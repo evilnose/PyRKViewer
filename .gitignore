@@ -1,2 +1,12 @@
+# output dirs
 build
 dist
+
+# python
+__pycache__
+.python-version
+
+# Mac
+.DS_STORE
+.AppleDouble
+.LSOverride

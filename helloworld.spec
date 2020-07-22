@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['helloworld.py'],
-             pathex=['C:\\Users\\Gary\\Work\\PyViewer'],
+             pathex=['/Users/garygeng/Work/wx-test'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -31,3 +31,10 @@ exe = EXE(pyz,
           upx_exclude=[],
           runtime_tmpdir=None,
           console=False )
+app = BUNDLE(exe,
+             name='helloworld.app',
+             icon=None,
+             bundle_identifier=None,
+             info_plist={
+                'NSHighResolutionCapable': 'True'
+             },)

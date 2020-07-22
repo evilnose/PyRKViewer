@@ -7,7 +7,6 @@ verify_ssl = true
 
 [packages]
 wxpython = "==4.1.0"
-pyinstaller = "*"
 
 [requires]
 python_version = "3.7"

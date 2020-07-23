@@ -3,7 +3,9 @@ Hello World, but with more meat.
 """
 
 import wx
+import IodineAPI
 
+# pylint: disable=maybe-no-member
 class HelloFrame(wx.Frame):
     """
     A Frame that says Hello World

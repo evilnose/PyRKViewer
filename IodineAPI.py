@@ -1,6 +1,8 @@
 import ctypes
+import sys
+import os
 
-libIodine = ctypes.cdll.LoadLibrary('../go-NOM/Iodine_Dll/Iodine.dll')
+libIodine = ctypes.cdll.LoadLibrary('ext/Iodine.dll')
 
 #########################   argtypes   #########################
 libIodine.cFree.argtypes = [ctypes.c_char_p]
@@ -367,7 +369,7 @@ def getNodeId(neti, nodei):
         return nodeId
 
 
-def getListOfNodesIds(neti):
+def getListOfNodeIds(neti):
     n = getNumberOfNodes(neti)
     nodeList = []
     for nodei in range(n):

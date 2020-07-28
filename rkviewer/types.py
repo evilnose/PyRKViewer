@@ -10,10 +10,21 @@ class Vec2(Generic[E]):
     y: E
     _i: int
 
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self._i = 0
+    def __init__(self, x, y=None):
+        """Initialize a 2D vector.
+
+        If two arguments are specified, they are considered the x and y coordinate
+        of the Vec2.
+
+        If only one argument is specified, it should be an iterable of two elements,
+        which will be unwrapped as x and y.
+        """
+        if y is None:
+            self.x, self.y = x
+        else:
+            self.x = x
+            self.y = y
+            self._i = 0
 
     def __iter__(self):
         self._i = 0
@@ -28,6 +39,44 @@ class Vec2(Generic[E]):
             return self.y
         else:
             raise StopIteration
+    
+    def __add__(self, other):
+        return Vec2(self.x + other.x, self.y + other.y)
+
+    def __iadd__(self, other):
+        self.x += other.x
+        self.y += other.y
+        return self
+
+    def __sub__(self, other):
+        return Vec2(self.x - other.x, self.y - other.y)
+
+    def __isub__(self, other):
+        self.x -= other.x
+        self.y -= other.y
+        return self
+
+    def __mul__(self, k: E):
+        return Vec2(self.x * k, self.y * k)
+
+    __rmul__ = __mul__
+
+    def __imul__(self, k: E):
+        self.x *= k
+        self.y *= k
+        return self
+
+    def __floordiv__(self, k: E):
+        return Vec2(self.x // k, self.y // k)
+
+    def __truediv__(self, k: E):
+        return Vec2(self.x / k, self.y / k)
+
+    def __repr__(self):
+        return 'Vec2({}, {})'.format(self.x, self.y)
+    
+    def to_wx_point(self):
+        return wx.Point(self.x, self.y)
 
 
 class Node:

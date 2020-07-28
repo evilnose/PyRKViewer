@@ -67,12 +67,31 @@ class InputMode(Enum):
     ADD = 2
 
 
-class Canvas(wx.Panel):
+class Canvas(wx.ScrolledWindow):
+    """The main panel onto which nodes, reactions, etc. will be drawn
+
+    Attributes:
+        controller (IController): The associated controller instance.
+        nodes (List[Node]): List of Node instances. This contains data needed
+            rendering them.
+        _input_mode (InputMode): The current input mode, e.g. SELECT, ADD, etc.
+        _dragged_node (Optional[Node]): The node current dragged, or None if no
+            Node is being dragged.
+        _dragged_relative (wx.Point): The relative (unscrolled) position of the dragged
+            node. This is used to make sure the draggednode stays at the same relative
+            position when the panel is scrolled.
+        _left_down_pos (Vec2): The last time the "down" event is
+            triggered for the left mouse button. This is used to keep track of
+            the relative distance traversed for the drag event. Note that this
+            is a logical position, i.e. the position relative to the virtual
+            origin of the canvas, which may be offscreen.
+    """
     controller: IController
     nodes: List[Node]
-    input_mode: InputMode
-    dragged_node: Optional[Node]
-    _left_down_pos: Optional[Vec2]
+    _input_mode: InputMode
+    _dragged_node: Optional[Node]
+    _dragged_relative: wx.Point
+    _left_down_pos: Vec2
 
     def __init__(self, controller: IController, *args, **kw):
         # ensure the parent's __init__ is called
@@ -88,20 +107,22 @@ class Canvas(wx.Panel):
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
+        self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
 
         # state variables
-        self.input_mode = InputMode.SELECT
-        self.dragged_node = None
-        # Position last time mouse was left-clicked, to keep track of relative 
-        # distance while dragging
-        self._left_down_pos = None  
+        self._input_mode = InputMode.SELECT
+        self._dragged_node = None
+        # Set to (0, 0) since this won't be used before it's updated once first
+        self._dragged_relative = wx.Point()
+        self._left_down_pos = Vec2(0, 0)  
 
     def SetInputMode(self, mode_str: str):
         """Set input mode based on the mode string"""
         if mode_str == 'select':
-            self.input_mode = InputMode.SELECT
+            self._input_mode = InputMode.SELECT
         elif mode_str == 'add':
-            self.input_mode = InputMode.ADD
+            self._input_mode = InputMode.ADD
         else:
             assert False, "Unknown input mode '{}'".format(mode_str)
 
@@ -127,28 +148,31 @@ class Canvas(wx.Panel):
             increment += 1
 
     def OnLeftDown(self, evt):
-        x, y = pos = evt.GetPosition()
-        self._left_down_pos = pos
-        if self.input_mode == InputMode.SELECT:
-            self.dragged_node = None
+        evt.Skip()
+        scrolledpos = evt.GetPosition()
+        pos = Vec2(self.CalcUnscrolledPosition(scrolledpos))
+        self._left_down_pos = scrolledpos
+        if self._input_mode == InputMode.SELECT:
+            self._dragged_node = None
             # check if there is node under clicked position
             # consider newly added nodes to be on top
             for node in reversed(self.nodes):
                 if node.Contains(pos):
-                    self.dragged_node = node
+                    self._dragged_node = node
                     break
 
-        elif self.input_mode == InputMode.ADD:
-            w, h = size = Vec2(50, 30)
-            adj_pos = Vec2(x - w/2, y - h/2)
+        elif self._input_mode == InputMode.ADD:
             # TODO move these outside
             DEFAULT_FILL = wx.Colour(0, 255, 0, 50)
             DEFAULT_BORDER = wx.Colour(255, 0, 0, 100)
             DEFAULT_BORDER_WIDTH = 1
 
+            size = Vec2(50, 30)
+            adj_pos = pos - size // 2
+
             node = Node(
                 id_='x',
-                pos=adj_pos,
+                pos=Vec2(adj_pos.x, adj_pos.y),
                 size=size,
                 fill_color=DEFAULT_FILL,
                 border_color=DEFAULT_BORDER,
@@ -157,33 +181,34 @@ class Canvas(wx.Panel):
             self.AddNodeRename(node)
             self.Refresh()
         else:
-            assert False, "Unknown input mode '{}'".format(self.input_mode)
+            assert False, "Unknown input mode '{}'".format(self._input_mode)
 
     def OnMotion(self, evt):
+        evt.Skip()
         assert isinstance(evt, wx.MouseEvent)
-        if self.input_mode == InputMode.SELECT:
+        if self._input_mode == InputMode.SELECT:
             if evt.leftIsDown:
-                if self.dragged_node is not None:
+                if self._dragged_node is not None:
                     assert self._left_down_pos is not None
-                    x, y = evt.GetPosition()
-                    ox, oy = self._left_down_pos
-                    nx, ny = self.dragged_node.position
+                    mouse_pos = Vec2(evt.GetPosition())
+                    relative = mouse_pos - self._left_down_pos
                     # updated dragged node position
-                    #TODO use Vec arithmetic
-                    self.dragged_node.position = Vec2(nx + x - ox, ny + y - oy)
+                    self._dragged_node.position += relative
+                    self._dragged_relative = self.CalcScrolledPosition(
+                        self._dragged_node.position.to_wx_point())
                     # update _left_down_pos for later dragging
-                    self._left_down_pos = Vec2(x, y)
+                    self._left_down_pos = mouse_pos
                     self.Refresh()
             else:
-                if self.dragged_node is not None:
-                    self.controller.TryMoveNode(self.dragged_node)
+                if self._dragged_node is not None:
+                    self.controller.TryMoveNode(self._dragged_node)
                     # not dragging anymore
-                    self.dragged_node = None
+                    self._dragged_node = None
             
-        elif self.input_mode == InputMode.ADD:
+        elif self._input_mode == InputMode.ADD:
             pass
         else:
-            assert False, "Unknown input mode '{}'".format(self.input_mode)
+            assert False, "Unknown input mode '{}'".format(self._input_mode)
 
     def OnPaint(self, evt):
         dc = wx.PaintDC(self)
@@ -194,7 +219,7 @@ class Canvas(wx.Panel):
             # TODO don't use global
             for node in self.nodes:
                 width, height = node.size
-                x, y = node.position
+                x, y = self.CalcScrolledPosition(node.position.x, node.position.y)
 
                 # make a path that contains a circle and some lines
                 brush = wx.Brush(node.fill_color, wx.BRUSHSTYLE_SOLID)
@@ -206,6 +231,28 @@ class Canvas(wx.Panel):
                 gc.FillPath(path)
                 gc.StrokePath(path)
 
+    def OnScroll(self, evt):
+        evt.Skip()
+        # Need to use wx.CallAfter() to ensure the scroll event is finished before we update the
+        # position of the dragged node
+        wx.CallAfter(self.AfterScroll)
+
+    def AfterScroll(self):
+        # if a Node is being dragged while the window is being scrolled, we would
+        # like to keep its position relative  to the scroll window the same
+        if self._input_mode == InputMode.SELECT and self._dragged_node is not None:
+            self._dragged_node.position = Vec2(self.CalcUnscrolledPosition(self._dragged_relative))
+            self.Refresh()
+
+    def OnMouseWheel(self, evt):
+        # dispatch a horizontal scroll event in this case
+        if evt.GetWheelAxis() == wx.MOUSE_WHEEL_VERTICAL and \
+            wx.GetKeyState(wx.WXK_SHIFT):
+                evt.SetWheelAxis(wx.MOUSE_WHEEL_HORIZONTAL)
+                # need to invert rotation for more intuitive scrolling
+                evt.SetWheelRotation(-evt.GetWheelRotation())
+
+        evt.Skip()
 
 class MainFrame(wx.Frame):
     controller: IController
@@ -215,7 +262,10 @@ class MainFrame(wx.Frame):
         super().__init__(*args, **kw)
 
         self.controller = controller
+        # TODO style AND with the style in **kw
         self.canvas = Canvas(self.controller, self, size=(630, 500))
+        self.canvas.SetVirtualSize(2000, 1600)
+        self.canvas.SetScrollRate(10, 10)
         self.canvas.SetBackgroundColour(wx.WHITE)
 
         # create a panel in the frame
@@ -224,9 +274,22 @@ class MainFrame(wx.Frame):
 
         # and create a sizer to manage the layout of child widgets
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.toolbar, wx.SizerFlags().Border(wx.TOP|wx.LEFT, 10))
-        sizer.Add(self.canvas, wx.SizerFlags().Border(wx.TOP|wx.LEFT, 10))
-        self.SetSizer(sizer)
+        sizer.Add(
+            self.toolbar,
+            0,  # No horizontal stretch
+            wx.EXPAND |  # Vertical stretch is fine
+            wx.ALL,
+            10
+        )
+        sizer.Add(self.canvas,
+            1,
+            wx.EXPAND |
+            wx.ALL,
+            10
+        )
+        # Set the sizer and *prevent the user from resizing it to a smaller size*
+        # TODO are we sure we want this?
+        self.SetSizerAndFit(sizer)
 
 
 class View(IView):

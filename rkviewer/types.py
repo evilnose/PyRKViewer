@@ -1,13 +1,13 @@
+from __future__ import annotations  # For returning self in a class
 from typing import Generic, TypeVar, List
 import abc
 # pylint: disable=maybe-no-member
 import wx
 
 
-E = TypeVar('E')
-class Vec2(Generic[E]):
-    x: E
-    y: E
+class Vec2:
+    x: int
+    y: int
     _i: int
 
     def __init__(self, x, y=None):
@@ -21,16 +21,18 @@ class Vec2(Generic[E]):
         """
         if y is None:
             self.x, self.y = x
+            self.x = int(self.x)
+            self.y = int(self.y)
         else:
-            self.x = x
-            self.y = y
+            self.x = int(x)
+            self.y = int(y)
             self._i = 0
 
-    def __iter__(self):
+    def __iter__(self) -> Vec2:
         self._i = 0
         return self
 
-    def __next__(self):
+    def __next__(self) -> int:
         if self._i == 0:
             self._i += 1
             return self.x
@@ -40,56 +42,67 @@ class Vec2(Generic[E]):
         else:
             raise StopIteration
     
-    def __add__(self, other):
+    def __add__(self, other) -> Vec2:
         return Vec2(self.x + other.x, self.y + other.y)
 
-    def __iadd__(self, other):
+    def __iadd__(self, other) -> Vec2:
         self.x += other.x
         self.y += other.y
         return self
 
-    def __sub__(self, other):
+    def __sub__(self, other) -> Vec2:
         return Vec2(self.x - other.x, self.y - other.y)
 
-    def __isub__(self, other):
+    def __isub__(self, other) -> Vec2:
         self.x -= other.x
         self.y -= other.y
         return self
 
-    def __mul__(self, k: E):
-        return Vec2(self.x * k, self.y * k)
+    def __mul__(self, k) -> Vec2:
+        return Vec2(int(self.x * k), int(self.y * k))
 
     __rmul__ = __mul__
 
-    def __imul__(self, k: E):
-        self.x *= k
-        self.y *= k
+    def __imul__(self, k) -> Vec2:
+        self.x = int(self.x * k)
+        self.y *= int(self.y * k)
         return self
 
-    def __floordiv__(self, k: E):
-        return Vec2(self.x // k, self.y // k)
+    def __floordiv__(self, k) -> Vec2:
+        return Vec2(int(self.x // k), int(self.y // k))
 
-    def __truediv__(self, k: E):
-        return Vec2(self.x / k, self.y / k)
+    def __truediv__(self, k) -> Vec2:
+        return Vec2(int(self.x / k), int(self.y / k))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'Vec2({}, {})'.format(self.x, self.y)
     
-    def to_wx_point(self):
+    def to_wx_point(self) -> wx.Point:
         return wx.Point(self.x, self.y)
+
+    # element-wise multiplication
+    def elem_mul(self, other: Vec2) -> Vec2:
+        return Vec2(self.x * other.x, self.y * other.y)
+
+    def elem_div(self, other: Vec2) -> Vec2:
+        return Vec2(self.x / other.x, self.y / other.y)
 
 
 class Node:
     id_: str
-    position: Vec2[int]
-    size: Vec2[int]
+    _position: Vec2
+    _s_position: Vec2  # scaled position # TODO add documentation
+    _size: Vec2
+    _s_size: Vec2  # scaled size
     fill_color: wx.Colour
     border_color: wx.Colour
     border_width: int
+    _scale: float
 
     # force keyword-only arguments
-    def __init__(self, *, id_: str, pos: Vec2[int], size: Vec2[int],
-                 fill_color: wx.Colour, border_color: wx.Colour, border_width: int):
+    def __init__(self, *, id_: str, pos: Vec2, size: Vec2, fill_color: wx.Colour,
+                 border_color: wx.Colour, border_width: int, scale: float = 1):
+        self._scale = scale
         self.id_ = id_
         self.position = pos
         self.size = size
@@ -97,11 +110,59 @@ class Node:
         self.border_color = border_color
         self.border_width = border_width
 
-    def Contains(self, pos: Vec2[int]) -> bool:
-        '''Returns whether the given position is contained within the node rectangle
-        '''
-        return (pos.x >= self.position.x) and (pos.x <= self.position.x + self.size.x) and \
-            (pos.y >= self.position.y) and (pos.y <= self.position.y + self.size.y)
+    @property
+    def position(self):
+        return self._position
+
+    @position.setter
+    def position(self, val: Vec2):
+        self._position = val
+        self._s_position = val * self._scale
+
+    @property
+    def s_position(self):
+        return self._s_position
+
+    @s_position.setter
+    def s_position(self, val: Vec2):
+        self._s_position = val
+        self._position = val / self._scale
+
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, val: Vec2):
+        self._size = val
+        self._s_size = val * self._scale
+
+    @property
+    def s_size(self):
+        return self._s_size
+
+    @s_size.setter
+    def s_size(self, val: Vec2):
+        self._s_size = val
+        self._size = val / self._scale
+
+    @property
+    def scale(self):
+        return self._scale
+
+    @scale.setter
+    def scale(self, val: float):
+        self._scale = val
+        self._s_position = self._position * self._scale
+        self._s_size = self._size * self._scale
+
+    def Contains(self, pos: Vec2) -> bool:
+        """Returns whether the given position is contained within the node rectangle.
+
+        pos is unscaled.
+        """
+        return (pos.x >= self._position.x) and (pos.x <= self._position.x + self._size.x) and \
+            (pos.y >= self._position.y) and (pos.y <= self._position.y + self._size.y)
 
 
 class IController(abc.ABC):

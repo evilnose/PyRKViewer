@@ -1,5 +1,5 @@
 from __future__ import annotations  # For returning self in a class
-from typing import Generic, TypeVar, List
+from typing import NewType, List, Tuple
 import abc
 # pylint: disable=maybe-no-member
 import wx
@@ -21,11 +21,9 @@ class Vec2:
         """
         if y is None:
             self.x, self.y = x
-            self.x = int(self.x)
-            self.y = int(self.y)
         else:
-            self.x = int(x)
-            self.y = int(y)
+            self.x = x
+            self.y = y
             self._i = 0
 
     def __iter__(self) -> Vec2:
@@ -59,20 +57,17 @@ class Vec2:
         return self
 
     def __mul__(self, k) -> Vec2:
-        return Vec2(int(self.x * k), int(self.y * k))
+        return Vec2(self.x * k, self.y * k)
 
     __rmul__ = __mul__
 
     def __imul__(self, k) -> Vec2:
-        self.x = int(self.x * k)
-        self.y *= int(self.y * k)
+        self.x = self.x * k
+        self.y *= self.y * k
         return self
 
-    def __floordiv__(self, k) -> Vec2:
-        return Vec2(int(self.x // k), int(self.y // k))
-
     def __truediv__(self, k) -> Vec2:
-        return Vec2(int(self.x / k), int(self.y / k))
+        return Vec2(self.x / k, self.y / k)
 
     def __repr__(self) -> str:
         return 'Vec2({}, {})'.format(self.x, self.y)
@@ -86,6 +81,19 @@ class Vec2:
 
     def elem_div(self, other: Vec2) -> Vec2:
         return Vec2(self.x / other.x, self.y / other.y)
+
+    @classmethod
+    def unity(cls) -> Vec2:
+        return Vec2(1, 1)
+
+
+class Rect:
+    def __init__(self, pos: Vec2, size: Vec2):
+        self.position = pos
+        self.size = size
+
+    def GetTuple(self) -> Tuple[Vec2, Vec2]:
+        return (self.position, self.size)
 
 
 class Node:
@@ -156,14 +164,6 @@ class Node:
         self._s_position = self._position * self._scale
         self._s_size = self._size * self._scale
 
-    def Contains(self, pos: Vec2) -> bool:
-        """Returns whether the given position is contained within the node rectangle.
-
-        pos is unscaled.
-        """
-        return (pos.x >= self._position.x) and (pos.x <= self._position.x + self._size.x) and \
-            (pos.y >= self._position.y) and (pos.y <= self._position.y + self._size.y)
-
 
 DEFAULT_THEME = {
     'canvas_bg': wx.WHITE,
@@ -179,6 +179,10 @@ DEFAULT_THEME = {
     'node_border_width': 1,
     'node_font_size': 10,  # TODO
     'node_font_color': wx.Colour(255, 0, 0, 100),  # TODO
+    'node_outline_color': wx.Colour(0, 140, 255),  # Distance from node to its (selection) outline
+    'node_outline_padding': 7,  # Distance from node to its (selection) outline
+    'node_handle_length': 8,  # Length of the squares one uses to drag resize nodes
+    'node_outline_width': 1.8,  # Width of the selected node outline
     'init_scale': 1,
 }
 

@@ -1,89 +1,73 @@
 from enum import Enum
-from typing import Callable, List, Optional, Tuple
-from copy import copy
+from typing import Callable, List, Optional, Tuple, Dict, Any
+import copy
 # pylint: disable=maybe-no-member
 import wx
 
-from .types import Vec2, Node, IView, IController
-
-
-class ButtonGroup:
-    Callback = Callable[[str], None]  # called with ID as argument
-    def __init__(self, parent: wx.Panel, callback: Callback):
-        self.parent = parent
-        self.callback = callback
-        self.buttons = []
-        self.selected = None  # should be tuple (button, group_id)
-
-    def AddButton(self, button: wx.ToggleButton, group_id: str):
-        # right now there is no type info for wxPython, so this is necessary
-        assert isinstance(button, wx.ToggleButton)
-
-        self.buttons.append(button)
-        button.Bind(wx.EVT_TOGGLEBUTTON, self._MakeToggleFn(button, group_id))
-
-        # First added button; make it selected
-        if self.selected is None:
-            self.selected = (button, group_id)
-            button.SetValue(True)
-            self.callback(group_id)
-
-    def _MakeToggleFn(self, button: wx.ToggleButton, group_id: str):
-        # right now there is no type info for wxPython, so this is necessary
-        assert isinstance(button, wx.ToggleButton)
-
-        def ret(evt):
-            assert self.selected is not None, "There must be at least one button in ButtonGroup!"
-
-            if evt.IsChecked():
-                button.SetValue(True)
-                selected_btn, selected_id = self.selected
-                if selected_id != group_id:
-                    selected_btn.SetValue(False)
-                    self.selected = (button, group_id)
-                    self.callback(group_id)
-            else:
-                # don't allow de-select
-                button.SetValue(True)
-        return ret
+from .types import Vec2, Node, IView, IController, DEFAULT_THEME
+from .widgets import ButtonGroup, DragDrop
 
 
 class TopToolbar(wx.Panel):
-    def __init__(self, *args, zoom_callback, **kw):
-        super().__init__(*args, **kw)
+    dragdrop: DragDrop
+
+    def __init__(self, parent, zoom_callback, drop_callback, **kw):
+        super().__init__(parent, **kw)
 
         # TODO add as attribute
         self._zoom_callback = zoom_callback
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        zoom_in_btn = wx.Button(self, label="Zoom In")
-        sizer.Add(zoom_in_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
-        zoom_in_btn.Bind(wx.EVT_BUTTON, self.OnZoomIn)
+        zoom_in_btn = wx.Button(
+            self, label="Zoom In")
+        # TODO make this a method
+        sizer.Add(zoom_in_btn, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        zoom_in_btn.Bind(
+            wx.EVT_BUTTON, self.OnZoomIn)
 
-        zoom_out_btn = wx.Button(self, label="Zoom Out")
-        sizer.Add(zoom_out_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
-        zoom_out_btn.Bind(wx.EVT_BUTTON, self.OnZoomOut)
+        zoom_out_btn = wx.Button(
+            self, label="Zoom Out")
+        sizer.Add(zoom_out_btn, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        zoom_out_btn.Bind(
+            wx.EVT_BUTTON, self.OnZoomOut)
 
+        self.dragdrop = DragDrop(
+            self, window=parent, drop_callback=drop_callback,
+            size=(30, 30))
+        self.dragdrop.SetBackgroundColour(
+            wx.WHITE)
+        sizer.Add(self.dragdrop, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
         self.SetSizer(sizer)
-    
+
     def OnZoomIn(self, _):
         self._zoom_callback(True)
 
     def OnZoomOut(self, _):
         self._zoom_callback(False)
 
+
 class Toolbar(wx.Panel):
     def __init__(self, *args, toggle_callback, **kw):
         super().__init__(*args, **kw)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        select_btn = wx.ToggleButton(self, label='&Select')
-        sizer.Add(select_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
-        add_btn = wx.ToggleButton(self, label='&Add')
-        sizer.Add(add_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
-        zoom_btn = wx.ToggleButton(self, label='&Zoom')
-        sizer.Add(zoom_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        select_btn = wx.ToggleButton(
+            self, label='&Select')
+        sizer.Add(select_btn, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        add_btn = wx.ToggleButton(
+            self, label='&Add')
+        sizer.Add(add_btn, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        zoom_btn = wx.ToggleButton(
+            self, label='&Zoom')
+        sizer.Add(zoom_btn, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
-        btn_group = ButtonGroup(self, toggle_callback)
+        btn_group = ButtonGroup(
+            self, toggle_callback)
         btn_group.AddButton(select_btn, 'select')
         btn_group.AddButton(add_btn, 'add')
         btn_group.AddButton(zoom_btn, 'zoom')
@@ -126,34 +110,44 @@ class Canvas(wx.ScrolledWindow):
     _left_down_pos: Vec2
     _scale: float
     realsize: Vec2
+    theme = Any  # Set as Any for now, since otherwise there was some issues with PyRight
 
-    def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
+    def __init__(self, controller: IController, *args, realsize: Tuple[int, int],
+                 theme: Dict[str, Any], **kw):
         # ensure the parent's __init__ is called
         super().__init__(*args, **kw)
 
         self.controller = controller
+        self.theme = theme
         self._nodes = list()
 
         # prevent flickering
         self.SetDoubleBuffered(True)
 
         # events
-        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        self.Bind(wx.EVT_LEFT_DOWN,
+                  self.OnLeftDown)
         self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
-        self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
+        self.Bind(wx.EVT_MOUSEWHEEL,
+                  self.OnMouseWheel)
 
         # state variables
         self._input_mode = InputMode.SELECT
         self._dragged_node = None
         # Set to (0, 0) since this won't be used before it's updated once first
         self._dragged_relative = wx.Point()
-        self._left_down_pos = Vec2(0, 0)  
+        self._left_down_pos = Vec2(0, 0)
 
         self._scale = 1
         self.realsize = Vec2(realsize)
-        self.SetVirtualSize(self.realsize.x, self.realsize.y)
+        self.SetVirtualSize(
+            self.realsize.x, self.realsize.y)
+
+    @property
+    def scale(self):
+        return self._scale
 
     def ResetNodes(self, nodes: List[Node]):
         self._nodes = nodes
@@ -182,15 +176,20 @@ class Canvas(wx.ScrolledWindow):
             self._scale /= 1.5
 
         # adjust scroll position
-        logical = Vec2(self.CalcUnscrolledPosition(anchor.to_wx_point()))
-        scaled = logical * (self._scale / old_scale)
-        newanchor = Vec2(self.CalcScrolledPosition(scaled.to_wx_point()))
+        logical = Vec2(self.CalcUnscrolledPosition(
+            anchor.to_wx_point()))
+        scaled = logical * \
+            (self._scale / old_scale)
+        newanchor = Vec2(
+            self.CalcScrolledPosition(scaled.to_wx_point()))
         # the amount of shift needed to keep anchor at the same position
         shift = newanchor - anchor
-        cur_scroll = Vec2(self.CalcUnscrolledPosition(0, 0))
+        cur_scroll = Vec2(
+            self.CalcUnscrolledPosition(0, 0))
         new_scroll = cur_scroll + shift
         # convert to scroll units
-        new_scroll = new_scroll.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
+        new_scroll = new_scroll.elem_div(
+            Vec2(self.GetScrollPixelsPerUnit()))
         self.Scroll(new_scroll.x, new_scroll.y)
 
         for node in self._nodes:
@@ -202,7 +201,8 @@ class Canvas(wx.ScrolledWindow):
         self.Refresh()
 
     def ZoomCenter(self, zooming_in: bool):
-        self.Zoom(zooming_in, Vec2(self.GetSize()) / 2)
+        self.Zoom(zooming_in, Vec2(
+            self.GetSize()) / 2)
 
     def AddNodeRename(self, node: Node) -> str:
         """Add node helper that renames if results in duplicate IDs.
@@ -216,7 +216,7 @@ class Canvas(wx.ScrolledWindow):
             if increment == 0:
                 suffix = ''
             else:
-                suffix = ' ({})'.format(increment)
+                suffix = '_{}'.format(increment)
             cur_id = node.id_ + suffix
             # not duplicate; add now
             if cur_id not in ids:
@@ -226,12 +226,12 @@ class Canvas(wx.ScrolledWindow):
             increment += 1
 
     def OnLeftDown(self, evt):
-        evt.Skip()
         scrolledpos = evt.GetPosition()
         # virtual position on the canvas
         self._left_down_pos = scrolledpos
         # actual, unscaled position on the canvas
-        real_pos = Vec2(self.CalcUnscrolledPosition(scrolledpos)) / self._scale
+        real_pos = Vec2(self.CalcUnscrolledPosition(
+            scrolledpos)) / self._scale
         if self._input_mode == InputMode.SELECT:
             self._dragged_node = None
             # check if there is node under clicked position
@@ -242,38 +242,39 @@ class Canvas(wx.ScrolledWindow):
                     break
 
         elif self._input_mode == InputMode.ADD:
-            real_pos = Vec2(self.CalcUnscrolledPosition(scrolledpos)) / self._scale
-            # TODO move these outside
-            DEFAULT_FILL = wx.Colour(0, 255, 0, 50)
-            DEFAULT_BORDER = wx.Colour(255, 0, 0, 100)
-            DEFAULT_BORDER_WIDTH = 1
-            SIZE = Vec2(50, 30)
+            real_pos = Vec2(self.CalcUnscrolledPosition(
+                scrolledpos)) / self._scale
+            size = Vec2(
+                self.theme['node_width'], self.theme['node_height'])
 
-            adj_pos = real_pos - SIZE // 2
+            adj_pos = real_pos - size // 2
 
             node = Node(
                 id_='x',
                 pos=adj_pos,
-                size=SIZE,
-                fill_color=DEFAULT_FILL,
-                border_color=DEFAULT_BORDER,
-                border_width=DEFAULT_BORDER_WIDTH,
+                size=size,
+                fill_color=self.theme['node_fill'],
+                border_color=self.theme['node_border'],
+                border_width=self.theme['node_border_width'],
                 scale=self._scale,
             )
             self.AddNodeRename(node)
             self.Refresh()
         elif self._input_mode == InputMode.ZOOM:
-            zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
-            self.Zoom(zooming_in, Vec2(scrolledpos))
+            zooming_in = not wx.GetKeyState(
+                wx.WXK_SHIFT)
+            self.Zoom(
+                zooming_in, Vec2(scrolledpos))
+        evt.Skip()
 
     def OnMotion(self, evt):
-        evt.Skip()
         assert isinstance(evt, wx.MouseEvent)
         if self._input_mode == InputMode.SELECT:
             if evt.leftIsDown:
                 if self._dragged_node is not None:
                     assert self._left_down_pos is not None
-                    mouse_pos = Vec2(evt.GetPosition())
+                    mouse_pos = Vec2(
+                        evt.GetPosition())
                     relative = mouse_pos - self._left_down_pos
                     # updated dragged node position
                     self._dragged_node.s_position += relative
@@ -284,10 +285,11 @@ class Canvas(wx.ScrolledWindow):
                     self.Refresh()
             else:
                 if self._dragged_node is not None:
-                    self.controller.TryMoveNode(self._dragged_node)
+                    self.controller.TryMoveNode(
+                        self._dragged_node)
                     # not dragging anymore
                     self._dragged_node = None
-            
+        evt.Skip()
 
     def OnPaint(self, evt):
         dc = wx.PaintDC(self)
@@ -295,19 +297,38 @@ class Canvas(wx.ScrolledWindow):
         gc = wx.GraphicsContext.Create(dc)
 
         if gc:
+            font = wx.Font(
+                wx.FontInfo(10 * self._scale))
+            gfont = gc.CreateFont(font, wx.BLACK)
+            gc.SetFont(gfont)
+
             for node in self._nodes:
                 width, height = node.s_size
-                x, y = self.CalcScrolledPosition(node.s_position.to_wx_point())
+                x, y = self.CalcScrolledPosition(
+                    node.s_position.to_wx_point())
+                border_width = node.border_width * self._scale
 
                 # make a path that contains a circle and some lines
-                brush = wx.Brush(node.fill_color, wx.BRUSHSTYLE_SOLID)
+                brush = wx.Brush(
+                    node.fill_color, wx.BRUSHSTYLE_SOLID)
                 gc.SetBrush(brush)
-                gc.SetPen(wx.RED_PEN)
+                pen = gc.CreatePen(wx.GraphicsPenInfo(
+                    node.border_color).Width(border_width))
+                gc.SetPen(pen)
                 path = gc.CreatePath()
-                path.AddRectangle(x, y, width - 1, height - 1)
+                path.AddRectangle(
+                    x, y, width, height)
 
                 gc.FillPath(path)
                 gc.StrokePath(path)
+
+                # Draw text
+                tw, th, _, _ = gc.GetFullTextExtent(
+                    node.id_)
+                tx = (width - tw) / 2
+                ty = (height - th) / 2
+                gc.DrawText(
+                    node.id_, tx + x, ty + y)
 
     def OnScroll(self, evt):
         evt.Skip()
@@ -319,61 +340,85 @@ class Canvas(wx.ScrolledWindow):
         # if a Node is being dragged while the window is being scrolled, we would
         # like to keep its position relative  to the scroll window the same
         if self._input_mode == InputMode.SELECT and self._dragged_node is not None:
-            self._dragged_node.s_position = Vec2(self.CalcUnscrolledPosition(self._dragged_relative))
+            self._dragged_node.s_position = Vec2(
+                self.CalcUnscrolledPosition(self._dragged_relative))
             self.Refresh()
 
     def OnMouseWheel(self, evt):
         # dispatch a horizontal scroll event in this case
         if evt.GetWheelAxis() == wx.MOUSE_WHEEL_VERTICAL and \
-            wx.GetKeyState(wx.WXK_SHIFT):
-                evt.SetWheelAxis(wx.MOUSE_WHEEL_HORIZONTAL)
-                # need to invert rotation for more intuitive scrolling
-                evt.SetWheelRotation(-evt.GetWheelRotation())
+                wx.GetKeyState(wx.WXK_SHIFT):
+            evt.SetWheelAxis(
+                wx.MOUSE_WHEEL_HORIZONTAL)
+            # need to invert rotation for more intuitive scrolling
+            evt.SetWheelRotation(
+                -evt.GetWheelRotation())
 
         evt.Skip()
 
-class MainFrame(wx.Frame):
+    def OnNodeDrop(self, pos):
+        print('dropped')
+
+
+class MainPanel(wx.Panel):
     controller: IController
+    theme: Dict[str, Any]
+    dragdrop: DragDrop
 
-    def __init__(self, controller: IController, *args, **kw):
-        LEFT_WIDTH = 100  # Width reserved for the left toolbar
-        TOP_HEIGHT = 40  # Height reserved for the top toolbar
-        CANVAS_WIDTH = 600  # Width reserved for the canvas
-        CANVAS_HEIGHT = 500  # Height reserved for the canvas
-
+    def __init__(self, parent, controller: IController, theme: Dict[str, Any]):
         # ensure the parent's __init__ is called
-        super().__init__(*args, **kw)
-
+        super().__init__(parent, style=wx.CLIP_CHILDREN)
+        self.SetBackgroundColour(wx.Colour(176, 176, 176))
         self.controller = controller
-        # TODO style AND with the style in **kw
-        self.canvas = Canvas(self.controller, self, size=(CANVAS_WIDTH, CANVAS_HEIGHT),
-                             realsize = (4 * CANVAS_WIDTH, 4 * CANVAS_HEIGHT))
+        self.theme = theme
+        self.canvas = Canvas(self.controller, self, size=(theme['canvas_width'], theme['canvas_height']),
+                             realsize=(4 * theme['canvas_width'],
+                                       4 * theme['canvas_height']),
+                             theme=theme)
         self.canvas.SetScrollRate(10, 10)
-        self.canvas.SetBackgroundColour(wx.WHITE)
+        self.canvas.SetBackgroundColour(
+            theme['canvas_bg'])
 
         # create a panel in the frame
         self.toolbar = Toolbar(self,
-                               size=(LEFT_WIDTH, CANVAS_HEIGHT),
+                               size=(theme['left_toolbar_width'],
+                                     theme['canvas_height']),
                                toggle_callback=self.canvas.SetInputMode)
-        self.toolbar.SetBackgroundColour(wx.WHITE)
+        self.toolbar.SetBackgroundColour(
+            theme['toolbar_bg'])
 
         self.top_toolbar = TopToolbar(self,
-                                      size=(CANVAS_WIDTH, TOP_HEIGHT),
-                                      zoom_callback=self.canvas.ZoomCenter,)
+                                      size=(theme['canvas_width'],
+                                            theme['top_toolbar_height']),
+                                      zoom_callback=self.canvas.ZoomCenter,
+                                      drop_callback=self.OnNodeDrop,
+                                      )
+        self.top_toolbar.SetBackgroundColour(
+            theme['toolbar_bg'])
+        #self.dragdrop = self.top_toolbar.dragdrop
+
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.buffer = None
 
         # and create a sizer to manage the layout of child widgets
-        sizer = wx.FlexGridSizer(cols=2, rows=2, vgap=5, hgap=5)
+        sizer = wx.FlexGridSizer(
+            cols=2, rows=2, vgap=5, hgap=5)
 
         # For the items (non-spacers),
         # The 0th element of the tuple is the element itself
         # The 1st element is 1 for the canvas, so that only it expands during resize
-        # The 2nd element is wx.EXPAND for all, so that the element expands to fill 
+        # The 2nd element is wx.EXPAND for all, so that the element expands to fill
         #   their grid cell.
         sizer.AddMany([
-            (LEFT_WIDTH, TOP_HEIGHT),  # Add spacer at (0, 0)
-            (self.top_toolbar, 0, wx.EXPAND),  # Add top toolbar at (0, 1)
-            (self.toolbar, 0, wx.EXPAND),  # Add toolbar at (1, 0)
-            (self.canvas, 1, wx.EXPAND),  # Add canvas at (1, 1)
+            # Add spacer at (0, 0)
+            (theme['left_toolbar_width'],
+             theme['top_toolbar_height']),
+            # Add top toolbar at (0, 1)
+            (self.top_toolbar, 0, wx.EXPAND),
+            # Add toolbar at (1, 0)
+            (self.toolbar, 0, wx.EXPAND),
+            # Add canvas at (1, 1)
+            (self.canvas, 1, wx.EXPAND),
         ])
 
         # The 1st col and row are growable, i.e. the cell the canvas is in
@@ -382,12 +427,39 @@ class MainFrame(wx.Frame):
 
         # TODO Set the sizer and *prevent the user from resizing it to a smaller size*
         # are we sure we want this?
-        self.SetSizerAndFit(sizer)
+        self.SetSizer(sizer)
+
+    def OnPaint(self, evt):
+        evt.Skip()
+        '''
+        if self.dragdrop.dragging:
+            scale = self.canvas.scale
+
+            x, y = self.dragdrop.position
+
+            width = self.theme['node_width'] * scale
+            height = self.theme['node_height'] * scale
+            border_width = self.theme['node_border_width'] * scale
+
+            # make a path that contains a circle and some lines
+            brush = wx.Brush(
+                self.theme['node_fill'], wx.BRUSHSTYLE_SOLID)
+            dc.SetBrush(brush)
+            pen = wx.Pen(colour=self.theme['node_border'],
+                         width=border_width)
+            dc.SetPen(pen)
+            dc.DrawRectangle(x, y, width, height)
+        '''
+
+    def OnNodeDrop(self, obj: wx.Window, pos: wx.Point):
+        if obj == self.canvas:
+            self.canvas.OnNodeDrop(pos)
 
 
 class View(IView):
-    def __init__(self):
+    def __init__(self, theme=DEFAULT_THEME):
         self.controller = None
+        self.theme = copy.copy(theme)
 
     def BindController(self, controller: IController):
         self.controller = controller
@@ -395,14 +467,15 @@ class View(IView):
     def MainLoop(self):
         assert self.controller is not None
         app = wx.App()
-        frm = MainFrame(self.controller, None, title='RK Network Viewer')
-        self.canvas_panel = frm.canvas
+        frm = wx.Frame(None, title='RK Network Viewer', size=(800, 600))
+        window = MainPanel(frm, self.controller, theme=self.theme)
+        self.canvas_panel = window.canvas
         frm.Show()
         app.MainLoop()
 
     def UpdateAll(self, nodes: List[Node]):
         """Update the list of nodes.
-        
+
         Note that View takes ownership of the list of nodes and may modify it.
         """
         self.canvas_panel.ResetNodes(nodes)

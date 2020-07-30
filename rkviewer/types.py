@@ -41,7 +41,7 @@ class Vec2:
             return self.y
         else:
             raise StopIteration
-    
+
     def __add__(self, other) -> Vec2:
         return Vec2(self.x + other.x, self.y + other.y)
 
@@ -76,7 +76,7 @@ class Vec2:
 
     def __repr__(self) -> str:
         return 'Vec2({}, {})'.format(self.x, self.y)
-    
+
     def to_wx_point(self) -> wx.Point:
         return wx.Point(self.x, self.y)
 
@@ -163,6 +163,24 @@ class Node:
         """
         return (pos.x >= self._position.x) and (pos.x <= self._position.x + self._size.x) and \
             (pos.y >= self._position.y) and (pos.y <= self._position.y + self._size.y)
+
+
+DEFAULT_THEME = {
+    'canvas_bg': wx.WHITE,
+    'toolbar_bg': wx.Colour(140, 140, 140),
+    'canvas_width': 600,
+    'canvas_height': 500,
+    'left_toolbar_width': 100,
+    'top_toolbar_height': 40,
+    'node_fill': wx.Colour(0, 255, 0, 50),
+    'node_border': wx.Colour(255, 0, 0, 100),
+    'node_width': 50,
+    'node_height': 30,
+    'node_border_width': 1,
+    'node_font_size': 10,  # TODO
+    'node_font_color': wx.Colour(255, 0, 0, 100),  # TODO
+    'init_scale': 1,
+}
 
 
 class IController(abc.ABC):

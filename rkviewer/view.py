@@ -86,9 +86,9 @@ class MainPanel(wx.Panel):
         self.SetBackgroundColour(wx.Colour(176, 176, 176))
         self.controller = controller
         self.theme = theme
-        self.canvas = Canvas(self.controller, self, size=(theme['canvas_width'], theme['canvas_height']),
-                             realsize=(4 * theme['canvas_width'],
-                                       4 * theme['canvas_height']),
+        self.canvas = Canvas(self.controller, self,
+                             size=(theme['canvas_width'], theme['canvas_height']),
+                             realsize=(4 * theme['canvas_width'], 4 * theme['canvas_height']),
                              theme=theme)
         self.canvas.SetScrollRate(10, 10)
         self.canvas.SetBackgroundColour(
@@ -141,11 +141,20 @@ class MainPanel(wx.Panel):
 
         # TODO Set the sizer and *prevent the user from resizing it to a smaller size*
         # are we sure we want this?
-        self.SetSizer(sizer)
+        self.SetSizerAndFit(sizer)
 
     def OnNodeDrop(self, obj: wx.Window, pos: wx.Point):
         if obj == self.canvas:
             self.canvas.OnNodeDrop(pos)
+
+
+class MyFrame(wx.Frame):
+    def __init__(self, controller: IController, theme, **kw):
+        super().__init__(None, **kw)
+        self.main_panel = MainPanel(self, controller, theme=theme)
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.main_panel, 1, wx.EXPAND)
+        self.SetSizerAndFit(sizer)
 
 
 class View(IView):
@@ -159,9 +168,8 @@ class View(IView):
     def MainLoop(self):
         assert self.controller is not None
         app = wx.App()
-        frm = wx.Frame(None, title='RK Network Viewer', size=(800, 600))
-        window = MainPanel(frm, self.controller, theme=self.theme)
-        self.canvas_panel = window.canvas
+        frm = MyFrame(self.controller, self.theme, title='RK Network Viewer')
+        self.canvas_panel = frm.main_panel.canvas
         frm.Show()
         app.MainLoop()
 

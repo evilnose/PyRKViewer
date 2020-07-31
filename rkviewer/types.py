@@ -1,6 +1,7 @@
 from __future__ import annotations  # For returning self in a class
 from typing import NewType, List, Tuple
 import abc
+import copy
 # pylint: disable=maybe-no-member
 import wx
 
@@ -82,6 +83,9 @@ class Vec2:
     def elem_div(self, other: Vec2) -> Vec2:
         return Vec2(self.x / other.x, self.y / other.y)
 
+    def elem_abs(self) -> Vec2:
+        return Vec2(abs(self.x), abs(self.y))
+
     @classmethod
     def unity(cls) -> Vec2:
         return Vec2(1, 1)
@@ -94,6 +98,18 @@ class Rect:
 
     def GetTuple(self) -> Tuple[Vec2, Vec2]:
         return (self.position, self.size)
+
+    def NthVertex(self, n: int):
+        if n == 0:
+            return self.position
+        elif n == 1:
+            return self.position + Vec2(self.size.x, 0)
+        elif n == 2:
+            return self.position + self.size
+        elif n == 3:
+            return self.position + Vec2(0, self.size.y)
+        else:
+            assert False, "Rect.NthVertex() index out of bounds"
 
 
 class Node:
@@ -164,6 +180,11 @@ class Node:
         self._s_position = self._position * self._scale
         self._s_size = self._size * self._scale
 
+    '''
+    def as_rect(self) -> Rect:
+        """Return scaled position/size as Rect"""
+        return Rect(copy.copy(self.s_position), copy.copy(self.s_size))
+    '''
 
 DEFAULT_THEME = {
     'canvas_bg': wx.WHITE,
@@ -184,6 +205,8 @@ DEFAULT_THEME = {
     'node_handle_length': 8,  # Length of the squares one uses to drag resize nodes
     'node_outline_width': 1.8,  # Width of the selected node outline
     'init_scale': 1,
+    'min_node_width': 20,
+    'min_node_height': 15,
 }
 
 
@@ -204,7 +227,12 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def TryMoveNode(self, node: Node):
+    def TryMoveNode(self, id_: str, pos: Vec2):
+        """Try to move the give node. TODO only accept node ID and new location"""
+        pass
+
+    @abc.abstractmethod
+    def TrySetNodeSize(self, id_: str, size: Vec2):
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 

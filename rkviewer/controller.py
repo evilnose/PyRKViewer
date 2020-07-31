@@ -33,17 +33,19 @@ class Controller(IController):
 
         self._UpdateView()
 
-    # TODO change this so that it accepts node ID and x and y
-    # just annoying that there is only setNodeCoordinateAndSize() right now
-    def TryMoveNode(self, node: Node):
+    def TryMoveNode(self, id_: str, pos: Vec2):
         neti = 0
-        x, y = node.position
-        w, h = node.size
         # TODO exception
-        nodei = iod.getNodeIndex(neti, node.id_)
-        iod.setNodeCoordinateAndSize(neti, nodei, x, y, w, h)
+        nodei = iod.getNodeIndex(neti, id_)
+        iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
         self._UpdateView()
-    
+
+    def TrySetNodeSize(self, id_: str, size: Vec2):
+        neti = 0
+        # TODO exception
+        nodei = iod.getNodeIndex(neti, id_)
+        iod.setNodeSize(neti, nodei, size.x, size.y)
+        self._UpdateView()
 
     def GetListOfNodeIds(self) -> List[str]:
         neti = 0

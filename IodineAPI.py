@@ -1,6 +1,4 @@
 import ctypes
-import sys
-import os
 
 libIodine = ctypes.cdll.LoadLibrary('ext/Iodine.dll')
 
@@ -33,8 +31,10 @@ libIodine.getNodeOutlineColorRGB.argtypes = [ctypes.c_int, ctypes.c_int]
 libIodine.getNodeOutlineColorAlpha.argtypes = [ctypes.c_int, ctypes.c_int]
 libIodine.getNodeOutlineThickness.argtypes = [ctypes.c_int, ctypes.c_int]
 libIodine.setNodeID.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_char_p]
-libIodine.setNodeCoordinateAndSize.argtypes = [
-    ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float]
+libIodine.setNodeCoordinate.argtypes = [
+    ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float]
+libIodine.setNodeSize.argtypes = [
+    ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float]
 libIodine.setNodeFillColorRGB.argtypes = [
     ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
 libIodine.setNodeFillColorAlpha.argtypes = [
@@ -113,7 +113,8 @@ libIodine.getNodeOutlineColorRGB.restype = ctypes.c_uint32
 libIodine.getNodeOutlineColorAlpha.restype = ctypes.c_float
 libIodine.getNodeOutlineThickness.restype = ctypes.c_int
 libIodine.setNodeID.restype = ctypes.c_int
-libIodine.setNodeCoordinateAndSize.restype = ctypes.c_int
+libIodine.setNodeCoordinate.restype = ctypes.c_int
+libIodine.setNodeSize.restype = ctypes.c_int
 libIodine.setNodeFillColorRGB.restype = ctypes.c_int
 libIodine.setNodeFillColorAlpha.restype = ctypes.c_int
 libIodine.setNodeOutlineColorRGB.restype = ctypes.c_int
@@ -387,6 +388,18 @@ def getNodeCoordinateAndSize(neti, nodei):
         raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
     return (X,Y,W,H)
 
+def getNodeFillColor(neti, nodei):
+    rgb = libIodine.getNodeFillColorRGB(neti, nodei)
+    a = libIodine.getNodeFillColorAlpha(neti, nodei)
+    errCode = getErrorCode()
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    r = rgb >> 16
+    g = (rgb >> 8)-(r << 8)
+    b = rgb - (rgb >> 8 << 8)
+
+    return (r,g,b,a)
+
 
 def getNodeFillColorRGB(neti, nodei):
     color1 = libIodine.getNodeFillColorRGB(neti, nodei)
@@ -402,6 +415,18 @@ def getNodeFillColorAlpha(neti, nodei):
     if errCode < 0:
         raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
     return alpha1
+
+def getNodeOutlineColor(neti, nodei):
+    rgb = libIodine.getNodeOutlineColorRGB(neti, nodei)
+    a = libIodine.getNodeOutlineColorAlpha(neti, nodei)
+    errCode = getErrorCode()
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    r = rgb >> 16
+    g = (rgb >> 8)-(r << 8)
+    b = rgb - (rgb >> 8 << 8)
+
+    return (r,g,b,a)
 
 def getNodeOutlineColorRGB(neti, nodei):
     color1 = libIodine.getNodeOutlineColorRGB(neti, nodei)
@@ -431,11 +456,16 @@ def setNodeId(neti, nodei, newId):
         raise ExceptionDict[errCode](errorDict[errCode], neti, nodei, newId)
 
 
-def setNodeCoordinateAndSize(neti, nodei, x, y, w, h):
-    errCode = libIodine.setNodeCoordinateAndSize(neti, nodei, x, y, w, h)
+def setNodeCoordinate(neti, nodei, x, y):
+    errCode = libIodine.setNodeCoordinate(neti, nodei, x, y)
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei, x, y)
 
+
+def setNodeSize(neti, nodei, w, h):
+    errCode = libIodine.setNodeSize(neti, nodei, w, h)
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei, w, h)
 
 def setNodeFillColorRGB(neti, nodei, r, g, b):
     errCode = libIodine.setNodeFillColorRGB(neti, nodei, r, g, b)
@@ -524,6 +554,19 @@ def getReactionRateLaw(neti, reai):
         raise ExceptionDict[errCode](errorDict[errCode], neti, reai)
     else:
         return rateLaw
+
+
+def getReactionFillColor(neti, reai):
+    rgb = libIodine.getReactionFillColorRGB(neti, reai)
+    a = libIodine.getReactionFillColorAlpha(neti, reai)
+    errCode = getErrorCode()
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, reai)
+    r = rgb >> 16
+    g = (rgb >> 8)-(r << 8)
+    b = rgb - (rgb >> 8 << 8)
+
+    return (r, g, b, a)
 
 
 def getReactionFillColorRGB(neti, reai):

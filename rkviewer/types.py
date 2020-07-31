@@ -71,7 +71,7 @@ class Vec2:
         return Vec2(self.x / k, self.y / k)
 
     def __repr__(self) -> str:
-        return 'Vec2({}, {})'.format(self.x, self.y)
+        return '({}, {})'.format(self.x, self.y)
 
     def to_wx_point(self) -> wx.Point:
         return wx.Point(self.x, self.y)
@@ -110,6 +110,9 @@ class Rect:
             return self.position + Vec2(0, self.size.y)
         else:
             assert False, "Rect.NthVertex() index out of bounds"
+
+    def __repr__(self):
+        return 'Rect({}, {})'.format(self.position, self.size)
 
 
 class Node:
@@ -201,12 +204,12 @@ DEFAULT_THEME = {
     'node_font_size': 10,  # TODO
     'node_font_color': wx.Colour(255, 0, 0, 100),  # TODO
     'node_outline_color': wx.Colour(0, 140, 255),  # Distance from node to its (selection) outline
-    'node_outline_padding': 7,  # Distance from node to its (selection) outline
-    'node_handle_length': 8,  # Length of the squares one uses to drag resize nodes
-    'node_outline_width': 1.8,  # Width of the selected node outline
+    'node_outline_padding': 3,  # Distance from node to its (selection) outline
+    'node_handle_length': 6,  # Length of the squares one uses to drag resize nodes
+    'node_outline_width': 1.6,  # Width of the selected node outline
     'init_scale': 1,
-    'min_node_width': 20,
-    'min_node_height': 15,
+    'min_node_width': 10,
+    'min_node_height': 6,
 }
 
 
@@ -222,7 +225,7 @@ class IController(abc.ABC):
     """
 
     @abc.abstractmethod
-    def TryAddNode(self, node: Node):
+    def TryAddNode(self, node: Node) -> bool:
         """Try to add the given Node to the canvas."""
         pass
 

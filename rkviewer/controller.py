@@ -14,11 +14,11 @@ class Controller(IController):
         self.view = view
         iod.newNetwork('the one')
 
-    def TryAddNode(self, node: Node):
+    def TryAddNode(self, node: Node) -> bool:
         '''
-        Add node represented by the given Node variable. If auto_rename is True, the
-        controller will rename the node in order of "<name> (1)", "<name> (2)" etc
-        in case of duplicate ID.
+        Add node represented by the given Node variable.
+
+        Returns whether the operation was successful.
         '''
         neti = 0
         # keep incrementing as long as there is duplicate ID
@@ -30,8 +30,10 @@ class Controller(IController):
             iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(), node.fill_color.Green(), node.fill_color.Blue())
         except iod.Error as e:
             print('Error:', str(e))
+            return False
 
         self._UpdateView()
+        return True
 
     def TryMoveNode(self, id_: str, pos: Vec2):
         neti = 0

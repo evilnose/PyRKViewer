@@ -164,14 +164,14 @@ class Canvas(wx.ScrolledWindow):
         pos.x = max(pos.x, 0)
         pos.y = max(pos.y, 0)
 
-        botright = pos + self.GetVirtualSize()
-        rsize = self.GetSize()
-        pos.x = min(pos.x, botright.x - rsize.x)
-        pos.y = min(pos.y, botright.x - rsize.y)
+        limit = Vec2(self.GetVirtualSize()) - Vec2(self.GetSize())
+        pos.x = min(pos.x, limit.x)
+        pos.y = min(pos.y, limit.x)
 
-        # TODONOW
         pos = pos.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
-        self.Scroll(pos.x, pos.y)
+        # need to mult by scale here since self.VirtualPosition is artificially increased, per
+        # scale * self.realsize
+        self.Scroll(pos.x * self._scale, pos.y * self._scale)
 
     def SetZoomLevel(self, zoom: int, anchor: Vec2):
         """Zoom in/out with the given anchor.
@@ -206,6 +206,7 @@ class Canvas(wx.ScrolledWindow):
         self.SetVirtualSize(vsize.x, vsize.y)
 
         self.zoom_slider.SetValue(self._zoom_level)
+        self.zoom_slider.SetPageSize(2)
 
         self.Refresh()
 
@@ -329,6 +330,13 @@ class Canvas(wx.ScrolledWindow):
         evt.Skip()
 
     def OnLeftUp(self, evt):
+        device_pos = Vec2(evt.GetPosition())
+        overlay = self.InWhichOverlay(device_pos)
+        if overlay is not None:
+            overlay.OnLeftUp(evt)
+            self.Refresh()
+            return
+
         if self._input_mode == InputMode.SELECT:
             # move dragged node
             if self._dragged_node is not None:

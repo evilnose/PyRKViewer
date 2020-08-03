@@ -5,7 +5,7 @@ import wx
 import abc
 from typing import Callable, List
 from .types import Vec2, Rect, Node
-from .utils import DrawRect
+from .utils import DrawRect, WithinRect
 
 
 class CanvasOverlay(abc.ABC):
@@ -21,6 +21,10 @@ class CanvasOverlay(abc.ABC):
 
     @abc.abstractmethod
     def OnLeftDown(self, evt: wx.MouseEvent):
+        pass
+
+    @abc.abstractmethod
+    def OnLeftUp(self, evt: wx.MouseEvent):
         pass
 
     @abc.abstractmethod
@@ -42,7 +46,12 @@ class Minimap(CanvasOverlay):
     _size: Vec2
     _width: int
     nodes: List[Node]
-    _callback : Callback
+    _callback: Callback
+    _dragging: bool  # whether the visible window handle is being dragged
+    # Position of the mouse relative to the top-left corner of the visible window handle on minimap.
+    # We keep this relative distance invariant when dragging. This is used because scrolling is 
+    # discrete, so we cannot add relative distance dragged since errors will accumulate.
+    _drag_pos: Vec2
 
     def __init__(self, *, pos: Vec2 = Vec2(0, 0), width: int, realsize: Vec2, window_pos: Vec2,
                  window_size: Vec2, pos_callback: Callback):
@@ -53,6 +62,8 @@ class Minimap(CanvasOverlay):
         self.window_size = window_size
         self.nodes = list()
         self._callback = pos_callback
+        self._dragging = False
+        self._drag_pos = Vec2(0, 0)
 
     @property
     def realsize(self):
@@ -101,12 +112,27 @@ class Minimap(CanvasOverlay):
             DrawRect(gc, Rect(n_pos, n_size), color)
 
     def OnLeftDown(self, evt: wx.Event):
-        scale = self._realsize.x / self._size.x
-        center = (Vec2(evt.GetPosition()) - self.position) * scale
-        self._callback(center - self.window_size / 2)
-        
+        if not self._dragging:
+            scale = self._size.x / self._realsize.x
+            pos = Vec2(evt.GetPosition()) - self.position
+            if WithinRect(pos, Rect(self.window_pos * scale, self.window_size * scale)):
+                self._dragging = True
+                self._drag_pos = pos - self.window_pos * scale
+            else:
+                topleft = pos - self.window_size * scale / 2
+                self._callback(topleft / scale)
+
+    def OnLeftUp(self, evt: wx.Event):
+        self._dragging = False
+
     def OnMotion(self, evt: wx.MouseEvent):
+        scale = self._size.x / self._realsize.x
+        pos = Vec2(evt.GetPosition()) - self.position
         if evt.LeftIsDown():
-            scale = self._realsize.x / self._size.x
-            center = (Vec2(evt.GetPosition()) - self.position) * scale
-            self._callback(center - self.window_size / 2)
+            if not self._dragging:
+                topleft = pos - self.window_size * scale / 2
+                self._callback(topleft / scale)
+            else:
+                actual_pos = pos - self._drag_pos
+                self._callback(actual_pos / scale)
+

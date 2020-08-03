@@ -1,15 +1,13 @@
-from typing import List, Dict, Any
-import copy
 # pylint: disable=maybe-no-member
 import wx
-
+from typing import List, Dict, Any
+import copy
 from .types import  Node, IView, IController, DEFAULT_THEME
 from .canvas import Canvas
-from .widgets import ButtonGroup, DragDrop
+from .widgets import ButtonGroup
 
 
 class TopToolbar(wx.Panel):
-    dragdrop: DragDrop
 
     def __init__(self, parent, zoom_callback, drop_callback, **kw):
         super().__init__(parent, **kw)
@@ -33,13 +31,6 @@ class TopToolbar(wx.Panel):
         zoom_out_btn.Bind(
             wx.EVT_BUTTON, self.OnZoomOut)
 
-        self.dragdrop = DragDrop(
-            self, window=parent, drop_callback=drop_callback,
-            size=(30, 30))
-        self.dragdrop.SetBackgroundColour(
-            wx.WHITE)
-        sizer.Add(self.dragdrop, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
         self.SetSizer(sizer)
 
     def OnZoomIn(self, _):
@@ -78,7 +69,6 @@ class Toolbar(wx.Panel):
 class MainPanel(wx.Panel):
     controller: IController
     theme: Dict[str, Any]
-    dragdrop: DragDrop
 
     def __init__(self, parent, controller: IController, theme: Dict[str, Any]):
         # ensure the parent's __init__ is called
@@ -92,7 +82,7 @@ class MainPanel(wx.Panel):
                              theme=theme)
         self.canvas.SetScrollRate(10, 10)
         self.canvas.SetBackgroundColour(
-            theme['canvas_bg'])
+            theme['canvas_outside_bg'])  # The actual bg will be drawn by canvas in OnPaint()
 
         # create a panel in the frame
         self.toolbar = Toolbar(self,
@@ -110,13 +100,11 @@ class MainPanel(wx.Panel):
                                       )
         self.top_toolbar.SetBackgroundColour(
             theme['toolbar_bg'])
-        #self.dragdrop = self.top_toolbar.dragdrop
 
         self.buffer = None
 
         # and create a sizer to manage the layout of child widgets
-        sizer = wx.FlexGridSizer(
-            cols=2, rows=2, vgap=5, hgap=5)
+        sizer = wx.FlexGridSizer(cols=2, rows=2, vgap=0, hgap=0)
 
         # For the items (non-spacers),
         # The 0th element of the tuple is the element itself

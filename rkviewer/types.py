@@ -1,14 +1,19 @@
+"""Types and helper classes.
+"""
 from __future__ import annotations  # For returning self in a class
-from typing import NewType, List, Tuple
+from typing import List, Tuple, TypeVar
 import abc
 import copy
 # pylint: disable=maybe-no-member
 import wx
 
 
+TNum = TypeVar('TNum', float, int)
+
+
 class Vec2:
-    x: int
-    y: int
+    x: TNum
+    y: TNum
     _i: int
 
     def __init__(self, x, y=None):
@@ -31,7 +36,7 @@ class Vec2:
         self._i = 0
         return self
 
-    def __next__(self) -> int:
+    def __next__(self) -> TNum:
         if self._i == 0:
             self._i += 1
             return self.x
@@ -72,6 +77,17 @@ class Vec2:
 
     def __repr__(self) -> str:
         return '({}, {})'.format(self.x, self.y)
+
+    def __getitem__(self, i) -> TNum:
+        if i == 0:
+            return self.x
+        elif i == 1:
+            return self.y
+        else:
+            raise IndexError("Tried to access index {} of a Vec2".format(i))
+
+    def __len__(self) -> int:
+        return 2
 
     def to_wx_point(self) -> wx.Point:
         return wx.Point(self.x, self.y)
@@ -194,6 +210,8 @@ DEFAULT_THEME = {
     'toolbar_bg': wx.Colour(140, 140, 140),
     'canvas_width': 600,
     'canvas_height': 500,
+    'canvas_bg': wx.WHITE,
+    'canvas_outside_bg': wx.Colour(160, 160, 160),  # Bg color for the parts out of bounds
     'left_toolbar_width': 100,
     'top_toolbar_height': 40,
     'node_fill': wx.Colour(0, 255, 0, 50),
@@ -208,8 +226,9 @@ DEFAULT_THEME = {
     'node_handle_length': 6,  # Length of the squares one uses to drag resize nodes
     'node_outline_width': 1.6,  # Width of the selected node outline
     'init_scale': 1,
-    'min_node_width': 10,
-    'min_node_height': 6,
+    'min_node_width': 20,
+    'min_node_height': 15,
+    'zoom_slider_bg': wx.Colour(150, 150, 150)
 }
 
 

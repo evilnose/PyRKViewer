@@ -1,9 +1,9 @@
-from enum import Enum
-from rkviewer.utils import WithinRect
-from typing import Optional, Any, Tuple, List, Dict
 # pylint: disable=maybe-no-member
+from rkviewer.canvaswidgets import CanvasOverlay, Minimap
 import wx
-
+from enum import Enum
+from typing import Optional, Any, Tuple, List, Dict
+from .utils import WithinRect, DrawRect
 from .types import Rect, Vec2, Node, IController
 
 
@@ -32,7 +32,10 @@ class Canvas(wx.ScrolledWindow):
             is a logical position, i.e. the position relative to the virtual
             origin of the canvas, which may be offscreen.
         _scale (float): The scale (i.e. zoom level) of the displayed elements. The dimensions
-            of the elements are multiplied by this number
+                        of the elements are multiplied by this number. This should be updated whenever
+                        _zoom_level is.
+        _zoom_level (int): Discrete zoom level directly related to _scale. Negative for zoom out,
+                           0 for no zoom, positive for zoom in. Needed by slider.
         realsize (Vec2): The actual, total size of canvas, including the part offscreen.
         theme (Any): In fact a dictionary that holds the theme data. See types.DEFAULT_THEME
                      for fields. Set to 'Any' type for now due to some issues
@@ -47,11 +50,16 @@ class Canvas(wx.ScrolledWindow):
     _dragged_node: Optional[Node]
     _dragged_relative: wx.Point
     _left_down_pos: Vec2
+    _zoom_level: int
     _scale: float
     realsize: Vec2
     theme = Any  # Set as Any for now, since otherwise there was some issues with PyRight
     _selected_ids: List[str]
     _resize_handle: int
+    _minimap: Minimap
+
+    MIN_ZOOM_LEVEL = -10
+    MAX_ZOOM_LEVEL = 10
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int],
                  theme: Dict[str, Any], **kw):
@@ -80,6 +88,7 @@ class Canvas(wx.ScrolledWindow):
         self._dragged_relative = wx.Point()
         self._left_down_pos = Vec2(0, 0)
 
+        self._zoom_level = 0
         self._scale = 1
         self.realsize = Vec2(realsize)
         self.SetVirtualSize(self.realsize.x, self.realsize.y)
@@ -87,9 +96,55 @@ class Canvas(wx.ScrolledWindow):
         self._selected_ids = list()
         self._resize_handle = -1
 
+        self.zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM, size=(200, 25))
+        self.zoom_slider.SetRange(Canvas.MIN_ZOOM_LEVEL, Canvas.MAX_ZOOM_LEVEL)
+        self.zoom_slider.SetBackgroundColour(self.theme['zoom_slider_bg'])
+        self.Bind(wx.EVT_SLIDER, self.OnSlider)
+
+        self._minimap = Minimap(width=200, realsize=self.realsize, window_pos=Vec2(0, 0),
+                                window_size=Vec2(self.GetSize()), pos_callback=self.SetOriginPos)
+
+        # TODO add List[CanvasOverlay] to store all overlays, so that overlay mouse checking code 
+        # can be generalized
+
+        self.SetOverlayPositions()
+
     @property
     def scale(self):
         return self._scale
+    
+    def InWhichOverlay(self, pos: Vec2) -> Optional[CanvasOverlay]:
+        # TODO right now this is hardcoded; in the future add List[CanvasOverlay] attribute
+        if WithinRect(pos, Rect(self._minimap.position, self._minimap.size)):
+            return self._minimap
+        return None
+
+    def SetOverlayPositions(self):
+        """Set the positions of the overlaid widgets. 
+
+        This should be called in OnPaint so that the overlaid widgets stay in the same relative
+        position.
+        """
+        canvas_size = Vec2(self.GetSize())
+        scroll_width = wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X)
+        scroll_height = wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y)
+        scroll_off = Vec2(scroll_width, scroll_height)
+
+        zoom_pos = canvas_size - Vec2(self.zoom_slider.GetSize()) - scroll_off
+        self.zoom_slider.SetPosition(zoom_pos.to_wx_point())
+
+        # do all the minimap updates here, since this is simpler and less prone to bugs
+        minimap_pos = Vec2(self.GetSize()) - scroll_off - self._minimap.size
+        _, slider_height = self.zoom_slider.GetSize()
+        minimap_pos.y -= slider_height + 10
+        self._minimap.position = minimap_pos
+
+        self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(wx.Point(0, 0))) / self._scale
+        # TODO for windows, need to subtract scroll offset from window size. Need to test if this
+        # is true for Mac and Linux, however. -Gary
+        self._minimap.window_size = (Vec2(self.GetSize()) - scroll_off) / self._scale
+        self._minimap.realsize = self.realsize
+        self._minimap.nodes = self._nodes
 
     def ResetNodes(self, nodes: List[Node]):
         self._nodes = nodes
@@ -104,18 +159,31 @@ class Canvas(wx.ScrolledWindow):
             'zoom': InputMode.ZOOM,
         }[mode_str]
 
-    def Zoom(self, zooming_in: bool, anchor: Vec2):
+    def SetOriginPos(self, pos: Vec2):
+        # check if out of bounds
+        pos.x = max(pos.x, 0)
+        pos.y = max(pos.y, 0)
+
+        botright = pos + self.GetVirtualSize()
+        rsize = self.GetSize()
+        pos.x = min(pos.x, botright.x - rsize.x)
+        pos.y = min(pos.y, botright.x - rsize.y)
+
+        # TODONOW
+        pos = pos.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
+        self.Scroll(pos.x, pos.y)
+
+    def SetZoomLevel(self, zoom: int, anchor: Vec2):
         """Zoom in/out with the given anchor.
 
         The anchor point stays at the same relative position after
         zooming. Note that the anchor position is scrolled position,
         i.e. device position
         """
+        assert zoom >= Canvas.MIN_ZOOM_LEVEL and zoom <= Canvas.MAX_ZOOM_LEVEL
+        self._zoom_level = zoom
         old_scale = self._scale
-        if zooming_in:
-            self._scale *= 1.5
-        else:
-            self._scale /= 1.5
+        self._scale = 1.2 ** zoom
 
         # adjust scroll position
         logical = Vec2(self.CalcUnscrolledPosition(anchor.to_wx_point()))
@@ -124,12 +192,12 @@ class Canvas(wx.ScrolledWindow):
         newanchor = Vec2(self.CalcScrolledPosition(scaled.to_wx_point()))
         # the amount of shift needed to keep anchor at the same position
         shift = newanchor - anchor
-        cur_scroll = Vec2(
-            self.CalcUnscrolledPosition(0, 0))
+        cur_scroll = Vec2(self.CalcUnscrolledPosition(0, 0))
         new_scroll = cur_scroll + shift
         # convert to scroll units
         new_scroll = new_scroll.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
         self.Scroll(new_scroll.x, new_scroll.y)
+        self.SetOverlayPositions()
 
         for node in self._nodes:
             node.scale = self._scale
@@ -137,11 +205,18 @@ class Canvas(wx.ScrolledWindow):
         vsize = self.realsize * self._scale
         self.SetVirtualSize(vsize.x, vsize.y)
 
+        self.zoom_slider.SetValue(self._zoom_level)
+
         self.Refresh()
 
     def ZoomCenter(self, zooming_in: bool):
-        self.Zoom(zooming_in, Vec2(
-            self.GetSize()) / 2)
+        self.IncrementZoom(zooming_in, Vec2(self.GetSize()) / 2)
+
+    def IncrementZoom(self, zooming_in: bool, anchor: Vec2):
+        new_zoom = self._zoom_level + (1 if zooming_in else -1)
+        if new_zoom < self.MIN_ZOOM_LEVEL or new_zoom > self.MAX_ZOOM_LEVEL:
+            return
+        self.SetZoomLevel(new_zoom, anchor)
 
     def AddNodeRename(self, node: Node) -> Optional[str]:
         """Add node helper that renames if results in duplicate IDs.
@@ -169,6 +244,14 @@ class Canvas(wx.ScrolledWindow):
 
     def OnLeftDown(self, evt):
         device_pos = Vec2(evt.GetPosition())
+
+        # Check overlays
+        overlay = self.InWhichOverlay(device_pos)
+        if overlay is not None:
+            overlay.OnLeftDown(evt)
+            self.Refresh()
+            return
+
         logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
         self._left_down_pos = device_pos
         reselect = False  # set to true if we might want to select a new node
@@ -242,7 +325,7 @@ class Canvas(wx.ScrolledWindow):
             self.Refresh()
         elif self._input_mode == InputMode.ZOOM:
             zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
-            self.Zoom(zooming_in, device_pos)
+            self.IncrementZoom(zooming_in, device_pos)
         evt.Skip()
 
     def OnLeftUp(self, evt):
@@ -264,6 +347,14 @@ class Canvas(wx.ScrolledWindow):
 
     def OnMotion(self, evt):
         assert isinstance(evt, wx.MouseEvent)
+
+        device_pos = Vec2(evt.GetPosition())
+        overlay = self.InWhichOverlay(device_pos)
+        if overlay is not None:
+            overlay.OnMotion(evt)
+            self.Refresh()
+            return
+
         if self._input_mode == InputMode.SELECT:
             if evt.leftIsDown:  # dragging
                 if self._dragged_node is not None:
@@ -315,36 +406,40 @@ class Canvas(wx.ScrolledWindow):
         evt.Skip()
 
     def OnPaint(self, evt):
+        self.SetOverlayPositions()
         dc = wx.PaintDC(self)
         # Create graphics context from it
         gc = wx.GraphicsContext.Create(dc)
 
         if gc:
+            # draw background
+            DrawRect(
+                gc,
+                Rect(Vec2(0, 0), self.realsize * self._scale),
+                fill=self.theme['canvas_bg']
+            )
+
+            # create font for nodes
             font = wx.Font(
                 wx.FontInfo(10 * self._scale))
             gfont = gc.CreateFont(font, wx.BLACK)
             gc.SetFont(gfont)
 
+            # draw nodes
             for node in self._nodes:
+                x, y = self.CalcScrolledPosition(node.s_position.to_wx_point())
                 width, height = node.s_size
-                x, y = self.CalcScrolledPosition(
-                    node.s_position.to_wx_point())
                 border_width = node.border_width * self._scale
 
-                # make a path that contains a circle and some lines
-                brush = wx.Brush(
-                    node.fill_color, wx.BRUSHSTYLE_SOLID)
-                gc.SetBrush(brush)
-                pen = gc.CreatePen(wx.GraphicsPenInfo(
-                    node.border_color).Width(border_width))
-                gc.SetPen(pen)
-                path = gc.CreatePath()
-                path.AddRectangle(x, y, width, height)
+                DrawRect(
+                    gc,
+                    Rect(Vec2(x, y), node.s_size),
+                    fill=self.theme['node_fill'],
+                    border=self.theme['node_border'],
+                    border_width=border_width,
+                )
 
-                gc.FillPath(path)
-                gc.StrokePath(path)
-
-                # Draw text
+                # draw text
                 tw, th, _, _ = gc.GetFullTextExtent(
                     node.id_)
                 tx = (width - tw) / 2
@@ -352,10 +447,13 @@ class Canvas(wx.ScrolledWindow):
                 gc.DrawText(
                     node.id_, tx + x, ty + y)
 
+                # draw selected node outlines
                 # TODO handle multiple selected
                 selected_nodes = self._GetSelectedNodes()
                 if len(selected_nodes) != 0:
                     self._DrawNodeOutline(gc, selected_nodes[0])
+
+            self._minimap.Paint(gc)
 
     def _GetSelectedNodes(self) -> List[Node]:
         """Get the list of selected nodes using self._selected_ids"""
@@ -381,8 +479,7 @@ class Canvas(wx.ScrolledWindow):
         path.AddRectangle(pos.x, pos.y, size.x, size.y)
         gc.StrokePath(path)
 
-        brush = wx.Brush(
-            self.theme['node_outline_color'], wx.BRUSHSTYLE_SOLID)
+        brush = wx.Brush(self.theme['node_outline_color'], wx.BRUSHSTYLE_SOLID)
         gc.SetBrush(brush)
         rects = self._GetNodeResizeHandleRects(outline_rect)
         for rect in rects:
@@ -421,7 +518,7 @@ class Canvas(wx.ScrolledWindow):
         """
         pos, size = outline_rect.GetTuple()
         centers = [pos, pos + Vec2(size.x, 0), pos + size, pos + Vec2(0, size.y)]
-        side = self.theme['node_handle_length'] * self._scale
+        side = self.theme['node_handle_length']
         ret = list()
         for center in centers:
             ret.append(Rect(center - Vec2.unity() * side / 2, Vec2.unity() * side))
@@ -453,6 +550,10 @@ class Canvas(wx.ScrolledWindow):
                 -evt.GetWheelRotation())
 
         evt.Skip()
+
+    def OnSlider(self, evt):
+        level = self.zoom_slider.GetValue()
+        self.SetZoomLevel(level, Vec2(self.GetSize()) / 2)
 
     def OnNodeDrop(self, pos):
         print('dropped')

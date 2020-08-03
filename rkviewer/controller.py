@@ -1,8 +1,7 @@
-from typing import List
-import IodineAPI as iod
 # pylint: disable=maybe-no-member
 import wx
-
+from typing import List
+import IodineAPI as iod
 from .types import Vec2, Node, IView, IController
 from .utils import IodToWxColour
 

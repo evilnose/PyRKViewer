@@ -13,6 +13,22 @@ class Controller(IController):
         self.view = view
         iod.newNetwork('the one')
 
+    def TryStartGroup(self) -> bool:
+        try:
+            iod.startGroup()
+        except iod.Error as e:
+            print('Error:', str(e))
+            return False
+        return True
+
+    def TryEndGroup(self) -> bool:
+        try:
+            iod.endGroup()
+        except iod.Error as e:
+            print('Error:', str(e))
+            return False
+        return True
+
     def TryAddNode(self, node: Node) -> bool:
         '''
         Add node represented by the given Node variable.
@@ -23,10 +39,14 @@ class Controller(IController):
         # keep incrementing as long as there is duplicate ID
         # TODO change
         try:
+            iod.startGroup()
             iod.addNode(neti, node.id_, node.position.x, node.position.y, node.size.x, node.size.y)
             nodei = iod.getNodeIndex(neti, node.id_)
             iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
-            iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(), node.fill_color.Green(), node.fill_color.Blue())
+            iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
+                                    node.fill_color.Green(), node.fill_color.Blue())
+            iod.setNodeOutlineThickness(neti, nodei, node.border_width)
+            iod.endGroup()
         except iod.Error as e:
             print('Error:', str(e))
             return False
@@ -34,12 +54,18 @@ class Controller(IController):
         self._UpdateView()
         return True
 
-    def TryMoveNode(self, id_: str, pos: Vec2):
+    def TryMoveNode(self, id_: str, pos: Vec2) -> bool:
         neti = 0
         # TODO exception
         nodei = iod.getNodeIndex(neti, id_)
-        iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
+        try:
+            iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
+        except iod.Error as e:
+            print('Error:', str(e))
+            return False
+
         self._UpdateView()
+        return True
 
     def TrySetNodeSize(self, id_: str, size: Vec2):
         neti = 0

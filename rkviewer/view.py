@@ -73,7 +73,7 @@ class MainPanel(wx.Panel):
     def __init__(self, parent, controller: IController, theme: Dict[str, Any]):
         # ensure the parent's __init__ is called
         super().__init__(parent, style=wx.CLIP_CHILDREN)
-        self.SetBackgroundColour(wx.Colour(176, 176, 176))
+        self.SetBackgroundColour(theme['overall_bg'])
         self.controller = controller
         self.theme = theme
         self.canvas = Canvas(self.controller, self,
@@ -104,7 +104,7 @@ class MainPanel(wx.Panel):
         self.buffer = None
 
         # and create a sizer to manage the layout of child widgets
-        sizer = wx.FlexGridSizer(cols=2, rows=2, vgap=0, hgap=0)
+        sizer = wx.FlexGridSizer(cols=2, rows=2, vgap=3, hgap=3)
 
         # For the items (non-spacers),
         # The 0th element of the tuple is the element itself

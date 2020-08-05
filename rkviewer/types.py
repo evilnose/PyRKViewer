@@ -1,7 +1,7 @@
 """Types and helper classes.
 """
 from __future__ import annotations  # For returning self in a class
-from typing import List, Tuple, TypeVar
+from typing import Callable, List, Tuple, TypeVar
 import abc
 import copy
 # pylint: disable=maybe-no-member
@@ -16,7 +16,7 @@ class Vec2:
     y: TNum
     _i: int
 
-    def __init__(self, x, y=None):
+    def __init__(self, x=None, y=None):
         """Initialize a 2D vector.
 
         If two arguments are specified, they are considered the x and y coordinate
@@ -25,12 +25,20 @@ class Vec2:
         If only one argument is specified, it should be an iterable of two elements,
         which will be unwrapped as x and y.
         """
-        if y is None:
+        self._i = 0
+        if x is None:
+            if y is not None:
+                raise ValueError('x cannot be None when y is not None. Use one of three '
+                                 'constructors: Vec2(x, y), Vec2(Other(x, y)), or Vec2()')
+            else:
+                self.x = 0
+                self.y = 0
+
+        elif y is None:
             self.x, self.y = x
         else:
             self.x = x
             self.y = y
-            self._i = 0
 
     def __iter__(self) -> Vec2:
         self._i = 0
@@ -49,28 +57,19 @@ class Vec2:
     def __add__(self, other) -> Vec2:
         return Vec2(self.x + other.x, self.y + other.y)
 
-    def __iadd__(self, other) -> Vec2:
-        self.x += other.x
-        self.y += other.y
-        return self
+    __iadd__ = __add__
 
     def __sub__(self, other) -> Vec2:
         return Vec2(self.x - other.x, self.y - other.y)
 
-    def __isub__(self, other) -> Vec2:
-        self.x -= other.x
-        self.y -= other.y
-        return self
+    __isub__ = __sub__
 
     def __mul__(self, k) -> Vec2:
         return Vec2(self.x * k, self.y * k)
 
     __rmul__ = __mul__
 
-    def __imul__(self, k) -> Vec2:
-        self.x = self.x * k
-        self.y *= self.y * k
-        return self
+    __imul__ = __mul__
 
     def __truediv__(self, k) -> Vec2:
         return Vec2(self.x / k, self.y / k)
@@ -78,13 +77,22 @@ class Vec2:
     def __repr__(self) -> str:
         return '({}, {})'.format(self.x, self.y)
 
-    def __getitem__(self, i) -> TNum:
+    def __getitem__(self, i: int):
         if i == 0:
             return self.x
         elif i == 1:
             return self.y
         else:
-            raise IndexError("Tried to access index {} of a Vec2".format(i))
+            raise IndexError("Tried to get axis {} of a Vec2".format(i))
+
+    def swapped(self, i: int, val: TNum):
+        """Return a Vec2 equal to this one but with the ith element swapped for val."""
+        if i == 0:
+            return Vec2(val, self.y)
+        elif i == 1:
+            return Vec2(self.x, val)
+        else:
+            raise IndexError("Tried to swap axis {} of a Vec2".format(i))
 
     def __len__(self) -> int:
         return 2
@@ -102,9 +110,12 @@ class Vec2:
     def elem_abs(self) -> Vec2:
         return Vec2(abs(self.x), abs(self.y))
 
+    def map(self, op: Callable) -> Vec2:
+        return Vec2(op(self.x), op(self.y))
+
     @classmethod
-    def unity(cls) -> Vec2:
-        return Vec2(1, 1)
+    def repeat(cls, val: TNum = 1) -> Vec2:
+        return Vec2(val, val)
 
 
 class Rect:
@@ -139,12 +150,12 @@ class Node:
     _s_size: Vec2  # scaled size
     fill_color: wx.Colour
     border_color: wx.Colour
-    border_width: int
+    border_width: float
     _scale: float
 
     # force keyword-only arguments
     def __init__(self, *, id_: str, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: int, scale: float = 1):
+                 border_color: wx.Colour, border_width: float, scale: float = 1):
         self._scale = scale
         self.id_ = id_
         self.position = pos
@@ -199,13 +210,18 @@ class Node:
         self._s_position = self._position * self._scale
         self._s_size = self._size * self._scale
 
-    '''
-    def as_rect(self) -> Rect:
-        """Return scaled position/size as Rect"""
+    @property
+    def s_rect(self):
+        """Return scaled position/size as Rect.
+
+        Note that the fields of the returned rect is copied, so one cannot modify this node through
+        the rect.
+        """
         return Rect(copy.copy(self.s_position), copy.copy(self.s_size))
-    '''
+
 
 DEFAULT_THEME = {
+    'overall_bg': wx.Colour(255, 112, 0),
     'canvas_bg': wx.WHITE,
     'toolbar_bg': wx.Colour(140, 140, 140),
     'canvas_width': 600,
@@ -218,13 +234,15 @@ DEFAULT_THEME = {
     'node_border': wx.Colour(255, 0, 0, 100),
     'node_width': 50,
     'node_height': 30,
-    'node_border_width': 1,
+    'node_border_width': 2,
     'node_font_size': 10,  # TODO
     'node_font_color': wx.Colour(255, 0, 0, 100),  # TODO
-    'node_outline_color': wx.Colour(0, 140, 255),  # Distance from node to its (selection) outline
-    'node_outline_padding': 3,  # Distance from node to its (selection) outline
-    'node_handle_length': 6,  # Length of the squares one uses to drag resize nodes
-    'node_outline_width': 1.6,  # Width of the selected node outline
+    'node_outline_width': 1.6,  # Width of the outline around each selected node
+    'node_outline_padding': 2,  # Padding of the outline around each selected node
+    'select_box_color': wx.Colour(0, 140, 255),
+    'select_box_padding': 5,  # Padding of the select box, relative to the mininum possible bbox
+    'select_handle_length': 8,  # Length of the squares one uses to drag resize nodes
+    'select_outline_width': 3,  # Width of the select box outline
     'init_scale': 1,
     'min_node_width': 20,
     'min_node_height': 15,
@@ -242,6 +260,16 @@ class IController(abc.ABC):
     some user input. If the action tried in such a method succeeds, the Controller
     should request the view to be redrawn
     """
+
+    @abc.abstractmethod
+    def TryStartGroup(self) -> bool:
+        """Try to signal start of group operation"""
+        pass
+
+    @abc.abstractmethod
+    def TryEndGroup(self) -> bool:
+        """Try to signal end of group operation"""
+        pass
 
     @abc.abstractmethod
     def TryAddNode(self, node: Node) -> bool:

@@ -1,10 +1,14 @@
 # pylint: disable=maybe-no-member
-from rkviewer.canvaswidgets import CanvasOverlay, Minimap
+from .canvasutils import CanvasOverlay, Minimap, MultiSelect
 import wx
 from enum import Enum
-from typing import Optional, Any, Tuple, List, Dict
-from .utils import WithinRect, DrawRect
+from typing import Optional, Any, Set, Tuple, List, Dict
+from .utils import ClampRectPos, WithinRect, DrawRect
 from .types import Rect, Vec2, Node, IController
+
+
+BOUNDS_EPS = 1
+BOUNDS_EPS_VEC = Vec2.repeat(BOUNDS_EPS)
 
 
 class InputMode(Enum):
@@ -21,12 +25,10 @@ class Canvas(wx.ScrolledWindow):
         nodes (List[Node]): List of Node instances. This contains data needed
             rendering them.
         _input_mode (InputMode): The current input mode, e.g. SELECT, ADD, etc.
-        _dragged_node (Optional[Node]): The node current dragged, or None if no
-            Node is being dragged. TODO make this a list and change this to IDs
-        _dragged_relative (wx.Point): The relative (unscrolled) position of the dragged
-            node. This is used to make sure the draggednode stays at the same relative
-            position when the panel is scrolled.
-        _left_down_pos (Vec2): The last time the "down" event is
+        _dragged_rel_window (wx.Point): The relative (unscrolled) position of the dragged
+            node. This is used to make sure the draggednode stays at the same position (relative to
+            the window) as the panel is scrolled.
+        _dragged_rel_mouse (Vec2): The last time the "down" event is
             triggered for the left mouse button. This is used to keep track of
             the relative distance traversed for the drag event. Note that this
             is a logical position, i.e. the position relative to the virtual
@@ -41,21 +43,18 @@ class Canvas(wx.ScrolledWindow):
                      for fields. Set to 'Any' type for now due to some issues
                      with Dict typing.
         _selected_ids (List[str]): The list of ids of the selected nodes.
-        _resize_handle (int): -1 if currently not resizing node, or 0-3 meaning  which vertex is
-                              being dragged. 0: top-left corner, and other vertices follow clockwise
     """
     controller: IController
     _nodes: List[Node]
     _input_mode: InputMode
-    _dragged_node: Optional[Node]
-    _dragged_relative: wx.Point
+    _multiselect: Optional[MultiSelect]
     _left_down_pos: Vec2
     _zoom_level: int
     _scale: float
     realsize: Vec2
     theme = Any  # Set as Any for now, since otherwise there was some issues with PyRight
-    _selected_ids: List[str]
-    _resize_handle: int
+    _selected_ids: Set[str]
+    # The outline drawn around the node(s) to be resized TODO document this
     _minimap: Minimap
 
     MIN_ZOOM_LEVEL = -10
@@ -78,33 +77,36 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
         self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
 
         # state variables
         self._input_mode = InputMode.SELECT
-        self._dragged_node = None
         # Set to (0, 0) since this won't be used before it's updated once first
-        self._dragged_relative = wx.Point()
-        self._left_down_pos = Vec2(0, 0)
+        self._dragged_rel_window = wx.Point()
+        self._left_down_pos = Vec2()
 
         self._zoom_level = 0
         self._scale = 1
         self.realsize = Vec2(realsize)
-        self.SetVirtualSize(self.realsize.x, self.realsize.y)
+        scroll_width = wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X)
+        scroll_height = wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y)
+        self._scroll_off = Vec2(scroll_width, scroll_height)
+        self.SetVirtualSize(*self.realsize)
 
-        self._selected_ids = list()
-        self._resize_handle = -1
+        self._selected_ids = set()
+        self._multiselect = None
 
         self.zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM, size=(200, 25))
         self.zoom_slider.SetRange(Canvas.MIN_ZOOM_LEVEL, Canvas.MAX_ZOOM_LEVEL)
         self.zoom_slider.SetBackgroundColour(self.theme['zoom_slider_bg'])
         self.Bind(wx.EVT_SLIDER, self.OnSlider)
 
-        self._minimap = Minimap(width=200, realsize=self.realsize, window_pos=Vec2(0, 0),
+        self._minimap = Minimap(width=200, realsize=self.realsize, window_pos=Vec2(),
                                 window_size=Vec2(self.GetSize()), pos_callback=self.SetOriginPos)
 
-        # TODO add List[CanvasOverlay] to store all overlays, so that overlay mouse checking code 
+        # TODO add List[CanvasOverlay] to store all overlays, so that overlay mouse checking code
         # can be generalized
 
         self.SetOverlayPositions()
@@ -112,7 +114,7 @@ class Canvas(wx.ScrolledWindow):
     @property
     def scale(self):
         return self._scale
-    
+
     def InWhichOverlay(self, pos: Vec2) -> Optional[CanvasOverlay]:
         # TODO right now this is hardcoded; in the future add List[CanvasOverlay] attribute
         if WithinRect(pos, Rect(self._minimap.position, self._minimap.size)):
@@ -126,15 +128,12 @@ class Canvas(wx.ScrolledWindow):
         position.
         """
         canvas_size = Vec2(self.GetSize())
-        scroll_width = wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X)
-        scroll_height = wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y)
-        scroll_off = Vec2(scroll_width, scroll_height)
 
-        zoom_pos = canvas_size - Vec2(self.zoom_slider.GetSize()) - scroll_off
+        zoom_pos = canvas_size - Vec2(self.zoom_slider.GetSize()) - self._scroll_off
         self.zoom_slider.SetPosition(zoom_pos.to_wx_point())
 
         # do all the minimap updates here, since this is simpler and less prone to bugs
-        minimap_pos = Vec2(self.GetSize()) - scroll_off - self._minimap.size
+        minimap_pos = Vec2(self.GetSize()) - self._scroll_off - self._minimap.size
         _, slider_height = self.zoom_slider.GetSize()
         minimap_pos.y -= slider_height + 10
         self._minimap.position = minimap_pos
@@ -142,7 +141,7 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(wx.Point(0, 0))) / self._scale
         # TODO for windows, need to subtract scroll offset from window size. Need to test if this
         # is true for Mac and Linux, however. -Gary
-        self._minimap.window_size = (Vec2(self.GetSize()) - scroll_off) / self._scale
+        self._minimap.window_size = Vec2(self.GetSize()) / self._scale - self._scroll_off
         self._minimap.realsize = self.realsize
         self._minimap.nodes = self._nodes
 
@@ -160,18 +159,19 @@ class Canvas(wx.ScrolledWindow):
         }[mode_str]
 
     def SetOriginPos(self, pos: Vec2):
+        pos *= self._scale
         # check if out of bounds
         pos.x = max(pos.x, 0)
         pos.y = max(pos.y, 0)
 
-        limit = Vec2(self.GetVirtualSize()) - Vec2(self.GetSize())
+        limit = self.realsize * self._scale - Vec2(self.GetSize())
         pos.x = min(pos.x, limit.x)
         pos.y = min(pos.y, limit.x)
 
         pos = pos.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
         # need to mult by scale here since self.VirtualPosition is artificially increased, per
         # scale * self.realsize
-        self.Scroll(pos.x * self._scale, pos.y * self._scale)
+        self.Scroll(pos.x, pos.y)
 
     def SetZoomLevel(self, zoom: int, anchor: Vec2):
         """Zoom in/out with the given anchor.
@@ -196,8 +196,6 @@ class Canvas(wx.ScrolledWindow):
         new_scroll = cur_scroll + shift
         # convert to scroll units
         new_scroll = new_scroll.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
-        self.Scroll(new_scroll.x, new_scroll.y)
-        self.SetOverlayPositions()
 
         for node in self._nodes:
             node.scale = self._scale
@@ -205,9 +203,14 @@ class Canvas(wx.ScrolledWindow):
         vsize = self.realsize * self._scale
         self.SetVirtualSize(vsize.x, vsize.y)
 
+        # Important: set virtual size first, then scroll
+        self.Scroll(new_scroll.x, new_scroll.y)
+        self.SetOverlayPositions()
+
         self.zoom_slider.SetValue(self._zoom_level)
         self.zoom_slider.SetPageSize(2)
 
+        self._UpdateMultiSelect()
         self.Refresh()
 
     def ZoomCenter(self, zooming_in: bool):
@@ -218,6 +221,21 @@ class Canvas(wx.ScrolledWindow):
         if new_zoom < self.MIN_ZOOM_LEVEL or new_zoom > self.MAX_ZOOM_LEVEL:
             return
         self.SetZoomLevel(new_zoom, anchor)
+
+    def _UpdateMultiSelect(self):
+        """Reconstruct the MultiSelect object from the current nodes.
+
+        This should be called before self._multiselect is used, if its list of selected nodes is
+        outdated. The list of nodes become outdated when self._nodes is overwritten, chiefly in
+        ResetNodes(), or when the list of selected nodes is changed.
+        """
+        nodes = self._GetSelectedNodes()
+        if len(nodes) != 0:
+            bounds = Rect(BOUNDS_EPS_VEC, self.realsize * self._scale - BOUNDS_EPS_VEC)
+            self._multiselect = MultiSelect(self._GetSelectedNodes(), self.theme,
+                                            bounds)
+        else:
+            self._multiselect = None
 
     def AddNodeRename(self, node: Node) -> Optional[str]:
         """Add node helper that renames if results in duplicate IDs.
@@ -255,54 +273,53 @@ class Canvas(wx.ScrolledWindow):
 
         logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
         self._left_down_pos = device_pos
-        reselect = False  # set to true if we might want to select a new node
+        reselect = True  # set to true if we want to scrap existing selected nodes and reselect
+        in_node = self._InNode(logical_pos)
 
         if self._input_mode == InputMode.SELECT:
-            if len(self._selected_ids) == 0:
-                reselect = True
-            else:
+            if len(self._selected_ids) != 0:
+                assert self._multiselect is not None
+                bounding_rect = self._multiselect.bounding_rect
                 # there are selected nodes; test if user clicked inside outline bounds or if user
                 # is resizing node
                 selected_nodes = self._GetSelectedNodes()
 
-                # TODO remove this once we can select multiple
-                assert len(selected_nodes) == 1
-
-                # get dimensions of outline
+                # get dimensions of outline TODO select multiple
                 node = selected_nodes[0]
-                outline_rect = self._GetNodeOutlineRect(node)
-                rects = self._GetNodeResizeHandleRects(outline_rect)
+                rects = self._GetNodeResizeHandleRects(bounding_rect)
 
-                handle = -1
                 for i, rect in enumerate(rects):
                     if WithinRect(logical_pos, rect):
-                        handle = i
-                        break
+                        self._UpdateMultiSelect()
+                        self._multiselect.BeginResize(i)
+                        return
 
-                if handle >= 0:
-                    # resize time
-                    self._resize_handle = handle
-                else:
-                    if WithinRect(logical_pos, outline_rect):
-                        # keep selecting this selected node, but need to update self._dragged_node
-                        # in case things were redrawn
-                        self._dragged_node = self._GetSelectedNodes()[0]
+                if WithinRect(logical_pos, bounding_rect):
+                    # re-create a MultiSelect since self.nodes could've changed when mouse
+                    # button was released
+                    self._UpdateMultiSelect()
+                    self._multiselect.BeginDrag(logical_pos)
+                    reselect = False
+
+            # re-select a node, which is outside of the currently selected nodes
+            if wx.GetKeyState(wx.WXK_CONTROL):
+                # possible multi-select
+                if in_node is not None:
+                    if in_node.id_ in self._selected_ids:
+                        self._selected_ids.remove(in_node.id_)
                     else:
-                        reselect = True
+                        self._selected_ids.add(in_node.id_)
+            elif reselect:
+                self._selected_ids = set()
+                if in_node is not None:
+                    self._selected_ids.add(in_node.id_)
 
-            if reselect:
-                # check if there is node under clicked position
-                # consider newly added nodes to be on top
-                self._dragged_node = None
-                for node in reversed(self._nodes):
-                    if WithinRect(logical_pos, Rect(node.s_position, node.s_size)):
-                        self._dragged_node = node
-                        break
-
-                if self._dragged_node is None:
-                    self._selected_ids = list()
-                else:
-                    self._selected_ids = [self._dragged_node.id_]
+            # create new MultiSelect if there are nodes selected
+            if len(self._selected_ids) != 0:
+                self._UpdateMultiSelect()
+                self._multiselect.BeginDrag(logical_pos)
+            else:
+                self._multiselect = None
 
             self.Refresh()
 
@@ -322,12 +339,15 @@ class Canvas(wx.ScrolledWindow):
                 border_width=self.theme['node_border_width'],
                 scale=self._scale,
             )
+            node.s_position = ClampRectPos(node.s_rect, Rect(Vec2(), self.realsize * self._scale),
+                                           BOUNDS_EPS)
             self.AddNodeRename(node)
             self.Refresh()
         elif self._input_mode == InputMode.ZOOM:
             zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
             self.IncrementZoom(zooming_in, device_pos)
         evt.Skip()
+
 
     def OnLeftUp(self, evt):
         device_pos = Vec2(evt.GetPosition())
@@ -339,79 +359,68 @@ class Canvas(wx.ScrolledWindow):
 
         if self._input_mode == InputMode.SELECT:
             # move dragged node
-            if self._dragged_node is not None:
-                assert self._resize_handle == -1  # cannot be dragging & resizing at the same time
+            self._UpdateDrag(True)
 
-                self.controller.TryMoveNode(self._dragged_node.id_, self._dragged_node.position)
-                # not dragging anymore
-                self._dragged_node = None
-            elif self._resize_handle != -1:
-                assert self._resize_handle >= 0 and self._resize_handle <= 3
-                # TODO ask controller to resize
-                node = self._GetSelectedNodes()[0]
-                self.controller.TryMoveNode(node.id_, node.position)
-                self.controller.TrySetNodeSize(node.id_, node.size)
-                self._resize_handle = -1  # not resizing anymore
+    def _UpdateDrag(self, stop_drag: bool):
+        """Called by OnLeftUp() or OnLeaveWindow() to send updated node pos/size to controller.
+        
+        For OnLeftUp() this is called with stop_drag = True, since we know the user has stopped
+        dragging.
+
+        For leaveWindow() this is called with stop_drag = False, since the user might still
+        be dragging after the mouse has returned to window.
+
+        TODO add handlers for outside of window, for smoother dragging experience.
+        """
+        if self._multiselect is not None:
+            if self._multiselect.dragging:
+                assert not self._multiselect.resizing
+
+                self.controller.TryStartGroup()
+                for node in self._multiselect.nodes:
+                    self.controller.TryMoveNode(node.id_, node.position)
+                self.controller.TryEndGroup()
+                if stop_drag:
+                    self._multiselect.EndDrag()
+                else:
+                    self._multiselect.refresh_nodes(self._GetSelectedNodes())
+            elif self._multiselect.resizing:
+                self.controller.TryStartGroup()
+                for node in self._multiselect.nodes:
+                    self.controller.TryMoveNode(node.id_, node.position)
+                    self.controller.TrySetNodeSize(node.id_, node.size)
+                self.controller.TryEndGroup()
+                if stop_drag:
+                    self._multiselect.EndResize()
+                else:
+                    self._multiselect.refresh_nodes(self._GetSelectedNodes())
 
     def OnMotion(self, evt):
         assert isinstance(evt, wx.MouseEvent)
 
-        device_pos = Vec2(evt.GetPosition())
-        overlay = self.InWhichOverlay(device_pos)
-        if overlay is not None:
-            overlay.OnMotion(evt)
+        try:
+            device_pos = Vec2(evt.GetPosition())
+            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+
+            # dragging takes priority here
+            if self._input_mode == InputMode.SELECT:
+                if evt.leftIsDown:  # dragging
+                    if self._multiselect is not None:
+                        if self._multiselect.dragging:
+                            assert self._left_down_pos is not None
+
+                            self._multiselect.DoDrag(logical_pos)
+                            return
+                        elif self._multiselect.resizing:
+                            self._multiselect.DoResize(logical_pos)
+                            return
+
+            overlay = self.InWhichOverlay(device_pos)
+            if overlay is not None:
+                overlay.OnMotion(evt)
+        finally:
             self.Refresh()
-            return
-
-        if self._input_mode == InputMode.SELECT:
-            if evt.leftIsDown:  # dragging
-                if self._dragged_node is not None:
-                    assert self._left_down_pos is not None
-                    assert self._resize_handle == -1
-
-                    mouse_pos = Vec2(evt.GetPosition())
-                    relative = mouse_pos - self._left_down_pos
-                    # updated dragged node position
-                    self._dragged_node.s_position += relative
-                    self._dragged_relative = self.CalcScrolledPosition(
-                        self._dragged_node.s_position.to_wx_point())
-                    # update _left_down_pos for later dragging
-                    self._left_down_pos = mouse_pos
-                    self.Refresh()
-                elif self._resize_handle != -1:
-                    assert self._resize_handle >= 0 and self._resize_handle <= 3
-                    # opposite_pt =
-                    node = self._GetSelectedNodes()[0]
-                    outline = self._GetNodeOutlineRect(node)
-                    # get opposite vertex as fixed point
-                    fixed_point = outline.NthVertex((self._resize_handle + 2) % 4)
-                    dragged_point = outline.NthVertex(self._resize_handle)
-                    target_point = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
-
-                    orig_diff = dragged_point - fixed_point
-                    target_diff = target_point - fixed_point
-                    size_ratio = target_diff.elem_div(orig_diff)
-                    # convert outline diff to unscaled rect diff
-                    rect_diff = node.s_size.elem_mul(size_ratio) / self._scale
-                    if abs(rect_diff.x) >= self.theme['min_node_width'] and \
-                            abs(rect_diff.y) >= self.theme['min_node_height']:
-                        # check that we are not going negative, i.e. "flipping" the node
-                        signs = orig_diff.elem_mul(target_diff)
-                        if signs.x >= 0 and signs.y >= 0:  # same signs
-                            # pos takes the minimum of the x's and y's of any two opposing vertices
-                            new_outline_pos = Vec2(min(fixed_point.x, target_point.x),
-                                                   min(fixed_point.y, target_point.y))
-                            new_pos = new_outline_pos + Vec2.unity() * \
-                                self.theme['node_outline_padding']
-
-                            if new_pos.x >= 0 and new_pos.y >= 0:
-                                # can resize
-                                new_size = rect_diff.elem_abs()
-                                node.s_position = new_pos
-                                node.size = new_size  # rect_diff is unscaled
-                                self.Refresh()
-
-        evt.Skip()
+            evt.Skip()
 
     def OnPaint(self, evt):
         self.SetOverlayPositions()
@@ -420,16 +429,16 @@ class Canvas(wx.ScrolledWindow):
         gc = wx.GraphicsContext.Create(dc)
 
         if gc:
-            # draw background
+            # draw background for debugging
+            origin = Vec2(self.CalcScrolledPosition(wx.Point(0, 0)))
             DrawRect(
                 gc,
-                Rect(Vec2(0, 0), self.realsize * self._scale),
-                fill=self.theme['canvas_bg']
+                Rect(origin, self.realsize * self._scale),
+                fill=self.theme['canvas_bg'],
             )
 
             # create font for nodes
-            font = wx.Font(
-                wx.FontInfo(10 * self._scale))
+            font = wx.Font(wx.FontInfo(10 * self._scale))
             gfont = gc.CreateFont(font, wx.BLACK)
             gc.SetFont(gfont)
 
@@ -448,20 +457,72 @@ class Canvas(wx.ScrolledWindow):
                 )
 
                 # draw text
-                tw, th, _, _ = gc.GetFullTextExtent(
-                    node.id_)
+                tw, th, _, _ = gc.GetFullTextExtent(node.id_)
                 tx = (width - tw) / 2
                 ty = (height - th) / 2
-                gc.DrawText(
-                    node.id_, tx + x, ty + y)
+                gc.DrawText(node.id_, tx + x, ty + y)
 
+            nodes = self._GetSelectedNodes()
+
+            if self._multiselect is not None:
+                width = self.theme['node_outline_width'] if len(nodes) == 1 else \
+                    self.theme['select_outline_width']
+                self._DrawResizeRect(gc, self._multiselect.bounding_rect, width)
+
+            if len(nodes) > 1:
                 # draw selected node outlines
-                # TODO handle multiple selected
-                selected_nodes = self._GetSelectedNodes()
-                if len(selected_nodes) != 0:
-                    self._DrawNodeOutline(gc, selected_nodes[0])
+                for node in nodes:
+                    self._DrawNodeOutline(gc, node.s_rect, node.border_width)
 
-            self._minimap.Paint(gc)
+            self._minimap.OnPaint(gc)
+
+    def OnLeaveWindow(self, evt):
+        self._UpdateDrag(False)
+
+    def _InNode(self, logical_pos: Vec2) -> Optional[Node]:
+        in_node: Optional[Node] = None
+        for node in reversed(self._nodes):
+            if WithinRect(logical_pos, node.s_rect):
+                in_node = node
+                break
+        return in_node
+
+    def _DrawNodeOutline(self, gc: wx.GraphicsContext, rect: Rect, border_width: float):
+        """Draw the outline around a selected node, given its scaled rect.
+
+        Note: the given rect will be modified.
+        """
+        # change position to device coordinates for drawing
+        adj_pos = Vec2(self.CalcScrolledPosition(rect.position.to_wx_point()))
+        rect.position = adj_pos
+
+        # add padding and account for border
+        rect.position -= Vec2.repeat(self.theme['node_outline_padding'])
+        rect.size += Vec2.repeat(
+            self.theme['node_outline_padding'] * 2)
+
+        # draw rect
+        DrawRect(gc, rect, border=self.theme['select_box_color'],
+                 border_width=self.theme['node_outline_width'])
+
+    def _DrawResizeRect(self, gc: wx.GraphicsContext, rect: Rect, border_width: float):
+        """Draw the outline around a node.
+
+        This also draws the eight resize handles.
+        """
+        # convert to device position for drawing
+        pos, size = rect.GetTuple()
+        adj_pos = Vec2(self.CalcScrolledPosition(pos.to_wx_point()))
+
+        # draw main outline
+        DrawRect(gc, Rect(adj_pos, size), border=self.theme['select_box_color'],
+                 border_width=border_width)
+
+        for handle_rect in self._GetNodeResizeHandleRects(rect):
+            # convert to device position for drawing
+            rpos, rsize = handle_rect.GetTuple()
+            rpos = Vec2(self.CalcScrolledPosition(rpos.to_wx_point()))
+            DrawRect(gc, Rect(rpos, rsize), fill=self.theme['select_box_color'])
 
     def _GetSelectedNodes(self) -> List[Node]:
         """Get the list of selected nodes using self._selected_ids"""
@@ -469,51 +530,8 @@ class Canvas(wx.ScrolledWindow):
         assert len(selected_nodes) == len(self._selected_ids)
         return selected_nodes
 
-    def _DrawNodeOutline(self, gc: wx.GraphicsContext, node: Node):
-        """Draw the outline around a node.
-
-        This also draws the resize handles (squares on the four quarters)
-        """
-        pen = gc.CreatePen(wx.GraphicsPenInfo(
-            self.theme['node_outline_color']).Width(self.theme['node_outline_width']))
-        gc.SetPen(pen)
-
-        outline_rect = self._GetNodeOutlineRect(node)
-        pos, size = outline_rect.GetTuple()
-        # convert to device position for drawing
-        pos = Vec2(self.CalcScrolledPosition(pos.to_wx_point()))
-
-        path = gc.CreatePath()
-        path.AddRectangle(pos.x, pos.y, size.x, size.y)
-        gc.StrokePath(path)
-
-        brush = wx.Brush(self.theme['node_outline_color'], wx.BRUSHSTYLE_SOLID)
-        gc.SetBrush(brush)
-        rects = self._GetNodeResizeHandleRects(outline_rect)
-        for rect in rects:
-            rpos, rsize = rect.GetTuple()
-            # convert to device position for drawing
-            rpos = Vec2(self.CalcScrolledPosition(rpos.to_wx_point()))
-            path = gc.CreatePath()
-            path.AddRectangle(rpos.x, rpos.y, rsize.x, rsize.y)
-            gc.FillPath(path)
-
-    def _GetNodeOutlineRect(self, node: Node) -> Rect:
-        """Helper that computes the scaled position and size of the node outline.
-
-        If scrolled is True, compute the scrolled position instead, i.e. relative to the
-        visible canvas.
-        """
-        # TODO update this for multiple nodes and update documentation too
-        realpos = Vec2(node.s_position.to_wx_point())
-        pos = realpos - Vec2.unity() * self.theme['node_outline_padding']
-        size = node.s_size + Vec2.unity() * 2 * self.theme['node_outline_padding']
-        return Rect(pos, size)
-
     def _GetNodeResizeHandleRects(self, outline_rect: Rect) -> List[Rect]:
         """Helper that computes the scaled positions and sizes of the resize handles.
-
-        Note that one can pass the unpacked return value of _GetNodeOutlineRect() directly to this.
 
         Args:
             pos (Vec2): The position of the top-left corner of the node outline.
@@ -525,27 +543,19 @@ class Canvas(wx.ScrolledWindow):
             all other handles follow in clockwise fashion.
         """
         pos, size = outline_rect.GetTuple()
-        centers = [pos, pos + Vec2(size.x, 0), pos + size, pos + Vec2(0, size.y)]
-        side = self.theme['node_handle_length']
-        ret = list()
-        for center in centers:
-            ret.append(Rect(center - Vec2.unity() * side / 2, Vec2.unity() * side))
+        centers = [pos, pos + Vec2(size.x / 2, 0),
+                   pos + Vec2(size.x, 0), pos + Vec2(size.x, size.y / 2),
+                   pos + size, pos + Vec2(size.x / 2, size.y),
+                   pos + Vec2(0, size.y), pos + Vec2(0, size.y / 2)]
+        side = self.theme['select_handle_length']
 
-        return ret
+        return [Rect(c - Vec2.repeat(side/2), Vec2.repeat(side)) for c in centers]
 
     def OnScroll(self, evt):
-        evt.Skip()
         # Need to use wx.CallAfter() to ensure the scroll event is finished before we update the
         # position of the dragged node
-        wx.CallAfter(self.AfterScroll)
-
-    def AfterScroll(self):
-        # if a Node is being dragged while the window is being scrolled, we would
-        # like to keep its position relative  to the scroll window the same
-        if self._input_mode == InputMode.SELECT and self._dragged_node is not None:
-            self._dragged_node.s_position = Vec2(
-                self.CalcUnscrolledPosition(self._dragged_relative))
-            self.Refresh()
+        wx.CallAfter(self.Refresh)
+        evt.Skip()
 
     def OnMouseWheel(self, evt):
         # dispatch a horizontal scroll event in this case

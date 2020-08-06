@@ -90,7 +90,7 @@ class Minimap(CanvasOverlay):
     def OnPaint(self, gc: wx.GraphicsContext):
         scale = self._size.x / self._realsize.x
 
-        # draw total rect
+        # draw total rect TODO color
         DrawRect(gc, Rect(self.position, self._size), fill=wx.Colour(150, 150, 150, 100))
         my_botright = self.position + self._size
 

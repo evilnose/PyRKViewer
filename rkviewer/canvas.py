@@ -3,7 +3,7 @@ from .canvasutils import CanvasOverlay, Minimap, MultiSelect
 import wx
 from enum import Enum
 from typing import Optional, Any, Set, Tuple, List, Dict
-from .utils import ClampRectPos, WithinRect, DrawRect
+from .utils import ClampRectPos, WithinRect, DrawRect, convert_position
 from .types import Rect, Vec2, Node, IController
 
 
@@ -114,6 +114,26 @@ class Canvas(wx.ScrolledWindow):
     @property
     def scale(self):
         return self._scale
+
+    def RegisterAllChildren(self, widget):
+        """Connect all descendants of this widget to relevant events.
+
+        wxPython does not propagate events like LEFT_UP and MOTION up to the
+        parent of the window that received it. Therefore normally there is 
+        no way for DragDrop to detect a mouse event if it occurred on top
+        of a child widget of window. This function solves this problem by
+        recursively connecting all child widgets of window to trigger the DragDrop
+        handlers. Note that whatever event registered here must do evt.Skip() so
+        that the child itself can handle its event as well.
+
+        This solution is from https://stackoverflow.com/a/27911300/9171534
+        """
+        if self != widget:
+            widget.Connect(wx.ID_ANY, -1, wx.wxEVT_LEFT_UP, self.OnLeftUp)
+            widget.Connect(wx.ID_ANY, -1, wx.wxEVT_MOTION, self.OnMotion)
+
+        for child in widget.GetChildren():
+            self.RegisterAllChildren(child)
 
     def InWhichOverlay(self, pos: Vec2) -> Optional[CanvasOverlay]:
         # TODO right now this is hardcoded; in the future add List[CanvasOverlay] attribute
@@ -261,9 +281,9 @@ class Canvas(wx.ScrolledWindow):
                     return None
             increment += 1
 
+    @convert_position
     def OnLeftDown(self, evt):
-        device_pos = Vec2(evt.GetPosition())
-
+        device_pos = evt.GetPosition()
         # Check overlays
         overlay = self.InWhichOverlay(device_pos)
         if overlay is not None:
@@ -349,6 +369,7 @@ class Canvas(wx.ScrolledWindow):
         evt.Skip()
 
 
+    @convert_position
     def OnLeftUp(self, evt):
         device_pos = Vec2(evt.GetPosition())
         overlay = self.InWhichOverlay(device_pos)
@@ -356,6 +377,8 @@ class Canvas(wx.ScrolledWindow):
             overlay.OnLeftUp(evt)
             self.Refresh()
             return
+        elif self._minimap.dragging:
+            self._minimap.OnLeftUp(evt)
 
         if self._input_mode == InputMode.SELECT:
             # move dragged node
@@ -395,18 +418,19 @@ class Canvas(wx.ScrolledWindow):
                 else:
                     self._multiselect.refresh_nodes(self._GetSelectedNodes())
 
+    @convert_position
     def OnMotion(self, evt):
         assert isinstance(evt, wx.MouseEvent)
-
         try:
             device_pos = Vec2(evt.GetPosition())
             logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
 
             # dragging takes priority here
-            if self._input_mode == InputMode.SELECT:
-                if evt.leftIsDown:  # dragging
+            if evt.leftIsDown:  # dragging
+                if self._input_mode == InputMode.SELECT:
                     if self._multiselect is not None:
                         if self._multiselect.dragging:
+                            assert not self._minimap.dragging
                             assert self._left_down_pos is not None
 
                             self._multiselect.DoDrag(logical_pos)
@@ -418,6 +442,8 @@ class Canvas(wx.ScrolledWindow):
             overlay = self.InWhichOverlay(device_pos)
             if overlay is not None:
                 overlay.OnMotion(evt)
+            elif self._minimap.dragging:
+                self._minimap.OnMotion(evt)
         finally:
             self.Refresh()
             evt.Skip()

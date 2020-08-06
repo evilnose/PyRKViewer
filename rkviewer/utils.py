@@ -81,3 +81,17 @@ def ClampPoint(pos: Vec2, bounds: Rect, padding = 0) -> Vec2:
     ret = Vec2(ret.x, max(ret.y, topleft.y))
     ret = Vec2(ret.x, min(ret.y, botright.y))
     return ret
+
+
+def convert_position(fn):
+    """Decorator that converts event position to one that is relative to the receiver."""
+    def ret(self, evt):
+        client_pos = evt.GetPosition()  # get raw position
+        screen_pos = evt.EventObject.ClientToScreen(client_pos)  # convert to screen position
+        relative_pos = self.ScreenToClient(screen_pos)  # convert to receiver position
+        # call function
+        copy = evt.Clone()
+        copy.SetPosition(relative_pos)
+        fn(self, copy)
+        evt.Skip()
+    return ret

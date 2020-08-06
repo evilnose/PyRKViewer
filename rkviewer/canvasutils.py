@@ -83,6 +83,10 @@ class Minimap(CanvasOverlay):
         self._realsize = val
         self._size = Vec2(self._width, self._width * val.y / val.x)
 
+    @property
+    def dragging(self):
+        return self._dragging
+
     def OnPaint(self, gc: wx.GraphicsContext):
         scale = self._size.x / self._realsize.x
 
@@ -125,6 +129,7 @@ class Minimap(CanvasOverlay):
     def OnMotion(self, evt: wx.MouseEvent):
         scale = self._size.x / self._realsize.x
         pos = Vec2(evt.GetPosition()) - self.position
+        pos = ClampPoint(pos, Rect(Vec2(), self.size))
         if evt.LeftIsDown():
             if not self._dragging:
                 topleft = pos - self.window_size * scale / 2
@@ -182,10 +187,33 @@ class MultiSelect:
         assert self._dragging
 
         new_positions = [mouse_pos + rp for rp in self._rel_positions]
-        x_good = True  # x-axis in bounds
-        y_good = True  # y-axis in bounds
+        min_x = min(p.x for p in new_positions)
+        min_y = min(p.y for p in new_positions)
+        max_x = max(p.x + n.s_size.x for p, n in zip(new_positions, self._nodes))
+        max_y = max(p.y + n.s_size.y for p, n in zip(new_positions, self._nodes))
+        offset = Vec2(0, 0)
+
         lim_topleft = self._bounds.position
         lim_botright = self._bounds.position + self._bounds.size
+
+        if min_x < lim_topleft.x:
+            assert max_x <= lim_botright.x
+            offset += Vec2(lim_topleft.x - min_x, 0)
+        elif max_x > lim_botright.x:
+            offset += Vec2(lim_botright.x - max_x, 0)
+
+        if min_y < lim_topleft.y:
+            assert max_y <= lim_botright.y
+            offset += Vec2(0, lim_topleft.y - min_y)
+        elif max_y > lim_botright.y:
+            offset += Vec2(0, lim_botright.y - max_y)
+
+        self.bounding_rect.position = mouse_pos + offset + self._drag_rel
+        for node, np in zip(self._nodes, new_positions):
+            node.s_position = np + offset
+        '''
+        x_good = True  # x-axis in bounds
+        y_good = True  # y-axis in bounds
         for node, np in zip(self._nodes, new_positions):
             botright = np + node.s_size
             if x_good and np.x < lim_topleft.x or botright.x > lim_botright.x:
@@ -197,8 +225,7 @@ class MultiSelect:
             if good:
                 self.bounding_rect.position = self.bounding_rect.position.swapped(
                     axis, mouse_pos[axis] + self._drag_rel[axis])
-                for node, np in zip(self._nodes, new_positions):
-                    node.s_position = node.s_position.swapped(axis, np[axis])
+        '''
 
     def EndDrag(self):
         self._dragging = False

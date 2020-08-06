@@ -224,8 +224,8 @@ DEFAULT_THEME = {
     'overall_bg': wx.Colour(255, 112, 0),
     'canvas_bg': wx.WHITE,
     'toolbar_bg': wx.Colour(140, 140, 140),
-    'canvas_width': 600,
-    'canvas_height': 500,
+    'canvas_width': 1000,
+    'canvas_height': 800,
     'canvas_bg': wx.WHITE,
     'canvas_outside_bg': wx.Colour(160, 160, 160),  # Bg color for the parts out of bounds
     'left_toolbar_width': 100,

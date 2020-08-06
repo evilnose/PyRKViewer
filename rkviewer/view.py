@@ -2,7 +2,7 @@
 import wx
 from typing import List, Dict, Any
 import copy
-from .types import  Node, IView, IController, DEFAULT_THEME
+from .types import Node, IView, IController, DEFAULT_THEME
 from .canvas import Canvas
 from .widgets import ButtonGroup
 
@@ -81,30 +81,28 @@ class MainPanel(wx.Panel):
                              realsize=(4 * theme['canvas_width'], 4 * theme['canvas_height']),
                              theme=theme)
         self.canvas.SetScrollRate(10, 10)
-        self.canvas.SetBackgroundColour(
-            theme['canvas_outside_bg'])  # The actual bg will be drawn by canvas in OnPaint()
+
+        # The bg of the available canvas will be drawn by canvas in OnPaint()
+        self.canvas.SetBackgroundColour( theme['canvas_outside_bg'])  
 
         # create a panel in the frame
         self.toolbar = Toolbar(self,
                                size=(theme['left_toolbar_width'],
                                      theme['canvas_height']),
                                toggle_callback=self.canvas.SetInputMode)
-        self.toolbar.SetBackgroundColour(
-            theme['toolbar_bg'])
+        self.toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
         self.top_toolbar = TopToolbar(self,
                                       size=(theme['canvas_width'],
                                             theme['top_toolbar_height']),
                                       zoom_callback=self.canvas.ZoomCenter,
-                                      drop_callback=self.OnNodeDrop,
-                                      )
-        self.top_toolbar.SetBackgroundColour(
-            theme['toolbar_bg'])
+                                      drop_callback=self.OnNodeDrop,)
+        self.top_toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
         self.buffer = None
 
         # and create a sizer to manage the layout of child widgets
-        sizer = wx.FlexGridSizer(cols=2, rows=2, vgap=3, hgap=3)
+        sizer = wx.FlexGridSizer(cols=2, rows=2, vgap=2, hgap=2)
 
         # For the items (non-spacers),
         # The 0th element of the tuple is the element itself
@@ -127,8 +125,8 @@ class MainPanel(wx.Panel):
         sizer.AddGrowableCol(1, 1)
         sizer.AddGrowableRow(1, 1)
 
-        # TODO Set the sizer and *prevent the user from resizing it to a smaller size*
-        # are we sure we want this?
+        # Set the sizer and *prevent the user from resizing it to a smaller size*
+        # TODO are we sure we want this behavior?
         self.SetSizerAndFit(sizer)
 
     def OnNodeDrop(self, obj: wx.Window, pos: wx.Point):
@@ -158,6 +156,7 @@ class View(IView):
         app = wx.App()
         frm = MyFrame(self.controller, self.theme, title='RK Network Viewer')
         self.canvas_panel = frm.main_panel.canvas
+        self.canvas_panel.RegisterAllChildren(frm)
         frm.Show()
         app.MainLoop()
 

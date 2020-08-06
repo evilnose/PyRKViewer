@@ -83,6 +83,17 @@ def ClampPoint(pos: Vec2, bounds: Rect, padding = 0) -> Vec2:
     return ret
 
 
+def RectsIntersect(r1: Rect, r2: Rect) -> bool:
+    botright1 = r1.position + r1.size
+    botright2 = r2.position + r2.size
+
+    for axis in [0, 1]:
+        if botright1[axis] <= r2.position[axis] or botright2[axis] <= r1.position[axis]:
+            return False
+
+    return True
+
+
 def convert_position(fn):
     """Decorator that converts event position to one that is relative to the receiver."""
     def ret(self, evt):

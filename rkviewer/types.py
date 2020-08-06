@@ -224,14 +224,14 @@ DEFAULT_THEME = {
     'overall_bg': wx.Colour(255, 112, 0),
     'canvas_bg': wx.WHITE,
     'toolbar_bg': wx.Colour(140, 140, 140),
-    'canvas_width': 1000,
-    'canvas_height': 800,
+    'canvas_width': 800,
+    'canvas_height': 600,
     'canvas_bg': wx.WHITE,
     'canvas_outside_bg': wx.Colour(160, 160, 160),  # Bg color for the parts out of bounds
     'left_toolbar_width': 100,
     'top_toolbar_height': 40,
     'node_fill': wx.Colour(0, 255, 0, 50),
-    'node_border': wx.Colour(255, 0, 0, 100),
+    'node_border': wx.Colour(19, 173, 2),
     'node_width': 50,
     'node_height': 30,
     'node_border_width': 2,
@@ -242,11 +242,14 @@ DEFAULT_THEME = {
     'select_box_color': wx.Colour(0, 140, 255),
     'select_box_padding': 5,  # Padding of the select box, relative to the mininum possible bbox
     'select_handle_length': 8,  # Length of the squares one uses to drag resize nodes
-    'select_outline_width': 3,  # Width of the select box outline
+    'select_outline_width': 2,  # Width of the select box outline
     'init_scale': 1,
     'min_node_width': 20,
     'min_node_height': 15,
-    'zoom_slider_bg': wx.Colour(150, 150, 150)
+    'zoom_slider_bg': wx.Colour(150, 150, 150),
+    'drag_fill': wx.Colour(0, 140, 255, 20),
+    'drag_border': wx.Colour(0, 140, 255),
+    'drag_border_width': 1,
 }
 
 

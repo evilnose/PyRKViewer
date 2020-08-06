@@ -226,7 +226,8 @@ class MultiSelect:
         # counter-clockwise direction
         dragged_idx = self._resize_handle // 2
         fixed_idx = int((dragged_idx + 2) % 4)  # get the vertex opposite dragged idx as fixed_idx
-        dragged_point = self._orig_rect.NthVertex(dragged_idx)
+        orig_dragged_point = self._orig_rect.NthVertex(dragged_idx)
+        cur_dragged_point = self.bounding_rect.NthVertex(dragged_idx)
         fixed_point = self._orig_rect.NthVertex(fixed_idx)
 
         target_point = mouse_pos
@@ -235,10 +236,10 @@ class MultiSelect:
         if self._resize_handle % 2 == 1:
             if self._resize_handle % 4 == 1:
                 # vertical resize; keep x the same
-                target_point.x = dragged_point.x
+                target_point.x = orig_dragged_point.x
             else:
                 assert self._resize_handle % 4 == 3
-                target_point.y = dragged_point.y
+                target_point.y = orig_dragged_point.y
 
         # clamp target point
         target_point = ClampPoint(target_point, self._bounds)
@@ -247,24 +248,36 @@ class MultiSelect:
 
         # raw difference between (current/target) dragged vertex and fixed vertex. Raw as in this
         # is the visual difference shown on the bounding rect.
-        orig_diff = dragged_point - fixed_point
+        orig_diff = orig_dragged_point - fixed_point
         target_diff = target_point - fixed_point
 
         signs = orig_diff.elem_mul(target_diff)
+
         # bounding_rect flipped?
-        if signs.x < 0 or signs.y < 0:
-            return
+        if signs.x < 0:
+            target_point.x = cur_dragged_point.x
+
+        if signs.y < 0:
+            target_point.y = cur_dragged_point.y
 
         # take absolute value and subtract padding to get actual difference (i.e. sizing)
         pad_off = Vec2.repeat(self._padding)
-        orig_size = (dragged_point - fixed_point).elem_abs() - pad_off * 2
+        orig_size = (orig_dragged_point - fixed_point).elem_abs() - pad_off * 2
         target_size = (target_point - fixed_point).elem_abs() - pad_off * 2
 
         size_ratio = target_size.elem_div(orig_size)
 
         # size too small?
-        if size_ratio.x < self._min_resize_ratio.x or size_ratio.y < self._min_resize_ratio.y:
-            return
+        if size_ratio.x < self._min_resize_ratio.x:
+            size_ratio = size_ratio.swapped(0, self._min_resize_ratio.x)
+            target_point.x = cur_dragged_point.x
+
+        if size_ratio.y < self._min_resize_ratio.y:
+            size_ratio = size_ratio.swapped(1, self._min_resize_ratio.y)
+            target_point.y = cur_dragged_point.y
+
+        # re-calculate target_size in case size_ratio changed
+        target_size = orig_size.elem_mul(size_ratio)
 
         # STEP 3 calculate new bounding_rect position and size
         br_pos = Vec2(min(fixed_point.x, target_point.x),

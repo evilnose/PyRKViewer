@@ -103,6 +103,7 @@ def convert_position(fn):
         # call function
         copy = evt.Clone()
         copy.SetPosition(relative_pos)
+        copy.foreign = not (self is evt.EventObject)
         fn(self, copy)
         evt.Skip()
     return ret

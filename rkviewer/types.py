@@ -243,13 +243,22 @@ DEFAULT_THEME = {
     'select_box_padding': 5,  # Padding of the select box, relative to the mininum possible bbox
     'select_handle_length': 8,  # Length of the squares one uses to drag resize nodes
     'select_outline_width': 2,  # Width of the select box outline
-    'init_scale': 1,
     'min_node_width': 20,
     'min_node_height': 15,
     'zoom_slider_bg': wx.Colour(150, 150, 150),
     'drag_fill': wx.Colour(0, 140, 255, 20),
     'drag_border': wx.Colour(0, 140, 255),
     'drag_border_width': 1,
+}
+
+
+DEFAULT_SETTINGS = {
+    'init_zoom': 1,
+    'status_fields': [
+        ('mode', -1),
+        ('cursor', -1),
+        ('zoom', -1),
+    ]
 }
 
 

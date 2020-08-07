@@ -2,7 +2,7 @@
 import wx
 from typing import List, Dict, Any
 import copy
-from .types import Node, IView, IController, DEFAULT_THEME
+from .types import DEFAULT_SETTINGS, Node, IView, IController, DEFAULT_THEME, DEFAULT_SETTINGS
 from .canvas import Canvas
 from .widgets import ButtonGroup
 
@@ -70,7 +70,8 @@ class MainPanel(wx.Panel):
     controller: IController
     theme: Dict[str, Any]
 
-    def __init__(self, parent, controller: IController, theme: Dict[str, Any]):
+    def __init__(self, parent, controller: IController, theme: Dict[str, Any],
+                 settings: Dict[str, Any]):
         # ensure the parent's __init__ is called
         super().__init__(parent, style=wx.CLIP_CHILDREN)
         self.SetBackgroundColour(theme['overall_bg'])
@@ -79,11 +80,13 @@ class MainPanel(wx.Panel):
         self.canvas = Canvas(self.controller, self,
                              size=(theme['canvas_width'], theme['canvas_height']),
                              realsize=(4 * theme['canvas_width'], 4 * theme['canvas_height']),
-                             theme=theme)
+                             theme=theme,
+                             settings=settings,
+                             )
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()
-        self.canvas.SetBackgroundColour( theme['canvas_outside_bg'])  
+        self.canvas.SetBackgroundColour(theme['canvas_outside_bg'])
 
         # create a panel in the frame
         self.toolbar = Toolbar(self,
@@ -135,18 +138,23 @@ class MainPanel(wx.Panel):
 
 
 class MyFrame(wx.Frame):
-    def __init__(self, controller: IController, theme, **kw):
+    def __init__(self, controller: IController, theme, settings, **kw):
         super().__init__(None, **kw)
-        self.main_panel = MainPanel(self, controller, theme=theme)
+        status_fields = settings['status_fields']
+        assert status_fields is not None
+        self.CreateStatusBar(len(DEFAULT_SETTINGS['status_fields']))
+        self.SetStatusWidths([width for _, width in status_fields])
+        self.main_panel = MainPanel(self, controller, theme=theme, settings=settings)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.main_panel, 1, wx.EXPAND)
         self.SetSizerAndFit(sizer)
 
 
 class View(IView):
-    def __init__(self, theme=DEFAULT_THEME):
+    def __init__(self, theme=DEFAULT_THEME, settings=DEFAULT_SETTINGS):
         self.controller = None
         self.theme = copy.copy(theme)
+        self.settings = copy.copy(settings)
 
     def BindController(self, controller: IController):
         self.controller = controller
@@ -154,7 +162,7 @@ class View(IView):
     def MainLoop(self):
         assert self.controller is not None
         app = wx.App()
-        frm = MyFrame(self.controller, self.theme, title='RK Network Viewer')
+        frm = MyFrame(self.controller, self.theme, self.settings, title='RK Network Viewer')
         self.canvas_panel = frm.main_panel.canvas
         self.canvas_panel.RegisterAllChildren(frm)
         frm.Show()

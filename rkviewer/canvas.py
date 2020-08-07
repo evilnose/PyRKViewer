@@ -2,7 +2,7 @@
 from .canvasutils import CanvasOverlay, Minimap, MultiSelect
 import wx
 from enum import Enum
-from typing import Container, Optional, Any, Set, Tuple, List, Dict
+from typing import Optional, Any, Set, Tuple, List, Dict
 from .utils import ClampRectPos, RectsIntersect, WithinRect, DrawRect, convert_position
 from .types import Rect, Vec2, Node, IController
 
@@ -56,6 +56,7 @@ class Canvas(wx.ScrolledWindow):
     _selected_ids: Set[str]
     # The outline drawn around the node(s) to be resized TODO document this
     _minimap: Minimap
+    _overlays: List[CanvasOverlay]
     _drag_selecting: bool
     _drag_start: Vec2
     _drag_rect: Rect
@@ -65,12 +66,13 @@ class Canvas(wx.ScrolledWindow):
     MAX_ZOOM_LEVEL = 10
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int],
-                 theme: Dict[str, Any], **kw):
+                 theme: Dict[str, Any], settings: Dict[str, Any], **kw):
         # ensure the parent's __init__ is called
         super().__init__(*args, **kw)
 
         self.controller = controller
         self.theme = theme
+        self.settings = settings # TODO document
         self._nodes = list()
 
         # prevent flickering
@@ -106,13 +108,25 @@ class Canvas(wx.ScrolledWindow):
         self.zoom_slider.SetBackgroundColour(self.theme['zoom_slider_bg'])
         self.Bind(wx.EVT_SLIDER, self.OnSlider)
 
+        # TODO document everything below
         self._minimap = Minimap(width=200, realsize=self.realsize, window_pos=Vec2(),
                                 window_size=Vec2(self.GetSize()), pos_callback=self.SetOriginPos)
+        self._overlays = [self._minimap]
 
         self._drag_selecting = False
         self._drag_start = Vec2()
         self._drag_rect = Rect(Vec2(), Vec2())
         self._drag_selected_ids = set()
+
+        self._status_bar = self.GetTopLevelParent().GetStatusBar()
+        assert self._status_bar is not None, "Need to create status bar before creating canvas!"
+
+        status_fields = self.settings['status_fields']
+        assert status_fields is not None
+        self._reverse_status = { name: i for i, (name, _) in enumerate(status_fields)}
+
+        wx.CallAfter(lambda: self.SetZoomLevel(0, Vec2(0, 0)))
+
         # TODO add List[CanvasOverlay] to store all overlays, so that overlay mouse checking code
         # can be generalized
         self.SetOverlayPositions()
@@ -183,6 +197,11 @@ class Canvas(wx.ScrolledWindow):
             'add': InputMode.ADD,
             'zoom': InputMode.ZOOM,
         }[mode_str]
+        self._SetStatusText('mode', 'Mode: {}'.format(mode_str))
+
+    def _SetStatusText(self, name: str, text: str):
+        idx = self._reverse_status[name]
+        self._status_bar.SetStatusText(text, idx)
 
     def SetOriginPos(self, pos: Vec2):
         pos *= self._scale
@@ -235,6 +254,8 @@ class Canvas(wx.ScrolledWindow):
 
         self.zoom_slider.SetValue(self._zoom_level)
         self.zoom_slider.SetPageSize(2)
+
+        self._SetStatusText('zoom', '{:.2f}x'.format(self._scale))
 
         self._UpdateMultiSelect()
         self.Refresh()
@@ -294,13 +315,17 @@ class Canvas(wx.ScrolledWindow):
             # Check overlays
             overlay = self.InWhichOverlay(device_pos)
             if overlay is not None:
+                overlay.hovering = True
                 overlay.OnLeftDown(evt)
                 return
+
+            for ol in self._overlays:
+                if ol is not overlay and ol.hovering:
+                    ol.hovering = False
 
             logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
             self._left_down_pos = device_pos
 
-            ctrl_pressed = wx.GetKeyState(wx.WXK_CONTROL)
             in_node = self._InNode(logical_pos)
 
             if self._input_mode == InputMode.SELECT:
@@ -439,6 +464,8 @@ class Canvas(wx.ScrolledWindow):
         try:
             device_pos = Vec2(evt.GetPosition())
             logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+            status_text = repr(logical_pos)
+            self._SetStatusText('cursor', status_text)
 
             # dragging takes priority here
             if evt.leftIsDown:  # dragging
@@ -467,8 +494,13 @@ class Canvas(wx.ScrolledWindow):
             overlay = self.InWhichOverlay(device_pos)
             if overlay is not None:
                 overlay.OnMotion(evt)
+                overlay.hovering = True
             elif self._minimap.dragging:
                 self._minimap.OnMotion(evt)
+
+            for ol in self._overlays:
+                if ol is not overlay and ol.hovering:
+                    ol.hovering = False
         finally:
             self.Refresh()
             evt.Skip()

@@ -13,6 +13,7 @@ from .utils import ClampPoint, DrawRect, GetBoundingRect, WithinRect
 class CanvasOverlay(abc.ABC):
     _size: Vec2
     _position: Vec2
+    hovering: bool
 
     @property
     def size(self):
@@ -73,6 +74,7 @@ class Minimap(CanvasOverlay):
         self._callback = pos_callback
         self._dragging = False
         self._drag_pos = Vec2()
+        self.hovering = False
 
     @property
     def realsize(self):
@@ -88,10 +90,23 @@ class Minimap(CanvasOverlay):
         return self._dragging
 
     def OnPaint(self, gc: wx.GraphicsContext):
+        BACKGROUND_USUAL = wx.Colour(155, 155, 155, 50)
+        FOREGROUND_USUAL = wx.Colour(255, 255, 255, 100)
+        BACKGROUND_FOCUS = wx.Colour(155, 155, 155, 80)
+        FOREGROUND_FOCUS = wx.Colour(255, 255, 255, 130)
+        FOREGROUND_DRAGGING = wx.Colour(255, 255, 255, 200)
+
+        background = BACKGROUND_FOCUS if (self.hovering or self._dragging) else BACKGROUND_USUAL
+        foreground = FOREGROUND_USUAL
+        if self._dragging:
+            foreground = FOREGROUND_DRAGGING
+        elif self.hovering:
+            foreground = FOREGROUND_FOCUS
+
         scale = self._size.x / self._realsize.x
 
-        # draw total rect TODO color
-        DrawRect(gc, Rect(self.position, self._size), fill=wx.Colour(150, 150, 150, 100))
+        # draw total rect TODO move this to theme or somewhere
+        DrawRect(gc, Rect(self.position, self._size), fill=background)
         my_botright = self.position + self._size
 
         win_pos = self.window_pos * scale + self.position
@@ -102,7 +117,7 @@ class Minimap(CanvasOverlay):
         win_size.y = min(win_size.y, my_botright.y - win_pos.y)
 
         # draw visible rect
-        DrawRect(gc, Rect(win_pos, win_size), fill=wx.Colour(255, 255, 255, 130))
+        DrawRect(gc, Rect(win_pos, win_size), fill=foreground)
 
         # draw nodes
         for node in self.nodes:

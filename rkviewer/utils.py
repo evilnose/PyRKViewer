@@ -3,13 +3,18 @@ from __future__ import annotations  # For returning self in a class
 # pylint: disable=maybe-no-member
 import wx
 import copy
-from typing import Callable, Tuple, TypeVar
+from typing import Any, Callable, Tuple, TypeVar
 
 
-TNum = TypeVar('TNum', float, int)
+TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int.
 
 
 class Vec2:
+    """Class that represents a 2D vector. Supports common vector operations like add and sub.
+    
+    Note:
+        Vec2 objects are immutable, meaning one cannot modify elements of the vector.
+    """
     x: TNum
     y: TNum
     _i: int
@@ -96,35 +101,64 @@ class Vec2:
         return 2
 
     def to_wx_point(self) -> wx.Point:
+        """Convert this to wx.Point; return the result."""
         return wx.Point(self.x, self.y)
 
     # element-wise multiplication
     def elem_mul(self, other: Vec2) -> Vec2:
+        """Return the resulting Vec2 by performing element-wise multiplication.
+        
+        Examples:
+            >>> c = a.elem_mul(b)  # is equivalent to...
+            >>> c = Vec2(a.x * b.x, a.y * b.y)
+        """
         return Vec2(self.x * other.x, self.y * other.y)
 
     def elem_div(self, other: Vec2) -> Vec2:
+        """Return the resulting Vec2 by performing element-wise division.
+        
+        Examples:
+            >>> c = a.elem_div(b)  # is equivalent to...
+            >>> c = Vec2(a.x / b.x, a.y / b.y)
+        """
         return Vec2(self.x / other.x, self.y / other.y)
 
     def elem_abs(self) -> Vec2:
+        """Return the Vec2 obtained by taking the element-wise absolute value of this Vec2."""
         return Vec2(abs(self.x), abs(self.y))
 
-    def map(self, op: Callable) -> Vec2:
+    def map(self, op: Callable[[TNum], Any]) -> Vec2:
+        """Map the given operation across the two elements of the vector."""
         return Vec2(op(self.x), op(self.y))
 
     @classmethod
     def repeat(cls, val: TNum = 1) -> Vec2:
+        """Return the Vec2 obtained by repeating the given scalar value across the two elements.
+        
+        Examples:
+
+            >>> print(Vec2.repeat(5.4))
+            (5.4, 5.4)
+        """
         return Vec2(val, val)
 
 
 class Rect:
+    """Class that represents a rectangle by keeping a position and a size."""
     def __init__(self, pos: Vec2, size: Vec2):
         self.position = pos
         self.size = size
 
     def GetTuple(self) -> Tuple[Vec2, Vec2]:
+        """Return the position and the size in a tuple."""
         return (self.position, self.size)
 
     def NthVertex(self, n: int):
+        """Return the nth vertex of the rectangle.
+        
+        The top-left vertex is the 0th vertex, and subsequence vertices are indexed in clockwise
+        fashion.
+        """
         if n == 0:
             return self.position
         elif n == 1:
@@ -141,14 +175,15 @@ class Rect:
 
 
 class Node:
+    """Class that represents a Node for rendering purposes."""
     id_: str
-    _position: Vec2
-    _s_position: Vec2  # scaled position # TODO add documentation
-    _size: Vec2
-    _s_size: Vec2  # scaled size
     fill_color: wx.Colour
     border_color: wx.Colour
     border_width: float
+    _position: Vec2
+    _s_position: Vec2
+    _size: Vec2
+    _s_size: Vec2
     _scale: float
 
     # force keyword-only arguments
@@ -164,6 +199,7 @@ class Node:
 
     @property
     def position(self):
+        """The unscaled position of the node."""
         return self._position
 
     @position.setter
@@ -173,6 +209,7 @@ class Node:
 
     @property
     def s_position(self):
+        """The scaled position of the node obtained by multiplying the scale."""
         return self._s_position
 
     @s_position.setter
@@ -182,6 +219,7 @@ class Node:
 
     @property
     def size(self):
+        """The unscaled size of the node."""
         return self._size
 
     @size.setter
@@ -191,6 +229,7 @@ class Node:
 
     @property
     def s_size(self):
+        """The scaled size of the node obtained by multiplying the scale."""
         return self._s_size
 
     @s_size.setter
@@ -200,6 +239,7 @@ class Node:
 
     @property
     def scale(self):
+        """The scale of the rectangle. 1 by default."""
         return self._scale
 
     @scale.setter
@@ -218,16 +258,21 @@ class Node:
         return Rect(copy.copy(self.s_position), copy.copy(self.s_size))
 
 
-def IodToWxColour(rgb: int, alpha: float):
+def rgba_to_wx_colour(rgb: int, alpha: float):
+    """Given RGBA color, return wx.Colour.
+    
+    Args:
+        rgb: RGB color in hex format.
+        alpha: The opacity of the color, ranging from 0.0 to 1.0.
+    """
     b = rgb & 0xff
     g = (rgb >> 8) & 0xff
     r = (rgb >> 16) & 0xff
     return wx.Colour(r, g, b, int(alpha * 255))
 
 
-
 def convert_position(fn):
-    """Decorator that converts event position to one that is relative to the receiver."""
+    """Decorator that converts the event position to one that is relative to the receiver."""
     def ret(self, evt):
         client_pos = evt.GetPosition()  # get raw position
         screen_pos = evt.EventObject.ClientToScreen(client_pos)  # convert to screen position

@@ -1,31 +1,46 @@
 # pylint: disable=maybe-no-member
 import wx
-from typing import Callable
+from typing import Callable, Any
 
 
 class ButtonGroup:
-    Callback = Callable[[str], None]  # called with ID as argument
+    """Class for keeping track of a group of buttons, where exactly one of them can be selected.
 
-    def __init__(self, parent: wx.Panel, callback: Callback):
-        self.parent = parent
+    Attributes:
+        Callback: The callback function type called with ID of the selected button as argument.
+    """
+    Callback = Callable[[str], None]
+
+    def __init__(self, callback: Callback):
+        """Construct a ButtonGroup.
+
+        Args:
+            callback: The callback function called when a new button is selected.
+        """
         self.callback = callback
         self.buttons = []
         self.selected = None  # should be tuple (button, group_id)
 
-    def AddButton(self, button: wx.ToggleButton, group_id: str):
+    def AddButton(self, button: wx.ToggleButton, identifier: Any):
+        """Add a button with the given identifier.
+        
+        When this button is clicked, callback is called with the identifier.
+        """
         # right now there is no type info for wxPython, so this is necessary
         assert isinstance(button, wx.ToggleButton)
 
         self.buttons.append(button)
-        button.Bind(wx.EVT_TOGGLEBUTTON, self._MakeToggleFn(button, group_id))
+        button.Bind(wx.EVT_TOGGLEBUTTON, self._MakeToggleFn(button, identifier))
 
         # First added button; make it selected
         if self.selected is None:
-            self.selected = (button, group_id)
+            self.selected = (button, identifier)
             button.SetValue(True)
-            self.callback(group_id)
+            self.callback(identifier)
 
-    def _MakeToggleFn(self, button: wx.ToggleButton, group_id: str):
+    def _MakeToggleFn(self, button: wx.ToggleButton, group_id: Any):
+        """Create the function to be called by a specific button in the group when it is clicked.
+        """
         # right now there is no type info for wxPython, so this is necessary
         assert isinstance(button, wx.ToggleButton)
 
@@ -45,6 +60,7 @@ class ButtonGroup:
         return ret
 
 
+# TODO this is obsolete. Delete this
 class DragDrop(wx.Panel):
     Callback = Callable[[wx.Window, wx.Point], None]
 

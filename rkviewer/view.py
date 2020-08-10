@@ -2,7 +2,7 @@
 import wx
 import copy
 from typing import List, Dict, Any
-from .canvas.wx import Canvas
+from .canvas.wx import Canvas, InputMode
 from .config import DEFAULT_SETTINGS, DEFAULT_THEME, DEFAULT_SETTINGS
 from .mvc import IController, IView
 from .utils import Node
@@ -10,8 +10,9 @@ from .widgets import ButtonGroup
 
 
 class TopToolbar(wx.Panel):
+    """Toolbar at the top of the app."""
 
-    def __init__(self, parent, zoom_callback, drop_callback, **kw):
+    def __init__(self, parent, zoom_callback, **kw):
         super().__init__(parent, **kw)
 
         # TODO add as attribute
@@ -43,6 +44,8 @@ class TopToolbar(wx.Panel):
 
 
 class Toolbar(wx.Panel):
+    """Toolbar at the left of the app."""
+
     def __init__(self, *args, toggle_callback, **kw):
         super().__init__(*args, **kw)
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -59,16 +62,16 @@ class Toolbar(wx.Panel):
         sizer.Add(zoom_btn, wx.SizerFlags().Align(
             wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
-        btn_group = ButtonGroup(
-            self, toggle_callback)
-        btn_group.AddButton(select_btn, 'select')
-        btn_group.AddButton(add_btn, 'add')
-        btn_group.AddButton(zoom_btn, 'zoom')
+        btn_group = ButtonGroup(toggle_callback)
+        btn_group.AddButton(select_btn, InputMode.SELECT)
+        btn_group.AddButton(add_btn, InputMode.ADD)
+        btn_group.AddButton(zoom_btn, InputMode.ZOOM)
 
         self.SetSizer(sizer)
 
 
 class MainPanel(wx.Panel):
+    """The main panel, which is the only chlid of the root Frame."""
     controller: IController
     theme: Dict[str, Any]
 
@@ -90,18 +93,20 @@ class MainPanel(wx.Panel):
         # The bg of the available canvas will be drawn by canvas in OnPaint()
         self.canvas.SetBackgroundColour(theme['canvas_outside_bg'])
 
+        def set_input_mode(ident):
+            self.canvas.input_mode = ident
+
         # create a panel in the frame
         self.toolbar = Toolbar(self,
                                size=(theme['left_toolbar_width'],
                                      theme['canvas_height']),
-                               toggle_callback=self.canvas.SetInputMode)
+                               toggle_callback=set_input_mode)
         self.toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
         self.top_toolbar = TopToolbar(self,
                                       size=(theme['canvas_width'],
                                             theme['top_toolbar_height']),
-                                      zoom_callback=self.canvas.ZoomCenter,
-                                      drop_callback=self.OnNodeDrop,)
+                                      zoom_callback=self.canvas.ZoomCenter)
         self.top_toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
         self.buffer = None
@@ -140,6 +145,7 @@ class MainPanel(wx.Panel):
 
 
 class MyFrame(wx.Frame):
+    """The main frame."""
     def __init__(self, controller: IController, theme, settings, **kw):
         super().__init__(None, **kw)
         status_fields = settings['status_fields']
@@ -153,6 +159,7 @@ class MyFrame(wx.Frame):
 
 
 class View(IView):
+    """Implementation of the view class."""
     def __init__(self, theme=DEFAULT_THEME, settings=DEFAULT_SETTINGS):
         self.controller = None
         self.theme = copy.copy(theme)

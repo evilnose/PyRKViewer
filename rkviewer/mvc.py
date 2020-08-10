@@ -1,7 +1,7 @@
 
 import abc
 from typing import List
-from .utils import Vec2, Rect, Node
+from .utils import Vec2, Node
 
 
 class IController(abc.ABC):
@@ -12,7 +12,7 @@ class IController(abc.ABC):
 
     The methods with name beginning with Try- are usually called by the View after
     some user input. If the action tried in such a method succeeds, the Controller
-    should request the view to be redrawn
+    should request the view to be redrawn; otherwise, an error message might be shown.
     """
 
     @abc.abstractmethod

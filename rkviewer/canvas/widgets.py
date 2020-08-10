@@ -1,25 +1,32 @@
-"""Canvas utilities, including overlays like the minimap and the drag n' drop.
+"""Canvas widgets that are drawn within the canvas.
 """
 # pylint: disable=maybe-no-member
 import wx
 import abc
 import copy
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 from .utils import Vec2, Rect, Node
 from .utils import clamp_point, draw_rect, get_bounding_rect, within_rect
 
 
 class CanvasOverlay(abc.ABC):
-    _size: Vec2
-    _position: Vec2
+    """Abstract class for a fixed-position overlay within the canvas.
+    
+    Attributes:
+        hovering: Used to set whether the mouse is current hovering over the overlay.
+    """
     hovering: bool
+    _size: Vec2  #: Private attribute for the 'size' property.
+    _position: Vec2  #: Private attribute for the 'position' property.
 
     @property
-    def size(self):
+    def size(self) -> Vec2:
+        """Return the size (i.e. of a rectangle) of the overlay."""
         return self._size
 
     @property
-    def position(self):
+    def position(self) -> Vec2:
+        """Return the position (i.e. of the top-left corner) of the overlay."""
         return self._position
 
     @position.setter
@@ -28,42 +35,65 @@ class CanvasOverlay(abc.ABC):
 
     @abc.abstractmethod
     def OnPaint(self, gc: wx.GraphicsContext):
+        """Re-paint the overlay."""
         pass
 
     @abc.abstractmethod
     def OnLeftDown(self, evt: wx.MouseEvent):
+        """Trigger a mouse left button down event on the overlay."""
         pass
 
     @abc.abstractmethod
     def OnLeftUp(self, evt: wx.MouseEvent):
+        """Trigger a mouse left button up event on the overlay."""
         pass
 
     @abc.abstractmethod
     def OnMotion(self, evt: wx.MouseEvent):
+        """Trigger a mouse motion event on the overlay."""
         pass
 
 
 class Minimap(CanvasOverlay):
-    """Class for drawing a minimap and handling its data and events.
+    """The minimap class that derives from CanvasOverlay.
+    
+    Attributes:
+        Callback: Type of the callback function called when the position of the minimap changes.
 
-    This is not a subclass of wx.Panel, since semi-transparent background is needed.
+        window_pos: Position of the canvas window, as updated by canvas.
+        window_size: Size of the canvas window, as updated by canvas.
+        nodes: The current list of nodes, as updated by canvas.
     """
     Callback = Callable[[Vec2], None]
-
-    _realsize: Vec2  # real size of the canvas
-    window_pos: Vec2  # position of the canvas window (visible part)
-    window_size: Vec2  # size of the canvas window (visible part)
-    _width: int
+    window_pos: Vec2
+    
+    window_size: Vec2
     nodes: List[Node]
-    _callback: Callback
-    _dragging: bool  # whether the visible window handle is being dragged
-    # Position of the mouse relative to the top-left corner of the visible window handle on minimap.
-    # We keep this relative distance invariant when dragging. This is used because scrolling is
-    # discrete, so we cannot add relative distance dragged since errors will accumulate.
-    _drag_pos: Vec2
 
-    def __init__(self, *, pos: Vec2 = Vec2(), width: int, realsize: Vec2, window_pos: Vec2,
+    _realsize: Vec2
+    _width: int
+    _callback: Callback #: the function called when the minimap position changes
+    _dragging: bool
+    _drag_rel: Vec2
+    """Position of the mouse relative to the top-left corner of the visible window handle on
+    minimap, the moment when dragging starts. We keep this relative distance invariant while
+    dragging. This is used because scrolling is discrete, so we cannot add relative distance
+    dragged since errors will accumulate.
+    """
+
+
+    def __init__(self, *, pos: Vec2, width: int, realsize: Vec2, window_pos: Vec2 = Vec2(),
                  window_size: Vec2, pos_callback: Callback):
+        """The constructor of the minimap
+
+        Args:
+            pos: The position of the minimap relative to the top-left corner of the canvas window.
+            width: The width of the minimap. The height will be set according to perspective.
+            realsize: The actual, full size of the canvas.
+            window_pos: The starting position of the window.
+            window_size: The starting size of the window.
+            pos_callback: The callback function called when the minimap window changes position.
+        """
         self._position = pos
         self._width = width
         self.realsize = realsize  # use the setter to set the _size as well
@@ -72,11 +102,12 @@ class Minimap(CanvasOverlay):
         self.nodes = list()
         self._callback = pos_callback
         self._dragging = False
-        self._drag_pos = Vec2()
+        self._drag_rel = Vec2()
         self.hovering = False
 
     @property
     def realsize(self):
+        """The actual, full size of the canvas, including those not visible on screen."""
         return self._realsize
 
     @realsize.setter
@@ -86,9 +117,11 @@ class Minimap(CanvasOverlay):
 
     @property
     def dragging(self):
+        """Whether the user is current dragging on the minimap window."""
         return self._dragging
 
     def OnPaint(self, gc: wx.GraphicsContext):
+        # TODO move this somewhere else
         BACKGROUND_USUAL = wx.Colour(155, 155, 155, 50)
         FOREGROUND_USUAL = wx.Colour(255, 255, 255, 100)
         BACKGROUND_FOCUS = wx.Colour(155, 155, 155, 80)
@@ -104,7 +137,7 @@ class Minimap(CanvasOverlay):
 
         scale = self._size.x / self._realsize.x
 
-        # draw total rect TODO move this to theme or somewhere
+        # draw total rect
         draw_rect(gc, Rect(self.position, self._size), fill=background)
         my_botright = self.position + self._size
 
@@ -132,7 +165,7 @@ class Minimap(CanvasOverlay):
             pos = Vec2(evt.GetPosition()) - self.position
             if within_rect(pos, Rect(self.window_pos * scale, self.window_size * scale)):
                 self._dragging = True
-                self._drag_pos = pos - self.window_pos * scale
+                self._drag_rel = pos - self.window_pos * scale
             else:
                 topleft = pos - self.window_size * scale / 2
                 self._callback(topleft / scale)
@@ -149,17 +182,38 @@ class Minimap(CanvasOverlay):
                 topleft = pos - self.window_size * scale / 2
                 self._callback(topleft / scale)
             else:
-                actual_pos = pos - self._drag_pos
+                actual_pos = pos - self._drag_rel
                 self._callback(actual_pos / scale)
 
 
 class MultiSelect:
+    """Class that manages selecting, moving, and resizing multiple nodes.
+    
+    This class will modify the position and size of the given list of nodes when the user
+    interacts with the bounding rectangle. Therefore, a new MultiSelect should be constructed 
+    whenever the passed list of nodes becomes outdated.
+    """
+    
+    _nodes: List[Node]
+    _padding: float  #: padding for the bounding rectangle around the selected nodes
+    _dragging: bool
+    _resizing: bool
+    _drag_rel: Vec2  #: relative position of the mouse to the bounding rect when dragging started
+    _rel_positions: Optional[List[Vec2]]  #: relative positions of the nodes to the bounding rect
+    _resize_handle: int  #: the node resize handle. See Canvas::_GetNodeResizeHandles for details.
+    #: the minimum resize ratio for each axis, to avoid making the nodes too small
+    _min_resize_ratio: Vec2
+    _orig_rect: Optional[Rect]  #: the bounding rect when dragging/resizing started
+    _bounds: Rect  #: the bounds that the bounding rect may not exceed
+    _bounding_rect: Rect
+    _theme: Dict[str, Any]  #: the current theme
+
     def __init__(self, nodes: List[Node], theme: Dict[str, Any], bounds: Rect):
         self._nodes = nodes
         # if only one node is selected, use the node padding instead
         self._padding = theme['select_box_padding'] if len(nodes) > 1 else \
             theme['node_outline_padding']
-        self.bounding_rect = get_bounding_rect(nodes, self._padding)
+        self._bounding_rect = get_bounding_rect(nodes, self._padding)
         self._dragging = False
         self._resizing = False
 
@@ -168,36 +222,36 @@ class MultiSelect:
 
         self._resize_handle = -1
         self._min_resize_ratio = Vec2()
-        self.theme = theme
+        self._theme = theme
         self._orig_rect = None
 
         self._bounds = bounds
 
     @property
     def dragging(self):
+        """Returns whether the user is drag-moving the bounding rectangle."""
         return self._dragging
 
     @property
     def resizing(self):
+        """Returns whether the user is drag-resizing the bounding rectangle."""
         return self._resizing
 
     @property
-    def nodes(self):
-        return self._nodes
-
-    def refresh_nodes(self, nodes: List[Node]):
-        """Called when user hasn't stopped dragging but the nodes have been updated.
-        """
-        self._nodes = nodes
+    def bounding_rect(self):
+        """The current bounding rectangle"""
+        return self._bounding_rect
 
     def BeginDrag(self, mouse_pos: Vec2):
+        """Begin a drag-moving operation."""
         assert not self._dragging
         assert not self._resizing
         self._dragging = True
-        self._drag_rel = self.bounding_rect.position - mouse_pos
+        self._drag_rel = self._bounding_rect.position - mouse_pos
         self._rel_positions = [n.s_position - mouse_pos for n in self._nodes]
 
     def DoDrag(self, mouse_pos: Vec2):
+        """Perform an ongoing drag-moving operation."""
         assert self._dragging
 
         new_positions = [mouse_pos + rp for rp in self._rel_positions]
@@ -222,45 +276,33 @@ class MultiSelect:
         elif max_y > lim_botright.y:
             offset += Vec2(0, lim_botright.y - max_y)
 
-        self.bounding_rect.position = mouse_pos + offset + self._drag_rel
+        self._bounding_rect.position = mouse_pos + offset + self._drag_rel
         for node, np in zip(self._nodes, new_positions):
             node.s_position = np + offset
-        '''
-        x_good = True  # x-axis in bounds
-        y_good = True  # y-axis in bounds
-        for node, np in zip(self._nodes, new_positions):
-            botright = np + node.s_size
-            if x_good and np.x < lim_topleft.x or botright.x > lim_botright.x:
-                x_good = False
-            if y_good and np.y < lim_topleft.y or botright.y > lim_botright.y:
-                y_good = False
-
-        for axis, good in enumerate([x_good, y_good]):
-            if good:
-                self.bounding_rect.position = self.bounding_rect.position.swapped(
-                    axis, mouse_pos[axis] + self._drag_rel[axis])
-        '''
 
     def EndDrag(self):
+        """End a drag-moving operation"""
         self._dragging = False
 
     def BeginResize(self, handle: int):
+        """Begin a resizing operation on the given resize handle."""
         assert not self._dragging
         assert not self._resizing
         assert handle >= 0 and handle < 8
 
         self._resizing = True
         self._resize_handle = handle
-        min_width = min(n.size.x for n in self.nodes)
-        min_height = min(n.size.y for n in self.nodes)
-        self._min_resize_ratio = Vec2(self.theme['min_node_width'] / min_width,
-                                      self.theme['min_node_height'] / min_height)
-        self._orig_rect = copy.copy(self.bounding_rect)
+        min_width = min(n.size.x for n in self._nodes)
+        min_height = min(n.size.y for n in self._nodes)
+        self._min_resize_ratio = Vec2(self._theme['min_node_width'] / min_width,
+                                      self._theme['min_node_height'] / min_height)
+        self._orig_rect = copy.copy(self._bounding_rect)
         self._orig_positions = [n.s_position - self._orig_rect.position - Vec2.repeat(self._padding)
                                 for n in self._nodes]
         self._orig_sizes = [n.s_size for n in self._nodes]
 
     def DoResize(self, mouse_pos: Vec2):
+        """Perform an ongoing resize operation."""
         assert self._resizing
         # STEP 1, get new rect vertices
         # see class comment for resize handle format. For side-handles, get the vertex in the
@@ -268,7 +310,7 @@ class MultiSelect:
         dragged_idx = self._resize_handle // 2
         fixed_idx = int((dragged_idx + 2) % 4)  # get the vertex opposite dragged idx as fixed_idx
         orig_dragged_point = self._orig_rect.NthVertex(dragged_idx)
-        cur_dragged_point = self.bounding_rect.NthVertex(dragged_idx)
+        cur_dragged_point = self._bounding_rect.NthVertex(dragged_idx)
         fixed_point = self._orig_rect.NthVertex(fixed_idx)
 
         target_point = mouse_pos
@@ -331,8 +373,9 @@ class MultiSelect:
             node.s_size = orig_size.elem_mul(size_ratio)
 
         # STEP 5 apply new bounding_rect position and size
-        self.bounding_rect.position = br_pos
-        self.bounding_rect.size = target_size + pad_off * 2
+        self._bounding_rect.position = br_pos
+        self._bounding_rect.size = target_size + pad_off * 2
 
     def EndResize(self):
+        """End a resize operation."""
         self._resizing = False

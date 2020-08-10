@@ -1,12 +1,20 @@
+"""Implementation of a controller.
+"""
 # pylint: disable=maybe-no-member
 import wx
 from typing import List
 import IodineAPI as iod
-from .utils import Vec2, Node, IodToWxColour
+from .utils import Vec2, Node, rgba_to_wx_colour
 from .mvc import IController, IView
 
 
 class Controller(IController):
+    """A controller class.
+    
+    This is not strictly adhering to the MVC architecture, since there is not a separate Model
+    interface. Rather, this controller directly interacts with iodine. The model class should
+    be implemented if necessary.
+    """
     view: IView
 
     def __init__(self, view: IView):
@@ -80,6 +88,7 @@ class Controller(IController):
 
     # get the updated list of nodes from model and update
     def _UpdateView(self):
+        """tell the view to update by re-populating its list of nodes."""
         # TODO multiple net IDs
         neti = 0
         ids = iod.getListOfNodeIds(neti)
@@ -90,7 +99,7 @@ class Controller(IController):
             x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)
             fill_rgb = iod.getNodeFillColorRGB(neti, nodei)
             fill_alpha = iod.getNodeFillColorAlpha(neti, nodei)
-            fill_color = IodToWxColour(fill_rgb, fill_alpha)
+            fill_color = rgba_to_wx_colour(fill_rgb, fill_alpha)
             # TODO don't hardcode border color and width
             node = Node(
                 id_=id_,

@@ -42,5 +42,5 @@ DEFAULT_SETTINGS = {
         ('mode', -1),
         ('cursor', -1),
         ('zoom', -1),
-    ]
+    ],  # first element: status field identifier; second element: field width
 }

@@ -4,10 +4,9 @@
 import wx
 import abc
 import copy
-from math import copysign
 from typing import Any, Callable, Dict, List
-from .types import Vec2, Rect, Node
-from .utils import ClampPoint, DrawRect, GetBoundingRect, WithinRect
+from .utils import Vec2, Rect, Node
+from .utils import clamp_point, draw_rect, get_bounding_rect, within_rect
 
 
 class CanvasOverlay(abc.ABC):
@@ -106,7 +105,7 @@ class Minimap(CanvasOverlay):
         scale = self._size.x / self._realsize.x
 
         # draw total rect TODO move this to theme or somewhere
-        DrawRect(gc, Rect(self.position, self._size), fill=background)
+        draw_rect(gc, Rect(self.position, self._size), fill=background)
         my_botright = self.position + self._size
 
         win_pos = self.window_pos * scale + self.position
@@ -117,7 +116,7 @@ class Minimap(CanvasOverlay):
         win_size.y = min(win_size.y, my_botright.y - win_pos.y)
 
         # draw visible rect
-        DrawRect(gc, Rect(win_pos, win_size), fill=foreground)
+        draw_rect(gc, Rect(win_pos, win_size), fill=foreground)
 
         # draw nodes
         for node in self.nodes:
@@ -125,13 +124,13 @@ class Minimap(CanvasOverlay):
             n_size = node.size * scale
             fc = node.fill_color
             color = wx.Colour(fc.Red(), fc.Green(), fc.Blue(), 100)
-            DrawRect(gc, Rect(n_pos, n_size), fill=color)
+            draw_rect(gc, Rect(n_pos, n_size), fill=color)
 
     def OnLeftDown(self, evt: wx.Event):
         if not self._dragging:
             scale = self._size.x / self._realsize.x
             pos = Vec2(evt.GetPosition()) - self.position
-            if WithinRect(pos, Rect(self.window_pos * scale, self.window_size * scale)):
+            if within_rect(pos, Rect(self.window_pos * scale, self.window_size * scale)):
                 self._dragging = True
                 self._drag_pos = pos - self.window_pos * scale
             else:
@@ -144,7 +143,7 @@ class Minimap(CanvasOverlay):
     def OnMotion(self, evt: wx.MouseEvent):
         scale = self._size.x / self._realsize.x
         pos = Vec2(evt.GetPosition()) - self.position
-        pos = ClampPoint(pos, Rect(Vec2(), self.size))
+        pos = clamp_point(pos, Rect(Vec2(), self.size))
         if evt.LeftIsDown():
             if not self._dragging:
                 topleft = pos - self.window_size * scale / 2
@@ -160,7 +159,7 @@ class MultiSelect:
         # if only one node is selected, use the node padding instead
         self._padding = theme['select_box_padding'] if len(nodes) > 1 else \
             theme['node_outline_padding']
-        self.bounding_rect = GetBoundingRect(nodes, self._padding)
+        self.bounding_rect = get_bounding_rect(nodes, self._padding)
         self._dragging = False
         self._resizing = False
 
@@ -284,7 +283,7 @@ class MultiSelect:
                 target_point.y = orig_dragged_point.y
 
         # clamp target point
-        target_point = ClampPoint(target_point, self._bounds)
+        target_point = clamp_point(target_point, self._bounds)
 
         # STEP 2, get and validate rect ratio
 

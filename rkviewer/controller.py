@@ -2,8 +2,8 @@
 import wx
 from typing import List
 import IodineAPI as iod
-from .types import Vec2, Node, IView, IController
-from .utils import IodToWxColour
+from .utils import Vec2, Node, IodToWxColour
+from .mvc import IController, IView
 
 
 class Controller(IController):

@@ -1,13 +1,19 @@
 # pylint: disable=maybe-no-member
-from .canvasutils import CanvasOverlay, Minimap, MultiSelect
+from .widgets import CanvasOverlay, Minimap, MultiSelect
 import wx
 from enum import Enum
 from typing import Optional, Any, Set, Tuple, List, Dict
-from .utils import ClampRectPos, RectsIntersect, WithinRect, DrawRect, convert_position
-from .types import Rect, Vec2, Node, IController
+from .utils import Vec2, Rect, Node, clamp_rect_pos, rects_intersect, within_rect, draw_rect
+from ..mvc import IController
+from ..utils import convert_position
 
 
+"""The padding around the canvas to ensure nodes are not moved out of bounds due to floating pont
+issues.
+"""
 BOUNDS_EPS = 1
+"""2D bounds vector formed from BOUNDS_EPS
+"""
 BOUNDS_EPS_VEC = Vec2.repeat(BOUNDS_EPS)
 
 
@@ -62,8 +68,8 @@ class Canvas(wx.ScrolledWindow):
     _drag_rect: Rect
     _drag_selected_ids: Set[str]
 
-    MIN_ZOOM_LEVEL = -10
-    MAX_ZOOM_LEVEL = 10
+    MIN_ZOOM_LEVEL = -7
+    MAX_ZOOM_LEVEL = 7
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int],
                  theme: Dict[str, Any], settings: Dict[str, Any], **kw):
@@ -157,7 +163,7 @@ class Canvas(wx.ScrolledWindow):
 
     def InWhichOverlay(self, pos: Vec2) -> Optional[CanvasOverlay]:
         # TODO right now this is hardcoded; in the future add List[CanvasOverlay] attribute
-        if WithinRect(pos, Rect(self._minimap.position, self._minimap.size)):
+        if within_rect(pos, Rect(self._minimap.position, self._minimap.size)):
             return self._minimap
         return None
 
@@ -228,7 +234,7 @@ class Canvas(wx.ScrolledWindow):
         assert zoom >= Canvas.MIN_ZOOM_LEVEL and zoom <= Canvas.MAX_ZOOM_LEVEL
         self._zoom_level = zoom
         old_scale = self._scale
-        self._scale = 1.2 ** zoom
+        self._scale = 1.5 ** zoom
 
         # adjust scroll position
         logical = Vec2(self.CalcUnscrolledPosition(anchor.to_wx_point()))
@@ -340,7 +346,7 @@ class Canvas(wx.ScrolledWindow):
                     rects = self._GetNodeResizeHandleRects(self._multiselect.bounding_rect)
 
                     for i, rect in enumerate(rects):
-                        if WithinRect(logical_pos, rect):
+                        if within_rect(logical_pos, rect):
                             self._UpdateMultiSelect()
                             self._multiselect.BeginResize(i)
                             return
@@ -352,7 +358,7 @@ class Canvas(wx.ScrolledWindow):
                 # clicked within rect, then we drag move the rect as well.
                 # The case where we don't drag the drag even though we clicked inside is if 
                 # multi-selecting and clicked on a node -- in that case we de-select that node.
-                if (not multi or in_node is None) and len(self._selected_ids) != 0 and WithinRect(
+                if (not multi or in_node is None) and len(self._selected_ids) != 0 and within_rect(
                         logical_pos, self._multiselect.bounding_rect):
                     # re-create a MultiSelect since self.nodes could've changed when mouse
                     # button was released
@@ -376,7 +382,7 @@ class Canvas(wx.ScrolledWindow):
                 # update multiselect
                 self._UpdateMultiSelect()
 
-                if len(self._selected_ids) != 0 and WithinRect(
+                if len(self._selected_ids) != 0 and within_rect(
                         logical_pos, self._multiselect.bounding_rect):
                     # re-create a MultiSelect since self.nodes could've changed when mouse
                     # button was released
@@ -408,7 +414,7 @@ class Canvas(wx.ScrolledWindow):
                     border_width=self.theme['node_border_width'],
                     scale=self._scale,
                 )
-                node.s_position = ClampRectPos(node.s_rect, Rect(Vec2(), self.realsize * self._scale),
+                node.s_position = clamp_rect_pos(node.s_rect, Rect(Vec2(), self.realsize * self._scale),
                                                BOUNDS_EPS)
                 self.AddNodeRename(node)
                 self.Refresh()
@@ -506,7 +512,7 @@ class Canvas(wx.ScrolledWindow):
             evt.Skip()
 
     def _GetIntersectingNodes(self, rect: Rect, nodes: List[Node]):
-        return [n for n in nodes if RectsIntersect(n.s_rect, rect)]
+        return [n for n in nodes if rects_intersect(n.s_rect, rect)]
 
     def OnPaint(self, evt):
         self.SetOverlayPositions()
@@ -517,7 +523,7 @@ class Canvas(wx.ScrolledWindow):
         if gc:
             # draw background for debugging
             origin = Vec2(self.CalcScrolledPosition(wx.Point(0, 0)))
-            DrawRect(
+            draw_rect(
                 gc,
                 Rect(origin, self.realsize * self._scale),
                 fill=self.theme['canvas_bg'],
@@ -534,7 +540,7 @@ class Canvas(wx.ScrolledWindow):
                 width, height = node.s_size
                 border_width = node.border_width * self._scale
 
-                DrawRect(
+                draw_rect(
                     gc,
                     Rect(Vec2(x, y), node.s_size),
                     fill=self.theme['node_fill'],
@@ -567,7 +573,7 @@ class Canvas(wx.ScrolledWindow):
             if self._drag_selecting:
                 adj_pos = Vec2(self.CalcScrolledPosition(self._drag_rect.position.to_wx_point()))
                 drect = Rect(adj_pos, self._drag_rect.size)
-                DrawRect(
+                draw_rect(
                     gc,
                     drect,
                     fill=self.theme['drag_fill'],
@@ -580,7 +586,7 @@ class Canvas(wx.ScrolledWindow):
     def _InNode(self, logical_pos: Vec2) -> Optional[Node]:
         in_node: Optional[Node] = None
         for node in reversed(self._nodes):
-            if WithinRect(logical_pos, node.s_rect):
+            if within_rect(logical_pos, node.s_rect):
                 in_node = node
                 break
         return in_node
@@ -600,7 +606,7 @@ class Canvas(wx.ScrolledWindow):
             self.theme['node_outline_padding'] * 2)
 
         # draw rect
-        DrawRect(gc, rect, border=self.theme['select_box_color'],
+        draw_rect(gc, rect, border=self.theme['select_box_color'],
                  border_width=self.theme['node_outline_width'])
 
     def _DrawResizeRect(self, gc: wx.GraphicsContext, rect: Rect, border_width: float):
@@ -613,14 +619,14 @@ class Canvas(wx.ScrolledWindow):
         adj_pos = Vec2(self.CalcScrolledPosition(pos.to_wx_point()))
 
         # draw main outline
-        DrawRect(gc, Rect(adj_pos, size), border=self.theme['select_box_color'],
+        draw_rect(gc, Rect(adj_pos, size), border=self.theme['select_box_color'],
                  border_width=border_width)
 
         for handle_rect in self._GetNodeResizeHandleRects(rect):
             # convert to device position for drawing
             rpos, rsize = handle_rect.GetTuple()
             rpos = Vec2(self.CalcScrolledPosition(rpos.to_wx_point()))
-            DrawRect(gc, Rect(rpos, rsize), fill=self.theme['select_box_color'])
+            draw_rect(gc, Rect(rpos, rsize), fill=self.theme['select_box_color'])
 
     def _GetSelectedNodes(self) -> List[Node]:
         """Get the list of selected nodes using self._selected_ids"""

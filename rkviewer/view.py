@@ -1,9 +1,11 @@
 # pylint: disable=maybe-no-member
 import wx
-from typing import List, Dict, Any
 import copy
-from .types import DEFAULT_SETTINGS, Node, IView, IController, DEFAULT_THEME, DEFAULT_SETTINGS
-from .canvas import Canvas
+from typing import List, Dict, Any
+from .canvas.wx import Canvas
+from .config import DEFAULT_SETTINGS, DEFAULT_THEME, DEFAULT_SETTINGS
+from .mvc import IController, IView
+from .utils import Node
 from .widgets import ButtonGroup
 
 

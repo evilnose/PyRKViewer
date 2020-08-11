@@ -16,32 +16,32 @@ class IController(abc.ABC):
     """
 
     @abc.abstractmethod
-    def TryStartGroup(self) -> bool:
+    def try_start_group(self) -> bool:
         """Try to signal start of group operation"""
         pass
 
     @abc.abstractmethod
-    def TryEndGroup(self) -> bool:
+    def try_end_group(self) -> bool:
         """Try to signal end of group operation"""
         pass
 
     @abc.abstractmethod
-    def TryAddNode(self, node: Node) -> bool:
+    def try_add_node(self, node: Node) -> bool:
         """Try to add the given Node to the canvas."""
         pass
 
     @abc.abstractmethod
-    def TryMoveNode(self, id_: str, pos: Vec2):
+    def try_move_node(self, id_: str, pos: Vec2):
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def TrySetNodeSize(self, id_: str, size: Vec2):
+    def try_set_node_size(self, id_: str, size: Vec2):
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def GetListOfNodeIds(self) -> List[str]:
+    def get_list_of_node_ids(self) -> List[str]:
         """Try getting the list of node IDs"""
         pass
 
@@ -54,20 +54,20 @@ class IView(abc.ABC):
     """
 
     @abc.abstractmethod
-    def BindController(self, controller: IController):
+    def bind_controller(self, controller: IController):
         """Bind the controller. This needs to be called after a controller is 
         created and before any other method is called.
         """
         pass
 
     @abc.abstractmethod
-    def MainLoop(self):
+    def main_loop(self):
         """Run the main loop. This is blocking right now. This may be modified to
         become non-blocking in the future if required.
         """
         pass
 
     @abc.abstractmethod
-    def UpdateAll(self, nodes):
+    def update_all(self, nodes):
         """Update all the graph objects, and redraw everything at the end"""
         pass

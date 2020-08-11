@@ -3,7 +3,7 @@
 # pylint: disable=maybe-no-member
 import wx
 from typing import List
-import IodineAPI as iod
+import iodine as iod
 from .utils import Vec2, Node, rgba_to_wx_colour
 from .mvc import IController, IView
 
@@ -21,7 +21,7 @@ class Controller(IController):
         self.view = view
         iod.newNetwork('the one')
 
-    def TryStartGroup(self) -> bool:
+    def try_start_group(self) -> bool:
         try:
             iod.startGroup()
         except iod.Error as e:
@@ -29,7 +29,7 @@ class Controller(IController):
             return False
         return True
 
-    def TryEndGroup(self) -> bool:
+    def try_end_group(self) -> bool:
         try:
             iod.endGroup()
         except iod.Error as e:
@@ -37,7 +37,7 @@ class Controller(IController):
             return False
         return True
 
-    def TryAddNode(self, node: Node) -> bool:
+    def try_add_node(self, node: Node) -> bool:
         '''
         Add node represented by the given Node variable.
 
@@ -59,10 +59,10 @@ class Controller(IController):
             print('Error:', str(e))
             return False
 
-        self._UpdateView()
+        self._update_view()
         return True
 
-    def TryMoveNode(self, id_: str, pos: Vec2) -> bool:
+    def try_move_node(self, id_: str, pos: Vec2) -> bool:
         neti = 0
         # TODO exception
         nodei = iod.getNodeIndex(neti, id_)
@@ -72,22 +72,22 @@ class Controller(IController):
             print('Error:', str(e))
             return False
 
-        self._UpdateView()
+        self._update_view()
         return True
 
-    def TrySetNodeSize(self, id_: str, size: Vec2):
+    def try_set_node_size(self, id_: str, size: Vec2):
         neti = 0
         # TODO exception
         nodei = iod.getNodeIndex(neti, id_)
         iod.setNodeSize(neti, nodei, size.x, size.y)
-        self._UpdateView()
+        self._update_view()
 
-    def GetListOfNodeIds(self) -> List[str]:
+    def get_list_of_node_ids(self) -> List[str]:
         neti = 0
         return iod.getListOfNodeIds(neti)
 
     # get the updated list of nodes from model and update
-    def _UpdateView(self):
+    def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
         # TODO multiple net IDs
         neti = 0
@@ -111,4 +111,4 @@ class Controller(IController):
             )
             nodes.append(node)
 
-        self.view.UpdateAll(nodes)
+        self.view.update_all(nodes)

@@ -100,6 +100,9 @@ class Vec2:
     def __len__(self) -> int:
         return 2
 
+    def __eq__(self, other: Vec2) -> bool:
+        return self.x == other.x and self.y == other.y
+
     def to_wx_point(self) -> wx.Point:
         """Convert this to wx.Point; return the result."""
         return wx.Point(self.x, self.y)
@@ -146,14 +149,18 @@ class Vec2:
 class Rect:
     """Class that represents a rectangle by keeping a position and a size."""
     def __init__(self, pos: Vec2, size: Vec2):
+        assert size.x >= 0 and size.y >= 0
         self.position = pos
         self.size = size
 
-    def GetTuple(self) -> Tuple[Vec2, Vec2]:
+    def __eq__(self, other: Rect) -> bool:
+        return self.position == other.position and self.size == other.size
+
+    def as_tuple(self) -> Tuple[Vec2, Vec2]:
         """Return the position and the size in a tuple."""
         return (self.position, self.size)
 
-    def NthVertex(self, n: int):
+    def nth_vertex(self, n: int):
         """Return the nth vertex of the rectangle.
         
         The top-left vertex is the 0th vertex, and subsequence vertices are indexed in clockwise
@@ -168,7 +175,7 @@ class Rect:
         elif n == 3:
             return self.position + Vec2(0, self.size.y)
         else:
-            assert False, "Rect.NthVertex() index out of bounds"
+            assert False, "Rect.nth_vertex() index out of bounds"
 
     def __repr__(self):
         return 'Rect({}, {})'.format(self.position, self.size)
@@ -283,4 +290,5 @@ def convert_position(fn):
         copy.foreign = not (self is evt.EventObject)
         fn(self, copy)
         evt.Skip()
+
     return ret

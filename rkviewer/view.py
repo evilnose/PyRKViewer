@@ -5,8 +5,13 @@ from typing import List, Dict, Any
 from .canvas.wx import Canvas, InputMode
 from .config import DEFAULT_SETTINGS, DEFAULT_THEME, DEFAULT_SETTINGS
 from .mvc import IController, IView
-from .utils import Node
+from .utils import Node, Vec2
 from .widgets import ButtonGroup
+
+
+class EditPanel(wx.Panel):
+    def __init__(self, parent, **kw):
+        super().__init__(parent, **kw)
 
 
 class TopToolbar(wx.Panel):
@@ -82,12 +87,12 @@ class MainPanel(wx.Panel):
         self.SetBackgroundColour(theme['overall_bg'])
         self.controller = controller
         self.theme = theme
+
         self.canvas = Canvas(self.controller, self,
                              size=(theme['canvas_width'], theme['canvas_height']),
                              realsize=(4 * theme['canvas_width'], 4 * theme['canvas_height']),
                              theme=theme,
-                             settings=settings,
-                             )
+                             settings=settings,)
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()
@@ -103,35 +108,27 @@ class MainPanel(wx.Panel):
                                toggle_callback=set_input_mode)
         self.toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
+        top_toolbar_width = theme['canvas_width'] + theme['edit_panel_width'] + theme['vgap']
         self.top_toolbar = TopToolbar(self,
-                                      size=(theme['canvas_width'],
-                                            theme['top_toolbar_height']),
+                                      size=(top_toolbar_width, theme['top_toolbar_height']),
                                       zoom_callback=self.canvas.ZoomCenter)
         self.top_toolbar.SetBackgroundColour(theme['toolbar_bg'])
+
+        self.edit_panel = EditPanel(self, size=(theme['edit_panel_width'],
+                                                theme['canvas_height']))
+        self.edit_panel.SetBackgroundColour(theme['toolbar_bg'])
 
         self.buffer = None
 
         # and create a sizer to manage the layout of child widgets
-        sizer = wx.FlexGridSizer(cols=2, rows=2, vgap=2, hgap=2)
+        sizer = wx.GridBagSizer(vgap=theme['vgap'], hgap=theme['hgap'])
 
-        # For the items (non-spacers),
-        # The 0th element of the tuple is the element itself
-        # The 1st element is 1 for the canvas, so that only it expands during resize
-        # The 2nd element is wx.EXPAND for all, so that the element expands to fill
-        #   their grid cell.
-        sizer.AddMany([
-            # Add spacer at (0, 0)
-            (theme['left_toolbar_width'],
-             theme['top_toolbar_height']),
-            # Add top toolbar at (0, 1)
-            (self.top_toolbar, 0, wx.EXPAND),
-            # Add toolbar at (1, 0)
-            (self.toolbar, 0, wx.EXPAND),
-            # Add canvas at (1, 1)
-            (self.canvas, 1, wx.EXPAND),
-        ])
+        sizer.Add(self.top_toolbar, wx.GBPosition(0, 1), wx.GBSpan(1, 2), wx.EXPAND)
+        sizer.Add(self.toolbar, wx.GBPosition(1, 0), wx.GBSpan(1, 1), wx.EXPAND)
+        sizer.Add(self.canvas, wx.GBPosition(1, 1), wx.GBSpan(1, 1), wx.EXPAND)
+        sizer.Add(self.edit_panel, wx.GBPosition(1, 2), wx.GBSpan(1, 1), wx.EXPAND)
 
-        # The 1st col and row are growable, i.e. the cell the canvas is in
+        # allow the canvas to grow
         sizer.AddGrowableCol(1, 1)
         sizer.AddGrowableRow(1, 1)
 
@@ -146,6 +143,7 @@ class MainPanel(wx.Panel):
 
 class MyFrame(wx.Frame):
     """The main frame."""
+
     def __init__(self, controller: IController, theme, settings, **kw):
         super().__init__(None, **kw)
         status_fields = settings['status_fields']
@@ -160,15 +158,16 @@ class MyFrame(wx.Frame):
 
 class View(IView):
     """Implementation of the view class."""
+
     def __init__(self, theme=DEFAULT_THEME, settings=DEFAULT_SETTINGS):
         self.controller = None
         self.theme = copy.copy(theme)
         self.settings = copy.copy(settings)
 
-    def BindController(self, controller: IController):
+    def bind_controller(self, controller: IController):
         self.controller = controller
 
-    def MainLoop(self):
+    def main_loop(self):
         assert self.controller is not None
         app = wx.App()
         frm = MyFrame(self.controller, self.theme, self.settings, title='RK Network Viewer')
@@ -177,7 +176,7 @@ class View(IView):
         frm.Show()
         app.MainLoop()
 
-    def UpdateAll(self, nodes: List[Node]):
+    def update_all(self, nodes: List[Node]):
         """Update the list of nodes.
 
         Note that View takes ownership of the list of nodes and may modify it.

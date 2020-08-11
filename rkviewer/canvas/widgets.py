@@ -5,8 +5,8 @@ import wx
 import abc
 import copy
 from typing import Any, Callable, Dict, List, Optional
-from .utils import Vec2, Rect, Node
 from .utils import clamp_point, draw_rect, get_bounding_rect, within_rect
+from ..utils import Vec2, Rect, Node
 
 
 class CanvasOverlay(abc.ABC):
@@ -213,7 +213,8 @@ class MultiSelect:
         # if only one node is selected, use the node padding instead
         self._padding = theme['select_box_padding'] if len(nodes) > 1 else \
             theme['node_outline_padding']
-        self._bounding_rect = get_bounding_rect(nodes, self._padding)
+        rects = [n.s_rect for n in nodes]
+        self._bounding_rect = get_bounding_rect(rects, self._padding)
         self._dragging = False
         self._resizing = False
 
@@ -309,9 +310,9 @@ class MultiSelect:
         # counter-clockwise direction
         dragged_idx = self._resize_handle // 2
         fixed_idx = int((dragged_idx + 2) % 4)  # get the vertex opposite dragged idx as fixed_idx
-        orig_dragged_point = self._orig_rect.NthVertex(dragged_idx)
-        cur_dragged_point = self._bounding_rect.NthVertex(dragged_idx)
-        fixed_point = self._orig_rect.NthVertex(fixed_idx)
+        orig_dragged_point = self._orig_rect.nth_vertex(dragged_idx)
+        cur_dragged_point = self._bounding_rect.nth_vertex(dragged_idx)
+        fixed_point = self._orig_rect.nth_vertex(fixed_idx)
 
         target_point = mouse_pos
 

@@ -14,3 +14,8 @@ run `pyinstaller -F --windowed --add-data ext/Iodine.dll;. main.py` on Windows
 or `pyinstaller -F --windowed --add-data ext/Iodine.dll:. main.py` on Linux/Mac
 to generate a file named `main.spec`. Note that if a `main.spec` file is already 
 present **it will be overwritten**.
+
+## Note on Style
+Usually snake_case is used for function names. However, to retain some degree of backwards 
+compatibility for wxPython, subclasses of wxPython classes use PascalCase for their methods,
+e.g. `Canvas::RegisterAllChildren`.

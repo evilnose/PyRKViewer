@@ -5,7 +5,7 @@ This includes drawing helpers and 2D geometry functions.
 # pylint: disable=maybe-no-member
 import wx
 from typing import Optional, List
-from ..utils import Vec2, Rect, Node
+from ..utils import Vec2, Rect
 
 
 def within_rect(pos: Vec2, rect: Rect) -> bool:
@@ -59,25 +59,24 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
         gc.StrokePath(path)
 
 
-def get_bounding_rect(nodes: List[Node], padding: float = 0) -> Rect:
-    """Compute the bounding rectangle of a given list of nodes.
+def get_bounding_rect(rects: List[Rect], padding: float = 0) -> Rect:
+    """Compute the bounding rectangle of a given list of rects.
 
-    This computes the smallest possible rectangle needed to cover each of the nodes (inclusive), as
-    well as its position. Border width of the nodes are not taken into account. Additionally a
-    padding may be specified to provide some space.
+    This computes the smallest possible rectangle needed to cover each of the rects (inclusive), as
+    well as its position. Additionally a padding may be specified to provide some space.
 
     Args:
-        nodes: The list of nodes.
+        rets: The list of rectangles.
         padding: The padding of the bounding rectangle. If positive, there will be x pixels of 
             padding for each side of the rectangle.
 
     Returns:
         The bounding rectangle.
     """
-    min_x = min(n.s_position.x for n in nodes)
-    min_y = min(n.s_position.y for n in nodes)
-    max_x = max(n.s_position.x + n.s_size.x for n in nodes)
-    max_y = max(n.s_position.y + n.s_size.y for n in nodes)
+    min_x = min(r.position.x for r in rects)
+    min_y = min(r.position.y for r in rects)
+    max_x = max(r.position.x + r.size.x for r in rects)
+    max_y = max(r.position.y + r.size.y for r in rects)
     size_x = max_x - min_x + padding * 2
     size_y = max_y - min_y + padding * 2
     return Rect(Vec2(min_x - padding, min_y - padding), Vec2(size_x, size_y))
@@ -97,11 +96,11 @@ def clamp_rect_pos(rect: Rect, bounds: Rect, padding = 0) -> Vec2:
         The clamped position.
     """
 
-    if rect.size.x > bounds.size.x or rect.size.y > bounds.size.y:
+    if rect.size.x + 2 * padding > bounds.size.x or rect.size.y + 2 * padding > bounds.size.y:
         raise ValueError("The clamped rectangle cannot fit inside the given bounds")
 
     topleft = bounds.position + Vec2.repeat(padding)
-    botright = bounds.size - rect.size - Vec2.repeat(padding)
+    botright = bounds.position + bounds.size - rect.size - Vec2.repeat(padding)
     ret = rect.position
     ret = Vec2(max(ret.x, topleft.x), ret.y)
     ret = Vec2(min(ret.x, botright.x), ret.y)
@@ -119,7 +118,7 @@ def clamp_point(pos: Vec2, bounds: Rect, padding = 0) -> Vec2:
         The clamp position.
     """
     topleft = bounds.position + Vec2.repeat(padding)
-    botright = bounds.size - Vec2.repeat(padding)
+    botright = bounds.position + bounds.size - Vec2.repeat(padding)
     ret = pos
     ret = Vec2(max(ret.x, topleft.x), ret.y)
     ret = Vec2(min(ret.x, botright.x), ret.y)
@@ -129,14 +128,14 @@ def clamp_point(pos: Vec2, bounds: Rect, padding = 0) -> Vec2:
 
 
 def rects_overlap(r1: Rect, r2: Rect) -> bool:
-    """Returns whether the two given rectangles overlap, not counting if they are touching."""
+    """Returns whether the two given rectangles overlap, counting if they are touching."""
     botright1 = r1.position + r1.size
     botright2 = r2.position + r2.size
 
     # The two rects do not overlap if and only if the two rects do not overlap along at least one
     # of the axes.
     for axis in [0, 1]:
-        if botright1[axis] <= r2.position[axis] or botright2[axis] <= r1.position[axis]:
+        if botright1[axis] < r2.position[axis] or botright2[axis] < r1.position[axis]:
             return False
 
     return True

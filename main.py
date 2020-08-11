@@ -5,5 +5,5 @@ from rkviewer.controller import Controller
 if __name__ == '__main__':
     view = View()
     controller = Controller(view)
-    view.BindController(controller)
-    view.MainLoop()
+    view.bind_controller(controller)
+    view.main_loop()

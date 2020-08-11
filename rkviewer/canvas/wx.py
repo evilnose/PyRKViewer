@@ -1,10 +1,11 @@
 """The interface of canvas for wxPython."""
 # pylint: disable=maybe-no-member
-from .widgets import CanvasOverlay, Minimap, MultiSelect
 import wx
 from enum import Enum, unique
 from typing import Optional, Any, Set, Tuple, List, Dict
-from .utils import Vec2, Rect, Node, clamp_rect_pos, rects_overlap, within_rect, draw_rect
+from .widgets import CanvasOverlay, Minimap, MultiSelect
+from .utils import clamp_rect_pos, rects_overlap, within_rect, draw_rect
+from ..utils import Vec2, Rect, Node
 from ..mvc import IController
 from ..utils import convert_position
 
@@ -65,6 +66,7 @@ class Canvas(wx.ScrolledWindow):
     _drag_rect: Rect  #: The current drag-selection rectangle.
     _drag_selected_ids: Set[str]  #: The currently selected nodes using drag-selection rectangle.
     _reverse_status: Dict[str, int]  #: TODO
+    _mouse_outside_frame: bool
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int],
                  theme: Dict[str, Any], settings: Dict[str, Any], **kw):
@@ -86,6 +88,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
+        self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
 
         # state variables
         self._input_mode = InputMode.SELECT
@@ -126,6 +129,8 @@ class Canvas(wx.ScrolledWindow):
         assert status_fields is not None
         self._reverse_status = {name: i for i, (name, _) in enumerate(status_fields)}
 
+        self._mouse_outside_frame = True
+
         wx.CallAfter(lambda: self.SetZoomLevel(0, Vec2(0, 0)))
 
         # TODO add List[CanvasOverlay] to store all overlays, so that overlay mouse checking code
@@ -165,6 +170,7 @@ class Canvas(wx.ScrolledWindow):
         if self != widget:
             widget.Connect(wx.ID_ANY, -1, wx.wxEVT_LEFT_UP, self.OnLeftUp)
             widget.Connect(wx.ID_ANY, -1, wx.wxEVT_MOTION, self.OnMotion)
+            widget.Connect(wx.ID_ANY, -1, wx.wxEVT_LEAVE_WINDOW, self.OnLeaveWindow)
 
         for child in widget.GetChildren():
             self.RegisterAllChildren(child)
@@ -318,7 +324,7 @@ class Canvas(wx.ScrolledWindow):
         Return the final ID added, or None is unsuccessful
         """
         increment = 0
-        ids = self.controller.GetListOfNodeIds()
+        ids = self.controller.get_list_of_node_ids()
         # keep incrementing as long as there is duplicate ID
         while True:
             suffix: str
@@ -330,7 +336,7 @@ class Canvas(wx.ScrolledWindow):
             # not duplicate; add now
             if cur_id not in ids:
                 node.id_ = cur_id
-                if self.controller.TryAddNode(node):
+                if self.controller.try_add_node(node):
                     return cur_id
                 else:
                     return None
@@ -465,18 +471,18 @@ class Canvas(wx.ScrolledWindow):
                     if self._multiselect.dragging:
                         assert not self._multiselect.resizing
 
-                        self.controller.TryStartGroup()
+                        self.controller.try_start_group()
                         for node in self._GetSelectedNodes():
-                            self.controller.TryMoveNode(node.id_, node.position)
-                        self.controller.TryEndGroup()
+                            self.controller.try_move_node(node.id_, node.position)
+                        self.controller.try_end_group()
                         self._multiselect.EndDrag()
                         return  # return to not check overlays
                     elif self._multiselect.resizing:
-                        self.controller.TryStartGroup()
+                        self.controller.try_start_group()
                         for node in self._GetSelectedNodes():
-                            self.controller.TryMoveNode(node.id_, node.position)
-                            self.controller.TrySetNodeSize(node.id_, node.size)
-                        self.controller.TryEndGroup()
+                            self.controller.try_move_node(node.id_, node.position)
+                            self.controller.try_set_node_size(node.id_, node.size)
+                        self.controller.try_end_group()
                         self._multiselect.EndResize()
                         return  # return to not check overlays
 
@@ -625,7 +631,7 @@ class Canvas(wx.ScrolledWindow):
         This also draws the eight resize handles.
         """
         # convert to device position for drawing
-        pos, size = rect.GetTuple()
+        pos, size = rect.as_tuple()
         adj_pos = Vec2(self.CalcScrolledPosition(pos.to_wx_point()))
 
         # draw main outline
@@ -634,7 +640,7 @@ class Canvas(wx.ScrolledWindow):
 
         for handle_rect in self._GetNodeResizeHandleRects(rect):
             # convert to device position for drawing
-            rpos, rsize = handle_rect.GetTuple()
+            rpos, rsize = handle_rect.as_tuple()
             rpos = Vec2(self.CalcScrolledPosition(rpos.to_wx_point()))
             draw_rect(gc, Rect(rpos, rsize), fill=self.theme['select_box_color'])
 
@@ -660,7 +666,7 @@ class Canvas(wx.ScrolledWindow):
             rectangles. They are ordered such that the top-left handle is the first element, and
             all other handles follow in clockwise fashion.
         """
-        pos, size = outline_rect.GetTuple()
+        pos, size = outline_rect.as_tuple()
         centers = [pos, pos + Vec2(size.x / 2, 0),
                    pos + Vec2(size.x, 0), pos + Vec2(size.x, size.y / 2),
                    pos + size, pos + Vec2(size.x / 2, size.y),
@@ -690,6 +696,16 @@ class Canvas(wx.ScrolledWindow):
     def OnSlider(self, evt):
         level = self.zoom_slider.GetValue()
         self.SetZoomLevel(level, Vec2(self.GetSize()) / 2)
+
+    def OnLeaveWindow(self, evt):
+        screen_pos = evt.EventObject.ClientToScreen(evt.GetPosition())
+        root_frame = self.GetTopLevelParent()
+        fw, fh = root_frame.GetClientSize()
+        frame_pos = root_frame.ScreenToClient(screen_pos)
+        # if mouse is leave frame (i.e. the root application window), issue OnLeftUp event.
+        if frame_pos.x < 0 or frame_pos.y < 0 or frame_pos.x >= fw or frame_pos.y >= fh:
+            self._mouse_outside_frame = True
+            self.OnLeftUp(evt)
 
     def OnNodeDrop(self, pos):
         # TODO

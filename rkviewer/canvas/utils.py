@@ -82,51 +82,6 @@ def get_bounding_rect(rects: List[Rect], padding: float = 0) -> Rect:
     return Rect(Vec2(min_x - padding, min_y - padding), Vec2(size_x, size_y))
 
 
-def clamp_rect_pos(rect: Rect, bounds: Rect, padding = 0) -> Vec2:
-    """Clamp the position of rect, so that it is entirely within the bounds rectangle.
-
-    The position is clamped such that the new position of the rectangle moves the least amount
-    of distance possible.
-
-    Note:
-        The clamped rectangle must be able to fit inside the bounds rectangle, inclusive. The
-        given rect is not modified, but a position is returned.
-
-    Returns:
-        The clamped position.
-    """
-
-    if rect.size.x + 2 * padding > bounds.size.x or rect.size.y + 2 * padding > bounds.size.y:
-        raise ValueError("The clamped rectangle cannot fit inside the given bounds")
-
-    topleft = bounds.position + Vec2.repeat(padding)
-    botright = bounds.position + bounds.size - rect.size - Vec2.repeat(padding)
-    ret = rect.position
-    ret = Vec2(max(ret.x, topleft.x), ret.y)
-    ret = Vec2(min(ret.x, botright.x), ret.y)
-    ret = Vec2(ret.x, max(ret.y, topleft.y))
-    ret = Vec2(ret.x, min(ret.y, botright.y))
-    return ret
-
-
-def clamp_point(pos: Vec2, bounds: Rect, padding = 0) -> Vec2:
-    """Clamp the given point (pos) so that it is entirely within the bounds rectangle. 
-
-    This is the same as calling clamp_rect_pos() with a clamped rectangle of size 1x1.
-
-    Returns:
-        The clamp position.
-    """
-    topleft = bounds.position + Vec2.repeat(padding)
-    botright = bounds.position + bounds.size - Vec2.repeat(padding)
-    ret = pos
-    ret = Vec2(max(ret.x, topleft.x), ret.y)
-    ret = Vec2(min(ret.x, botright.x), ret.y)
-    ret = Vec2(ret.x, max(ret.y, topleft.y))
-    ret = Vec2(ret.x, min(ret.y, botright.y))
-    return ret
-
-
 def rects_overlap(r1: Rect, r2: Rect) -> bool:
     """Returns whether the two given rectangles overlap, counting if they are touching."""
     botright1 = r1.position + r1.size

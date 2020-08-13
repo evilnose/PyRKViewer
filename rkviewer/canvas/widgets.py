@@ -5,8 +5,8 @@ import wx
 import abc
 import copy
 from typing import Any, Callable, Dict, List, Optional
-from .utils import clamp_point, draw_rect, get_bounding_rect, within_rect
-from ..utils import Vec2, Rect, Node
+from .utils import draw_rect, get_bounding_rect, within_rect
+from ..utils import Vec2, Rect, Node, clamp_point
 
 
 class CanvasOverlay(abc.ABC):
@@ -194,7 +194,7 @@ class MultiSelect:
     whenever the passed list of nodes becomes outdated.
     """
     
-    _nodes: List[Node]
+    nodes: List[Node]
     _padding: float  #: padding for the bounding rectangle around the selected nodes
     _dragging: bool
     _resizing: bool
@@ -209,7 +209,7 @@ class MultiSelect:
     _theme: Dict[str, Any]  #: the current theme
 
     def __init__(self, nodes: List[Node], theme: Dict[str, Any], bounds: Rect):
-        self._nodes = nodes
+        self.nodes = nodes
         # if only one node is selected, use the node padding instead
         self._padding = theme['select_box_padding'] if len(nodes) > 1 else \
             theme['node_outline_padding']
@@ -249,7 +249,7 @@ class MultiSelect:
         assert not self._resizing
         self._dragging = True
         self._drag_rel = self._bounding_rect.position - mouse_pos
-        self._rel_positions = [n.s_position - mouse_pos for n in self._nodes]
+        self._rel_positions = [n.s_position - mouse_pos for n in self.nodes]
 
     def DoDrag(self, mouse_pos: Vec2):
         """Perform an ongoing drag-moving operation."""
@@ -258,8 +258,8 @@ class MultiSelect:
         new_positions = [mouse_pos + rp for rp in self._rel_positions]
         min_x = min(p.x for p in new_positions)
         min_y = min(p.y for p in new_positions)
-        max_x = max(p.x + n.s_size.x for p, n in zip(new_positions, self._nodes))
-        max_y = max(p.y + n.s_size.y for p, n in zip(new_positions, self._nodes))
+        max_x = max(p.x + n.s_size.x for p, n in zip(new_positions, self.nodes))
+        max_y = max(p.y + n.s_size.y for p, n in zip(new_positions, self.nodes))
         offset = Vec2(0, 0)
 
         lim_topleft = self._bounds.position
@@ -278,7 +278,7 @@ class MultiSelect:
             offset += Vec2(0, lim_botright.y - max_y)
 
         self._bounding_rect.position = mouse_pos + offset + self._drag_rel
-        for node, np in zip(self._nodes, new_positions):
+        for node, np in zip(self.nodes, new_positions):
             node.s_position = np + offset
 
     def EndDrag(self):
@@ -293,14 +293,14 @@ class MultiSelect:
 
         self._resizing = True
         self._resize_handle = handle
-        min_width = min(n.size.x for n in self._nodes)
-        min_height = min(n.size.y for n in self._nodes)
+        min_width = min(n.size.x for n in self.nodes)
+        min_height = min(n.size.y for n in self.nodes)
         self._min_resize_ratio = Vec2(self._theme['min_node_width'] / min_width,
                                       self._theme['min_node_height'] / min_height)
         self._orig_rect = copy.copy(self._bounding_rect)
         self._orig_positions = [n.s_position - self._orig_rect.position - Vec2.repeat(self._padding)
-                                for n in self._nodes]
-        self._orig_sizes = [n.s_size for n in self._nodes]
+                                for n in self.nodes]
+        self._orig_sizes = [n.s_size for n in self.nodes]
 
     def DoResize(self, mouse_pos: Vec2):
         """Perform an ongoing resize operation."""
@@ -368,7 +368,7 @@ class MultiSelect:
                       min(fixed_point.y, target_point.y))
 
         # STEP 4 calculate and apply new node positions and sizes
-        for node, orig_pos, orig_size in zip(self._nodes, self._orig_positions, self._orig_sizes):
+        for node, orig_pos, orig_size in zip(self.nodes, self._orig_positions, self._orig_sizes):
             assert orig_pos.x >= -1e-6 and orig_pos.y >= -1e-6
             node.s_position = br_pos + orig_pos.elem_mul(size_ratio) + pad_off
             node.s_size = orig_size.elem_mul(size_ratio)

@@ -20,21 +20,28 @@ class Controller(IController):
     def __init__(self, view: IView):
         self.view = view
         iod.newNetwork('the one')
+        self.in_group = False
 
     def try_start_group(self) -> bool:
+        assert not self.in_group
         try:
             iod.startGroup()
+            self.in_group = True
         except iod.Error as e:
-            print('Error:', str(e))
+            print('Error starting group:', str(e))
             return False
         return True
 
     def try_end_group(self) -> bool:
+        assert self.in_group
         try:
             iod.endGroup()
+            self.in_group = False
         except iod.Error as e:
-            print('Error:', str(e))
+            print('Error ending group:', str(e))
             return False
+        finally:
+            self._update_view()
         return True
 
     def try_add_node(self, node: Node) -> bool:
@@ -56,31 +63,54 @@ class Controller(IController):
             iod.setNodeOutlineThickness(neti, nodei, node.border_width)
             iod.endGroup()
         except iod.Error as e:
-            print('Error:', str(e))
+            print('Error adding node:', str(e))
             return False
 
-        self._update_view()
+        if not self.in_group:
+            self._update_view()
         return True
 
     def try_move_node(self, id_: str, pos: Vec2) -> bool:
+        assert pos.x >= 0 and pos.y >= 0
         neti = 0
         # TODO exception
         nodei = iod.getNodeIndex(neti, id_)
         try:
             iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
         except iod.Error as e:
-            print('Error:', str(e))
+            print('Error moving node:', str(e))
             return False
 
-        self._update_view()
+        if not self.in_group:
+            self._update_view()
         return True
 
-    def try_set_node_size(self, id_: str, size: Vec2):
+    def try_set_node_size(self, id_: str, size: Vec2) -> bool:
         neti = 0
         # TODO exception
-        nodei = iod.getNodeIndex(neti, id_)
-        iod.setNodeSize(neti, nodei, size.x, size.y)
-        self._update_view()
+        try:
+            nodei = iod.getNodeIndex(neti, id_)
+            iod.setNodeSize(neti, nodei, size.x, size.y)
+        except iod.Error as e:
+            print('Error resizing node:', str(e))
+            return False
+
+        if not self.in_group:
+            self._update_view()
+        return True
+
+    def try_rename_node(self, old_id: str, new_id: str) -> bool:
+        neti = 0
+        try:
+            nodei = iod.getNodeIndex(neti, old_id)
+            iod.setNodeId(neti, nodei, new_id)
+        except iod.Error as e:
+            print('Error renaming node:', str(e))
+            return False
+
+        if not self.in_group:
+            self._update_view()
+        return True
 
     def get_list_of_node_ids(self) -> List[str]:
         neti = 0

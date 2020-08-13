@@ -31,13 +31,17 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_move_node(self, id_: str, pos: Vec2):
+    def try_move_node(self, id_: str, pos: Vec2) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def try_set_node_size(self, id_: str, size: Vec2):
+    def try_set_node_size(self, id_: str, size: Vec2) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
+        pass
+
+    @abc.abstractmethod
+    def try_rename_node(self, old_id: str, new_id: str) -> bool:
         pass
 
     @abc.abstractmethod

@@ -3,7 +3,7 @@ from __future__ import annotations  # For returning self in a class
 # pylint: disable=maybe-no-member
 import wx
 import copy
-from typing import Any, Callable, Tuple, TypeVar
+from typing import Any, Callable, Collection, List, Tuple, TypeVar
 
 
 TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int.
@@ -264,6 +264,11 @@ class Node:
         """
         return Rect(copy.copy(self.s_position), copy.copy(self.s_size))
 
+    @property
+    def rect(self):
+        """The same as s_rect, but the rectangle is unscaled.
+        """
+        return Rect(copy.copy(self.position), copy.copy(self.size))
 
 def rgba_to_wx_colour(rgb: int, alpha: float):
     """Given RGBA color, return wx.Colour.
@@ -276,6 +281,59 @@ def rgba_to_wx_colour(rgb: int, alpha: float):
     g = (rgb >> 8) & 0xff
     r = (rgb >> 16) & 0xff
     return wx.Colour(r, g, b, int(alpha * 255))
+
+
+def clamp_rect_pos(rect: Rect, bounds: Rect, padding = 0) -> Vec2:
+    """Clamp the position of rect, so that it is entirely within the bounds rectangle.
+
+    The position is clamped such that the new position of the rectangle moves the least amount
+    of distance possible.
+
+    Note:
+        The clamped rectangle must be able to fit inside the bounds rectangle, inclusive. The
+        given rect is not modified, but a position is returned.
+
+    Returns:
+        The clamped position.
+    """
+
+    if rect.size.x + 2 * padding > bounds.size.x or rect.size.y + 2 * padding > bounds.size.y:
+        raise ValueError("The clamped rectangle cannot fit inside the given bounds")
+
+    topleft = bounds.position + Vec2.repeat(padding)
+    botright = bounds.position + bounds.size - rect.size - Vec2.repeat(padding)
+    ret = rect.position
+    ret = Vec2(max(ret.x, topleft.x), ret.y)
+    ret = Vec2(min(ret.x, botright.x), ret.y)
+    ret = Vec2(ret.x, max(ret.y, topleft.y))
+    ret = Vec2(ret.x, min(ret.y, botright.y))
+    return ret
+
+
+def clamp_rect_size(rect: Rect, botright: Vec2, padding: int = 0) -> Vec2:
+    """TODO document"""
+    limit = botright - rect.position
+    assert limit.x > 0 and limit.y > 0
+
+    return Vec2(min(limit.x, rect.size.x), min(limit.y, rect.size.y))
+
+
+def clamp_point(pos: Vec2, bounds: Rect, padding = 0) -> Vec2:
+    """Clamp the given point (pos) so that it is entirely within the bounds rectangle. 
+
+    This is the same as calling clamp_rect_pos() with a clamped rectangle of size 1x1.
+
+    Returns:
+        The clamp position.
+    """
+    topleft = bounds.position + Vec2.repeat(padding)
+    botright = bounds.position + bounds.size - Vec2.repeat(padding)
+    ret = pos
+    ret = Vec2(max(ret.x, topleft.x), ret.y)
+    ret = Vec2(min(ret.x, botright.x), ret.y)
+    ret = Vec2(ret.x, max(ret.y, topleft.y))
+    ret = Vec2(ret.x, min(ret.y, botright.y))
+    return ret
 
 
 def convert_position(fn):
@@ -292,3 +350,15 @@ def convert_position(fn):
         evt.Skip()
 
     return ret
+
+
+def get_nodes_by_ids(nodes: List[Node], ids: Collection[str]):
+    ret = [n for n in nodes if n.id_ in ids]
+    assert len(ret) == len(ids)
+    return ret
+
+
+def no_rzeros(num: float, precision: int) -> str:
+    assert precision > 0
+    fmt = '{:.' + str(precision) + 'f}'
+    return fmt.format(num).rstrip('0').rstrip('.')

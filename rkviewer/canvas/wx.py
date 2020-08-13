@@ -1,16 +1,19 @@
 """The interface of canvas for wxPython."""
 # pylint: disable=maybe-no-member
+from rkviewer.canvas.events import DidDragMoveNodesEvent, DidDragResizeNodesEvent, \
+    DidSelectNodesEvent, DidUpdateNodesEvent
 import wx
+import copy
 from enum import Enum, unique
 from typing import Optional, Any, Set, Tuple, List, Dict
 from .widgets import CanvasOverlay, Minimap, MultiSelect
-from .utils import clamp_rect_pos, rects_overlap, within_rect, draw_rect
-from ..utils import Vec2, Rect, Node
+from .utils import rects_overlap, within_rect, draw_rect
+from ..utils import Vec2, Rect, Node, get_nodes_by_ids, clamp_rect_pos
 from ..mvc import IController
 from ..utils import convert_position
 
 
-BOUNDS_EPS = 1
+BOUNDS_EPS = 0
 """The padding around the canvas to ensure nodes are not moved out of bounds due to floating pont
 issues.
 """
@@ -154,6 +157,9 @@ class Canvas(wx.ScrolledWindow):
         """
         return self._scale
 
+    def UpdateSelectedIds(self, ids: Set[str]):
+        self._selected_ids = ids
+
     def RegisterAllChildren(self, widget):
         """Connect all descendants of this widget to relevant events.
 
@@ -232,6 +238,17 @@ class Canvas(wx.ScrolledWindow):
         self._nodes = nodes
         for node in self._nodes:
             node.scale = self._scale
+
+        # update MultiSelect is not dragging (if we are dragging, ResetNodes() must have been called
+        # when the mouse exited the window.)
+        if self._multiselect:
+            if not self._multiselect.dragging and not self._multiselect.resizing:
+                self._UpdateMultiSelect()
+            else:
+                self._UpdateMultiSelect()
+
+        evt = DidUpdateNodesEvent(nodes=self._nodes)
+        wx.PostEvent(self, evt)
 
     def _SetStatusText(self, name: str, text: str):
         idx = self._reverse_status[name]
@@ -408,12 +425,12 @@ class Canvas(wx.ScrolledWindow):
 
                 # update multiselect
                 self._UpdateMultiSelect()
+                wx.PostEvent(self, DidSelectNodesEvent(node_ids=self._selected_ids))
 
                 if len(self._selected_ids) != 0 and within_rect(
                         logical_pos, self._multiselect._bounding_rect):
                     # re-create a MultiSelect since self.nodes could've changed when mouse
                     # button was released
-                    self._UpdateMultiSelect()
                     self._multiselect.BeginDrag(logical_pos)
                     return
 
@@ -456,40 +473,47 @@ class Canvas(wx.ScrolledWindow):
     @convert_position
     def OnLeftUp(self, evt):
         try:
-            device_pos = Vec2(evt.GetPosition())
-            overlay = self.InWhichOverlay(device_pos)
-
-            if self._minimap.dragging:
-                self._minimap.OnLeftUp(evt)
-            elif self._drag_selecting:
-                self._drag_selecting = False
-                self._selected_ids |= self._drag_selected_ids
-                self._UpdateMultiSelect()
-            elif self.input_mode == InputMode.SELECT:
-                # move dragged node
-                if self._multiselect is not None:
-                    if self._multiselect.dragging:
-                        assert not self._multiselect.resizing
-
-                        self.controller.try_start_group()
-                        for node in self._GetSelectedNodes():
-                            self.controller.try_move_node(node.id_, node.position)
-                        self.controller.try_end_group()
-                        self._multiselect.EndDrag()
-                        return  # return to not check overlays
-                    elif self._multiselect.resizing:
-                        self.controller.try_start_group()
-                        for node in self._GetSelectedNodes():
-                            self.controller.try_move_node(node.id_, node.position)
-                            self.controller.try_set_node_size(node.id_, node.size)
-                        self.controller.try_end_group()
-                        self._multiselect.EndResize()
-                        return  # return to not check overlays
-
-            if overlay is not None:
-                overlay.OnLeftUp(evt)
+            self._UpdateNodePosAndSize(evt, False)
         finally:
             self.Refresh()
+
+    def _UpdateNodePosAndSize(self, evt: wx.Event, keep_dragging: bool):
+        device_pos = Vec2(evt.GetPosition())
+        overlay = self.InWhichOverlay(device_pos)
+
+        if self._minimap.dragging:
+            if not keep_dragging:
+                self._minimap.OnLeftUp(evt)
+        elif self._drag_selecting:
+            self._drag_selecting = False  # stop multiselect regardless of keep_dragging
+            self._selected_ids |= self._drag_selected_ids
+            self._UpdateMultiSelect()
+            wx.PostEvent(self, DidSelectNodesEvent(node_ids=self._selected_ids))
+        elif self.input_mode == InputMode.SELECT:
+            # move dragged node
+            if self._multiselect is not None:
+                if self._multiselect.dragging:
+                    assert not self._multiselect.resizing
+
+                    self.controller.try_start_group()
+                    for node in self._GetSelectedNodes():
+                        self.controller.try_move_node(node.id_, node.position)
+                    self.controller.try_end_group()
+                    if not keep_dragging:
+                        self._multiselect.EndDrag()
+                    return  # return to not check overlays
+                elif self._multiselect.resizing:
+                    self.controller.try_start_group()
+                    for node in self._GetSelectedNodes():
+                        self.controller.try_move_node(node.id_, node.position)
+                        self.controller.try_set_node_size(node.id_, node.size)
+                    self.controller.try_end_group()
+                    if not keep_dragging:
+                        self._multiselect.EndResize()
+                    return  # return to not check overlays
+
+        if overlay is not None:
+            overlay.OnLeftUp(evt)
 
     @convert_position
     def OnMotion(self, evt):
@@ -519,9 +543,21 @@ class Canvas(wx.ScrolledWindow):
                             assert not self._minimap.dragging
 
                             self._multiselect.DoDrag(logical_pos)
+
+                            # post event
+                            new_positions = [n.position for n in self._GetSelectedNodes()]
+                            evt = DidDragMoveNodesEvent(node_ids=self._selected_ids,
+                                                        new_positions=new_positions)
+                            wx.PostEvent(self, evt)
                             return
                         elif self._multiselect.resizing:
                             self._multiselect.DoResize(logical_pos)
+
+                            # post event
+                            new_sizes = [n.size for n in self._GetSelectedNodes()]
+                            evt = DidDragResizeNodesEvent(node_ids=self._selected_ids,
+                                                          new_sizes=new_sizes)
+                            wx.PostEvent(self, evt)
                             return
 
             overlay = self.InWhichOverlay(device_pos)
@@ -590,7 +626,8 @@ class Canvas(wx.ScrolledWindow):
 
             # draw newly-selected nodes outlines
             if self._drag_selecting:
-                for node in self._IdsToNodes(self._selected_ids | self._drag_selected_ids):
+                cur_selected_ids = self._selected_ids | self._drag_selected_ids
+                for node in get_nodes_by_ids(self._nodes, cur_selected_ids):
                     self._DrawNodeOutline(gc, node.s_rect, node.border_width)
 
             # draw drag-selection rect
@@ -646,13 +683,7 @@ class Canvas(wx.ScrolledWindow):
 
     def _GetSelectedNodes(self) -> List[Node]:
         """Get the list of selected nodes using self._selected_ids."""
-        return self._IdsToNodes(self._selected_ids)
-
-    def _IdsToNodes(self, ids: Set[str]) -> List[Node]:
-        """Map the given list of node IDs to a list of corresponding nodes."""
-        nodes = [n for n in self._nodes if n.id_ in ids]
-        assert len(nodes) == len(ids)
-        return nodes
+        return get_nodes_by_ids(self._nodes, self._selected_ids)
 
     def _GetNodeResizeHandleRects(self, outline_rect: Rect) -> List[Rect]:
         """Helper that computes the scaled positions and sizes of the resize handles.
@@ -705,7 +736,7 @@ class Canvas(wx.ScrolledWindow):
         # if mouse is leave frame (i.e. the root application window), issue OnLeftUp event.
         if frame_pos.x < 0 or frame_pos.y < 0 or frame_pos.x >= fw or frame_pos.y >= fh:
             self._mouse_outside_frame = True
-            self.OnLeftUp(evt)
+            self._UpdateNodePosAndSize(evt, True)
 
     def OnNodeDrop(self, pos):
         # TODO

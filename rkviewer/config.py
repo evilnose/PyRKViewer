@@ -7,16 +7,15 @@ import wx
 DEFAULT_THEME = {
     'overall_bg': wx.Colour(255, 112, 0),
     'canvas_bg': wx.WHITE,
-    'toolbar_bg': wx.Colour(150, 150, 150),
+    'toolbar_bg': wx.Colour(230, 230, 230),
     'canvas_width': 1000,
     'canvas_height': 620,
     'vgap': 2,  # vertical gap between toolbars and canvas
     'hgap': 2,  # horizontal gap between toolbars and canvas
-    'canvas_bg': wx.WHITE,
     'canvas_outside_bg': wx.Colour(160, 160, 160),  # Bg color for the parts out of bounds
     'left_toolbar_width': 100,
     'top_toolbar_height': 40,
-    'edit_panel_width': 150,
+    'edit_panel_width': 240,
     'node_fill': wx.Colour(0, 255, 0, 50),
     'node_border': wx.Colour(19, 173, 2),
     'node_width': 50,
@@ -46,4 +45,5 @@ DEFAULT_SETTINGS = {
         ('cursor', -1),
         ('zoom', -1),
     ],  # first element: status field identifier; second element: field width
+    'decimal_precision': 2,
 }

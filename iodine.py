@@ -152,10 +152,6 @@ class TStack(object):
     def pop(self):
         return self.items.pop()
 
-class TNetworkSet(object):
-    def __init__(self):
-        self.items = []TNetwork
-
 
 stackFlag = True
 errCode = 0

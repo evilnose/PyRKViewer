@@ -15,7 +15,7 @@ DEFAULT_THEME = {
     'canvas_outside_bg': wx.Colour(160, 160, 160),  # Bg color for the parts out of bounds
     'left_toolbar_width': 100,
     'top_toolbar_height': 40,
-    'edit_panel_width': 240,
+    'edit_panel_width': 260,
     'node_fill': wx.Colour(0, 255, 0, 50),
     'node_border': wx.Colour(19, 173, 2),
     'node_width': 50,

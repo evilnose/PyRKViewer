@@ -1,4 +1,5 @@
-
+# pylint: disable=maybe-no-member
+import wx
 import abc
 from typing import List
 from .utils import Vec2, Node
@@ -42,6 +43,26 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def try_rename_node(self, old_id: str, new_id: str) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_node_fill_rgb(self, id_: str, color: wx.Colour) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_node_fill_alpha(self, id_: str, alpha: float) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_node_border_rgb(self, id_: str, color: wx.Colour) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_node_border_alpha(self, id_: str, alpha: float) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_node_border_width(self, id_: str, width: float) -> bool:
         pass
 
     @abc.abstractmethod

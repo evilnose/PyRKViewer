@@ -1,14 +1,14 @@
 # pylint: disable=maybe-no-member
 import wx
 import copy
-from typing import Callable, List, Dict, Any, Optional, Tuple
+from typing import Callable, List, Dict, Any, Optional, Set, Tuple
 from .canvas.events import EVT_DID_DRAG_MOVE_NODES, EVT_DID_DRAG_RESIZE_NODES, \
     EVT_DID_SELECT_NODES, EVT_DID_UPDATE_NODES
 from .canvas.wx import Canvas, InputMode
 from .config import DEFAULT_SETTINGS, DEFAULT_THEME, DEFAULT_SETTINGS
 from .mvc import IController, IView
-from .utils import Node, Rect, Vec2, clamp_rect_size, get_nodes_by_ids, no_rzeros, \
-    clamp_rect_pos
+from .utils import Node, Rect, Vec2, clamp_rect_size, decode_rgba, encode_rgba, get_nodes_by_ids, no_rzeros, \
+    clamp_rect_pos, on_msw, rgba_to_wx_colour, wx_colour_to_rgb
 from .canvas.utils import get_bounding_rect
 from .widgets import ButtonGroup
 
@@ -17,6 +17,8 @@ class EditPanel(wx.Panel):
     canvas: Canvas
     controller: IController
     _nodes: List[Node]
+    ColorCallback = Callable[[wx.Colour], None]
+    FloatCallback = Callable[[float], None]
 
     def __init__(self, parent, canvas: Canvas, controller: IController, theme: Dict[str, Any],
                  settings: Dict[str, Any], **kw):
@@ -31,11 +33,16 @@ class EditPanel(wx.Panel):
         info_image = wx.Image('resources/info-2-16.png', wx.BITMAP_TYPE_PNG)
         self._info_bitmap = wx.Bitmap(info_image)
         self._info_length = 16
-        self._title = wx.StaticText(self)  # only displayed when node(s) are selected
+        self.form = wx.Panel(self)
+        self._title = wx.StaticText(self.form)  # only displayed when node(s) are selected
         title_font = wx.Font(wx.FontInfo(10))
         self._title.SetFont(title_font)
         self._subtitle = wx.StaticText(self)
         self._bounding_rect = None  # No padding
+        self._dirty = False
+
+        self.labels = dict()
+        self.badges = dict()
 
         self.CreateControls()
 
@@ -45,13 +52,12 @@ class EditPanel(wx.Panel):
         canvas.Bind(EVT_DID_DRAG_RESIZE_NODES, self.OnDidDragResizeNodes)
 
     def CreateControls(self):
-        VGAP = 5
-        HGAP = 8
+        VGAP = 8
+        HGAP = 5
         MORE_LEFT_PADDING = 0  # Left padding in addition to vgap
         MORE_TOP_PADDING = 5  # Top padding in addition to hgap
         MORE_RIGHT_PADDING = 0
 
-        self.form = wx.Panel(self)
         self.null_message = wx.StaticText(self, label="Nothing is selected.", style=wx.ALIGN_CENTER)
 
         form_sizer = wx.GridBagSizer(vgap=VGAP, hgap=HGAP)
@@ -79,21 +85,31 @@ class EditPanel(wx.Panel):
         # ID form control
         self.id_textctrl = wx.TextCtrl(self.form)
         self.id_textctrl.Bind(wx.EVT_TEXT, self.OnIdText)
-        self.id_label, self.id_badge = self.AppendControl(
-            form_sizer, 'identifier', self.id_textctrl)
+        self.AppendControl(form_sizer, 'identifier', self.id_textctrl)
 
         self.pos_ctrl = wx.TextCtrl(self.form)
         self.pos_ctrl.Bind(wx.EVT_TEXT, self.OnPosText)
-        self.pos_label, self.pos_badge = self.AppendControl(form_sizer, 'position', self.pos_ctrl)
+        self.AppendControl(form_sizer, 'position', self.pos_ctrl)
 
         self.size_ctrl = wx.TextCtrl(self.form)
         self.size_ctrl.Bind(wx.EVT_TEXT, self.OnSizeText)
-        self.size_label, self.size_badge = self.AppendControl(form_sizer, 'size', self.size_ctrl)
+        self.AppendControl(form_sizer, 'size', self.size_ctrl)
 
-        self.fill_ctrl = wx.ColourPickerCtrl(self.form)
-        self.fill_ctrl.Bind(wx.EVT_COLOURPICKER_CHANGED, self.OnFillColorChanged)
-        self.fill_label, self.fill_badge = self.AppendControl(form_sizer, 'fill color',
-                                                              self.fill_ctrl)
+        self.fill_ctrl, self.fill_alpha_ctrl = self.CreateColorControl(
+            'fill color', 'fill opacity',
+            self.OnFillColorChanged, self.FillAlphaCallback,
+            form_sizer)
+
+        self.border_ctrl, self.border_alpha_ctrl = self.CreateColorControl(
+            'border color', 'border opacity',
+            self.OnBorderColorChanged, self.BorderAlphaCallback,
+            form_sizer)
+
+        self.border_width_ctrl = wx.TextCtrl(self.form)
+        self.AppendControl(form_sizer, 'border width', self.border_width_ctrl)
+        border_callback = self.MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
+                                                     self.BorderWidthCallback, (1, 100))
+        self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
 
         self.form.SetSizer(form_sizer)
 
@@ -105,8 +121,7 @@ class EditPanel(wx.Panel):
         self.null_message.Show(True)
         self.SetSizer(sizer)
 
-    def AppendControl(self, sizer: wx.Sizer, label_str: str,
-                      ctrl: wx.Control) -> Tuple[wx.StaticText, wx.StaticText]:
+    def AppendControl(self, sizer: wx.Sizer, label_str: str, ctrl: wx.Control):
         """Append a control, its label, and its info badge to the last row of the sizer.
 
         Returns the automaticaly created label and info badge (wx.StaticText for now).
@@ -124,47 +139,117 @@ class EditPanel(wx.Panel):
         sizer.Add(info_badge, wx.GBPosition(rows, 3), wx.GBSpan(1, 1),
                   flag=wx.ALIGN_CENTER)
         info_badge.Show(False)
-        return label, info_badge
+        self.labels[ctrl.GetId()] = label
+        self.badges[ctrl.GetId()] = info_badge
 
     def AppendSpacer(self, sizer: wx.Sizer, height: int):
         rows = sizer.GetRows()
         sizer.Add(0, height, wx.GBPosition(rows, 0), wx.GBSpan(1, 5))
 
+    def CreateColorControl(self, label: str, alpha_label: str,
+                           color_callback: ColorCallback, alpha_callback: FloatCallback,
+                           sizer: wx.Sizer, alpha_range: Tuple[float, float] = (0, 1)) \
+            -> Tuple[wx.ColourPickerCtrl, wx.TextCtrl]:
+        ctrl = wx.ColourPickerCtrl(self.form)
+        ctrl.Bind(wx.EVT_COLOURPICKER_CHANGED, color_callback)
+        self.AppendControl(sizer, label, ctrl)
+
+        alpha_ctrl = None
+
+        if on_msw():
+            # Windows does not support picking alpha in color picker. So we add an additional
+            # field for that
+            alpha_ctrl = wx.TextCtrl(self.form)
+            self.AppendControl(sizer, alpha_label, alpha_ctrl)
+            callback = self.MakeFloatCtrlFunction(alpha_ctrl.GetId(), alpha_callback, alpha_range)
+            self.Bind(wx.EVT_TEXT, callback)
+
+        return ctrl, alpha_ctrl
+
+    def FillAlphaCallback(self, alpha: float):
+        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        self._dirty = True
+        self.controller.try_start_group()
+        for node in nodes:
+            self.controller.try_set_node_fill_alpha(node.id_, alpha)
+        self.controller.try_end_group()
+
+    def BorderAlphaCallback(self, alpha: float):
+        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        self._dirty = True
+        self.controller.try_start_group()
+        for node in nodes:
+            self.controller.try_set_node_border_alpha(node.id_, alpha)
+        self.controller.try_end_group()
+
+    def BorderWidthCallback(self, width: float):
+        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        self._dirty = True
+        self.controller.try_start_group()
+        for node in nodes:
+            self.controller.try_set_node_border_width(node.id_, width)
+        self.controller.try_end_group()
+
+    def MakeFloatCtrlFunction(self, ctrl_id: str,
+                              callback: FloatCallback, range_: Tuple[float, float]):
+        lo, hi = range_
+        assert lo <= hi
+
+        def float_ctrl_fn(evt):
+            text = evt.GetString()
+            value: float
+            try:
+                value = float(text)
+            except ValueError:
+                self.SetValidationState(False, ctrl_id, "Value must be a number")
+                return
+
+            if value < lo or value > hi:
+                self.SetValidationState(
+                    False, ctrl_id, "Value must be in range [{}, {}]".format(lo, hi))
+                return
+
+            callback(value)
+            self.SetValidationState(True, ctrl_id)
+
+        return float_ctrl_fn
+
     def OnIdText(self, evt):
         new_id = evt.GetString()
         assert len(self._selected_ids) == 1
         [old_id] = self._selected_ids
+        ctrl_id = self.id_textctrl.GetId()
         if new_id != old_id:
             if len(new_id) == 0:
-                self.SetValidationState(False, self.id_badge, "Not saved: ID cannot be empty")
+                self.SetValidationState(False, ctrl_id, "ID cannot be empty")
+                return
             else:
                 for node in self._nodes:
                     if node.id_ == new_id:
-                        self.SetValidationState(False, self.id_badge, "Not saved: Duplicate ID")
-                        break
+                        self.SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
+                        return
                 else:
                     # loop terminated fine. There is no duplicate ID
-                    self.SetValidationState(True, self.id_badge)
                     self._selected_ids.remove(old_id)
                     self._selected_ids.add(new_id)
                     self.canvas.UpdateSelectedIds(self._selected_ids)
+                    self._dirty = True
                     if not self.controller.try_rename_node(old_id, new_id):
-                        assert False, 'this should not happen!'
-
-        else:
-            self.SetValidationState(True, self.id_badge)
+                        # this should not happen!
+                        assert False
+        self.SetValidationState(True, self.id_ctrl.GetId())
 
     def OnPosText(self, evt):
         text = evt.GetString()
         xy = self.ParseNumPair(text)
+        ctrl_id = self.pos_ctrl.GetId()
         if xy is None:
-            self.SetValidationState(False, self.pos_badge, 'Should be in the form "X, Y"')
+            self.SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
             return
 
         pos = Vec2(xy)
         if pos.x < 0 or pos.y < 0:
-            self.SetValidationState(False, self.pos_badge,
-                                    'Position coordinates should be non-negative')
+            self.SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
             return
         nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
         bounds = Rect(Vec2(), self.canvas.realsize)
@@ -174,23 +259,25 @@ class EditPanel(wx.Panel):
 
             clamped = clamp_rect_pos(Rect(pos, node.size), bounds)
             if node.position != clamped or pos != clamped:
+                self._dirty = True
                 self.controller.try_move_node(node.id_, Vec2(clamped.x, clamped.y))
         else:
             clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
             if self._bounding_rect.position != pos or pos != clamped:
                 offset = clamped - self._bounding_rect.position
+                self._dirty = True
                 self.controller.try_start_group()
                 for node in nodes:
                     self.controller.try_move_node(node.id_, node.position + offset)
                 self.controller.try_end_group()
-
-        self.SetValidationState(True, self.pos_badge)
+        self.SetValidationState(True, self.pos_ctrl.GetId())
 
     def OnSizeText(self, evt):
+        ctrl_id = self.size_ctrl.GetId()
         text = evt.GetString()
         wh = self.ParseNumPair(text)
         if wh is None:
-            self.SetValidationState(False, self.size_badge, 'Should be in the form "width, height"')
+            self.SetValidationState(False, ctrl_id, 'Should be in the form "width, height"')
             return
 
         nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
@@ -202,11 +289,12 @@ class EditPanel(wx.Panel):
 
             if size.x < min_width or size.y < min_height:
                 message = 'Node size needs to be at least ({}, {})'.format(min_width, min_height)
-                self.SetValidationState(False, self.size_badge, message)
+                self.SetValidationState(False, ctrl_id, message)
                 return
 
             clamped = clamp_rect_size(Rect(node.position, size), self.canvas.realsize)
             if node.size != clamped or size != clamped:
+                self._dirty = True
                 self.controller.try_set_node_size(node.id_, Vec2(clamped.x, clamped.y))
         else:
             min_nw = min(n.size.x for n in nodes)
@@ -217,13 +305,14 @@ class EditPanel(wx.Panel):
             if size.x < limit.x or size.y < limit.y:
                 message = 'Size of bounding box needs to be at least ({}, {})'.format(
                     no_rzeros(limit.x, 2), no_rzeros(limit.y, 2))
-                self.SetValidationState(False, self.size_badge, message)
+                self.SetValidationState(False, ctrl_id, message)
                 return
 
             clamped = clamp_rect_size(Rect(self._bounding_rect.position, size),
                                       self.canvas.realsize)
             if self._bounding_rect.size != clamped or size != clamped:
                 ratio = clamped.elem_div(self._bounding_rect.size)
+                self._dirty = True
                 self.controller.try_start_group()
                 for node in nodes:
                     rel_pos = node.position - self._bounding_rect.position
@@ -231,11 +320,35 @@ class EditPanel(wx.Panel):
                         node.id_, self._bounding_rect.position + rel_pos.elem_mul(ratio))
                     self.controller.try_set_node_size(node.id_, node.size.elem_mul(ratio))
                 self.controller.try_end_group()
-
-        self.SetValidationState(True, self.size_badge)
+        self.SetValidationState(True, self.size_ctrl.GetId())
 
     def OnFillColorChanged(self, evt: wx.Event):
-        print('changed')
+        fill = evt.GetColour()
+        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        self._dirty = True
+        self.controller.try_start_group()
+        for node in nodes:
+            if on_msw():
+                self.controller.try_set_node_fill_rgb(node.id_, fill)
+            else:
+                # we can set both the RGB and the alpha at the same time
+                self.controller.try_set_node_fill_rgb(node.id_, fill)
+                self.controller.try_set_node_fill_alpha(node.id_, fill.Alpha())
+        self.controller.try_end_group()
+
+    def OnBorderColorChanged(self, evt: wx.Event):
+        border = evt.GetColour()
+        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        self._dirty = True
+        self.controller.try_start_group()
+        for node in nodes:
+            if on_msw():
+                self.controller.try_set_node_border_rgb(node.id_, border)
+            else:
+                # we can set both the RGB and the alpha at the same time
+                self.controller.try_set_node_border_rgb(node.id_, border)
+                self.controller.try_set_node_border_alpha(node.id_, border.Alpha())
+        self.controller.try_end_group()
 
     def _SetBestInsertion(self, ctrl: wx.TextCtrl, orig_text: str, orig_insertion: int):
         """Set the most natural insertion point for a paired-number text control.
@@ -304,7 +417,8 @@ class EditPanel(wx.Panel):
 
         return (x_prec, y_prec)
 
-    def SetValidationState(self, good: bool, badge: wx.Window, message: str = ""):
+    def SetValidationState(self, good: bool, ctrl_id: str, message: str = ""):
+        badge = self.badges[ctrl_id]
         if good:
             badge.Show(False)
         else:
@@ -314,8 +428,14 @@ class EditPanel(wx.Panel):
 
     def OnDidUpdateNodes(self, evt):
         self._nodes = evt.nodes
-        if len(self._selected_ids) != 0:
+        if len(self._selected_ids) != 0 and not self._dirty:
             self.UpdateAllFields()
+
+        self._dirty = False
+
+        # clear validation errors
+        for id_ in self.badges.keys():
+            self.SetValidationState(True, id_)
 
     def OnDidSelectNodes(self, evt):
         self._selected_ids = evt.node_ids
@@ -330,10 +450,10 @@ class EditPanel(wx.Panel):
             self._title.SetLabel(title_label)
 
             id_text = 'identifier' if len(evt.node_ids) == 1 else 'identifiers'
-            self.id_label.SetLabel(id_text)
+            self.labels[self.id_textctrl.GetId()].SetLabel(id_text)
 
             size_text = 'size' if len(evt.node_ids) == 1 else 'total span'
-            self.size_label.SetLabel(size_text)
+            self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
 
             self.null_message.Show(False)
             self.form.Show(True)
@@ -351,9 +471,13 @@ class EditPanel(wx.Panel):
         assert len(self._selected_ids) != 0
         nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
         prec = self.settings['decimal_precision']
-        id_text = None
-        pos = None
-        fill = None
+        id_text: str
+        pos: Vec2
+        size: Vec2
+        fill: wx.Colour
+        fill_alpha: Optional[int]
+        border: wx.Colour
+        border_alpha: Optional[int]
         if len(self._selected_ids) == 1:
             [node] = nodes
             self.id_textctrl.Enable(True)
@@ -365,6 +489,9 @@ class EditPanel(wx.Panel):
             pos = node.position
             size = node.size
             fill = node.fill_color
+            fill_alpha = node.fill_color.Alpha()
+            border = node.border_color
+            border_alpha = node.border_color.Alpha()
         else:
             self.id_textctrl.Enable(False)
             id_text = '; '.join(sorted(list(self._selected_ids)))
@@ -373,15 +500,50 @@ class EditPanel(wx.Panel):
             pos = self._bounding_rect.position
             size = self._bounding_rect.size
 
+            fill, fill_alpha = self.GetMultiColor(list(n.fill_color for n in nodes))
+            border, border_alpha = self.GetMultiColor(list(n.border_color for n in nodes))
+
+        border_width = self.GetMultiFloatText(set(n.border_width for n in nodes), prec)
+
         self.id_textctrl.ChangeValue(id_text)
         self.ChangePairValue(self.pos_ctrl, pos, prec)
         self.ChangePairValue(self.size_ctrl, size, prec)
         self.fill_ctrl.SetColour(fill)
+        self.border_ctrl.SetColour(border)
 
-        # clear validation errors
-        self.SetValidationState(True, self.id_badge)
-        self.SetValidationState(True, self.pos_badge)
-        self.SetValidationState(True, self.size_badge)
+        # set fill alpha if on windows
+        if on_msw():
+            self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
+            self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
+
+        self.border_width_ctrl.ChangeValue(border_width)
+
+    def GetMultiColor(self, colors: List[wx.Colour]) -> Tuple[wx.Colour, Optional[int]]:
+        if on_msw():
+            rgbset = set(c.GetRGB() for c in colors)
+            rgb = copy.copy(wx.BLACK)
+            if len(rgbset) == 1:
+                rgb.SetRGB(next(iter(rgbset)))
+
+            alphaset = set(c.Alpha() for c in colors)
+            alpha = next(iter(alphaset)) if len(alphaset) == 1 else None
+            return rgb, alpha
+        else:
+            rgbaset = set(c.GetRGBA() for c in colors)
+            rgba = copy.copy(wx.BLACK)
+            if len(rgbaset) == 1:
+                rgba.SetRGBA(next(iter(rgbaset)))
+
+            return rgba, None
+
+    def GetMultiFloatText(self, values: Set[float], precision: int) -> str:
+        return no_rzeros(next(iter(values)), precision) if len(values) == 1 else '?'
+
+    def _AlphaToText(self, alpha: Optional[int], prec: int) -> str:
+        if alpha is None:
+            return '?'
+        else:
+            return no_rzeros(alpha / 255, prec)
 
     def ChangePairValue(self, ctrl: wx.TextCtrl, new_val: Vec2, prec: int):
         old_text = ctrl.GetValue()
@@ -389,8 +551,6 @@ class EditPanel(wx.Panel):
 
         # round old_val to desired precision. We don't want to refresh value when user is typing,
         # even if their value exceeded our precision
-        old_val.x = round(old_val.x, prec)
-        old_val.y = round(old_val.y, prec)
         if old_val != new_val:
             if ctrl.HasFocus():
                 orig_insertion = ctrl.GetInsertionPoint()
@@ -403,35 +563,29 @@ class EditPanel(wx.Panel):
 class TopToolbar(wx.Panel):
     """Toolbar at the top of the app."""
 
-    def __init__(self, parent, zoom_callback, **kw):
+    def __init__(self, parent, zoom_callback, edit_panel_callback, **kw):
         super().__init__(parent, **kw)
 
-        # TODO add as attribute
-        self._zoom_callback = zoom_callback
-
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        zoom_in_btn = wx.Button(
-            self, label="Zoom In")
+        zoom_in_btn = wx.Button(self, label="Zoom In")
         # TODO make this a method
-        sizer.Add(zoom_in_btn, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
-        zoom_in_btn.Bind(
-            wx.EVT_BUTTON, self.OnZoomIn)
+        sizer.Add(zoom_in_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        zoom_in_fn = lambda e: zoom_callback(True)
+        zoom_in_btn.Bind(wx.EVT_BUTTON, zoom_in_fn)
 
-        zoom_out_btn = wx.Button(
-            self, label="Zoom Out")
-        sizer.Add(zoom_out_btn, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
-        zoom_out_btn.Bind(
-            wx.EVT_BUTTON, self.OnZoomOut)
+        zoom_out_btn = wx.Button(self, label="Zoom Out")
+        sizer.Add(zoom_out_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        zoom_out_fn = lambda _: zoom_callback(False)
+        zoom_out_btn.Bind(wx.EVT_BUTTON, zoom_out_fn)
+
+        # Note: Right align after this
+        sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
+
+        toggle_panel_button = wx.Button(self, label="Details")
+        sizer.Add(toggle_panel_button, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.RIGHT, 10))
+        toggle_panel_button.Bind(wx.EVT_BUTTON, edit_panel_callback)
 
         self.SetSizer(sizer)
-
-    def OnZoomIn(self, _):
-        self._zoom_callback(True)
-
-    def OnZoomOut(self, _):
-        self._zoom_callback(False)
 
 
 class Toolbar(wx.Panel):
@@ -497,7 +651,8 @@ class MainPanel(wx.Panel):
         top_toolbar_width = theme['canvas_width'] + theme['edit_panel_width'] + theme['vgap']
         self.top_toolbar = TopToolbar(self,
                                       size=(top_toolbar_width, theme['top_toolbar_height']),
-                                      zoom_callback=self.canvas.ZoomCenter)
+                                      zoom_callback=self.canvas.ZoomCenter,
+                                      edit_panel_callback=self.ToggleEditPanel)
         self.top_toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
         self.edit_panel = EditPanel(self, self.canvas, self.controller, self.theme, settings,
@@ -510,10 +665,10 @@ class MainPanel(wx.Panel):
         # and create a sizer to manage the layout of child widgets
         sizer = wx.GridBagSizer(vgap=theme['vgap'], hgap=theme['hgap'])
 
-        sizer.Add(self.top_toolbar, wx.GBPosition(0, 1), wx.GBSpan(1, 2), wx.EXPAND)
-        sizer.Add(self.toolbar, wx.GBPosition(1, 0), wx.GBSpan(1, 1), wx.EXPAND)
-        sizer.Add(self.canvas, wx.GBPosition(1, 1), wx.GBSpan(1, 1), wx.EXPAND)
-        sizer.Add(self.edit_panel, wx.GBPosition(1, 2), wx.GBSpan(1, 1), wx.EXPAND)
+        sizer.Add(self.top_toolbar, wx.GBPosition(0, 1), wx.GBSpan(1, 2), flag=wx.EXPAND)
+        sizer.Add(self.toolbar, wx.GBPosition(1, 0), flag=wx.EXPAND)
+        sizer.Add(self.canvas, wx.GBPosition(1, 1),  flag=wx.EXPAND)
+        sizer.Add(self.edit_panel, wx.GBPosition(1, 2), flag=wx.EXPAND)
 
         # allow the canvas to grow
         sizer.AddGrowableCol(1, 1)
@@ -521,11 +676,24 @@ class MainPanel(wx.Panel):
 
         # Set the sizer and *prevent the user from resizing it to a smaller size*
         # TODO are we sure we want this behavior?
-        self.SetSizerAndFit(sizer)
+        self.SetSizer(sizer)
 
     def OnNodeDrop(self, obj: wx.Window, pos: wx.Point):
         if obj == self.canvas:
             self.canvas.OnNodeDrop(pos)
+
+    def ToggleEditPanel(self, evt):
+        sizer = self.GetSizer()
+        if self.edit_panel.IsShown():
+            self.edit_panel.Hide()
+            sizer.Detach(self.edit_panel)
+            sizer.SetItemSpan(self.canvas, wx.GBSpan(1, 2))
+        else:
+            sizer.SetItemSpan(self.canvas, wx.GBSpan(1, 1))
+            sizer.Add(self.edit_panel, wx.GBPosition(1, 2), flag=wx.EXPAND)
+            self.edit_panel.Show()
+
+        self.Layout()
 
 
 class MyFrame(wx.Frame):

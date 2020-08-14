@@ -603,8 +603,8 @@ class Canvas(wx.ScrolledWindow):
                 draw_rect(
                     gc,
                     Rect(Vec2(x, y), node.s_size),
-                    fill=self.theme['node_fill'],
-                    border=self.theme['node_border'],
+                    fill=node.fill_color,
+                    border=node.border_color,
                     border_width=border_width,
                 )
 

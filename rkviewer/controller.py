@@ -51,16 +51,19 @@ class Controller(IController):
         Returns whether the operation was successful.
         '''
         neti = 0
-        # keep incrementing as long as there is duplicate ID
-        # TODO change
         try:
+            # if this fails in case a group is already in place, modify startGroup to not start
+            # group if already in group
             iod.startGroup()
             iod.addNode(neti, node.id_, node.position.x, node.position.y, node.size.x, node.size.y)
             nodei = iod.getNodeIndex(neti, node.id_)
             iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
             iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
                                     node.fill_color.Green(), node.fill_color.Blue())
-            iod.setNodeOutlineThickness(neti, nodei, node.border_width)
+            iod.setNodeOutlineColorAlpha(neti, nodei, node.border_color.Alpha() / 255)
+            iod.setNodeOutlineColorRGB(neti, nodei, node.border_color.Red(),
+                                    node.border_color.Green(), node.border_color.Blue())
+            iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
             iod.endGroup()
         except iod.Error as e:
             print('Error adding node:', str(e))
@@ -112,6 +115,73 @@ class Controller(IController):
             self._update_view()
         return True
 
+    def try_set_node_fill_rgb(self, id_: str, color: wx.Colour) -> bool:
+        neti = 0
+        try:
+            nodei = iod.getNodeIndex(neti, id_)
+            iod.setNodeFillColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
+        except iod.Error as e:
+            print('Error setting node fill color:', str(e))
+            return False
+
+        if not self.in_group:
+            self._update_view()
+        return True
+
+
+    def try_set_node_fill_alpha(self, id_: str, alpha: float) -> bool:
+        neti = 0
+        try:
+            nodei = iod.getNodeIndex(neti, id_)
+            iod.setNodeFillColorAlpha(neti, nodei, alpha)
+        except iod.Error as e:
+            print('Error setting node fill alpha:', str(e))
+            return False
+
+        if not self.in_group:
+            self._update_view()
+        return True
+
+    def try_set_node_border_rgb(self, id_: str, color: wx.Colour) -> bool:
+        neti = 0
+        try:
+            nodei = iod.getNodeIndex(neti, id_)
+            iod.setNodeOutlineColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
+        except iod.Error as e:
+            print('Error setting node border color:', str(e))
+            return False
+
+        if not self.in_group:
+            self._update_view()
+        return True
+
+    def try_set_node_border_alpha(self, id_: str, alpha: float) -> bool:
+        neti = 0
+        try:
+            nodei = iod.getNodeIndex(neti, id_)
+            iod.setNodeOutlineColorAlpha(neti, nodei, alpha)
+        except iod.Error as e:
+            print('Error setting node border alpha:', str(e))
+            return False
+
+        if not self.in_group:
+            self._update_view()
+        return True
+
+    def try_set_node_border_width(self, id_: str, width: float) -> bool:
+        neti = 0
+        try:
+            nodei = iod.getNodeIndex(neti, id_)
+            print('warning: TODO decide if node width is int or float')
+            iod.setNodeOutlineThickness(neti, nodei, int(width))
+        except iod.Error as e:
+            print('Error setting node border width', str(e))
+            return False
+
+        if not self.in_group:
+            self._update_view()
+        return True
+
     def get_list_of_node_ids(self) -> List[str]:
         neti = 0
         return iod.getListOfNodeIds(neti)
@@ -127,17 +197,19 @@ class Controller(IController):
         for id_ in ids:
             nodei = iod.getNodeIndex(neti, id_)
             x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)
-            fill_rgb = iod.getNodeFillColorRGB(neti, nodei)
             fill_alpha = iod.getNodeFillColorAlpha(neti, nodei)
+            fill_rgb = iod.getNodeFillColorRGB(neti, nodei)
             fill_color = rgba_to_wx_colour(fill_rgb, fill_alpha)
-            # TODO don't hardcode border color and width
+            border_alpha = iod.getNodeOutlineColorAlpha(neti, nodei)
+            border_rgb = iod.getNodeOutlineColorRGB(neti, nodei)
+            border_color = rgba_to_wx_colour(border_rgb, border_alpha)
             node = Node(
                 id_=id_,
                 pos=Vec2(x, y),
                 size=Vec2(w, h),
                 fill_color=fill_color,
-                border_color=wx.Colour(255, 0, 0, 255),
-                border_width=1
+                border_color=border_color,
+                border_width=iod.getNodeOutlineThickness(neti, nodei)
             )
             nodes.append(node)
 

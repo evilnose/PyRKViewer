@@ -3,6 +3,7 @@ from __future__ import annotations  # For returning self in a class
 # pylint: disable=maybe-no-member
 import wx
 import copy
+import os
 from typing import Any, Callable, Collection, List, Tuple, TypeVar
 
 
@@ -270,7 +271,8 @@ class Node:
         """
         return Rect(copy.copy(self.position), copy.copy(self.size))
 
-def rgba_to_wx_colour(rgb: int, alpha: float):
+
+def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
     """Given RGBA color, return wx.Colour.
     
     Args:
@@ -281,6 +283,20 @@ def rgba_to_wx_colour(rgb: int, alpha: float):
     g = (rgb >> 8) & 0xff
     r = (rgb >> 16) & 0xff
     return wx.Colour(r, g, b, int(alpha * 255))
+
+
+def wx_colour_to_rgb(color: wx.Colour) -> int:
+    print(color.Red())
+    return color.Red() << 16 + color.Green() << 8 + color.Blue()
+
+
+def encode_rgba(color: wx.Colour) -> int:
+    return color.Alpha() << 24 + wx_colour_to_rgb(color)
+
+
+def decode_rgba(rgba: int) -> wx.Colour:
+    a = (rgba >> 24) & 0xff
+    return rgba_to_wx_colour(rgba, a / 255)
 
 
 def clamp_rect_pos(rect: Rect, bounds: Rect, padding = 0) -> Vec2:
@@ -362,3 +378,8 @@ def no_rzeros(num: float, precision: int) -> str:
     assert precision > 0
     fmt = '{:.' + str(precision) + 'f}'
     return fmt.format(num).rstrip('0').rstrip('.')
+
+
+def on_msw() -> bool:
+    """Returns whether we are running on Windows."""
+    return os.name == 'nt'

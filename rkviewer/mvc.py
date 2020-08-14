@@ -27,6 +27,16 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def try_undo(self) -> bool:
+        """Try to undo last operation"""
+        pass
+
+    @abc.abstractmethod
+    def try_redo(self) -> bool:
+        """Try to redo last undone operation"""
+        pass
+
+    @abc.abstractmethod
     def try_add_node(self, node: Node) -> bool:
         """Try to add the given Node to the canvas."""
         pass
@@ -63,6 +73,10 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def try_set_node_border_width(self, id_: str, width: float) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_delete_node(self, id_: str) -> bool:
         pass
 
     @abc.abstractmethod

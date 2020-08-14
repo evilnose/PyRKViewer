@@ -21,6 +21,7 @@ class Controller(IController):
         self.view = view
         iod.newNetwork('the one')
         self.in_group = False
+        self.stacklen = 0  # TODO temporary hack to not undo the first newNetwork() operation.
 
     def try_start_group(self) -> bool:
         assert not self.in_group
@@ -40,8 +41,36 @@ class Controller(IController):
         except iod.Error as e:
             print('Error ending group:', str(e))
             return False
-        finally:
-            self._update_view()
+        self._update_view()
+        return True
+
+    def try_undo(self) -> bool:
+        if self.stacklen == 0:
+            return False
+        try:
+            assert not self.in_group
+            iod.undo()
+        except iod.StackEmptyError:
+            return False
+        except iod.Error as e:
+            print('Error undoing:', str(e))
+            return False
+
+        self.stacklen -= 2  # -2 to correct the +1 in update_view
+        self._update_view()
+        return True
+
+    def try_redo(self) -> bool:
+        try:
+            assert not self.in_group
+            iod.redo()
+        except iod.StackEmptyError:
+            return False
+        except iod.Error as e:
+            print('Error redoing:', str(e))
+            return False
+
+        self._update_view()
         return True
 
     def try_add_node(self, node: Node) -> bool:
@@ -182,6 +211,19 @@ class Controller(IController):
             self._update_view()
         return True
 
+    def try_delete_node(self, id_: str) -> bool:
+        neti = 0
+        try:
+            nodei = iod.getNodeIndex(neti, id_)
+            iod.deleteNode(neti, nodei)
+        except iod.Error as e:
+            print('Error deleting node:', str(e))
+            return False
+
+        if not self.in_group:
+            self._update_view()
+        return True
+
     def get_list_of_node_ids(self) -> List[str]:
         neti = 0
         return iod.getListOfNodeIds(neti)
@@ -189,6 +231,7 @@ class Controller(IController):
     # get the updated list of nodes from model and update
     def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
+        self.stacklen += 1  #TODO remove
         # TODO multiple net IDs
         neti = 0
         ids = iod.getListOfNodeIds(neti)

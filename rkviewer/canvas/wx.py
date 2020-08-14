@@ -92,6 +92,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnKeyDown)
 
         # state variables
         self._input_mode = InputMode.SELECT
@@ -238,6 +239,9 @@ class Canvas(wx.ScrolledWindow):
         self._nodes = nodes
         for node in self._nodes:
             node.scale = self._scale
+
+        ids = set(n.id_ for n in nodes)
+        self._selected_ids &= ids  # cull removed nodes
 
         # update MultiSelect is not dragging (if we are dragging, ResetNodes() must have been called
         # when the mouse exited the window.)
@@ -395,7 +399,7 @@ class Canvas(wx.ScrolledWindow):
                             self._multiselect.BeginResize(i)
                             return
 
-                multi = wx.GetKeyState(wx.WXK_CONTROL)
+                multi = wx.GetKeyState(wx.WXK_CONTROL) or wx.GetKeyState(wx.WXK_SHIFT)
 
                 # if not multi-selecting and clicked within rect, then we definitely drag move
                 # the rect. OR, if we are multi-selecting but didn't click on any node, and we
@@ -464,7 +468,7 @@ class Canvas(wx.ScrolledWindow):
                 self.Refresh()
             elif self.input_mode == InputMode.ZOOM:
                 zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
-                self.IncrementZoom(zooming_in, device_pos)
+                self.IncrementZoom(zooming_in, Vec2(device_pos))
 
         finally:
             self.Refresh()
@@ -737,6 +741,22 @@ class Canvas(wx.ScrolledWindow):
         if frame_pos.x < 0 or frame_pos.y < 0 or frame_pos.x >= fw or frame_pos.y >= fh:
             self._mouse_outside_frame = True
             self._UpdateNodePosAndSize(evt, True)
+
+    def OnKeyDown(self, evt):
+        key = evt.GetKeyCode()
+        if key == wx.WXK_DELETE:
+            if len(self._selected_ids) != 0:
+                assert self._multiselect is not None
+                self.controller.try_start_group()
+                for id_ in self._selected_ids:
+                    self.controller.try_delete_node(id_)
+                self.controller.try_end_group()
+
+                # controller must have told view to cull the selected IDs
+                assert len(self._selected_ids) == 0
+                wx.PostEvent(self, DidSelectNodesEvent(node_ids=list()))
+
+        evt.Skip()
 
     def OnNodeDrop(self, pos):
         # TODO

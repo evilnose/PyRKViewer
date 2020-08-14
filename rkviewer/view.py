@@ -237,7 +237,7 @@ class EditPanel(wx.Panel):
                     if not self.controller.try_rename_node(old_id, new_id):
                         # this should not happen!
                         assert False
-        self.SetValidationState(True, self.id_ctrl.GetId())
+        self.SetValidationState(True, self.id_textctrl.GetId())
 
     def OnPosText(self, evt):
         text = evt.GetString()
@@ -563,20 +563,26 @@ class EditPanel(wx.Panel):
 class TopToolbar(wx.Panel):
     """Toolbar at the top of the app."""
 
-    def __init__(self, parent, zoom_callback, edit_panel_callback, **kw):
+    def __init__(self, parent, controller: IController, zoom_callback, edit_panel_callback, **kw):
         super().__init__(parent, **kw)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         zoom_in_btn = wx.Button(self, label="Zoom In")
         # TODO make this a method
         sizer.Add(zoom_in_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
-        zoom_in_fn = lambda e: zoom_callback(True)
-        zoom_in_btn.Bind(wx.EVT_BUTTON, zoom_in_fn)
+        zoom_in_btn.Bind(wx.EVT_BUTTON, lambda _: zoom_callback(True))
 
         zoom_out_btn = wx.Button(self, label="Zoom Out")
         sizer.Add(zoom_out_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
-        zoom_out_fn = lambda _: zoom_callback(False)
-        zoom_out_btn.Bind(wx.EVT_BUTTON, zoom_out_fn)
+        zoom_out_btn.Bind(wx.EVT_BUTTON, lambda _: zoom_callback(False))
+
+        undo_button = wx.Button(self, label="Undo")
+        sizer.Add(undo_button, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        undo_button.Bind(wx.EVT_BUTTON, lambda _: controller.try_undo())
+
+        redo_button = wx.Button(self, label="Redo")
+        sizer.Add(redo_button, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        redo_button.Bind(wx.EVT_BUTTON, lambda _: controller.try_redo())
 
         # Note: Right align after this
         sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
@@ -649,7 +655,7 @@ class MainPanel(wx.Panel):
         self.toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
         top_toolbar_width = theme['canvas_width'] + theme['edit_panel_width'] + theme['vgap']
-        self.top_toolbar = TopToolbar(self,
+        self.top_toolbar = TopToolbar(self, controller,
                                       size=(top_toolbar_width, theme['top_toolbar_height']),
                                       zoom_callback=self.canvas.ZoomCenter,
                                       edit_panel_callback=self.ToggleEditPanel)

@@ -314,8 +314,8 @@ def clamp_rect_pos(rect: Rect, bounds: Rect, padding = 0) -> Vec2:
 
 
 def clamp_rect_size(rect: Rect, botright: Vec2, padding: int = 0) -> Vec2:
-    """TODO document"""
-    limit = botright - rect.position
+    """Clamp the size of the given rectangle if its bottom-right corner exceeds botright."""
+    limit = botright - rect.position - Vec2.repeat(padding)
     assert limit.x > 0 and limit.y > 0
 
     return Vec2(min(limit.x, rect.size.x), min(limit.y, rect.size.y))
@@ -341,6 +341,7 @@ def clamp_point(pos: Vec2, bounds: Rect, padding = 0) -> Vec2:
 
 def convert_position(fn):
     """Decorator that converts the event position to one that is relative to the receiver."""
+
     def ret(self, evt):
         client_pos = evt.GetPosition()  # get raw position
         screen_pos = evt.EventObject.ClientToScreen(client_pos)  # convert to screen position
@@ -356,6 +357,7 @@ def convert_position(fn):
 
 
 def get_nodes_by_ids(nodes: List[Node], ids: Collection[str]):
+    """Simple helper that maps the given list of IDs to their corresponding nodes."""
     ret = [n for n in nodes if n.id_ in ids]
     assert len(ret) == len(ids)
     return ret

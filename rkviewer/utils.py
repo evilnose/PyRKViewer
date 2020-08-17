@@ -4,6 +4,7 @@ from __future__ import annotations  # For returning self in a class
 import wx
 import copy
 import os
+import sys
 from typing import Any, Callable, Collection, List, Tuple, TypeVar
 
 
@@ -285,20 +286,6 @@ def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
     return wx.Colour(r, g, b, int(alpha * 255))
 
 
-def wx_colour_to_rgb(color: wx.Colour) -> int:
-    print(color.Red())
-    return color.Red() << 16 + color.Green() << 8 + color.Blue()
-
-
-def encode_rgba(color: wx.Colour) -> int:
-    return color.Alpha() << 24 + wx_colour_to_rgb(color)
-
-
-def decode_rgba(rgba: int) -> wx.Colour:
-    a = (rgba >> 24) & 0xff
-    return rgba_to_wx_colour(rgba, a / 255)
-
-
 def clamp_rect_pos(rect: Rect, bounds: Rect, padding = 0) -> Vec2:
     """Clamp the position of rect, so that it is entirely within the bounds rectangle.
 
@@ -383,3 +370,14 @@ def no_rzeros(num: float, precision: int) -> str:
 def on_msw() -> bool:
     """Returns whether we are running on Windows."""
     return os.name == 'nt'
+
+
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller."""
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = getattr(sys, '_MEIPASS')
+    else:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, 'resources', relative_path)

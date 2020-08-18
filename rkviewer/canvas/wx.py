@@ -92,7 +92,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
-        self.Bind(wx.EVT_CHAR_HOOK, self.OnKeyDown)
+        #self.GetTopLevelParent().Bind(wx.EVT_CHAR_HOOK, self.TempOnKeyDown)
 
         # state variables
         self._input_mode = InputMode.SELECT
@@ -323,6 +323,9 @@ class Canvas(wx.ScrolledWindow):
         if new_zoom < self.MIN_ZOOM_LEVEL or new_zoom > self.MAX_ZOOM_LEVEL:
             return
         self.SetZoomLevel(new_zoom, anchor)
+
+    def ResetZoom(self):
+        self.SetZoomLevel(0, Vec2(self.GetSize()) / 2)
 
     def _UpdateMultiSelect(self):
         """Reconstruct the MultiSelect object from the current nodes.
@@ -742,19 +745,17 @@ class Canvas(wx.ScrolledWindow):
             self._mouse_outside_frame = True
             self._UpdateNodePosAndSize(evt, True)
 
-    def OnKeyDown(self, evt):
-        key = evt.GetKeyCode()
-        if key == wx.WXK_DELETE:
-            if len(self._selected_ids) != 0:
-                assert self._multiselect is not None
-                self.controller.try_start_group()
-                for id_ in self._selected_ids:
-                    self.controller.try_delete_node(id_)
-                self.controller.try_end_group()
+    def DeleteSelectedNodes(self, evt):
+        if len(self._selected_ids) != 0:
+            assert self._multiselect is not None
+            self.controller.try_start_group()
+            for id_ in self._selected_ids:
+                self.controller.try_delete_node(id_)
+            self.controller.try_end_group()
 
-                # controller must have told view to cull the selected IDs
-                assert len(self._selected_ids) == 0
-                wx.PostEvent(self, DidSelectNodesEvent(node_ids=list()))
+            # controller must have told view to cull the selected IDs
+            assert len(self._selected_ids) == 0
+            wx.PostEvent(self, DidSelectNodesEvent(node_ids=list()))
 
         evt.Skip()
 

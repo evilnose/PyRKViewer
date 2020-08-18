@@ -41,9 +41,9 @@ DEFAULT_THEME = {
 DEFAULT_SETTINGS = {
     'init_zoom': 1,
     'status_fields': [
-        ('mode', -1),
-        ('cursor', -1),
-        ('zoom', -1),
+        ('mode', 100),
+        ('cursor', 100),
+        ('zoom', 100),
     ],  # first element: status field identifier; second element: field width
     'decimal_precision': 2,
 }

@@ -15,7 +15,7 @@ from .widgets import ButtonGroup
 
 class EditPanel(wx.Panel):
     """Panel that displays and allows editing of the details of a node.
-    
+
     Attributes
         ColorCallback: Callback type for when a color input is changed.
         FloatCallback: Callback type for when a float input is changed.
@@ -60,7 +60,7 @@ class EditPanel(wx.Panel):
     _nodes: List[Node]  #: current list of nodes in canvas.
     _selected_ids: Set[str]  #: current list of selected IDs in canvas.
     _label_font: wx.Font  #: font for the form input label.
-    _info_bitmap: wx.Image  #:  bitmap for the info badge (icon), for when an input is invalid.
+    _info_bitmap: wx.Image  # :  bitmap for the info badge (icon), for when an input is invalid.
     _info_length: int  #: length of the square reserved for _info_bitmap
     _title: wx.StaticText  #: title of the form
     _bounding_rect: Optional[Rect]  #: the exact bounding rectangle of the selected nodes
@@ -153,7 +153,7 @@ class EditPanel(wx.Panel):
         self.border_width_ctrl = wx.TextCtrl(self.form)
         self._AppendControl(form_sizer, 'border width', self.border_width_ctrl)
         border_callback = self._MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
-                                                     self._BorderWidthCallback, (1, 100))
+                                                      self._BorderWidthCallback, (1, 100))
         self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
 
         self.form.SetSizer(form_sizer)
@@ -198,8 +198,8 @@ class EditPanel(wx.Panel):
         sizer.Add(0, height, wx.GBPosition(rows, 0), wx.GBSpan(1, 5))
 
     def _CreateColorControl(self, label: str, alpha_label: str,
-                           color_callback: ColorCallback, alpha_callback: FloatCallback,
-                           sizer: wx.Sizer, alpha_range: Tuple[float, float] = (0, 1)) \
+                            color_callback: ColorCallback, alpha_callback: FloatCallback,
+                            sizer: wx.Sizer, alpha_range: Tuple[float, float] = (0, 1)) \
             -> Tuple[wx.ColourPickerCtrl, wx.TextCtrl]:
         """Helper method for creating a color control and adding it to the form.
 
@@ -258,7 +258,7 @@ class EditPanel(wx.Panel):
         self.controller.try_end_group()
 
     def _MakeFloatCtrlFunction(self, ctrl_id: str,
-                              callback: FloatCallback, range_: Tuple[float, float]):
+                               callback: FloatCallback, range_: Tuple[float, float]):
         """Helper method that creates a validation function for a TextCtrl that only allows floats.
 
         Args:
@@ -615,7 +615,7 @@ class EditPanel(wx.Panel):
 
     def _GetMultiColor(self, colors: List[wx.Colour]) -> Tuple[wx.Colour, Optional[int]]:
         """Helper method for producing one single color from a list of colors.
-        
+
         Editing programs that allows selection of multiple entities usually support editing all of
         the selected entities at once. When a property of all the selected entities are the same,
         the displayed value of that property is that single value precisely. However, if they are
@@ -668,7 +668,7 @@ class EditPanel(wx.Panel):
 
     def _ChangePairValue(self, ctrl: wx.TextCtrl, new_val: Vec2, prec: int):
         """Helper for updating the value of a paired number TextCtrl.
-        
+
         The TextCtrl accepts text in the format "X, Y" where X and Y are floats. The control is
         not updated if the new and old values are identical (considering precision).
 
@@ -719,7 +719,8 @@ class TopToolbar(wx.Panel):
         sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
 
         toggle_panel_button = wx.Button(self, label="Toggle Details")
-        sizer.Add(toggle_panel_button, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.RIGHT, 10))
+        sizer.Add(toggle_panel_button, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER_VERTICAL).Border(wx.RIGHT, 10))
         toggle_panel_button.Bind(wx.EVT_BUTTON, edit_panel_callback)
 
         self.SetSizer(sizer)
@@ -731,18 +732,12 @@ class Toolbar(wx.Panel):
     def __init__(self, *args, toggle_callback, **kw):
         super().__init__(*args, **kw)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        select_btn = wx.ToggleButton(
-            self, label='&Select')
-        sizer.Add(select_btn, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER).Border(wx.TOP, 10))
-        add_btn = wx.ToggleButton(
-            self, label='&Add')
-        sizer.Add(add_btn, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER).Border(wx.TOP, 10))
-        zoom_btn = wx.ToggleButton(
-            self, label='&Zoom')
-        sizer.Add(zoom_btn, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        select_btn = wx.ToggleButton(self, label='&Select')
+        sizer.Add(select_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        add_btn = wx.ToggleButton(self, label='&Add')
+        sizer.Add(add_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        zoom_btn = wx.ToggleButton(self, label='&Zoom')
+        sizer.Add(zoom_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
         btn_group = ButtonGroup(toggle_callback)
         btn_group.AddButton(select_btn, InputMode.SELECT)
@@ -756,6 +751,10 @@ class MainPanel(wx.Panel):
     """The main panel, which is the only chlid of the root Frame."""
     controller: IController
     theme: Dict[str, Any]
+    canvas: Canvas
+    toolbar: Toolbar
+    top_toolbar: TopToolbar
+    edit_panel: EditPanel
 
     def __init__(self, parent, controller: IController, theme: Dict[str, Any],
                  settings: Dict[str, Any]):
@@ -797,8 +796,6 @@ class MainPanel(wx.Panel):
                                           theme['canvas_height']))
         self.edit_panel.SetBackgroundColour(theme['toolbar_bg'])
 
-        self.buffer = None
-
         # and create a sizer to manage the layout of child widgets
         sizer = wx.GridBagSizer(vgap=theme['vgap'], hgap=theme['hgap'])
 
@@ -837,7 +834,8 @@ class MyFrame(wx.Frame):
     """The main frame."""
 
     def __init__(self, controller: IController, theme, settings, **kw):
-        super().__init__(None, **kw)
+        super().__init__(None, style=wx.DEFAULT_FRAME_STYLE|wx.WS_EX_PROCESS_UI_UPDATES, **kw)
+
         status_fields = settings['status_fields']
         assert status_fields is not None
         self.CreateStatusBar(len(DEFAULT_SETTINGS['status_fields']))
@@ -846,6 +844,84 @@ class MyFrame(wx.Frame):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.main_panel, 1, wx.EXPAND)
         self.SetSizerAndFit(sizer)
+
+        canvas = self.main_panel.canvas
+
+        entries = list()
+        menu_bar = wx.MenuBar()
+
+        self.menu_events = list()
+        file_menu = wx.Menu()
+        self.AddMenuItem(file_menu, 'E&xit', 'Exit application', lambda _: self.Close(), entries,
+                         id_=wx.ID_EXIT)
+
+        edit_menu = wx.Menu()
+        self.AddMenuItem(edit_menu, '&Undo', 'Undo action', lambda _: controller.try_undo(),
+                         entries, key=(wx.ACCEL_CTRL, ord('Z')))
+        self.AddMenuItem(edit_menu, '&Redo', 'Redo action', lambda _: controller.try_redo(),
+                         entries, key=(wx.ACCEL_CTRL, ord('Y')))
+
+        view_menu = wx.Menu()
+        self.AddMenuItem(view_menu, 'Zoom &In', 'Zoom in canvas', lambda _: canvas.ZoomCenter(True),
+                         entries, key=(wx.ACCEL_CTRL, ord('+')))
+        self.AddMenuItem(view_menu, 'Zoom &Out', 'Zoom out canvas',
+                         lambda _: canvas.ZoomCenter(False), entries, key=(wx.ACCEL_CTRL, ord('-')))
+        self.AddMenuItem(view_menu, '&Reset Zoom', 'Reset canva zoom',
+                         lambda _: canvas.ResetZoom(), entries, key=(wx.ACCEL_CTRL, ord(' ')))
+
+        menu_bar.Append(file_menu, '&File')
+        menu_bar.Append(edit_menu, '&Edit')
+        menu_bar.Append(view_menu, '&View')
+
+        atable = wx.AcceleratorTable(entries)
+
+        self.SetMenuBar(menu_bar)
+        self.atable = atable
+        canvas.SetAcceleratorTable(atable)
+
+        self.OverrideAccelTable(self)
+
+        self.Center()
+
+    def AddMenuItem(self, menu: wx.Menu, text: str, help_text: str, callback: Callable,
+                    entries: List, key: Tuple[Any, wx.KeyCode] = None, id_: str = None):
+        if id_ is None:
+            id_ = wx.NewId()
+
+        shortcut = ''
+        if key is not None:
+            entry = wx.AcceleratorEntry(key[0], key[1], id_)
+            entries.append(entry)
+            shortcut = entry.ToString()
+
+        item = menu.Append(id_, '{}\t{}'.format(text, shortcut), help_text)
+        self.Bind(wx.EVT_MENU, callback, item)
+        self.menu_events.append((callback, item))
+
+    def OverrideAccelTable(self, widget):
+        # TODO document
+        if isinstance(widget, wx.TextCtrl):
+            def OnFocus(evt):
+                for cb, item in self.menu_events:
+                    self.Unbind(wx.EVT_MENU, handler=cb, source=item)
+                # For some reason, we need to do this for both self and menubar to disable the
+                # AcceleratorTable. Don't ever lose this sacred knowledge, for it came at the cost
+                # of 50 minutes.
+                self.SetAcceleratorTable(wx.NullAcceleratorTable)
+                self.GetMenuBar().SetAcceleratorTable(wx.NullAcceleratorTable)
+                evt.Skip()
+
+            def OnUnfocus(evt):
+                for cb, item in self.menu_events:
+                    self.Bind(wx.EVT_MENU, handler=cb, source=item)
+                self.SetAcceleratorTable(self.atable)
+                evt.Skip()
+
+            widget.Bind(wx.EVT_SET_FOCUS, OnFocus)
+            widget.Bind(wx.EVT_KILL_FOCUS, OnUnfocus)
+
+        for child in widget.GetChildren():
+            self.OverrideAccelTable(child)
 
 
 class View(IView):

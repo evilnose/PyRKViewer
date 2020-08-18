@@ -247,12 +247,13 @@ class Controller(IController):
             border_rgb = iod.getNodeOutlineColorRGB(neti, nodei)
             border_color = rgba_to_wx_colour(border_rgb, border_alpha)
             node = Node(
+                index=nodei,
                 id_=id_,
                 pos=Vec2(x, y),
                 size=Vec2(w, h),
                 fill_color=fill_color,
                 border_color=border_color,
-                border_width=iod.getNodeOutlineThickness(neti, nodei)
+                border_width=iod.getNodeOutlineThickness(neti, nodei),
             )
             nodes.append(node)
 

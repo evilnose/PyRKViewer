@@ -184,7 +184,17 @@ class Rect:
 
 
 class Node:
-    """Class that represents a Node for rendering purposes."""
+    """Class that represents a Node for rendering purposes.
+    
+    Attributes:
+        index: The index of the node. If this node has not yet been added to the NOM, this takes on
+               the value of -1.
+        id_: The ID of the node.
+        fill_color: The fill color of the node.
+        border_color: The border color of the node.
+        border_width: The border width of the node.
+    """
+    index: int
     id_: str
     fill_color: wx.Colour
     border_color: wx.Colour
@@ -197,8 +207,9 @@ class Node:
 
     # force keyword-only arguments
     def __init__(self, *, id_: str, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, scale: float = 1):
+                 border_color: wx.Colour, border_width: float, scale: float = 1, index: int = -1):
         self._scale = scale
+        self.index = index
         self.id_ = id_
         self.position = pos
         self.size = size

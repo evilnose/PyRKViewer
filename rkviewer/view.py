@@ -7,7 +7,7 @@ from .canvas.events import EVT_DID_DRAG_MOVE_NODES, EVT_DID_DRAG_RESIZE_NODES, \
 from .canvas.wx import Canvas, InputMode
 from .config import DEFAULT_SETTINGS, DEFAULT_THEME, DEFAULT_SETTINGS
 from .mvc import IController, IView
-from .utils import Node, Rect, Vec2, clamp_rect_size, get_nodes_by_ids, no_rzeros, \
+from .utils import Node, Rect, Vec2, clamp_rect_size, get_nodes_by_idx, no_rzeros, \
     clamp_rect_pos, on_msw, resource_path
 from .canvas.utils import get_bounding_rect
 from .widgets import ButtonGroup
@@ -23,6 +23,7 @@ class EditPanel(wx.Panel):
         controller: The associated controller.
         theme: The theme of the application.
         settings: The settings of the application.
+        net_index: The current network index. For now it is 0 since there is only one tab.
         form: The actual form widget. This is at the same level as null_message.
         null_message: The widget displayed in place of the form,  when nothing is selected.
         labels: A dictionary that maps the ID of input controls to their associated label objects.
@@ -45,6 +46,7 @@ class EditPanel(wx.Panel):
     controller: IController
     theme: Dict[str, Any]
     settings: Dict[str, Any]
+    net_index: int
     form: wx.Panel
     null_message: wx.StaticText
     labels: Dict[str, wx.Window]
@@ -58,7 +60,7 @@ class EditPanel(wx.Panel):
     border_alpha_ctrl: Optional[wx.TextCtrl]
     border_width_ctrl: wx.TextCtrl
     _nodes: List[Node]  #: current list of nodes in canvas.
-    _selected_ids: Set[str]  #: current list of selected IDs in canvas.
+    _selected_idx: Set[int]  #: current list of selected indices in canvas.
     _label_font: wx.Font  #: font for the form input label.
     _info_bitmap: wx.Image  # :  bitmap for the info badge (icon), for when an input is invalid.
     _info_length: int  #: length of the square reserved for _info_bitmap
@@ -73,11 +75,12 @@ class EditPanel(wx.Panel):
         self.controller = controller
         self.theme = theme
         self.settings = settings
+        self.net_index = 0
         self.form = wx.Panel(self)
         self.labels = dict()
         self.badges = dict()
         self._nodes = list()
-        self._selected_ids = set()
+        self._selected_idx = set()
         self._label_font = wx.Font(wx.FontInfo().Bold())
         info_image = wx.Image(resource_path('info-2-16.png'), wx.BITMAP_TYPE_PNG)
         self._info_bitmap = wx.Bitmap(info_image)
@@ -226,35 +229,35 @@ class EditPanel(wx.Panel):
             alpha_ctrl = wx.TextCtrl(self.form)
             self._AppendControl(sizer, alpha_label, alpha_ctrl)
             callback = self._MakeFloatCtrlFunction(alpha_ctrl.GetId(), alpha_callback, alpha_range)
-            self.Bind(wx.EVT_TEXT, callback)
+            alpha_ctrl.Bind(wx.EVT_TEXT, callback)
 
         return ctrl, alpha_ctrl
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
-        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         self._dirty = True
         self.controller.try_start_group()
         for node in nodes:
-            self.controller.try_set_node_fill_alpha(node.id_, alpha)
+            self.controller.try_set_node_fill_alpha(self.net_index, node.index, alpha)
         self.controller.try_end_group()
 
     def _BorderAlphaCallback(self, alpha: float):
         """Callback for when the border alpha changes."""
-        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         self._dirty = True
         self.controller.try_start_group()
         for node in nodes:
-            self.controller.try_set_node_border_alpha(node.id_, alpha)
+            self.controller.try_set_node_border_alpha(self.net_index, node.index, alpha)
         self.controller.try_end_group()
 
     def _BorderWidthCallback(self, width: float):
         """Callback for when the border width changes."""
-        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         self._dirty = True
         self.controller.try_start_group()
         for node in nodes:
-            self.controller.try_set_node_border_width(node.id_, width)
+            self.controller.try_set_node_border_width(self.net_index, node.index, width)
         self.controller.try_end_group()
 
     def _MakeFloatCtrlFunction(self, ctrl_id: str,
@@ -294,27 +297,23 @@ class EditPanel(wx.Panel):
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
-        assert len(self._selected_ids) == 1
-        [old_id] = self._selected_ids
+        assert len(self._selected_idx) == 1
+        [nodei] = self._selected_idx
         ctrl_id = self.id_textctrl.GetId()
-        if new_id != old_id:
-            if len(new_id) == 0:
-                self._SetValidationState(False, ctrl_id, "ID cannot be empty")
-                return
+        if len(new_id) == 0:
+            self._SetValidationState(False, ctrl_id, "ID cannot be empty")
+            return
+        else:
+            for node in self._nodes:
+                if node.id_ == new_id:
+                    self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
+                    return
             else:
-                for node in self._nodes:
-                    if node.id_ == new_id:
-                        self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
-                        return
-                else:
-                    # loop terminated fine. There is no duplicate ID
-                    self._selected_ids.remove(old_id)
-                    self._selected_ids.add(new_id)
-                    self.canvas.UpdateSelectedIds(self._selected_ids)
-                    self._dirty = True
-                    if not self.controller.try_rename_node(old_id, new_id):
-                        # this should not happen!
-                        assert False
+                # loop terminated fine. There is no duplicate ID
+                self._dirty = True
+                if not self.controller.try_rename_node(self.net_index, nodei, new_id):
+                    # this should not happen!
+                    assert False
         self._SetValidationState(True, self.id_textctrl.GetId())
 
     def _OnPosText(self, evt):
@@ -330,7 +329,7 @@ class EditPanel(wx.Panel):
         if pos.x < 0 or pos.y < 0:
             self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
             return
-        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         bounds = Rect(Vec2(), self.canvas.realsize)
         clamped = None
         if len(nodes) == 1:
@@ -339,7 +338,8 @@ class EditPanel(wx.Panel):
             clamped = clamp_rect_pos(Rect(pos, node.size), bounds)
             if node.position != clamped or pos != clamped:
                 self._dirty = True
-                self.controller.try_move_node(node.id_, Vec2(clamped.x, clamped.y))
+                self.controller.try_move_node(self.net_index, node.index,
+                                              Vec2(clamped.x, clamped.y))
         else:
             clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
             if self._bounding_rect.position != pos or pos != clamped:
@@ -347,7 +347,8 @@ class EditPanel(wx.Panel):
                 self._dirty = True
                 self.controller.try_start_group()
                 for node in nodes:
-                    self.controller.try_move_node(node.id_, node.position + offset)
+                    self.controller.try_move_node(self.net_index, node.index,
+                                                  node.position + offset)
                 self.controller.try_end_group()
         self._SetValidationState(True, self.pos_ctrl.GetId())
 
@@ -360,7 +361,7 @@ class EditPanel(wx.Panel):
             self._SetValidationState(False, ctrl_id, 'Should be in the form "width, height"')
             return
 
-        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         min_width = self.theme['min_node_width']
         min_height = self.theme['min_node_height']
         size = Vec2(wh)
@@ -375,7 +376,8 @@ class EditPanel(wx.Panel):
             clamped = clamp_rect_size(Rect(node.position, size), self.canvas.realsize)
             if node.size != clamped or size != clamped:
                 self._dirty = True
-                self.controller.try_set_node_size(node.id_, Vec2(clamped.x, clamped.y))
+                self.controller.try_set_node_size(self.net_index, node.index,
+                                                  Vec2(clamped.x, clamped.y))
         else:
             min_nw = min(n.size.x for n in nodes)
             min_nh = min(n.size.y for n in nodes)
@@ -396,40 +398,41 @@ class EditPanel(wx.Panel):
                 self.controller.try_start_group()
                 for node in nodes:
                     rel_pos = node.position - self._bounding_rect.position
-                    self.controller.try_move_node(
-                        node.id_, self._bounding_rect.position + rel_pos.elem_mul(ratio))
-                    self.controller.try_set_node_size(node.id_, node.size.elem_mul(ratio))
+                    new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
+                    self.controller.try_move_node(self.net_index, node.index, new_pos)
+                    self.controller.try_set_node_size(self.net_index, node.index,
+                                                      node.size.elem_mul(ratio))
                 self.controller.try_end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
     def _OnFillColorChanged(self, evt: wx.Event):
         """Callback for the fill color control."""
         fill = evt.GetColour()
-        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         self._dirty = True
         self.controller.try_start_group()
         for node in nodes:
             if on_msw():
-                self.controller.try_set_node_fill_rgb(node.id_, fill)
+                self.controller.try_set_node_fill_rgb(self.net_index, node.index, fill)
             else:
                 # we can set both the RGB and the alpha at the same time
-                self.controller.try_set_node_fill_rgb(node.id_, fill)
-                self.controller.try_set_node_fill_alpha(node.id_, fill.Alpha())
+                self.controller.try_set_node_fill_rgb(self.net_index, node.index, fill)
+                self.controller.try_set_node_fill_alpha(self.net_index, node.index, fill.Alpha())
         self.controller.try_end_group()
 
     def _OnBorderColorChanged(self, evt: wx.Event):
         """Callback for the border color control."""
         border = evt.GetColour()
-        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         self._dirty = True
         self.controller.try_start_group()
         for node in nodes:
             if on_msw():
-                self.controller.try_set_node_border_rgb(node.id_, border)
+                self.controller.try_set_node_border_rgb(self.net_index, node.index, border)
             else:
                 # we can set both the RGB and the alpha at the same time
-                self.controller.try_set_node_border_rgb(node.id_, border)
-                self.controller.try_set_node_border_alpha(node.id_, border.Alpha())
+                self.controller.try_set_node_border_rgb(self.net_idnex, node.index, border)
+                self.controller.try_set_node_border_alpha(self.net_index, node.index, border.Alpha())
         self.controller.try_end_group()
 
     def _SetBestInsertion(self, ctrl: wx.TextCtrl, orig_text: str, orig_insertion: int):
@@ -519,7 +522,7 @@ class EditPanel(wx.Panel):
     def _OnDidUpdateNodes(self, evt):
         """Function called after the list of nodes have been updated."""
         self._nodes = evt.nodes
-        if len(self._selected_ids) != 0 and not self._dirty:
+        if len(self._selected_idx) != 0 and not self._dirty:
             self._UpdateAllFields()
 
         self._dirty = False
@@ -530,21 +533,21 @@ class EditPanel(wx.Panel):
 
     def _OnDidSelectNodes(self, evt):
         """Function called after the list of selected nodes have been updated."""
-        self._selected_ids = evt.node_ids
-        if len(evt.node_ids) == 0:
+        self._selected_idx = evt.indices
+        if len(evt.indices) == 0:
             self.form.Show(False)
             self.null_message.Show(True)
         else:
             self.pos_ctrl.ChangeValue('')
             self._UpdateAllFields()
 
-            title_label = 'Edit Node' if len(evt.node_ids) == 1 else 'Edit Multiple Nodes'
+            title_label = 'Edit Node' if len(evt.indices) == 1 else 'Edit Multiple Nodes'
             self._title.SetLabel(title_label)
 
-            id_text = 'identifier' if len(evt.node_ids) == 1 else 'identifiers'
+            id_text = 'identifier' if len(evt.indices) == 1 else 'identifiers'
             self.labels[self.id_textctrl.GetId()].SetLabel(id_text)
 
-            size_text = 'size' if len(evt.node_ids) == 1 else 'total span'
+            size_text = 'size' if len(evt.indices) == 1 else 'total span'
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
 
             self.null_message.Show(False)
@@ -563,8 +566,8 @@ class EditPanel(wx.Panel):
 
     def _UpdateAllFields(self):
         """Update the form field values based on current data."""
-        assert len(self._selected_ids) != 0
-        nodes = get_nodes_by_ids(self._nodes, self._selected_ids)
+        assert len(self._selected_idx) != 0
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         prec = self.settings['decimal_precision']
         id_text: str
         pos: Vec2
@@ -573,10 +576,10 @@ class EditPanel(wx.Panel):
         fill_alpha: Optional[int]
         border: wx.Colour
         border_alpha: Optional[int]
-        if len(self._selected_ids) == 1:
+        if len(self._selected_idx) == 1:
             [node] = nodes
             self.id_textctrl.Enable(True)
-            id_text = next(iter(self._selected_ids))
+            id_text = node.id_
             '''
             pos_text = '{}, {}'.format(no_trailing_zeros(node.position.x, prec),
                                        no_trailing_zeros(node.position.y, prec))
@@ -589,7 +592,7 @@ class EditPanel(wx.Panel):
             border_alpha = node.border_color.Alpha()
         else:
             self.id_textctrl.Enable(False)
-            id_text = '; '.join(sorted(list(self._selected_ids)))
+            id_text = '; '.join(sorted(list(n.id_ for n in nodes)))
 
             self._bounding_rect = get_bounding_rect([n.rect for n in nodes])
             pos = self._bounding_rect.position
@@ -834,7 +837,7 @@ class MyFrame(wx.Frame):
     """The main frame."""
 
     def __init__(self, controller: IController, theme, settings, **kw):
-        super().__init__(None, style=wx.DEFAULT_FRAME_STYLE|wx.WS_EX_PROCESS_UI_UPDATES, **kw)
+        super().__init__(None, style=wx.DEFAULT_FRAME_STYLE | wx.WS_EX_PROCESS_UI_UPDATES, **kw)
 
         status_fields = settings['status_fields']
         assert status_fields is not None

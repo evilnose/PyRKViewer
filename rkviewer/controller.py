@@ -73,13 +73,12 @@ class Controller(IController):
         self._update_view()
         return True
 
-    def try_add_node(self, node: Node) -> bool:
+    def try_add_node(self, neti: int, node: Node) -> bool:
         '''
         Add node represented by the given Node variable.
 
         Returns whether the operation was successful.
         '''
-        neti = 0
         try:
             # if this fails in case a group is already in place, modify startGroup to not start
             # group if already in group
@@ -102,11 +101,8 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def try_move_node(self, id_: str, pos: Vec2) -> bool:
+    def try_move_node(self, neti: int, nodei: int, pos: Vec2) -> bool:
         assert pos.x >= 0 and pos.y >= 0
-        neti = 0
-        # TODO exception
-        nodei = iod.getNodeIndex(neti, id_)
         try:
             iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
         except iod.Error as e:
@@ -117,11 +113,10 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def try_set_node_size(self, id_: str, size: Vec2) -> bool:
-        neti = 0
+    def try_set_node_size(self, neti: int, nodei: int, size: Vec2) -> bool:
+        nodei
         # TODO exception
         try:
-            nodei = iod.getNodeIndex(neti, id_)
             iod.setNodeSize(neti, nodei, size.x, size.y)
         except iod.Error as e:
             print('Error resizing node:', str(e))
@@ -131,10 +126,8 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def try_rename_node(self, old_id: str, new_id: str) -> bool:
-        neti = 0
+    def try_rename_node(self, neti: int, nodei: int, new_id: str) -> bool:
         try:
-            nodei = iod.getNodeIndex(neti, old_id)
             iod.setNodeId(neti, nodei, new_id)
         except iod.Error as e:
             print('Error renaming node:', str(e))
@@ -144,10 +137,8 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def try_set_node_fill_rgb(self, id_: str, color: wx.Colour) -> bool:
-        neti = 0
+    def try_set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
         try:
-            nodei = iod.getNodeIndex(neti, id_)
             iod.setNodeFillColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
         except iod.Error as e:
             print('Error setting node fill color:', str(e))
@@ -158,10 +149,8 @@ class Controller(IController):
         return True
 
 
-    def try_set_node_fill_alpha(self, id_: str, alpha: float) -> bool:
-        neti = 0
+    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
         try:
-            nodei = iod.getNodeIndex(neti, id_)
             iod.setNodeFillColorAlpha(neti, nodei, alpha)
         except iod.Error as e:
             print('Error setting node fill alpha:', str(e))
@@ -171,10 +160,8 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def try_set_node_border_rgb(self, id_: str, color: wx.Colour) -> bool:
-        neti = 0
+    def try_set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
         try:
-            nodei = iod.getNodeIndex(neti, id_)
             iod.setNodeOutlineColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
         except iod.Error as e:
             print('Error setting node border color:', str(e))
@@ -184,10 +171,8 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def try_set_node_border_alpha(self, id_: str, alpha: float) -> bool:
-        neti = 0
+    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
         try:
-            nodei = iod.getNodeIndex(neti, id_)
             iod.setNodeOutlineColorAlpha(neti, nodei, alpha)
         except iod.Error as e:
             print('Error setting node border alpha:', str(e))
@@ -197,10 +182,8 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def try_set_node_border_width(self, id_: str, width: float) -> bool:
-        neti = 0
+    def try_set_node_border_width(self, neti: int, nodei: int, width: float) -> bool:
         try:
-            nodei = iod.getNodeIndex(neti, id_)
             print('warning: TODO decide if node width is int or float')
             iod.setNodeOutlineThickness(neti, nodei, int(width))
         except iod.Error as e:
@@ -211,10 +194,8 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def try_delete_node(self, id_: str) -> bool:
-        neti = 0
+    def try_delete_node(self, neti: int, nodei: int) -> bool:
         try:
-            nodei = iod.getNodeIndex(neti, id_)
             iod.deleteNode(neti, nodei)
         except iod.Error as e:
             print('Error deleting node:', str(e))
@@ -224,8 +205,7 @@ class Controller(IController):
             self._update_view()
         return True
 
-    def get_list_of_node_ids(self) -> List[str]:
-        neti = 0
+    def get_list_of_node_ids(self, neti: int) -> List[str]:
         return iod.getListOfNodeIds(neti)
 
     # get the updated list of nodes from model and update

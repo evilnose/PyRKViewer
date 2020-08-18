@@ -37,50 +37,50 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_add_node(self, node: Node) -> bool:
+    def try_add_node(self, neti: int, node: Node) -> bool:
         """Try to add the given Node to the canvas."""
         pass
 
     @abc.abstractmethod
-    def try_move_node(self, id_: str, pos: Vec2) -> bool:
+    def try_move_node(self, neti: int, nodei: int, pos: Vec2) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def try_set_node_size(self, id_: str, size: Vec2) -> bool:
+    def try_set_node_size(self, neti: int, nodei: int, size: Vec2) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def try_rename_node(self, old_id: str, new_id: str) -> bool:
+    def try_rename_node(self, neti: int, nodei: int, new_id: str) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_fill_rgb(self, id_: str, color: wx.Colour) -> bool:
+    def try_set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_fill_alpha(self, id_: str, alpha: float) -> bool:
+    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_border_rgb(self, id_: str, color: wx.Colour) -> bool:
+    def try_set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_border_alpha(self, id_: str, alpha: float) -> bool:
+    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_border_width(self, id_: str, width: float) -> bool:
+    def try_set_node_border_width(self, neti: int, nodei: int, width: float) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_delete_node(self, id_: str) -> bool:
+    def try_delete_node(self, neti: int, nodei: int) -> bool:
         pass
 
     @abc.abstractmethod
-    def get_list_of_node_ids(self) -> List[str]:
+    def get_list_of_node_ids(self, neti: int) -> List[str]:
         """Try getting the list of node IDs"""
         pass
 

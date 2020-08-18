@@ -21,7 +21,7 @@ DidSelectNodesEvent, EVT_DID_SELECT_NODES = NewEvent()
 """Called after the list of selected nodes has changed.
 
 Attributes:
-    node_ids (Set[str]): The current list of selected nodes.
+    indices (Set[int]): The indices of the list of selected nodes.
 """
 
 DidDragMoveNodesEvent, EVT_DID_DRAG_MOVE_NODES = NewEvent()

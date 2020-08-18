@@ -367,10 +367,10 @@ def convert_position(fn):
     return ret
 
 
-def get_nodes_by_ids(nodes: List[Node], ids: Collection[str]):
-    """Simple helper that maps the given list of IDs to their corresponding nodes."""
-    ret = [n for n in nodes if n.id_ in ids]
-    assert len(ret) == len(ids)
+def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
+    """Simple helper that maps the given list of indices to their corresponding nodes."""
+    ret = [n for n in nodes if n.index in indices]
+    assert len(ret) == len(indices)
     return ret
 
 

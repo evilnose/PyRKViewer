@@ -8,7 +8,7 @@ from enum import Enum, unique
 from typing import Optional, Any, Set, Tuple, List, Dict
 from .widgets import CanvasOverlay, Minimap, MultiSelect
 from .utils import rects_overlap, within_rect, draw_rect
-from ..utils import Vec2, Rect, Node, get_nodes_by_ids, clamp_rect_pos
+from ..utils import Vec2, Rect, Node, get_nodes_by_idx, clamp_rect_pos
 from ..mvc import IController
 from ..utils import convert_position
 
@@ -46,6 +46,7 @@ class Canvas(wx.ScrolledWindow):
                      with Dict typing.
         settings: Inherited configuration settings.
         realsize: The actual, total size of canvas, including the part offscreen.
+        net_index: Current network index. Right now this is always 0 since there is only one tab.
     """
     MIN_ZOOM_LEVEL: int = -7
     MAX_ZOOM_LEVEL: int = 7
@@ -54,20 +55,21 @@ class Canvas(wx.ScrolledWindow):
     theme: Dict[str, Any]
     settings: Dict[str, Any]
     realsize: Vec2
+    net_index: int
 
     _input_mode: InputMode
     _nodes: List[Node]  #: List of Node instances. This contains data needed to render them.
     _zoom_level: int  #: The current zoom level. See SetZoomLevel() for more detail.
     #: The zoom scale. This always corresponds one-to-one with zoom_level. See property for detail.
     _scale: float
-    _selected_ids: Set[str]  #: The list of IDs of the currently selected nodes.
+    _selected_idx: Set[int]  #: The list of indices of the currently selected nodes.
     _multiselect: Optional[MultiSelect]  #: The current MultiSelect instance.
     _minimap: Minimap  #: The minimap overlay.
     _overlays: List[CanvasOverlay]  #: The list of overlays. Used when processing click events.
     _drag_selecting: bool  #: If currently dragging the selection rectangle.
     _drag_select_start: Vec2  #: The (logical) mouse position when the user started drag selecting.
     _drag_rect: Rect  #: The current drag-selection rectangle.
-    _drag_selected_ids: Set[str]  #: The currently selected nodes using drag-selection rectangle.
+    _drag_selected_idx: Set[int]  #: The currently selected nodes using drag-selection rectangle.
     _reverse_status: Dict[str, int]  #: TODO
     _mouse_outside_frame: bool
 
@@ -79,6 +81,7 @@ class Canvas(wx.ScrolledWindow):
         self.controller = controller
         self.theme = theme
         self.settings = settings  # TODO document
+        self.net_index = 0
         self._nodes = list()
 
         # prevent flickering
@@ -107,7 +110,7 @@ class Canvas(wx.ScrolledWindow):
         self._scroll_off = Vec2(scroll_width, scroll_height)
         self.SetVirtualSize(*self.realsize)
 
-        self._selected_ids = set()
+        self._selected_idx = set()
         self._multiselect = None
 
         self.zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM, size=(200, 25))
@@ -124,7 +127,7 @@ class Canvas(wx.ScrolledWindow):
         self._drag_selecting = False
         self._drag_select_start = Vec2()
         self._drag_rect = Rect(Vec2(), Vec2())
-        self._drag_selected_ids = set()
+        self._drag_selected_idx = set()
 
         self._status_bar = self.GetTopLevelParent().GetStatusBar()
         assert self._status_bar is not None, "Need to create status bar before creating canvas!"
@@ -158,8 +161,8 @@ class Canvas(wx.ScrolledWindow):
         """
         return self._scale
 
-    def UpdateSelectedIds(self, ids: Set[str]):
-        self._selected_ids = ids
+    def UpdateSelectedIndices(self, indices: Set[int]):
+        self._selected_idx = indices
 
     def RegisterAllChildren(self, widget):
         """Connect all descendants of this widget to relevant events.
@@ -240,8 +243,8 @@ class Canvas(wx.ScrolledWindow):
         for node in self._nodes:
             node.scale = self._scale
 
-        ids = set(n.id_ for n in nodes)
-        self._selected_ids &= ids  # cull removed nodes
+        idx = set(n.index for n in nodes)
+        self._selected_idx &= idx  # cull removed nodes
 
         # update MultiSelect is not dragging (if we are dragging, ResetNodes() must have been called
         # when the mouse exited the window.)
@@ -348,7 +351,7 @@ class Canvas(wx.ScrolledWindow):
         Return the final ID added, or None is unsuccessful
         """
         increment = 0
-        ids = self.controller.get_list_of_node_ids()
+        ids = self.controller.get_list_of_node_ids(0)
         # keep incrementing as long as there is duplicate ID
         while True:
             suffix: str
@@ -360,7 +363,7 @@ class Canvas(wx.ScrolledWindow):
             # not duplicate; add now
             if cur_id not in ids:
                 node.id_ = cur_id
-                if self.controller.try_add_node(node):
+                if self.controller.try_add_node(self.net_index, node):
                     return cur_id
                 else:
                     return None
@@ -386,7 +389,7 @@ class Canvas(wx.ScrolledWindow):
             in_node = self._InWhichNode(logical_pos)
 
             if self.input_mode == InputMode.SELECT:
-                if len(self._selected_ids) != 0:
+                if len(self._selected_idx) != 0:
                     assert self._multiselect is not None
                     # there are selected nodes; test if user clicked inside outline bounds or if user
                     # is resizing node
@@ -409,7 +412,7 @@ class Canvas(wx.ScrolledWindow):
                 # clicked within rect, then we drag move the rect as well.
                 # The case where we don't drag the drag even though we clicked inside is if
                 # multi-selecting and clicked on a node -- in that case we de-select that node.
-                if (not multi or in_node is None) and len(self._selected_ids) != 0 and within_rect(
+                if (not multi or in_node is None) and len(self._selected_idx) != 0 and within_rect(
                         logical_pos, self._multiselect._bounding_rect):
                     # re-create a MultiSelect since self.nodes could've changed when mouse
                     # button was released
@@ -420,21 +423,22 @@ class Canvas(wx.ScrolledWindow):
                 # not resizing or dragging
                 if multi:
                     if in_node is not None:
-                        if in_node.id_ in self._selected_ids:
-                            self._selected_ids.remove(in_node.id_)
+                        assert in_node.index != -1
+                        if in_node.index in self._selected_idx:
+                            self._selected_idx.remove(in_node.index)
                         else:
-                            self._selected_ids.add(in_node.id_)
+                            self._selected_idx.add(in_node.index)
                 else:
                     # clear selected nodes
-                    self._selected_ids = set()
+                    self._selected_idx = set()
                     if in_node is not None:
-                        self._selected_ids.add(in_node.id_)
+                        self._selected_idx.add(in_node.index)
 
                 # update multiselect
                 self._UpdateMultiSelect()
-                wx.PostEvent(self, DidSelectNodesEvent(node_ids=self._selected_ids))
+                wx.PostEvent(self, DidSelectNodesEvent(indices=self._selected_idx))
 
-                if len(self._selected_ids) != 0 and within_rect(
+                if len(self._selected_idx) != 0 and within_rect(
                         logical_pos, self._multiselect._bounding_rect):
                     # re-create a MultiSelect since self.nodes could've changed when mouse
                     # button was released
@@ -446,7 +450,7 @@ class Canvas(wx.ScrolledWindow):
                     self._drag_selecting = True
                     self._drag_select_start = logical_pos
                     self._drag_rect = Rect(self._drag_select_start, Vec2())
-                    self._drag_selected_ids = set()
+                    self._drag_selected_idx = set()
                     self._multiselect = None
 
             elif self.input_mode == InputMode.ADD:
@@ -493,9 +497,9 @@ class Canvas(wx.ScrolledWindow):
                 self._minimap.OnLeftUp(evt)
         elif self._drag_selecting:
             self._drag_selecting = False  # stop multiselect regardless of keep_dragging
-            self._selected_ids |= self._drag_selected_ids
+            self._selected_idx |= self._drag_selected_idx
             self._UpdateMultiSelect()
-            wx.PostEvent(self, DidSelectNodesEvent(node_ids=self._selected_ids))
+            wx.PostEvent(self, DidSelectNodesEvent(indices=self._selected_idx))
         elif self.input_mode == InputMode.SELECT:
             # move dragged node
             if self._multiselect is not None:
@@ -504,7 +508,7 @@ class Canvas(wx.ScrolledWindow):
 
                     self.controller.try_start_group()
                     for node in self._GetSelectedNodes():
-                        self.controller.try_move_node(node.id_, node.position)
+                        self.controller.try_move_node(self.net_index, node.index, node.position)
                     self.controller.try_end_group()
                     if not keep_dragging:
                         self._multiselect.EndDrag()
@@ -512,8 +516,8 @@ class Canvas(wx.ScrolledWindow):
                 elif self._multiselect.resizing:
                     self.controller.try_start_group()
                     for node in self._GetSelectedNodes():
-                        self.controller.try_move_node(node.id_, node.position)
-                        self.controller.try_set_node_size(node.id_, node.size)
+                        self.controller.try_move_node(self.net_index, node.index, node.position)
+                        self.controller.try_set_node_size(self.net_index, node.index, node.size)
                     self.controller.try_end_group()
                     if not keep_dragging:
                         self._multiselect.EndResize()
@@ -542,7 +546,7 @@ class Canvas(wx.ScrolledWindow):
                         self._drag_rect = Rect(topleft, botright - topleft)
                         selected_nodes = [n for n in self._nodes if rects_overlap(n.s_rect,
                                                                                   self._drag_rect)]
-                        self._drag_selected_ids = set(n.id_ for n in selected_nodes)
+                        self._drag_selected_idx = set(n.index for n in selected_nodes)
                         return
 
                     if self._multiselect is not None:
@@ -553,7 +557,7 @@ class Canvas(wx.ScrolledWindow):
 
                             # post event
                             new_positions = [n.position for n in self._GetSelectedNodes()]
-                            evt = DidDragMoveNodesEvent(node_ids=self._selected_ids,
+                            evt = DidDragMoveNodesEvent(indices=self._selected_idx,
                                                         new_positions=new_positions)
                             wx.PostEvent(self, evt)
                             return
@@ -562,7 +566,7 @@ class Canvas(wx.ScrolledWindow):
 
                             # post event
                             new_sizes = [n.size for n in self._GetSelectedNodes()]
-                            evt = DidDragResizeNodesEvent(node_ids=self._selected_ids,
+                            evt = DidDragResizeNodesEvent(indices=self._selected_idx,
                                                           new_sizes=new_sizes)
                             wx.PostEvent(self, evt)
                             return
@@ -633,8 +637,8 @@ class Canvas(wx.ScrolledWindow):
 
             # draw newly-selected nodes outlines
             if self._drag_selecting:
-                cur_selected_ids = self._selected_ids | self._drag_selected_ids
-                for node in get_nodes_by_ids(self._nodes, cur_selected_ids):
+                cur_selected_idx = self._selected_idx | self._drag_selected_idx
+                for node in get_nodes_by_idx(self._nodes, cur_selected_idx):
                     self._DrawNodeOutline(gc, node.s_rect, node.border_width)
 
             # draw drag-selection rect
@@ -689,8 +693,8 @@ class Canvas(wx.ScrolledWindow):
             draw_rect(gc, Rect(rpos, rsize), fill=self.theme['select_box_color'])
 
     def _GetSelectedNodes(self) -> List[Node]:
-        """Get the list of selected nodes using self._selected_ids."""
-        return get_nodes_by_ids(self._nodes, self._selected_ids)
+        """Get the list of selected nodes using self._selected_idx."""
+        return get_nodes_by_idx(self._nodes, self._selected_idx)
 
     def _GetNodeResizeHandleRects(self, outline_rect: Rect) -> List[Rect]:
         """Helper that computes the scaled positions and sizes of the resize handles.
@@ -746,16 +750,16 @@ class Canvas(wx.ScrolledWindow):
             self._UpdateNodePosAndSize(evt, True)
 
     def DeleteSelectedNodes(self, evt):
-        if len(self._selected_ids) != 0:
+        if len(self._selected_idx) != 0:
             assert self._multiselect is not None
             self.controller.try_start_group()
-            for id_ in self._selected_ids:
-                self.controller.try_delete_node(id_)
+            for index in self._selected_idx:
+                self.controller.try_delete_node(self.net_index, index)
             self.controller.try_end_group()
 
             # controller must have told view to cull the selected IDs
-            assert len(self._selected_ids) == 0
-            wx.PostEvent(self, DidSelectNodesEvent(node_ids=list()))
+            assert len(self._selected_idx) == 0
+            wx.PostEvent(self, DidSelectNodesEvent(indices=list()))
 
         evt.Skip()
 

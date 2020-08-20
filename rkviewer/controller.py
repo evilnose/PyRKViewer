@@ -2,15 +2,15 @@
 """
 # pylint: disable=maybe-no-member
 import wx
-from typing import List
+from typing import Collection, List, Optional, Set
 import iodine as iod
-from .utils import Vec2, Node, rgba_to_wx_colour
+from .utils import Reaction, Vec2, Node, get_nodes_by_ident, get_nodes_by_idx, rgba_to_wx_colour
 from .mvc import IController, IView
 
 
 class Controller(IController):
     """A controller class.
-    
+
     This is not strictly adhering to the MVC architecture, since there is not a separate Model
     interface. Rather, this controller directly interacts with iodine. The model class should
     be implemented if necessary.
@@ -20,27 +20,33 @@ class Controller(IController):
     def __init__(self, view: IView):
         self.view = view
         iod.newNetwork('the one')
-        self.in_group = False
         self.stacklen = 0  # TODO temporary hack to not undo the first newNetwork() operation.
+        self.group_depth = 0
 
     def try_start_group(self) -> bool:
-        assert not self.in_group
+        # TODO record group depth
         try:
             iod.startGroup()
-            self.in_group = True
+            self.group_depth += 1
         except iod.Error as e:
             print('Error starting group:', str(e))
             return False
         return True
 
     def try_end_group(self) -> bool:
-        assert self.in_group
+        assert self.group_depth > 0
+        self.group_depth -= 1
+
+        # still in a group; don't call endGroup()
+        if self.group_depth > 0:
+            return False
+
         try:
             iod.endGroup()
-            self.in_group = False
         except iod.Error as e:
             print('Error ending group:', str(e))
             return False
+
         self._update_view()
         return True
 
@@ -48,7 +54,7 @@ class Controller(IController):
         if self.stacklen == 0:
             return False
         try:
-            assert not self.in_group
+            assert self.group_depth == 0
             iod.undo()
         except iod.StackEmptyError:
             return False
@@ -62,7 +68,7 @@ class Controller(IController):
 
     def try_redo(self) -> bool:
         try:
-            assert not self.in_group
+            assert self.group_depth == 0
             iod.redo()
         except iod.StackEmptyError:
             return False
@@ -73,16 +79,14 @@ class Controller(IController):
         self._update_view()
         return True
 
-    def try_add_node(self, neti: int, node: Node) -> bool:
+    def try_add_node_g(self, neti: int, node: Node) -> bool:
         '''
         Add node represented by the given Node variable.
 
-        Returns whether the operation was successful.
+        The 'g' suffix indicates that this operation creates its own group
         '''
         try:
-            # if this fails in case a group is already in place, modify startGroup to not start
-            # group if already in group
-            iod.startGroup()
+            self.try_start_group()
             iod.addNode(neti, node.id_, node.position.x, node.position.y, node.size.x, node.size.y)
             nodei = iod.getNodeIndex(neti, node.id_)
             iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
@@ -90,15 +94,13 @@ class Controller(IController):
                                     node.fill_color.Green(), node.fill_color.Blue())
             iod.setNodeOutlineColorAlpha(neti, nodei, node.border_color.Alpha() / 255)
             iod.setNodeOutlineColorRGB(neti, nodei, node.border_color.Red(),
-                                    node.border_color.Green(), node.border_color.Blue())
+                                       node.border_color.Green(), node.border_color.Blue())
             iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
-            iod.endGroup()
+            self.try_end_group()
         except iod.Error as e:
             print('Error adding node:', str(e))
             return False
 
-        if not self.in_group:
-            self._update_view()
         return True
 
     def try_move_node(self, neti: int, nodei: int, pos: Vec2) -> bool:
@@ -109,7 +111,7 @@ class Controller(IController):
             print('Error moving node:', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
         return True
 
@@ -122,7 +124,7 @@ class Controller(IController):
             print('Error resizing node:', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
         return True
 
@@ -133,7 +135,7 @@ class Controller(IController):
             print('Error renaming node:', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
         return True
 
@@ -144,10 +146,9 @@ class Controller(IController):
             print('Error setting node fill color:', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
         return True
-
 
     def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
         try:
@@ -156,7 +157,7 @@ class Controller(IController):
             print('Error setting node fill alpha:', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
         return True
 
@@ -167,7 +168,7 @@ class Controller(IController):
             print('Error setting node border color:', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
         return True
 
@@ -178,7 +179,7 @@ class Controller(IController):
             print('Error setting node border alpha:', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
         return True
 
@@ -190,7 +191,7 @@ class Controller(IController):
             print('Error setting node border width', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
         return True
 
@@ -201,23 +202,51 @@ class Controller(IController):
             print('Error deleting node:', str(e))
             return False
 
-        if not self.in_group:
+        if self.group_depth == 0:
             self._update_view()
+        return True
+
+    def try_add_reaction_g(self, neti: int, reaction: Reaction) -> bool:
+        """Try create a reaction."""
+        try:
+            self.try_start_group()
+            iod.createReaction(neti, reaction.id_)
+            reai = iod.getReactionIndex(neti, reaction.id_)
+
+            for src in reaction.sources:
+                iod.addSrcNode(neti, reai, src.index, 1.0)
+
+            for tar in reaction.targets:
+                iod.addDestNode(neti, reai, tar.index, 1.0)
+
+            iod.setReactionFillColorRGB(neti, reai,
+                                        reaction.fill_color.Red(),
+                                        reaction.fill_color.Green(),
+                                        reaction.fill_color.Blue())
+            self.try_end_group()
+        except iod.Error as e:
+            print('Error creating reaction:', str(e))
+            return False
+
+        self._update_view()
         return True
 
     def get_list_of_node_ids(self, neti: int) -> List[str]:
         return iod.getListOfNodeIds(neti)
 
+    def get_node_index(self, neti: int, node_id: str) -> int:
+        return iod.getNodeIndex(neti, node_id)
+
     # get the updated list of nodes from model and update
     def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
-        self.stacklen += 1  #TODO remove
+        self.stacklen += 1  # TODO remove
         # TODO multiple net IDs
         neti = 0
-        ids = iod.getListOfNodeIds(neti)
         nodes = list()
+        reactions = list()
         # TODO try except
-        for id_ in ids:
+        for id_ in iod.getListOfNodeIds(neti):
             nodei = iod.getNodeIndex(neti, id_)
             x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)
             fill_alpha = iod.getNodeFillColorAlpha(neti, nodei)
@@ -227,8 +256,8 @@ class Controller(IController):
             border_rgb = iod.getNodeOutlineColorRGB(neti, nodei)
             border_color = rgba_to_wx_colour(border_rgb, border_alpha)
             node = Node(
+                id_,
                 index=nodei,
-                id_=id_,
                 pos=Vec2(x, y),
                 size=Vec2(w, h),
                 fill_color=fill_color,
@@ -237,4 +266,19 @@ class Controller(IController):
             )
             nodes.append(node)
 
-        self.view.update_all(nodes)
+        for id_ in iod.getListOfReactionIds(neti):
+            reai = iod.getReactionIndex(neti, id_)
+            sids = iod.getListOfReactionSrcNodes(neti, reai)
+            sources = get_nodes_by_ident(nodes, sids)
+            tids = iod.getListOfReactionDestNodes(neti, reai)
+            targets = get_nodes_by_ident(nodes, tids)
+            fill_rgb = iod.getReactionFillColorRGB(neti, reai)
+            fill_alpha = iod.getReactionFillColorAlpha(neti, reai)
+            reaction = Reaction(id_,
+                                sources=sources,
+                                targets=targets,
+                                fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
+                                index=reai)
+            reactions.append(reaction)
+
+        self.view.update_all(nodes, reactions)

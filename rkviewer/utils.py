@@ -5,7 +5,7 @@ import wx
 import copy
 import os
 import sys
-from typing import Any, Callable, Collection, List, Tuple, TypeVar
+from typing import Any, Callable, Collection, List, Set, Tuple, TypeVar
 
 
 TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int.
@@ -13,7 +13,7 @@ TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int
 
 class Vec2:
     """Class that represents a 2D vector. Supports common vector operations like add and sub.
-    
+
     Note:
         Vec2 objects are immutable, meaning one cannot modify elements of the vector.
     """
@@ -112,7 +112,7 @@ class Vec2:
     # element-wise multiplication
     def elem_mul(self, other: Vec2) -> Vec2:
         """Return the resulting Vec2 by performing element-wise multiplication.
-        
+
         Examples:
             >>> c = a.elem_mul(b)  # is equivalent to...
             >>> c = Vec2(a.x * b.x, a.y * b.y)
@@ -121,7 +121,7 @@ class Vec2:
 
     def elem_div(self, other: Vec2) -> Vec2:
         """Return the resulting Vec2 by performing element-wise division.
-        
+
         Examples:
             >>> c = a.elem_div(b)  # is equivalent to...
             >>> c = Vec2(a.x / b.x, a.y / b.y)
@@ -139,7 +139,7 @@ class Vec2:
     @classmethod
     def repeat(cls, val: TNum = 1) -> Vec2:
         """Return the Vec2 obtained by repeating the given scalar value across the two elements.
-        
+
         Examples:
 
             >>> print(Vec2.repeat(5.4))
@@ -150,6 +150,7 @@ class Vec2:
 
 class Rect:
     """Class that represents a rectangle by keeping a position and a size."""
+
     def __init__(self, pos: Vec2, size: Vec2):
         assert size.x >= 0 and size.y >= 0
         self.position = pos
@@ -164,7 +165,7 @@ class Rect:
 
     def nth_vertex(self, n: int):
         """Return the nth vertex of the rectangle.
-        
+
         The top-left vertex is the 0th vertex, and subsequence vertices are indexed in clockwise
         fashion.
         """
@@ -185,7 +186,7 @@ class Rect:
 
 class Node:
     """Class that represents a Node for rendering purposes.
-    
+
     Attributes:
         index: The index of the node. If this node has not yet been added to the NOM, this takes on
                the value of -1.
@@ -206,7 +207,7 @@ class Node:
     _scale: float
 
     # force keyword-only arguments
-    def __init__(self, *, id_: str, pos: Vec2, size: Vec2, fill_color: wx.Colour,
+    def __init__(self, id_: str, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
                  border_color: wx.Colour, border_width: float, scale: float = 1, index: int = -1):
         self._scale = scale
         self.index = index
@@ -284,9 +285,45 @@ class Node:
         return Rect(copy.copy(self.position), copy.copy(self.size))
 
 
+class Reaction:
+    def __init__(self, id_: str, *, sources: List[Node], targets: List[Node],
+                 fill_color: wx.Colour, scale: float = 1, index: int = -1):
+        self.id_ = id_
+        self.index = index
+        self.fill_color = fill_color
+        self.scale = scale
+        self._sources = sources
+        self._targets = targets
+
+        self.update_nodes(sources, targets)
+
+    def update_nodes(self, sources: List[Node], targets: List[Node]):
+        s = sum((n.position + n.size / 2 for n in sources + targets), Vec2())
+        self._position = s / (len(sources) + len(targets))
+
+    def update(self):
+        self.update_nodes(self._sources, self._targets)
+
+    @property
+    def position(self) -> Vec2:
+        return self._position
+
+    @property
+    def s_position(self) -> Vec2:
+        return self._position * self.scale
+
+    @property
+    def sources(self) -> List[Node]:
+        return self._sources
+
+    @property
+    def targets(self) -> List[Node]:
+        return self._targets
+
+
 def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
     """Given RGBA color, return wx.Colour.
-    
+
     Args:
         rgb: RGB color in hex format.
         alpha: The opacity of the color, ranging from 0.0 to 1.0.
@@ -297,7 +334,7 @@ def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
     return wx.Colour(r, g, b, int(alpha * 255))
 
 
-def clamp_rect_pos(rect: Rect, bounds: Rect, padding = 0) -> Vec2:
+def clamp_rect_pos(rect: Rect, bounds: Rect, padding=0) -> Vec2:
     """Clamp the position of rect, so that it is entirely within the bounds rectangle.
 
     The position is clamped such that the new position of the rectangle moves the least amount
@@ -332,7 +369,7 @@ def clamp_rect_size(rect: Rect, botright: Vec2, padding: int = 0) -> Vec2:
     return Vec2(min(limit.x, rect.size.x), min(limit.y, rect.size.y))
 
 
-def clamp_point(pos: Vec2, bounds: Rect, padding = 0) -> Vec2:
+def clamp_point(pos: Vec2, bounds: Rect, padding=0) -> Vec2:
     """Clamp the given point (pos) so that it is entirely within the bounds rectangle. 
 
     This is the same as calling clamp_rect_pos() with a clamped rectangle of size 1x1.
@@ -371,6 +408,12 @@ def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
     """Simple helper that maps the given list of indices to their corresponding nodes."""
     ret = [n for n in nodes if n.index in indices]
     assert len(ret) == len(indices)
+    return ret
+
+
+def get_nodes_by_ident(nodes: List[Node], ids: Collection[str]):
+    ret = [n for n in nodes if n.id_ in ids]
+    assert len(ret) == len(ids)
     return ret
 
 

@@ -17,7 +17,8 @@ def within_rect(pos: Vec2, rect: Rect) -> bool:
 
 
 def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] = None,
-             border: Optional[wx.Colour] = None, border_width: float = 1):
+             border: Optional[wx.Colour] = None, border_width: float = 1,
+             fill_style = wx.BRUSHSTYLE_SOLID, border_style = wx.PENSTYLE_SOLID):
     """Draw a rectangle with the given graphics context.
 
     Either fill or border must be specified to avoid drawing an entirely transparent rectangle.
@@ -42,10 +43,10 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
 
     # set up brush and pen if applicable
     if fill is not None:
-        brush = wx.Brush(fill, wx.BRUSHSTYLE_SOLID)
+        brush = wx.Brush(fill, fill_style)
         gc.SetBrush(brush)
     if border is not None:
-        pen = gc.CreatePen(wx.GraphicsPenInfo(border).Width(border_width))
+        pen = gc.CreatePen(wx.GraphicsPenInfo(border).Width(border_width).Style(border_style))
         gc.SetPen(pen)
 
     # draw rect
@@ -80,6 +81,10 @@ def get_bounding_rect(rects: List[Rect], padding: float = 0) -> Rect:
     size_x = max_x - min_x + padding * 2
     size_y = max_y - min_y + padding * 2
     return Rect(Vec2(min_x - padding, min_y - padding), Vec2(size_x, size_y))
+
+
+def padded_rect(rect: Rect, padding: float) -> Rect:
+    return Rect(rect.position - Vec2.repeat(padding), rect.size + Vec2.repeat(padding) * 2)
 
 
 def rects_overlap(r1: Rect, r2: Rect) -> bool:

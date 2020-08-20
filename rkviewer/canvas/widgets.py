@@ -212,7 +212,7 @@ class MultiSelect:
         self.nodes = nodes
         # if only one node is selected, use the node padding instead
         self._padding = theme['select_box_padding'] if len(nodes) > 1 else \
-            theme['node_outline_padding']
+            theme['select_outline_padding']
         rects = [n.s_rect for n in nodes]
         self._bounding_rect = get_bounding_rect(rects, self._padding)
         self._dragging = False

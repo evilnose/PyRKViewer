@@ -6,8 +6,6 @@ handlers to these events.
 
 # pylint: disable=maybe-no-member
 from wx.lib.newevent import NewEvent
-from rkviewer.utils import Node
-from typing import Any, List
 
 
 #WillSelectNodesEvent, EVT_WILL_SELECT_NODES = NewEvent()
@@ -17,11 +15,12 @@ Note:
     Not implemented.
 """
 
-DidSelectNodesEvent, EVT_DID_SELECT_NODES = NewEvent()
-"""Called after the list of selected nodes has changed.
+DidUpdateSelectionEvent, EVT_DID_UPDATE_SELECTION = NewEvent()
+"""Called after the list of selected nodes and/or reactions has changed.
 
 Attributes:
-    indices (Set[int]): The indices of the list of selected nodes.
+    node_idx (Set[int]): The indices of the list of selected nodes.
+    reaction_idx (Set[int]): The indices of the list of selected reactions.
 """
 
 DidDragMoveNodesEvent, EVT_DID_DRAG_MOVE_NODES = NewEvent()
@@ -48,9 +47,10 @@ Note:
     if the user resized a node in the edit panel.
 """
 
-DidUpdateNodesEvent, EVT_DID_UPDATE_NODES = NewEvent()
-"""Called after the list of nodes is updated by the controller.
+DidUpdateCanvasEvent, EVT_DID_UPDATE_CANVAS = NewEvent()
+"""Called after the canvas has been updated by the controller.
 
 Attributes:
     nodes (list[Node]): The list of nodes.
+    reaction (list[Reaction]): The list of reactions.
 """

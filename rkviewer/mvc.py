@@ -1,8 +1,8 @@
 # pylint: disable=maybe-no-member
 import wx
 import abc
-from typing import List
-from .utils import Vec2, Node
+from typing import Collection, List
+from .utils import Reaction, Vec2, Node
 
 
 class IController(abc.ABC):
@@ -37,7 +37,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_add_node(self, neti: int, node: Node) -> bool:
+    def try_add_node_g(self, neti: int, node: Node) -> bool:
         """Try to add the given Node to the canvas."""
         pass
 
@@ -84,6 +84,13 @@ class IController(abc.ABC):
         """Try getting the list of node IDs"""
         pass
 
+    @abc.abstractmethod
+    def get_node_index(self, neti: int, node_id: str) -> int:
+        pass
+
+    @abc.abstractmethod
+    def try_add_reaction_g(self, neti: int,  reaction: Reaction) -> bool:
+        pass
 
 class IView(abc.ABC):
     """The inteface class for a controller
@@ -107,6 +114,6 @@ class IView(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_all(self, nodes):
+    def update_all(self, nodes, reactions):
         """Update all the graph objects, and redraw everything at the end"""
         pass

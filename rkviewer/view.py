@@ -1,6 +1,6 @@
 # pylint: disable=maybe-no-member
 from abc import abstractmethod
-from rkviewer.forms import NodeForm
+from rkviewer.forms import NodeForm, ReactionForm
 import wx
 import wx.lib.agw.flatnotebook as fnb
 import copy
@@ -16,7 +16,7 @@ from .canvas.utils import get_bounding_rect
 from .widgets import ButtonGroup
 
 
-class EditPanel(wx.Panel):
+class EditPanel(fnb.FlatNotebook):
     """Panel that displays and allows editing of the details of a node.
 
     Attributes
@@ -26,26 +26,31 @@ class EditPanel(wx.Panel):
     node_form: wx.Panel
     reaction_form: wx.Panel
     null_message: wx.StaticText
+    FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | \
+        fnb.FNB_NODRAG | fnb.FNB_NO_TAB_FOCUS | fnb.FNB_VC8
 
     def __init__(self, parent, canvas: Canvas, controller: IController, theme: Dict[str, Any],
                  settings: Dict[str, Any], **kw):
-        super().__init__(parent, **kw)
+        super().__init__(parent, agwStyle=EditPanel.FNB_STYLE, **kw)
 
-        fnb_style = fnb.FNB_HIDE_ON_SINGLE_TAB | fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | \
-            fnb.FNB_NODRAG | fnb.FNB_NO_TAB_FOCUS | fnb.FNB_HIDE_ON_SINGLE_TAB | fnb.FNB_VC8
-        self.form_tabs = fnb.FlatNotebook(self, agwStyle=fnb_style)
-        self.node_form = NodeForm(self.form_tabs, canvas, theme, settings, controller)
-        self.form_tabs.AddPage(self.node_form, 'Nodes')
-        self.form_tabs.AddPage(wx.Panel(self.form_tabs), 'Reactions')
-        self.null_message = wx.StaticText(self, label="Nothing is selected.", style=wx.ALIGN_CENTER)
+        self.canvas = canvas
 
+        self.node_form = NodeForm(self, canvas, theme, settings, controller)
+        self.reaction_form = ReactionForm(self, canvas, theme, settings, controller)
+
+        self.null_message = wx.Panel(self)
+        text = wx.StaticText(self.null_message, label="Nothing is selected.", style=wx.ALIGN_CENTER)
+        null_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        null_sizer.Add(text, proportion=1, flag=wx.ALIGN_CENTER_VERTICAL)
+        self.null_message.SetSizer(null_sizer)
+        self.SetCustomPage(self.null_message)
+
+        self.node_form.Hide()
+        self.reaction_form.Hide()
         # overall sizer for alternating form and "nothing selected" displays
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.form_tabs, proportion=1, flag=wx.EXPAND)
-        sizer.Add(self.null_message, proportion=1, flag=wx.ALIGN_CENTER_VERTICAL)
-        self.form_tabs.Show(False)
-        self.null_message.Show(True)
-        self.SetSizer(sizer)
+        #sizer = wx.BoxSizer(wx.HORIZONTAL)
+        #sizer.Add(null_message, proportion=1, flag=wx.ALIGN_CENTER_VERTICAL)
+        #self.SetSizer(sizer)
 
         canvas.Bind(EVT_DID_UPDATE_CANVAS, self.OnDidUpdateCanvas)
         canvas.Bind(EVT_DID_UPDATE_SELECTION, self.OnDidUpdateSelection)
@@ -54,16 +59,54 @@ class EditPanel(wx.Panel):
 
     def OnDidUpdateCanvas(self, evt):
         self.node_form.UpdateNodes(evt.nodes)
+        self.reaction_form.UpdateReactions(evt.reactions)
 
     def OnDidUpdateSelection(self, evt):
-        if len(evt.node_idx) == 0:
-            self.form_tabs.Show(False)
-            self.null_message.Show(True)
-        else:
-            self.node_form.UpdateNodeSelection(evt.node_idx)
+        should_show_nodes = len(evt.node_idx) != 0
+        should_show_reactions = len(evt.reaction_idx) != 0
 
-            self.null_message.Show(False)
-            self.form_tabs.Show(True)
+        showing_nodes = self.node_form.IsShown()
+        showing_reactions = self.reaction_form.IsShown()
+
+        cur_page = self.GetCurrentPage()
+        assert cur_page is not None or (not showing_nodes and not showing_reactions)
+
+        if should_show_nodes:
+            self.node_form.UpdateNodeSelection(evt.node_idx)
+            if not showing_nodes:
+                self.InsertPage(0, self.node_form, 'Nodes')
+                self.node_form.Show()
+
+        if showing_nodes and not should_show_nodes:
+            # find and remove existing page
+            for i in range(self.GetPageCount()):
+                if self.GetPage(i) == self.node_form:
+                    self.RemovePage(i)
+                    self.node_form.Hide()
+                    break
+
+        if should_show_reactions:
+            self.reaction_form.UpdateReactionSelection(evt.reaction_idx)
+            if not showing_reactions:
+                self.AddPage(self.reaction_form, 'Reactions')
+                self.reaction_form.Show()
+
+        if showing_reactions and not should_show_reactions:
+            for i in range(self.GetPageCount()):
+                if self.GetPage(i) == self.reaction_form:
+                    self.RemovePage(i)
+                    self.reaction_form.Hide()
+                    break
+
+        # set the active tab to the same as before
+        for i in range(self.GetPageCount()):
+            if self.GetPage(i) == cur_page:
+                self.SetSelection(i)
+                break
+        
+        # need to reset focus to canvas, since for some reason FlatNotebook sets focus to the first
+        # field in a notebook page after it is added.
+        self.canvas.SetFocus()
 
         self.GetSizer().Layout()
 

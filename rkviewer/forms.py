@@ -5,10 +5,8 @@ from abc import abstractmethod
 import copy
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from .canvas.canvas import Canvas
-from .canvas.events import EVT_DID_DRAG_MOVE_NODES, EVT_DID_DRAG_RESIZE_NODES, \
-    EVT_DID_UPDATE_CANVAS, EVT_DID_UPDATE_SELECTION
 from .canvas.utils import get_bounding_rect
-from .utils import Node, Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_nodes_by_idx, \
+from .utils import Node, Reaction, Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_nodes_by_idx, \
     no_rzeros, on_msw, resource_path
 
 
@@ -84,7 +82,7 @@ class EditPanelForm(wx.Panel):
     _dirty: bool  #: flag for if edits were made but the controller hasn't updated the view yet
 
     def __init__(self, parent, canvas: Canvas, theme: Dict[str, Any], settings: Dict[str, Any],
-        controller: IController):
+                 controller: IController):
         super().__init__(parent)
         self.canvas = canvas
         self.controller = controller
@@ -103,7 +101,7 @@ class EditPanelForm(wx.Panel):
         self._dirty = False
 
     @abstractmethod
-    def UpdateAllFields(self, evt):
+    def UpdateAllFields(self):
         pass
 
     def InitAndGetSizer(self) -> wx.Sizer:
@@ -361,12 +359,12 @@ class EditPanelForm(wx.Panel):
 
 class NodeForm(EditPanelForm):
     """Form for editing one or multiple nodes.
-    
+
     Attributes:
         _nodes: List[Node]  #: current list of nodes in canvas.
         _selected_idx: Set[int]  #: current list of selected indices in canvas.
         _bounding_rect: Optional[Rect]  #: the exact bounding rectangle of the selected nodes
-        id_textctrl: wx.TextCtrl
+        id_ctrl: wx.TextCtrl
         pos_ctrl: wx.TextCtrl
         size_ctrl: wx.TextCtrl
         fill_ctrl: wx.ColourPickerCtrl
@@ -375,8 +373,9 @@ class NodeForm(EditPanelForm):
         border_alpha_ctrl: Optional[wx.TextCtrl]
         border_width_ctrl: wx.TextCtrl
     """
+
     def __init__(self, parent, canvas: Canvas, theme: Dict[str, Any], settings: Dict[str, Any],
-        controller: IController):
+                 controller: IController):
         super().__init__(parent, canvas, theme, settings, controller)
         self._nodes = list()
         self._selected_idx = set()
@@ -409,7 +408,7 @@ class NodeForm(EditPanelForm):
             self._title.SetLabel(title_label)
 
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
-            self.labels[self.id_textctrl.GetId()].SetLabel(id_text)
+            self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
 
             size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
@@ -428,9 +427,9 @@ class NodeForm(EditPanelForm):
 
     def CreateControls(self, sizer):
         # ID form control
-        self.id_textctrl = wx.TextCtrl(self)
-        self.id_textctrl.Bind(wx.EVT_TEXT, self._OnIdText)
-        self._AppendControl(sizer, 'identifier', self.id_textctrl)
+        self.id_ctrl = wx.TextCtrl(self)
+        self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
+        self._AppendControl(sizer, 'identifier', self.id_ctrl)
 
         self.pos_ctrl = wx.TextCtrl(self)
         self.pos_ctrl.Bind(wx.EVT_TEXT, self._OnPosText)
@@ -461,7 +460,7 @@ class NodeForm(EditPanelForm):
         new_id = evt.GetString()
         assert len(self._selected_idx) == 1
         [nodei] = self._selected_idx
-        ctrl_id = self.id_textctrl.GetId()
+        ctrl_id = self.id_ctrl.GetId()
         if len(new_id) == 0:
             self._SetValidationState(False, ctrl_id, "ID cannot be empty")
             return
@@ -476,7 +475,7 @@ class NodeForm(EditPanelForm):
                 if not self.controller.try_rename_node(self.net_index, nodei, new_id):
                     # this should not happen!
                     assert False
-        self._SetValidationState(True, self.id_textctrl.GetId())
+        self._SetValidationState(True, self.id_ctrl.GetId())
 
     def _OnPosText(self, evt):
         """Callback for the position control."""
@@ -639,7 +638,7 @@ class NodeForm(EditPanelForm):
         border_alpha: Optional[int]
         if len(self._selected_idx) == 1:
             [node] = nodes
-            self.id_textctrl.Enable(True)
+            self.id_ctrl.Enable(True)
             id_text = node.id_
             '''
             pos_text = '{}, {}'.format(no_trailing_zeros(node.position.x, prec),
@@ -652,7 +651,7 @@ class NodeForm(EditPanelForm):
             border = node.border_color
             border_alpha = node.border_color.Alpha()
         else:
-            self.id_textctrl.Enable(False)
+            self.id_ctrl.Enable(False)
             id_text = '; '.join(sorted(list(n.id_ for n in nodes)))
 
             self._bounding_rect = get_bounding_rect([n.rect for n in nodes])
@@ -664,7 +663,7 @@ class NodeForm(EditPanelForm):
 
         border_width = self._GetMultiFloatText(set(n.border_width for n in nodes), prec)
 
-        self.id_textctrl.ChangeValue(id_text)
+        self.id_ctrl.ChangeValue(id_text)
         self._ChangePairValue(self.pos_ctrl, pos, prec)
         self._ChangePairValue(self.size_ctrl, size, prec)
         self.fill_ctrl.SetColour(fill)
@@ -676,3 +675,64 @@ class NodeForm(EditPanelForm):
             self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
 
         self.border_width_ctrl.ChangeValue(border_width)
+
+
+class ReactionForm(EditPanelForm):
+
+    def __init__(self, parent, canvas: Canvas, theme: Dict[str, Any], settings: Dict[str, Any],
+                 controller: IController):
+        super().__init__(parent, canvas, theme, settings, controller)
+
+        self._reactions = list()
+        self._selected_idx = set()
+
+        sizer = self.InitAndGetSizer()
+        self.CreateControls(sizer)
+        self.SetSizer(sizer)
+        
+    def CreateControls(self, sizer: wx.Sizer):
+        self.id_ctrl = wx.TextCtrl(self)
+        self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
+        self._AppendControl(sizer, 'identifier', self.id_ctrl)
+
+    def _OnIdText(self, evt):
+        """Callback for the ID control."""
+        new_id = evt.GetString()
+        assert len(self._selected_idx) == 1
+        [reai] = self._selected_idx
+        ctrl_id = self.id_ctrl.GetId()
+        if len(new_id) == 0:
+            self._SetValidationState(False, ctrl_id, "ID cannot be empty")
+            return
+        else:
+            for rxn in self._reactions:
+                if rxn.id_ == new_id:
+                    self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
+                    return
+            else:
+                # loop terminated fine. There is no duplicate ID
+                self._dirty = True
+                assert False, 'We cannot set reaction ID yet!'
+        self._SetValidationState(True, self.id_ctrl.GetId())
+
+    def UpdateReactions(self, reactions: List[Reaction]):
+        """Function called after the list of nodes have been updated."""
+        self._reactions = reactions
+        if len(self._selected_idx) != 0 and not self._dirty:
+            self.UpdateAllFields()
+
+        self._dirty = False
+
+        # clear validation errors
+        for id_ in self.badges.keys():
+            self._SetValidationState(True, id_)
+
+    def UpdateReactionSelection(self, selected_idx: List[int]):
+        """Function called after the list of selected nodes have been updated."""
+        self._selected_idx = selected_idx
+        if len(self._selected_idx) != 0:
+            title_label = 'Edit Reaction' if len(self._selected_idx) == 1 else 'Edit Multiple Reactions'
+            self._title.SetLabel(title_label)
+
+            id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
+            self.labels[self.id_ctrl.GetId()].SetLabel(id_text)

@@ -34,7 +34,7 @@ class CanvasOverlay(abc.ABC):
         self._position = val
 
     @abc.abstractmethod
-    def OnPaint(self, gc: wx.GraphicsContext):
+    def DoPaint(self, gc: wx.GraphicsContext):
         """Re-paint the overlay."""
         pass
 
@@ -120,7 +120,7 @@ class Minimap(CanvasOverlay):
         """Whether the user is current dragging on the minimap window."""
         return self._dragging
 
-    def OnPaint(self, gc: wx.GraphicsContext):
+    def DoPaint(self, gc: wx.GraphicsContext):
         # TODO move this somewhere else
         BACKGROUND_USUAL = wx.Colour(155, 155, 155, 50)
         FOREGROUND_USUAL = wx.Colour(255, 255, 255, 100)

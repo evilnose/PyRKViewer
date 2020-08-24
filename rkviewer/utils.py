@@ -3,9 +3,11 @@ from __future__ import annotations  # For returning self in a class
 # pylint: disable=maybe-no-member
 import wx
 import copy
+import math
+from itertools import tee
 import os
 import sys
-from typing import Any, Callable, Collection, List, Set, Tuple, TypeVar
+from typing import Any, Callable, Collection, Iterable, List, Set, Tuple, TypeVar
 
 
 TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int.
@@ -135,6 +137,21 @@ class Vec2:
     def map(self, op: Callable[[TNum], Any]) -> Vec2:
         """Map the given operation across the two elements of the vector."""
         return Vec2(op(self.x), op(self.y))
+
+    @property
+    def norm(self) -> TNum:
+        return math.sqrt(self.norm_sq)
+
+    @property
+    def norm_sq(self) -> TNum:
+        return self.x ** 2 + self.y ** 2
+
+    def normalized(self, norm: TNum = 1) -> Vec2:
+        old_norm = self.norm
+        return self * (norm / old_norm)
+
+    def dot(self, other: Vec2) -> TNum:
+        return self.x * other.x + self.y * other.y
 
     @classmethod
     def repeat(cls, val: TNum = 1) -> Vec2:
@@ -285,40 +302,9 @@ class Node:
         return Rect(copy.copy(self.position), copy.copy(self.size))
 
 
-class Reaction:
-    def __init__(self, id_: str, *, sources: List[Node], targets: List[Node],
-                 fill_color: wx.Colour, scale: float = 1, index: int = -1):
-        self.id_ = id_
-        self.index = index
-        self.fill_color = fill_color
-        self.scale = scale
-        self._sources = sources
-        self._targets = targets
-
-        self.update_nodes(sources, targets)
-
-    def update_nodes(self, sources: List[Node], targets: List[Node]):
-        s = sum((n.position + n.size / 2 for n in sources + targets), Vec2())
-        self._position = s / (len(sources) + len(targets))
-
-    def update(self):
-        self.update_nodes(self._sources, self._targets)
-
     @property
-    def position(self) -> Vec2:
-        return self._position
-
-    @property
-    def s_position(self) -> Vec2:
-        return self._position * self.scale
-
-    @property
-    def sources(self) -> List[Node]:
-        return self._sources
-
-    @property
-    def targets(self) -> List[Node]:
-        return self._targets
+    def center_point(self) -> Vec2:
+        return self.position + self.size / 2
 
 
 def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
@@ -437,3 +423,10 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, 'resources', relative_path)
+
+
+def pairwise(iterable: Iterable) -> Iterable:
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)

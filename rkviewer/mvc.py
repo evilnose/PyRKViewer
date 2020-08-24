@@ -1,8 +1,9 @@
 # pylint: disable=maybe-no-member
 import wx
 import abc
-from typing import Collection, List
-from .utils import Reaction, Vec2, Node
+from typing import List
+from .utils import Vec2, Node
+from .canvas.reactions import Reaction
 
 
 class IController(abc.ABC):

@@ -1,6 +1,6 @@
+"""The main View class and associated widgets.
+"""
 # pylint: disable=maybe-no-member
-from abc import abstractmethod
-from rkviewer.forms import NodeForm, ReactionForm
 import wx
 import wx.lib.agw.flatnotebook as fnb
 import copy
@@ -8,11 +8,11 @@ from typing import Callable, List, Dict, Any, Optional, Set, Tuple
 from .canvas.events import EVT_DID_DRAG_MOVE_NODES, EVT_DID_DRAG_RESIZE_NODES, \
     EVT_DID_UPDATE_SELECTION, EVT_DID_UPDATE_CANVAS
 from .canvas.canvas import Canvas, InputMode
+from .canvas.reactions import Reaction
 from .config import DEFAULT_SETTINGS, DEFAULT_THEME, DEFAULT_SETTINGS
+from .forms import NodeForm, ReactionForm
 from .mvc import IController, IView
-from .utils import Node, Reaction, Rect, Vec2, clamp_rect_size, get_nodes_by_idx, no_rzeros, \
-    clamp_rect_pos, on_msw, resource_path
-from .canvas.utils import get_bounding_rect
+from .utils import Node
 from .widgets import ButtonGroup
 
 

@@ -6,9 +6,10 @@ import wx
 import copy
 from enum import Enum, unique
 from typing import Collection, Optional, Any, Set, Tuple, List, Dict
-from .widgets import CanvasOverlay, Minimap, MultiSelect
+from .reactions import BezierHandle, ReactionBezier, init_bezier, Reaction
 from .utils import padded_rect, rects_overlap, within_rect, draw_rect
-from ..utils import Reaction, Vec2, Rect, Node, get_nodes_by_idx, clamp_rect_pos, rgba_to_wx_colour
+from .widgets import CanvasOverlay, Minimap, MultiSelect
+from ..utils import Vec2, Rect, Node, get_nodes_by_idx, clamp_rect_pos, rgba_to_wx_colour
 from ..mvc import IController
 from ..utils import convert_position
 
@@ -59,7 +60,7 @@ class Canvas(wx.ScrolledWindow):
     _net_index: int
     _input_mode: InputMode
     _nodes: List[Node]  #: List of Node instances. This contains data needed to render them.
-    _reactions: List[Reaction]  #: List of reaction instances.
+    _reactions: List[Reaction]  #: List of ReactionBezier instances.
     _zoom_level: int  #: The current zoom level. See SetZoomLevel() for more detail.
     #: The zoom scale. This always corresponds one-to-one with zoom_level. See property for detail.
     _scale: float
@@ -77,12 +78,14 @@ class Canvas(wx.ScrolledWindow):
     _reverse_status: Dict[str, int]  #: TODO
     _mouse_outside_frame: bool
     _copied_nodes: List[Node]
+    _bezier_info: Optional[Tuple[Reaction, BezierHandle]]  #: TODO
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int],
                  theme: Dict[str, Any], settings: Dict[str, Any], **kw):
         # ensure the parent's __init__ is called
         super().__init__(*args, style=wx.DEFAULT_FRAME_STYLE & ~wx.MAXIMIZE_BOX ^ wx.RESIZE_BORDER, **kw)
 
+        init_bezier()
         self.controller = controller
         self.theme = theme
         self.settings = settings  # TODO document
@@ -147,6 +150,8 @@ class Canvas(wx.ScrolledWindow):
 
         self._mouse_outside_frame = True
         self._copied_nodes = list()
+
+        self._bezier_info = None
 
         wx.CallAfter(lambda: self.SetZoomLevel(0, Vec2(0, 0)))
 
@@ -392,7 +397,7 @@ class Canvas(wx.ScrolledWindow):
     def OnLeftDown(self, evt):
         try:
             device_pos = evt.GetPosition()
-            # Check overlays
+            ### Check if clicked on overlay using device_pos
             overlay = self._InWhichOverlay(device_pos)
             if overlay is not None:
                 overlay.hovering = True
@@ -408,15 +413,15 @@ class Canvas(wx.ScrolledWindow):
             if self.input_mode == InputMode.SELECT:
                 if len(self._selected_idx) != 0:
                     assert self._multiselect is not None
-                    # there are selected nodes; test if user clicked inside outline bounds or if user
-                    # is resizing node
+                    # there are selected nodes; test if user clicked inside outline bounds or if
+                    # user is resizing node
                     selected_nodes = self._GetSelectedNodes()
 
                     # get dimensions of outline
                     node = selected_nodes[0]
                     rects = self._GetNodeResizeHandleRects(self._multiselect.bounding_rect)
 
-                    # check if resizing
+                    ### Check if clicked on resize handle
                     for i, rect in enumerate(rects):
                         if within_rect(logical_pos, rect):
                             self._UpdateMultiSelect()
@@ -425,16 +430,31 @@ class Canvas(wx.ScrolledWindow):
 
                 multi = wx.GetKeyState(wx.WXK_CONTROL) or wx.GetKeyState(wx.WXK_SHIFT)
 
-                in_rxn = self._InWhichReactionCenter(logical_pos)
-                # reactions take precedence over nodes
+                ### Check if clicked on handle circle
+                for rxn in (r for r in self._reactions if r.index in self._sel_reactions_idx):
+                    handle = rxn.bezier.on_which_handle(logical_pos)
+                    if handle is not None:
+                        self._bezier_info = (rxn, handle)
+                        return
+
+                self._bezier_info = None
+
+                ### Check if clicked on reaction bezier curve
+                in_rxn = None
+                for rxn in self._reactions:
+                    if rxn.bezier.is_on_curve(logical_pos):
+                        in_rxn = rxn
+                        break
+
+                ### Check if clicked on node
                 in_node = None
                 if in_rxn is None:
                     in_node = self._InWhichNode(logical_pos)
 
                 # if not multi-selecting and clicked within rect, then we definitely drag move
-                # the rect. OR, if we are multi-selecting but didn't click on any node, and we
-                # clicked within rect, then we drag move the rect as well.
-                # The case where we don't drag the drag even though we clicked inside is if
+                # the rect. OR, if we are multi-selecting but didn't click on any node or reaction,
+                # and we clicked within rect, then we drag move the rect as well.
+                # The case where we don't drag the rect even though we clicked inside is if
                 # multi-selecting and clicked on a node -- in that case we de-select that node.
                 if len(self._selected_idx) != 0 and \
                         within_rect(logical_pos, self._multiselect.bounding_rect) and \
@@ -573,6 +593,7 @@ class Canvas(wx.ScrolledWindow):
     @convert_position
     def OnMotion(self, evt):
         assert isinstance(evt, wx.MouseEvent)
+        redraw = False
         try:
             device_pos = Vec2(evt.GetPosition())
             logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
@@ -591,9 +612,15 @@ class Canvas(wx.ScrolledWindow):
                         selected_nodes = [n for n in self._nodes if rects_overlap(n.s_rect,
                                                                                   self._drag_rect)]
                         self._drag_selected_idx = set(n.index for n in selected_nodes)
+                        redraw = True
                         return
 
-                    if self._multiselect is not None:
+                    if self._bezier_info is not None:
+                        rxn, handle = self._bezier_info
+                        rxn.bezier.do_move_handle(handle, logical_pos)
+                        redraw = True
+                        return
+                    elif self._multiselect is not None:
                         adjusted = False
                         if self._multiselect.dragging:
                             assert not self._minimap.dragging
@@ -619,20 +646,25 @@ class Canvas(wx.ScrolledWindow):
                         if adjusted:
                             for rxn in self._reactions:
                                 rxn.update()
+                            redraw = True
                             return
 
             overlay = self._InWhichOverlay(device_pos)
             if overlay is not None:
                 overlay.OnMotion(evt)
                 overlay.hovering = True
+                redraw = True
             elif self._minimap.dragging:
                 self._minimap.OnMotion(evt)
+                redraw = True
 
             for ol in self._overlays:
                 if ol is not overlay and ol.hovering:
                     ol.hovering = False
+                    redraw = True
         finally:
-            self.Refresh()
+            if redraw:
+                self.Refresh()
             evt.Skip()
 
     def OnPaint(self, evt):
@@ -642,7 +674,7 @@ class Canvas(wx.ScrolledWindow):
         gc = wx.GraphicsContext.Create(dc)
 
         if gc:
-            # draw background for debugging
+            ### Draw background
             origin = Vec2(self.CalcScrolledPosition(wx.Point(0, 0)))
             draw_rect(
                 gc,
@@ -650,12 +682,12 @@ class Canvas(wx.ScrolledWindow):
                 fill=self.theme['canvas_bg'],
             )
 
+            ### Draw nodes
             # create font for nodes
             font = wx.Font(wx.FontInfo(10 * self._scale))
             gfont = gc.CreateFont(font, wx.BLACK)
             gc.SetFont(gfont)
 
-            # draw nodes
             for node in self._nodes:
                 x, y = self.CalcScrolledPosition(node.s_position.to_wx_point())
                 width, height = node.s_size
@@ -675,39 +707,33 @@ class Canvas(wx.ScrolledWindow):
                 ty = (height - th) / 2
                 gc.DrawText(node.id_, tx + x, ty + y)
 
-            nodes = self._GetSelectedNodes()
+            ### Draw outline for selected nodes and bounding box
+            cur_selected_idx = self._selected_idx | self._drag_selected_idx
+            nodes = get_nodes_by_idx(self._nodes, cur_selected_idx)
             if len(nodes) > 0:
-                assert self._multiselect is not None
-                width = self.theme['select_outline_width'] if len(nodes) == 1 else \
-                    self.theme['select_outline_width']
-                self._DrawResizeRect(gc, self._multiselect.bounding_rect, width)
+                if len(self._selected_idx) > 0:
+                    assert self._multiselect is not None
+                    width = self.theme['select_outline_width'] if len(nodes) == 1 else \
+                        self.theme['select_outline_width']
+                    self._DrawResizeRect(gc, self._multiselect.bounding_rect, width)
                 if len(nodes) > 1:
                     for node in nodes:
                         self._DrawRectOutline(gc, node.s_rect)
+            
+            ### Draw reactions
+            # for rxn in self._reactions:
+                #size = Vec2.repeat(self.theme['reaction_center_size'])
+                #scrolled_pos = self.CalcScrolledPosition(rxn.s_position.to_wx_point())
+                #draw_rect(gc, Rect(Vec2(scrolled_pos) - size / 2, size), fill=rxn.fill_color)
 
-            reactions = [r for r in self._reactions if r.index in self._sel_reactions_idx]
-            for rxn in reactions:
-                size = Vec2.repeat(self.theme['reaction_center_size'])
-                self._DrawRectOutline(gc, Rect(rxn.s_position - size / 2, size))
-
+            ### Draw reaction Beziers
             for rxn in self._reactions:
-                size = Vec2.repeat(self.theme['reaction_center_size'])
-                # TODO draw circle instead, and convert to scrolled position
-                scrolled_pos = self.CalcScrolledPosition(rxn.s_position.to_wx_point())
-                draw_rect(gc, Rect(Vec2(scrolled_pos) - size / 2, size), fill=rxn.fill_color)
+                rxn.do_paint(gc, self.CalcScrolledPosition)
 
-            # draw newly-selected nodes outlines
-            if self._drag_selecting:
-                cur_selected_idx = self._selected_idx | self._drag_selected_idx
-                for node in get_nodes_by_idx(self._nodes, cur_selected_idx):
-                    draw_rect(
-                        gc,
-                        self._ToScrolledRect(self._drag_rect),
-                        fill=None,
-                        border=self.theme['drag_border'],
-                        border_width=self.theme['drag_border_width'],
-                    )
+            for rxn in (r for r in self._reactions if r.index in self._sel_reactions_idx):
+                rxn.do_paint_selected(gc, self.CalcScrolledPosition)
 
+            ### Draw reactant and product marker outlines
             def draw_reaction_outline(color: wx.Colour):
                 draw_rect(
                     gc,
@@ -719,7 +745,6 @@ class Canvas(wx.ScrolledWindow):
                     border_style=wx.PENSTYLE_LONG_DASH,
                 )
 
-            # draw reactant outlines
             reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
             for node in reactants:
                 draw_reaction_outline(self.theme['reactant_border'])
@@ -728,7 +753,7 @@ class Canvas(wx.ScrolledWindow):
             for node in products:
                 draw_reaction_outline(self.theme['product_border'])
 
-            # draw drag-selection rect
+            ### Draw drag-selection rect
             if self._drag_selecting:
                 draw_rect(
                     gc,
@@ -738,7 +763,8 @@ class Canvas(wx.ScrolledWindow):
                     border_width=self.theme['drag_border_width'],
                 )
 
-            self._minimap.OnPaint(gc)
+            ### Draw minimap
+            self._minimap.DoPaint(gc)
 
     def _ToScrolledRect(self, rect: Rect) -> Rect:
         """Helper that converts rectangle to scrolled (device) position."""

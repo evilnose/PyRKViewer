@@ -1,3 +1,5 @@
+"""All sorts of form widgets, mainly those used in EditPanel.
+"""
 # pylint: disable=maybe-no-member
 from rkviewer.mvc import IController
 import wx
@@ -5,8 +7,9 @@ from abc import abstractmethod
 import copy
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from .canvas.canvas import Canvas
+from .canvas.reactions import Reaction
 from .canvas.utils import get_bounding_rect
-from .utils import Node, Reaction, Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_nodes_by_idx, \
+from .utils import Node, Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_nodes_by_idx, \
     no_rzeros, on_msw, resource_path
 
 

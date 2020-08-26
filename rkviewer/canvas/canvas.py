@@ -12,6 +12,7 @@ from .widgets import CanvasOverlay, Minimap, MultiSelect
 from ..utils import Vec2, Rect, Node, get_nodes_by_idx, clamp_rect_pos, rgba_to_wx_colour
 from ..mvc import IController
 from ..utils import convert_position
+from ..config import theme, settings
 
 
 BOUNDS_EPS = 0
@@ -42,18 +43,12 @@ class Canvas(wx.ScrolledWindow):
         MAX_ZOOM_LEVEL: The maximum zoom level the user is allowed to reach.
 
         controller: The associated controller instance.
-        theme: In fact a dictionary that holds the theme data. See types.DEFAULT_THEME
-                     for fields. Set to 'Any' type for now due to some issues
-                     with Dict typing.
-        settings: Inherited configuration settings.
         realsize: The actual, total size of canvas, including the part offscreen.
     """
     MIN_ZOOM_LEVEL: int = -7
     MAX_ZOOM_LEVEL: int = 7
 
     controller: IController
-    theme: Dict[str, Any]
-    settings: Dict[str, Any]
     realsize: Vec2
 
     #: Current network index. Right now this is always 0 since there is only one tab.
@@ -80,15 +75,12 @@ class Canvas(wx.ScrolledWindow):
     _copied_nodes: List[Node]
     _bezier_info: Optional[Tuple[Reaction, BezierHandle]]  #: TODO
 
-    def __init__(self, controller: IController, *args, realsize: Tuple[int, int],
-                 theme: Dict[str, Any], settings: Dict[str, Any], **kw):
+    def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
         # ensure the parent's __init__ is called
         super().__init__(*args, style=wx.DEFAULT_FRAME_STYLE & ~wx.MAXIMIZE_BOX ^ wx.RESIZE_BORDER, **kw)
 
         init_bezier()
         self.controller = controller
-        self.theme = theme
-        self.settings = settings  # TODO document
         self._net_index = 0
         self._nodes = list()
         self._reactions = list()
@@ -127,7 +119,7 @@ class Canvas(wx.ScrolledWindow):
 
         self.zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM, size=(200, 25))
         self.zoom_slider.SetRange(Canvas.MIN_ZOOM_LEVEL, Canvas.MAX_ZOOM_LEVEL)
-        self.zoom_slider.SetBackgroundColour(self.theme['zoom_slider_bg'])
+        self.zoom_slider.SetBackgroundColour(theme['zoom_slider_bg'])
         self.Bind(wx.EVT_SLIDER, self.OnSlider)
 
         # TODO document everything below
@@ -144,7 +136,7 @@ class Canvas(wx.ScrolledWindow):
         self._status_bar = self.GetTopLevelParent().GetStatusBar()
         assert self._status_bar is not None, "Need to create status bar before creating canvas!"
 
-        status_fields = self.settings['status_fields']
+        status_fields = settings['status_fields']
         assert status_fields is not None
         self._reverse_status = {name: i for i, (name, _) in enumerate(status_fields)}
 
@@ -218,7 +210,7 @@ class Canvas(wx.ScrolledWindow):
         return None
 
     def _GetReactionCenterRect(self, s_pos: Vec2) -> Rect:
-        size = Vec2.repeat(self.theme['reaction_center_size']) * self._scale
+        size = Vec2.repeat(theme['reaction_center_size']) * self._scale
         return Rect(s_pos - size / 2, size)
 
     def _InWhichOverlay(self, pos: Vec2) -> Optional[CanvasOverlay]:
@@ -368,8 +360,7 @@ class Canvas(wx.ScrolledWindow):
         nodes = self._GetSelectedNodes()
         if len(nodes) != 0:
             bounds = Rect(BOUNDS_EPS_VEC, self.realsize * self._scale - BOUNDS_EPS_VEC)
-            self._multiselect = MultiSelect(self._GetSelectedNodes(), self.theme,
-                                            bounds)
+            self._multiselect = MultiSelect(self._GetSelectedNodes(), bounds)
         else:
             self._multiselect = None
 
@@ -442,7 +433,7 @@ class Canvas(wx.ScrolledWindow):
                 ### Check if clicked on reaction bezier curve
                 in_rxn = None
                 for rxn in self._reactions:
-                    if rxn.bezier.is_on_curve(logical_pos):
+                    if rxn.bezier.is_mouse_on(logical_pos):
                         in_rxn = rxn
                         break
 
@@ -512,7 +503,7 @@ class Canvas(wx.ScrolledWindow):
 
             elif self.input_mode == InputMode.ADD:
                 size = Vec2(
-                    self.theme['node_width'], self.theme['node_height'])
+                    theme['node_width'], theme['node_height'])
 
                 unscaled_pos = logical_pos / self._scale
                 adj_pos = unscaled_pos - size / 2
@@ -521,9 +512,9 @@ class Canvas(wx.ScrolledWindow):
                     'x',
                     pos=adj_pos,
                     size=size,
-                    fill_color=self.theme['node_fill'],
-                    border_color=self.theme['node_border'],
-                    border_width=self.theme['node_border_width'],
+                    fill_color=theme['node_fill'],
+                    border_color=theme['node_border'],
+                    border_width=theme['node_border_width'],
                     scale=self._scale,
                 )
                 node.s_position = clamp_rect_pos(node.s_rect, Rect(Vec2(), self.realsize *
@@ -682,7 +673,7 @@ class Canvas(wx.ScrolledWindow):
             draw_rect(
                 gc,
                 Rect(origin, self.realsize * self._scale),
-                fill=self.theme['canvas_bg'],
+                fill=theme['canvas_bg'],
             )
 
             ### Draw nodes
@@ -716,8 +707,8 @@ class Canvas(wx.ScrolledWindow):
             if len(nodes) > 0:
                 if len(self._selected_idx) > 0:
                     assert self._multiselect is not None
-                    width = self.theme['select_outline_width'] if len(nodes) == 1 else \
-                        self.theme['select_outline_width']
+                    width = theme['select_outline_width'] if len(nodes) == 1 else \
+                        theme['select_outline_width']
                     self._DrawResizeRect(gc, self._multiselect.bounding_rect, width)
                 if len(nodes) > 1:
                     for node in nodes:
@@ -725,7 +716,7 @@ class Canvas(wx.ScrolledWindow):
             
             ### Draw reactions
             # for rxn in self._reactions:
-                #size = Vec2.repeat(self.theme['reaction_center_size'])
+                #size = Vec2.repeat(theme['reaction_center_size'])
                 #scrolled_pos = self.CalcScrolledPosition(rxn.s_position.to_wx_point())
                 #draw_rect(gc, Rect(Vec2(scrolled_pos) - size / 2, size), fill=rxn.fill_color)
 
@@ -743,29 +734,29 @@ class Canvas(wx.ScrolledWindow):
                 draw_rect(
                     gc,
                     padded_rect(self._ToScrolledRect(node.s_rect),
-                                self.theme['react_node_padding'] * self._scale),
+                                theme['react_node_padding'] * self._scale),
                     fill=None,
                     border=color,
-                    border_width=self.theme['react_node_border_width'],
+                    border_width=theme['react_node_border_width'],
                     border_style=wx.PENSTYLE_LONG_DASH,
                 )
 
             reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
             for node in reactants:
-                draw_reaction_outline(self.theme['reactant_border'])
+                draw_reaction_outline(theme['reactant_border'])
 
             products = get_nodes_by_idx(self._nodes, self._product_idx)
             for node in products:
-                draw_reaction_outline(self.theme['product_border'])
+                draw_reaction_outline(theme['product_border'])
 
             ### Draw drag-selection rect
             if self._drag_selecting:
                 draw_rect(
                     gc,
                     self._ToScrolledRect(self._drag_rect),
-                    fill=self.theme['drag_fill'],
-                    border=self.theme['drag_border'],
-                    border_width=self.theme['drag_border_width'],
+                    fill=theme['drag_fill'],
+                    border=theme['drag_border'],
+                    border_width=theme['drag_border_width'],
                 )
 
             ### Draw minimap
@@ -784,11 +775,11 @@ class Canvas(wx.ScrolledWindow):
 
         # change position to device coordinates for drawing
         rect = self._ToScrolledRect(rect)
-        rect = padded_rect(rect, self.theme['select_outline_padding'] * self._scale)
+        rect = padded_rect(rect, theme['select_outline_padding'] * self._scale)
 
         # draw rect
-        draw_rect(gc, rect, border=self.theme['select_box_color'],
-                  border_width=self.theme['select_outline_width'])
+        draw_rect(gc, rect, border=theme['select_box_color'],
+                  border_width=theme['select_outline_width'])
 
     def _DrawResizeRect(self, gc: wx.GraphicsContext, rect: Rect, border_width: float):
         """Draw the outline around a node.
@@ -800,14 +791,14 @@ class Canvas(wx.ScrolledWindow):
         adj_pos = Vec2(self.CalcScrolledPosition(pos.to_wx_point()))
 
         # draw main outline
-        draw_rect(gc, Rect(adj_pos, size), border=self.theme['select_box_color'],
+        draw_rect(gc, Rect(adj_pos, size), border=theme['select_box_color'],
                   border_width=border_width)
 
         for handle_rect in self._GetNodeResizeHandleRects(rect):
             # convert to device position for drawing
             rpos, rsize = handle_rect.as_tuple()
             rpos = Vec2(self.CalcScrolledPosition(rpos.to_wx_point()))
-            draw_rect(gc, Rect(rpos, rsize), fill=self.theme['select_box_color'])
+            draw_rect(gc, Rect(rpos, rsize), fill=theme['select_box_color'])
 
     def _GetSelectedNodes(self) -> List[Node]:
         """Get the list of selected nodes using self._selected_idx."""
@@ -830,7 +821,7 @@ class Canvas(wx.ScrolledWindow):
                    pos + Vec2(size.x, 0), pos + Vec2(size.x, size.y / 2),
                    pos + size, pos + Vec2(size.x / 2, size.y),
                    pos + Vec2(0, size.y), pos + Vec2(0, size.y / 2)]
-        side = self.theme['select_handle_length']
+        side = theme['select_handle_length']
 
         return [Rect(c - Vec2.repeat(side/2), Vec2.repeat(side)) for c in centers]
 
@@ -922,7 +913,7 @@ class Canvas(wx.ScrolledWindow):
             id_,
             sources=get_nodes_by_idx(self._nodes, self._reactant_idx),
             targets=get_nodes_by_idx(self._nodes, self._product_idx),
-            fill_color=self.theme['reaction_fill'],
+            fill_color=theme['reaction_fill'],
         )
         self.controller.try_add_reaction_g(self._net_index, reaction)
         self._reactant_idx = set()

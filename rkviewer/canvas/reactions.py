@@ -11,12 +11,13 @@ from enum import Enum
 import math
 from itertools import chain
 from typing import Callable, List, Optional, Tuple
-from ..utils import Node, Vec2, clamp_point_outside, pairwise
 from .utils import padded_rect, within_rect
+from ..utils import Node, Vec2, clamp_point_outside, pairwise
+from ..config import settings
 
 
 MAXSEGS = 29  # Number of segments used to construct bezier
-HANDLE_RADIUS = 3  # Radius of the contro lhandle
+HANDLE_RADIUS = 4  # Radius of the contro lhandle
 HANDLE_BUFFER = 2
 NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
 TIP_DISPLACEMENT = 4
@@ -188,6 +189,13 @@ class Reaction:
     def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
         self.bezier.do_paint(gc, to_scrolled_fn)
 
+        # draw centroid
+        pen = wx.Pen(self.fill_color)
+        gc.SetPen(pen)
+        radius = settings['reaction_radius'] * self.scale
+        center = to_scrolled_fn(self.bezier.centroid * self.scale - Vec2.repeat(radius))
+        gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
+
     def do_paint_selected(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
         self.bezier.do_paint_selected(gc, to_scrolled_fn)
 
@@ -321,7 +329,7 @@ class SpeciesBezier:
 
         # Draw arrow tip
         if not self.is_source:
-            self.paint_arrow_tip(gc)
+            self.paint_arrow_tip(gc, to_scrolled_fn)
 
     def do_paint_selected(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
         node_intersect = Vec2(to_scrolled_fn(self.node_intersection * self.scale))
@@ -330,12 +338,13 @@ class SpeciesBezier:
         centroid_handle = Vec2(to_scrolled_fn(self.centroid_handle * self.scale))
         self.paint_handles(gc, node_intersect, node_handle, centroid, centroid_handle)
 
-    def paint_arrow_tip(self, gc):
+    def paint_arrow_tip(self, gc, to_scrolled_fn: ToScrolledFn):
         assert len(self.arrow_adjusted_coords) == 4
         c = wx.Colour(0, 0, 0, 255)
         gc.SetPen(wx.Pen(c))
         gc.SetBrush(wx.Brush(c))
-        gc.DrawLines([wx.Point2D(*coord) for coord in self.arrow_adjusted_coords])
+        gc.DrawLines([wx.Point2D(*to_scrolled_fn(coord * self.scale))
+                      for coord in self.arrow_adjusted_coords])
 
     def paint_handles(self, gc: wx.GraphicsContext, base1: Vec2, handle1: Vec2, base2: Vec2,
                       handle2: Vec2):
@@ -405,11 +414,13 @@ class ReactionBezier:
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.scale = val
 
-    def is_on_curve(self, pos: Vec2) -> bool:
+    def is_mouse_on(self, pos: Vec2) -> bool:
         """Return whether mouse is on the Bezier curve (not including the handles).
 
         pos is the logical position of the mouse (and not multiplied by any scale).
         """
+        if (pos - self.centroid).norm_sq <= settings['reaction_radius'] ** 2:
+            return True
         return any(bz.is_on_curve(pos) for bz in chain(self.src_beziers, self.dest_beziers))
 
     def on_which_handle(self, pos: Vec2) -> Optional[BezierHandle]:

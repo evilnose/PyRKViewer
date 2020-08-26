@@ -9,7 +9,7 @@ from .canvas.events import EVT_DID_DRAG_MOVE_NODES, EVT_DID_DRAG_RESIZE_NODES, \
     EVT_DID_UPDATE_SELECTION, EVT_DID_UPDATE_CANVAS
 from .canvas.canvas import Canvas, InputMode
 from .canvas.reactions import Reaction
-from .config import DEFAULT_SETTINGS, DEFAULT_THEME, DEFAULT_SETTINGS
+from .config import settings, theme
 from .forms import NodeForm, ReactionForm
 from .mvc import IController, IView
 from .utils import Node
@@ -29,14 +29,13 @@ class EditPanel(fnb.FlatNotebook):
     FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | \
         fnb.FNB_NODRAG | fnb.FNB_NO_TAB_FOCUS | fnb.FNB_VC8
 
-    def __init__(self, parent, canvas: Canvas, controller: IController, theme: Dict[str, Any],
-                 settings: Dict[str, Any], **kw):
+    def __init__(self, parent, canvas: Canvas, controller: IController, **kw):
         super().__init__(parent, agwStyle=EditPanel.FNB_STYLE, **kw)
 
         self.canvas = canvas
 
-        self.node_form = NodeForm(self, canvas, theme, settings, controller)
-        self.reaction_form = ReactionForm(self, canvas, theme, settings, controller)
+        self.node_form = NodeForm(self, canvas, controller)
+        self.reaction_form = ReactionForm(self, canvas, controller)
 
         self.null_message = wx.Panel(self)
         text = wx.StaticText(self.null_message, label="Nothing is selected.", style=wx.ALIGN_CENTER)
@@ -183,19 +182,15 @@ class MainPanel(wx.Panel):
     toolbar: Toolbar
     edit_panel: EditPanel
 
-    def __init__(self, parent, controller: IController, theme: Dict[str, Any],
-                 settings: Dict[str, Any]):
+    def __init__(self, parent, controller: IController):
         # ensure the parent's __init__ is called
         super().__init__(parent, style=wx.CLIP_CHILDREN)
         self.SetBackgroundColour(theme['overall_bg'])
         self.controller = controller
-        self.theme = theme
 
         self.canvas = Canvas(self.controller, self,
                              size=(theme['canvas_width'], theme['canvas_height']),
                              realsize=(4 * theme['canvas_width'], 4 * theme['canvas_height']),
-                             theme=theme,
-                             settings=settings,
                              )
         self.canvas.SetScrollRate(10, 10)
 
@@ -219,7 +214,7 @@ class MainPanel(wx.Panel):
                                edit_panel_callback=self.ToggleEditPanel)
         self.toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
-        self.edit_panel = EditPanel(self, self.canvas, self.controller, self.theme, settings,
+        self.edit_panel = EditPanel(self, self.canvas, self.controller, 
                                     size=(theme['edit_panel_width'],
                                           theme['canvas_height']))
         self.edit_panel.SetBackgroundColour(theme['toolbar_bg'])
@@ -260,14 +255,14 @@ class MainPanel(wx.Panel):
 class MyFrame(wx.Frame):
     """The main frame."""
 
-    def __init__(self, controller: IController, theme, settings, **kw):
+    def __init__(self, controller: IController, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE | wx.WS_EX_PROCESS_UI_UPDATES, **kw)
 
         status_fields = settings['status_fields']
         assert status_fields is not None
-        self.CreateStatusBar(len(DEFAULT_SETTINGS['status_fields']))
+        self.CreateStatusBar(len(settings['status_fields']))
         self.SetStatusWidths([width for _, width in status_fields])
-        self.main_panel = MainPanel(self, controller, theme=theme, settings=settings)
+        self.main_panel = MainPanel(self, controller)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.main_panel, 1, wx.EXPAND)
 
@@ -389,10 +384,8 @@ class MyFrame(wx.Frame):
 class View(IView):
     """Implementation of the view class."""
 
-    def __init__(self, theme=DEFAULT_THEME, settings=DEFAULT_SETTINGS):
+    def __init__(self):
         self.controller = None
-        self.theme = copy.copy(theme)
-        self.settings = copy.copy(settings)
 
     def bind_controller(self, controller: IController):
         self.controller = controller
@@ -400,7 +393,7 @@ class View(IView):
     def main_loop(self):
         assert self.controller is not None
         app = wx.App()
-        frm = MyFrame(self.controller, self.theme, self.settings, title='RK Network Viewer')
+        frm = MyFrame(self.controller, title='RK Network Viewer')
         self.canvas_panel = frm.main_panel.canvas
         self.canvas_panel.RegisterAllChildren(frm)
         frm.Show()

@@ -7,6 +7,7 @@ import copy
 from typing import Any, Callable, Dict, List, Optional
 from .utils import draw_rect, get_bounding_rect, within_rect
 from ..utils import Vec2, Rect, Node, clamp_point
+from ..config import theme
 
 
 class CanvasOverlay(abc.ABC):
@@ -206,9 +207,8 @@ class MultiSelect:
     _orig_rect: Optional[Rect]  #: the bounding rect when dragging/resizing started
     _bounds: Rect  #: the bounds that the bounding rect may not exceed
     _bounding_rect: Rect
-    _theme: Dict[str, Any]  #: the current theme
 
-    def __init__(self, nodes: List[Node], theme: Dict[str, Any], bounds: Rect):
+    def __init__(self, nodes: List[Node], bounds: Rect):
         self.nodes = nodes
         # if only one node is selected, use the node padding instead
         self._padding = theme['select_box_padding'] if len(nodes) > 1 else \

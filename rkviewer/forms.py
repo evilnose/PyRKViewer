@@ -11,6 +11,7 @@ from .canvas.reactions import Reaction
 from .canvas.utils import get_bounding_rect
 from .utils import Node, Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_nodes_by_idx, \
     no_rzeros, on_msw, resource_path
+from .config import theme, settings
 
 
 def parse_num_pair(text: str) -> Optional[Tuple[float, float]]:
@@ -64,8 +65,6 @@ class EditPanelForm(wx.Panel):
         FloatCallback: Callback type for when a float input is changed.
         canvas: The associated canvas.
         controller: The associated controller.
-        theme: The theme of the application.
-        settings: The settings of the application.
         net_index: The current network index. For now it is 0 since there is only one tab.
     """
     ColorCallback = Callable[[wx.Colour], None]
@@ -73,8 +72,6 @@ class EditPanelForm(wx.Panel):
 
     canvas: Canvas
     controller: IController
-    theme: Dict[str, Any]
-    settings: Dict[str, Any]
     net_index: int
     labels: Dict[str, wx.Window]
     badges: Dict[str, wx.Window]
@@ -84,13 +81,10 @@ class EditPanelForm(wx.Panel):
     _title: wx.StaticText  #: title of the form
     _dirty: bool  #: flag for if edits were made but the controller hasn't updated the view yet
 
-    def __init__(self, parent, canvas: Canvas, theme: Dict[str, Any], settings: Dict[str, Any],
-                 controller: IController):
+    def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent)
         self.canvas = canvas
         self.controller = controller
-        self.theme = theme
-        self.settings = settings
         self.net_index = 0
         self.labels = dict()
         self.badges = dict()
@@ -377,9 +371,8 @@ class NodeForm(EditPanelForm):
         border_width_ctrl: wx.TextCtrl
     """
 
-    def __init__(self, parent, canvas: Canvas, theme: Dict[str, Any], settings: Dict[str, Any],
-                 controller: IController):
-        super().__init__(parent, canvas, theme, settings, controller)
+    def __init__(self, parent, canvas: Canvas, controller: IController):
+        super().__init__(parent, canvas, controller)
         self._nodes = list()
         self._selected_idx = set()
         self._bounding_rect = None  # No padding
@@ -526,8 +519,8 @@ class NodeForm(EditPanelForm):
             return
 
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        min_width = self.theme['min_node_width']
-        min_height = self.theme['min_node_height']
+        min_width = theme['min_node_width']
+        min_height = theme['min_node_height']
         size = Vec2(wh)
         if len(nodes) == 1:
             [node] = nodes
@@ -631,7 +624,7 @@ class NodeForm(EditPanelForm):
         """Update the form field values based on current data."""
         assert len(self._selected_idx) != 0
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        prec = self.settings['decimal_precision']
+        prec = settings['decimal_precision']
         id_text: str
         pos: Vec2
         size: Vec2
@@ -682,9 +675,8 @@ class NodeForm(EditPanelForm):
 
 class ReactionForm(EditPanelForm):
 
-    def __init__(self, parent, canvas: Canvas, theme: Dict[str, Any], settings: Dict[str, Any],
-                 controller: IController):
-        super().__init__(parent, canvas, theme, settings, controller)
+    def __init__(self, parent, canvas: Canvas, controller: IController):
+        super().__init__(parent, canvas, controller)
 
         self._reactions = list()
         self._selected_idx = set()

@@ -2,6 +2,7 @@
 """
 # pylint: disable=maybe-no-member
 import wx
+import copy
 
 
 DEFAULT_THEME = {
@@ -52,4 +53,9 @@ DEFAULT_SETTINGS = {
         ('zoom', 100),
     ],  # first element: status field identifier; second element: field width
     'decimal_precision': 2,
+    'reaction_radius': 6,
 }
+
+
+theme = copy.copy(DEFAULT_THEME)
+settings = copy.copy(DEFAULT_SETTINGS)

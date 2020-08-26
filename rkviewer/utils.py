@@ -3,6 +3,7 @@ from __future__ import annotations  # For returning self in a class
 # pylint: disable=maybe-no-member
 import wx
 import copy
+from enum import Enum
 import math
 from itertools import tee
 import os
@@ -197,6 +198,12 @@ class Rect:
         else:
             assert False, "Rect.nth_vertex() index out of bounds"
 
+    def sides(self):
+        i = 0
+        for i in range(3):
+            yield (self.nth_vertex(i), self.nth_vertex(i + 1))
+        yield (self.nth_vertex(3), self.nth_vertex(0))
+
     def __repr__(self):
         return 'Rect({}, {})'.format(self.position, self.size)
 
@@ -307,6 +314,13 @@ class Node:
         return self.position + self.size / 2
 
 
+class Direction(Enum):
+    LEFT = 0
+    TOP = 1
+    RIGHT = 2
+    BOTTOM = 3
+    
+
 def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
     """Given RGBA color, return wx.Colour.
 
@@ -371,6 +385,32 @@ def clamp_point(pos: Vec2, bounds: Rect, padding=0) -> Vec2:
     ret = Vec2(ret.x, max(ret.y, topleft.y))
     ret = Vec2(ret.x, min(ret.y, botright.y))
     return ret
+
+
+def clamp_point_outside(pos: Vec2, bounds: Rect) -> Vec2:
+    botright = bounds.position + bounds.size
+    # (distance, tiebreak, direction for recording)
+    left = (pos.x - bounds.position.x, 0, Direction.LEFT)
+    top = (pos.y - bounds.position.y, 1, Direction.TOP)
+    right = (botright.x - pos.x, 2, Direction.RIGHT)
+    bottom = (botright.y - pos.y, 3, Direction.BOTTOM)
+
+    minimum = min(left, right, top, bottom)
+    
+    dist, _, direct = minimum
+    if dist <= 0:
+        print('oops')
+        return pos
+
+    if direct == Direction.LEFT:
+        return pos.swapped(0, bounds.position.x)
+    elif direct == Direction.RIGHT:
+        return pos.swapped(0, botright.x)
+    elif direct == Direction.TOP:
+        return pos.swapped(1, bounds.position.y)
+    else:
+        assert direct == Direction.BOTTOM
+        return pos.swapped(1, botright.y)
 
 
 def convert_position(fn):

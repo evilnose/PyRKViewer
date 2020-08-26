@@ -590,6 +590,9 @@ class Canvas(wx.ScrolledWindow):
         if overlay is not None:
             overlay.OnLeftUp(evt)
 
+    def CalcScrolledPositionFloat(self, pos: Vec2) -> Vec2:
+        return Vec2(self.CalcScrolledPosition(wx.Point(0, 0))) + pos
+
     @convert_position
     def OnMotion(self, evt):
         assert isinstance(evt, wx.MouseEvent)
@@ -728,10 +731,12 @@ class Canvas(wx.ScrolledWindow):
 
             ### Draw reaction Beziers
             for rxn in self._reactions:
-                rxn.do_paint(gc, self.CalcScrolledPosition)
+                # need better accuracy, so use CalcScrolledPositionFloat
+                rxn.do_paint(gc, self.CalcScrolledPositionFloat)
 
             for rxn in (r for r in self._reactions if r.index in self._sel_reactions_idx):
-                rxn.do_paint_selected(gc, self.CalcScrolledPosition)
+                # need better accuracy, so use CalcScrolledPositionFloat
+                rxn.do_paint_selected(gc, self.CalcScrolledPositionFloat)
 
             ### Draw reactant and product marker outlines
             def draw_reaction_outline(color: wx.Colour):

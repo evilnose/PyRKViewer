@@ -11,6 +11,7 @@ from enum import Enum
 import math
 from itertools import chain
 from typing import Callable, List, Optional, Tuple
+from .state import cstate
 from .utils import padded_rect, within_rect
 from ..utils import Node, Vec2, clamp_point_outside, pairwise
 from ..config import settings
@@ -166,25 +167,15 @@ def init_bezier():
 
 class Reaction:
     def __init__(self, id_: str, *, sources: List[Node], targets: List[Node],
-                 fill_color: wx.Colour, scale: float = 1, index: int = -1):
+                 fill_color: wx.Colour, index: int = -1):
         self.id_ = id_
         self.index = index
         self.fill_color = fill_color
-        self._scale = scale
         self._sources = sources
         self._targets = targets
         self.bezier = ReactionBezier(sources, targets)
 
         self.update_nodes(sources, targets)
-
-    @property
-    def scale(self) -> float:
-        return self._scale
-
-    @scale.setter
-    def scale(self, val: float):
-        self._scale = val
-        self.bezier.scale = val
 
     def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
         self.bezier.do_paint(gc, to_scrolled_fn)
@@ -192,8 +183,8 @@ class Reaction:
         # draw centroid
         pen = wx.Pen(self.fill_color)
         gc.SetPen(pen)
-        radius = settings['reaction_radius'] * self.scale
-        center = to_scrolled_fn(self.bezier.centroid * self.scale - Vec2.repeat(radius))
+        radius = settings['reaction_radius'] * cstate.scale
+        center = to_scrolled_fn(self.bezier.centroid * cstate.scale - Vec2.repeat(radius))
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
 
     def do_paint_selected(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
@@ -213,7 +204,7 @@ class Reaction:
 
     @property
     def s_position(self) -> Vec2:
-        return self._position * self.scale
+        return self._position * cstate.scale
 
     @property
     def sources(self) -> List[Node]:
@@ -224,9 +215,49 @@ class Reaction:
         return self._targets
 
 
+def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: bool):
+    c = wx.Colour(255, 112, 0) if hovering else wx.Colour(0, 102, 204)
+    brush = wx.Brush(c)
+    pen = wx.Pen(c)
+
+    gc.SetPen(pen)
+
+    # Draw handle lines
+    path = gc.CreatePath()
+    path.MoveToPoint(*base)
+    path.AddLineToPoint(*handle)
+    gc.StrokePath(path)
+
+    # Draw handle circles
+    gc.SetBrush(brush)
+    gc.DrawEllipse(handle.x - HANDLE_RADIUS, handle.y - HANDLE_RADIUS,
+                   2 * HANDLE_RADIUS, 2 * HANDLE_RADIUS)
+
+
+class BezierHandle:
+    position: Vec2
+    _mouse_offset: Vec2  #: Convenient field that stores (center - mouse_pos) on mouse down.
+    mouse_hovering: bool
+    on_moved: Optional[Callable[[Vec2], None]]
+
+    def __init__(self, position: Vec2, on_moved: Callable[[Vec2], None] = None):
+        self.position = position
+        self._mouse_offset = Vec2()
+        self.on_moved = on_moved
+        self.mouse_hovering = False
+
+    def do_drag(self, pos: Vec2):
+        self.position = (pos + self._mouse_offset) / cstate.scale
+        if self.on_moved:
+            self.on_moved(self.position)
+
+    def do_left_down(self, pos: Vec2):
+        self._mouse_offset = self.position - pos
+
+
 class SpeciesBezier:
-    def __init__(self, node: Node, handle: Vec2, centroid: Vec2, centroid_handle: Vec2,
-                 is_source: bool):
+    def __init__(self, node: Node, handle: BezierHandle, centroid: Vec2,
+                 centroid_handle: BezierHandle, is_source: bool):
         assert INITIALIZED, 'Bezier matrices not initialized! Call init_bezier()'
 
         self.node = node
@@ -235,15 +266,14 @@ class SpeciesBezier:
         self.is_source = is_source
         self.bezier_points = [Vec2() for _ in range(MAXSEGS + 1)]
         self._dirty = True
-        self.scale = 1
-        self.update_curve(centroid, centroid_handle)
+        self.centroid_handle = centroid_handle
+        self.update_curve(centroid)
         self.arrow_adjusted_coords = list()
 
-    def update_curve(self, centroid: Vec2, centroid_handle: Vec2):
+    def update_curve(self, centroid: Vec2):
         """Called after either the node, the centroid, or at least one of their handles changed.
         """
         self.centroid = centroid
-        self.centroid_handle = centroid_handle
         self._dirty = True
 
     def _recompute_curve(self):
@@ -257,7 +287,8 @@ class SpeciesBezier:
         # extend handle to make sure that an intersection is found between the handle and the
         # node rectangle sides. We're essentially making the handle a ray.
         longer_side = max(outer_rect.size.x, outer_rect.size.y)
-        extended_handle = node_center + (self.handle - node_center).normalized(longer_side * 10)
+        extended_handle = node_center + (
+            self.handle.position - node_center).normalized(longer_side * 10)
         handle_segment = (node_center, extended_handle)
         # check for intersection on the side
         sides = outer_rect.sides()
@@ -272,8 +303,8 @@ class SpeciesBezier:
         # Scale up dimensions (mult by 1000) to get a smooth curve
         for i in range(MAXSEGS+1):
             tmp = Vec2()
-            for j, point in enumerate((self.node_intersection, self.handle, self.centroid_handle,
-                                       self.centroid)):
+            for j, point in enumerate((self.node_intersection, self.handle.position,
+                                       self.centroid_handle.position, self.centroid)):
                 tmp += point * 1000 * BezJ[i][j]
 
             # and scale back down again
@@ -311,7 +342,7 @@ class SpeciesBezier:
             self._recompute_curve()
             self._dirty = False
 
-        return any(pt_on_line(p1 * self.scale, p2 * self.scale, pos, CURVE_SLACK)
+        return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK)
                    for p1, p2 in pairwise(self.bezier_points))
 
     def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
@@ -322,9 +353,9 @@ class SpeciesBezier:
         gc.SetPen(wx.Pen(wx.BLACK, 2))
         path = gc.CreatePath()
 
-        path.MoveToPoint(*to_scrolled_fn(self.bezier_points[0] * self.scale))
+        path.MoveToPoint(*to_scrolled_fn(self.bezier_points[0] * cstate.scale))
         for i in range(1, MAXSEGS+1):
-            path.AddLineToPoint(*to_scrolled_fn(self.bezier_points[i] * self.scale))
+            path.AddLineToPoint(*to_scrolled_fn(self.bezier_points[i] * cstate.scale))
         gc.StrokePath(path)
 
         # Draw arrow tip
@@ -332,55 +363,24 @@ class SpeciesBezier:
             self.paint_arrow_tip(gc, to_scrolled_fn)
 
     def do_paint_selected(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
-        node_intersect = Vec2(to_scrolled_fn(self.node_intersection * self.scale))
-        node_handle = Vec2(to_scrolled_fn(self.handle * self.scale))
-        centroid = Vec2(to_scrolled_fn(self.centroid * self.scale))
-        centroid_handle = Vec2(to_scrolled_fn(self.centroid_handle * self.scale))
-        self.paint_handles(gc, node_intersect, node_handle, centroid, centroid_handle)
+        node_intersect = Vec2(to_scrolled_fn(self.node_intersection * cstate.scale))
+        node_handle = Vec2(to_scrolled_fn(self.handle.position * cstate.scale))
+        paint_handle(gc, node_intersect, node_handle, self.handle.mouse_hovering)
 
     def paint_arrow_tip(self, gc, to_scrolled_fn: ToScrolledFn):
         assert len(self.arrow_adjusted_coords) == 4
-        c = wx.Colour(0, 0, 0, 255)
+        c = wx.BLACK
         gc.SetPen(wx.Pen(c))
         gc.SetBrush(wx.Brush(c))
-        gc.DrawLines([wx.Point2D(*to_scrolled_fn(coord * self.scale))
+        gc.DrawLines([wx.Point2D(*to_scrolled_fn(coord * cstate.scale))
                       for coord in self.arrow_adjusted_coords])
-
-    def paint_handles(self, gc: wx.GraphicsContext, base1: Vec2, handle1: Vec2, base2: Vec2,
-                      handle2: Vec2):
-        c = wx.Colour(0, 102, 204, 255)
-        brush = wx.Brush(c)
-        pen = wx.Pen(c)
-
-        gc.SetPen(pen)
-
-        # Draw handle lines
-        path = gc.CreatePath()
-        path.MoveToPoint(*base1)
-        path.AddLineToPoint(*handle1)
-
-        path.MoveToPoint(*base2)
-        path.AddLineToPoint(*handle2)
-        gc.StrokePath(path)
-
-        # Draw handle circles
-        gc.SetBrush(brush)
-        gc.DrawEllipse(handle1.x - HANDLE_RADIUS, handle1.y - HANDLE_RADIUS,
-                       2 * HANDLE_RADIUS, 2 * HANDLE_RADIUS)
-        gc.DrawEllipse(handle2.x - HANDLE_RADIUS, handle2.y - HANDLE_RADIUS,
-                       2 * HANDLE_RADIUS, 2 * HANDLE_RADIUS)
-
-
-@dataclass
-class BezierHandle:
-    is_centroid_reactant: Optional[bool]
-    species_bezier: Optional[SpeciesBezier]
-    mouse_offset: Vec2
 
 
 class ReactionBezier:
     src_beziers: List[SpeciesBezier]
     dest_beziers: List[SpeciesBezier]
+    src_c_handle: BezierHandle
+    dest_c_handle: BezierHandle
 
     def __init__(self, reactants: List[Node], products: List[Node]):
         self.reactants = reactants
@@ -389,30 +389,30 @@ class ReactionBezier:
         self.src_beziers = list()
         self.dest_beziers = list()
 
-        self._scale = 1
+        self.src_c_handle = BezierHandle((self.reactants[0].center_point + self.centroid) / 2,
+                                         self._src_handle_moved)
+        self.dest_c_handle = BezierHandle(2 * self.centroid - self.src_c_handle.position,
+                                          self._dest_handle_moved)
 
-        # TODO hard-coded for now
-        self.src_c_handle = (self.reactants[0].center_point + self.centroid) / 2
-        self.dest_c_handle = 2 * self.centroid - self.src_c_handle
+        self.handles = [self.src_c_handle, self.dest_c_handle]
 
-        for node in self.reactants:
-            node_handle = (node.center_point + self.centroid) / 2
-            self.src_beziers.append(SpeciesBezier(node, node_handle, self.centroid,
-                                                  self.src_c_handle, True))
-        for node in self.products:
-            node_handle = (node.center_point + self.centroid) / 2
-            self.dest_beziers.append(SpeciesBezier(node, node_handle, self.centroid,
-                                                   self.dest_c_handle, False))
+        # create handles for species
+        in_products = False  # whether the loop has reached the products part
+        for node in chain(self.reactants, [None], self.products):
+            if node is None:
+                in_products = True
+                continue
+            node_handle = BezierHandle((node.center_point + self.centroid) / 2)
+            centroid_handle = self.dest_c_handle if in_products else self.src_c_handle
+            sb = SpeciesBezier(node, node_handle, self.centroid, centroid_handle, not in_products)
+            to_append = self.dest_beziers if in_products else self.src_beziers
+            to_append.append(sb)
+            #node_handle.on_moved = lambda _: sb.update_curve(self.centroid)
+            node_handle.on_moved = self.make_handle_moved_func(sb)
+            self.handles.append(node_handle)
 
-    @property
-    def scale(self) -> float:
-        return self._scale
-
-    @scale.setter
-    def scale(self, val: float):
-        self._scale = val
-        for bz in chain(self.src_beziers, self.dest_beziers):
-            bz.scale = val
+    def make_handle_moved_func(self, sb: SpeciesBezier):
+        return lambda _: sb.update_curve(self.centroid)
 
     def is_mouse_on(self, pos: Vec2) -> bool:
         """Return whether mouse is on the Bezier curve (not including the handles).
@@ -423,52 +423,27 @@ class ReactionBezier:
             return True
         return any(bz.is_on_curve(pos) for bz in chain(self.src_beziers, self.dest_beziers))
 
-    def on_which_handle(self, pos: Vec2) -> Optional[BezierHandle]:
-        # check centroid handles
-        scaled_src_ch = self.src_c_handle * self._scale
-        scaled_dest_ch = self.dest_c_handle * self._scale
-        if pt_in_circle(pos, HANDLE_RADIUS, scaled_src_ch):
-            return BezierHandle(True, None, scaled_src_ch - pos)
-        if pt_in_circle(pos, HANDLE_RADIUS, scaled_dest_ch):
-            return BezierHandle(False, None, scaled_dest_ch - pos)
-
-        for bz in self.src_beziers:
-            scaled_handle = bz.handle * self._scale
-            if pt_in_circle(pos, HANDLE_RADIUS, scaled_handle):
-                return BezierHandle(None, bz, scaled_handle - pos)
-
-        for bz in self.dest_beziers:
-            scaled_handle = bz.handle * self._scale
-            if pt_in_circle(pos, HANDLE_RADIUS, scaled_handle * self._scale):
-                return BezierHandle(None, bz, scaled_handle - pos)
-
+    def in_which_handle(self, pos: Vec2) -> Optional[BezierHandle]:
+        for handle in self.handles:
+            if pt_in_circle(pos, HANDLE_RADIUS, handle.position * cstate.scale):
+                return handle
         return None
 
-    def do_move_handle(self, handle: BezierHandle, pos: Vec2):
-        if handle.is_centroid_reactant is not None:
-            if handle.is_centroid_reactant:
-                self.src_c_handle = (handle.mouse_offset + pos) / self._scale
-                self.dest_c_handle = (2 * self.centroid - self.src_c_handle) / self._scale
-            else:
-                self.dest_c_handle = (handle.mouse_offset + pos) / self._scale
-                self.src_c_handle = (2 * self.centroid - self.dest_c_handle) / self._scale
+    def _src_handle_moved(self, pos):
+        self.dest_c_handle.position = (2 * self.centroid - pos) / cstate.scale
+        for bz in chain(self.src_beziers, self.dest_beziers):
+            bz.update_curve(self.centroid)
 
-            for sp_bz in self.src_beziers:
-                sp_bz.update_curve(self.centroid, self.src_c_handle)
-            for sp_bz in self.dest_beziers:
-                sp_bz.update_curve(self.centroid, self.dest_c_handle)
-        else:
-            assert handle.species_bezier is not None
-            handle.species_bezier.handle = (handle.mouse_offset + pos) / self._scale
-            centroid_handle = self.src_c_handle if handle.species_bezier.is_source else \
-                self.dest_c_handle
-            handle.species_bezier.update_curve(self.centroid, centroid_handle)
+    def _dest_handle_moved(self, pos):
+        self.src_c_handle.position = (2 * self.centroid - pos) / cstate.scale
+        for bz in chain(self.src_beziers, self.dest_beziers):
+            bz.update_curve(self.centroid)
 
     def nodes_updated(self):
         for sp_bz in self.src_beziers:
-            sp_bz.update_curve(self.centroid, self.src_c_handle)
+            sp_bz.update_curve(self.centroid)
         for sp_bz in self.dest_beziers:
-            sp_bz.update_curve(self.centroid, self.dest_c_handle)
+            sp_bz.update_curve(self.centroid)
 
     def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
         for bz in chain(self.src_beziers, self.dest_beziers):
@@ -477,3 +452,9 @@ class ReactionBezier:
     def do_paint_selected(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.do_paint_selected(gc, to_scrolled_fn)
+        centroid = Vec2(to_scrolled_fn(self.centroid * cstate.scale))
+        center_handles = [self.src_c_handle, self.dest_c_handle]
+        hovering = any(h.mouse_hovering for h in center_handles)
+        for handle in center_handles:
+            handle_pos = Vec2(to_scrolled_fn(handle.position * cstate.scale))
+            paint_handle(gc, centroid, handle_pos, hovering)

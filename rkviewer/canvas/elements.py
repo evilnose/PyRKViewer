@@ -1,0 +1,2 @@
+class CanvasElement:
+    pass

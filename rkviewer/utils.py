@@ -9,6 +9,7 @@ from itertools import tee
 import os
 import sys
 from typing import Any, Callable, Collection, Iterable, List, Set, Tuple, TypeVar
+from .canvas.state import cstate
 
 
 TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int.
@@ -225,15 +226,12 @@ class Node:
     border_color: wx.Colour
     border_width: float
     _position: Vec2
-    _s_position: Vec2
     _size: Vec2
-    _s_size: Vec2
     _scale: float
 
     # force keyword-only arguments
     def __init__(self, id_: str, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, scale: float = 1, index: int = -1):
-        self._scale = scale
+                 border_color: wx.Colour, border_width: float, index: int = -1):
         self.index = index
         self.id_ = id_
         self.position = pos
@@ -250,17 +248,15 @@ class Node:
     @position.setter
     def position(self, val: Vec2):
         self._position = val
-        self._s_position = val * self._scale
 
     @property
     def s_position(self):
         """The scaled position of the node obtained by multiplying the scale."""
-        return self._s_position
+        return self._position * cstate.scale
 
     @s_position.setter
     def s_position(self, val: Vec2):
-        self._s_position = val
-        self._position = val / self._scale
+        self._position = val / cstate.scale
 
     @property
     def size(self):
@@ -270,28 +266,15 @@ class Node:
     @size.setter
     def size(self, val: Vec2):
         self._size = val
-        self._s_size = val * self._scale
 
     @property
     def s_size(self):
         """The scaled size of the node obtained by multiplying the scale."""
-        return self._s_size
+        return self._size * cstate.scale
 
     @s_size.setter
     def s_size(self, val: Vec2):
-        self._s_size = val
-        self._size = val / self._scale
-
-    @property
-    def scale(self):
-        """The scale of the rectangle. 1 by default."""
-        return self._scale
-
-    @scale.setter
-    def scale(self, val: float):
-        self._scale = val
-        self._s_position = self._position * self._scale
-        self._s_size = self._size * self._scale
+        self._size = val / cstate.scale
 
     @property
     def s_rect(self):
@@ -399,7 +382,6 @@ def clamp_point_outside(pos: Vec2, bounds: Rect) -> Vec2:
     
     dist, _, direct = minimum
     if dist <= 0:
-        print('oops')
         return pos
 
     if direct == Direction.LEFT:

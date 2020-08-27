@@ -41,7 +41,8 @@ DEFAULT_THEME = {
     'reactant_border': wx.Colour(255, 100, 100),
     'product_border': wx.Colour(0, 214, 125),
     'reaction_center_size': 10,
-    'reaction_fill': wx.Colour(10, 105, 0)
+    'reaction_fill': wx.BLACK,
+    'selected_reaction_fill': wx.Colour(0, 140, 255),
 }
 
 

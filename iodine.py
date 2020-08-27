@@ -1,21 +1,27 @@
 import json
 
-class TNode:
-    def __init__(self, nodeId:str, x:float, y:float, w:float, h:float):
-        self.id = nodeId
+class TNode(object):
+    def __init__(self, nodeID:str, x:float, y:float, w:float, h:float):
+        self.id = nodeID
         self.x = x
         self.y = y
         self.w = w
         self.h = h
         self.fillColor = TColor(255, 150, 80, 255)
         self.outlineColor = TColor(255, 100, 80, 255)
-        self.outlineThickness = 3
+        self.outlineThickness = 3.0
+        self.fontPointSize = 20
+        self.fontFamily = "default"
+        self.fontStyle = "normal"
+        self.fontWeight = "default"
+        self.fontName = ""
+        self.fontColor = TColor(0, 0, 0, 255)
 
 
-class TNetwork:
-    def __init__(self, netId:str):
-        self.magicIdentifier = "NM01"
-        self.id = netId
+class TNetwork(object):
+    def __init__(self, netID:str):
+        self.magicIDentifier = "NM01"
+        self.id = netID
         self.nodes = []
         self.reactions = []
 
@@ -40,16 +46,16 @@ class TNetwork:
         return s
 
 
-class TReaction:
-    def __init__(self, reaId:str):
-        self.id = reaId
+class TReaction(object):
+    def __init__(self, reaID:str):
+        self.id = reaID
         self.rateLaw = ""
         self.species = [{}, {}]
         self.fillColor = TColor(255, 150, 80, 255)
-        self.thickness = 3
+        self.thickness = 3.0
 
 
-class TColor:
+class TColor(object):
     def __init__(self, r:int, g:int, b:int, a:int):
         self.r = r
         self.g = g
@@ -57,16 +63,78 @@ class TColor:
         self.a = a
 
 
+class TNetworkSet(list):
+    def __init__(self, netList=[]):
+        list.__init__([])
+        self.extend(netList)
+
+    def deepCopy(self):
+        NewNetworkSet = TNetworkSet()
+        for i in self:
+            NewNetworkX = TNetwork(i.id)
+            NewNetworkX.magicIDentifier = i.magicIDentifier
+            for j in i.nodes:
+                NewNodeX = TNode(j.id, j.x, j.y, j.w, j.h)
+                NewNodeX.fillColor.r = j.fillColor.r
+                NewNodeX.fillColor.g = j.fillColor.g
+                NewNodeX.fillColor.b = j.fillColor.b
+                NewNodeX.fillColor.a = j.fillColor.a
+                NewNodeX.outlineThickness = j.outlineThickness
+                NewNodeX.outlineColor.r = j.outlineColor.r
+                NewNodeX.outlineColor.g = j.outlineColor.g
+                NewNodeX.outlineColor.b = j.outlineColor.b
+                NewNodeX.outlineColor.a = j.outlineColor.a
+                NewNodeX.fontPointSize = j.fontPointSize
+                NewNodeX.fontFamily = j.fontFamily
+                NewNodeX.fontStyle = j.fontStyle
+                NewNodeX.fontWeight = j.fontWeight
+                NewNodeX.fontName = j.fontName
+                NewNodeX.fontColor.r = j.fontColor.r
+                NewNodeX.fontColor.g = j.fontColor.g
+                NewNodeX.fontColor.b = j.fontColor.b
+                NewNodeX.fontColor.a = j.fontColor.a
+                NewNetworkX.nodes.append(NewNodeX)
+            for k in i.reactions:
+                NewReactionX = TReaction(k.id)
+                NewReactionX.fillColor.r = k.fillColor.r
+                NewReactionX.fillColor.g = k.fillColor.g
+                NewReactionX.fillColor.b = k.fillColor.b
+                NewReactionX.fillColor.a = k.fillColor.a
+                NewReactionX.thickness = k.thickness
+                NewReactionX.rateLaw = k.rateLaw
+                for l in k.species[0]:
+                    NewReactionX.species[0][l] = k.species[0][l]
+                for m in k.species[1]:
+                    NewReactionX.species[1][m] = k.species[1][m]
+                NewNetworkX.reactions.append(NewReactionX)
+            NewNetworkSet.append(NewNetworkX)
+        return NewNetworkSet
+
+
+class TStack(object):
+    def __init__(self):
+        self.items = []
+
+    def isEmpty(self):
+        return self.items == []
+
+    def push(self, netSet):
+        theSet = netSet.deepCopy()
+        self.items.append(theSet)
+    def pop(self):
+        return self.items.pop()
+
+
 class Error(Exception):
     """Base class for other exceptions"""
     pass
 
 
-class IdNotFoundError(Error):
+class IDNotFoundError(Error):
     pass
 
 
-class IdRepeatError(Error):
+class IDRepeatError(Error):
     pass
 
 
@@ -124,8 +192,8 @@ errorDict = {
 
 
 ExceptionDict = {
-    -2: IdNotFoundError,
-    -3: IdRepeatError,
+    -2: IDNotFoundError,
+    -3: IDRepeatError,
     -4: NodeNotFreeError,
     -5: NetIndexOutOfRangeError,
     -6: ReactionIndexOutOfRangeError,
@@ -138,60 +206,33 @@ ExceptionDict = {
 }
 
 
-class TStack(object):
-    def __init__(self):
-        self.items = []
+fontFamilyDict ={
+	"default": 0,
+	"decorative": 1,
+	"roman": 2,
+	"script": 3,
+	"swiss": 4,
+	"modern": 5,
+}
 
-    def isEmpty(self):
-        return self.items == []
+fontStyleDict ={
+	"normal": 0,
+	"italic": 1,
+}
 
-    def push(self, set):
-        theSet = deepcopy(set)
-        self.items.append(theSet)
-
-    def pop(self):
-        return self.items.pop()
+fontWeightDict ={
+	"default": 0,
+	"light": 1,
+	"bold": 2,
+}
 
 
 stackFlag = True
 errCode = 0
-networkSet = []
+networkSet = TNetworkSet()
 netSetStack = TStack()
 redoStack = TStack()
 
-
-def deepcopy(n):
-    NewNetworkSet = []
-    for i in n:
-        NewNetworkX = TNetwork(i.id)
-        NewNetworkX.magicIdentifier = i.magicIdentifier
-        for j in i.nodes:
-            NewNodeX = TNode(j.id, j.x, j.y, j.w, j.h)
-            NewNodeX.fillColor.r = j.fillColor.r
-            NewNodeX.fillColor.g = j.fillColor.g
-            NewNodeX.fillColor.b = j.fillColor.b
-            NewNodeX.fillColor.a = j.fillColor.a
-            NewNodeX.outlineThickness = j.outlineThickness
-            NewNodeX.outlineColor.r = j.outlineColor.r
-            NewNodeX.outlineColor.g = j.outlineColor.g
-            NewNodeX.outlineColor.b = j.outlineColor.b
-            NewNodeX.outlineColor.a = j.outlineColor.a
-            NewNetworkX.nodes.append(NewNodeX)
-        for k in i.reactions:
-            NewReactionX = TReaction(k.id)
-            NewReactionX.fillColor.r = k.fillColor.r
-            NewReactionX.fillColor.g = k.fillColor.g
-            NewReactionX.fillColor.b = k.fillColor.b
-            NewReactionX.fillColor.a = k.fillColor.a
-            NewReactionX.thickness = k.thickness
-            NewReactionX.rateLaw = k.rateLaw
-            for l in k.species[0]:
-                NewReactionX.species[0][l] = k.species[0][l]
-            for m in k.species[1]:
-                NewReactionX.species[1][m] = k.species[1][m]
-            NewNetworkX.reactions.append(NewReactionX)
-        NewNetworkSet.append(NewNetworkX)
-    return NewNetworkSet
 
 
 def getErrorCode():
@@ -249,7 +290,7 @@ def endGroup():
     stackFlag = True
 
 
-def newNetwork(netId:str):  # TODO: stackflag #TODO addErrorMsg
+def newNetwork(netID:str):  
     """
     newNetwork Create a new network
     errCode -3: id repeat, 0 :ok
@@ -257,20 +298,20 @@ def newNetwork(netId:str):  # TODO: stackflag #TODO addErrorMsg
     global stackFlag, errCode, networkSet, netSetStack, redoStack
     errCode = 0
     for i in range(len(networkSet)):
-        if networkSet[i].id == netId:
+        if networkSet[i].id == netID:
             errCode = -3
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], netId)
+        raise ExceptionDict[errCode](errorDict[errCode], netID)
     else:
         if stackFlag:
             redoStack = TStack()
             netSetStack.push(networkSet)
 
-        newNetwork = TNetwork(netId)
+        newNetwork = TNetwork(netID)
         networkSet.append(newNetwork)
 
 
-def getNetworkIndex(netId: str):
+def getNetworkIndex(netID: str):
     """
     getNetworkIndex 
     return: -2: net id can't find
@@ -279,12 +320,12 @@ def getNetworkIndex(netId: str):
     errCode = -2
 
     for i in range(len(networkSet)):
-        if networkSet[i].id == netId:
+        if networkSet[i].id == netID:
             index = i
             errCode = 0
 
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], netId)
+        raise ExceptionDict[errCode](errorDict[errCode], netID)
     else:
         return index
 
@@ -352,7 +393,7 @@ def saveNetworkAsJSON(neti:int, fileName: str):
 
 
 
-def deleteNetwork(neti:str):
+def deleteNetwork(neti:int):
     """
     DeleteNetwork DeleteNetwork
     errCode: -5: net index out of range
@@ -368,11 +409,11 @@ def deleteNetwork(neti:str):
             redoStack = TStack()
             netSetStack.push(networkSet)
         if neti == 0:
-            networkSet = networkSet[1:]
+            networkSet = TNetworkSet(networkSet[1:])
         elif neti == len(networkSet)-1:
-            networkSet = networkSet[:len(networkSet)-1]
+            networkSet = TNetworkSet(networkSet[:len(networkSet)-1])
         else:
-            networkSet = networkSet[:neti]+networkSet[neti+1:]
+            networkSet = TNetworkSet(networkSet[:neti]+networkSet[neti+1:])
 
 
 def clearNetworks():
@@ -381,16 +422,16 @@ def clearNetworks():
     if stackFlag:
         redoStack = TStack()
         netSetStack.push(networkSet)
-    networkSet = []
+    networkSet = TNetworkSet()
 
 
 def getNumberOfNetworks():
     return len(networkSet)
 
 
-def getNetworkId(neti:int):
+def getNetworkID(neti:int):
     """    
-    GetNetworkId GetId of network
+    GetNetworkID GetID of network
     errCode: -5: net index out of range
     """
     global stackFlag, errCode, networkSet, netSetStack, redoStack
@@ -407,11 +448,11 @@ def getListOfNetworks():
     a = getNumberOfNetworks()
     idList = []
     for neti in range(a):
-        idList.append(getNetworkId(neti))
+        idList.append(getNetworkID(neti))
     return idList
 
 
-def addNode(neti: int, nodeId: str, x: float, y: float, w: float, h: float):
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float):
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -425,7 +466,7 @@ def addNode(neti: int, nodeId: str, x: float, y: float, w: float, h: float):
     else:
         n = networkSet[neti]
         for i in n.nodes:
-            if i.id == nodeId:
+            if i.id == nodeID:
                 errCode = -3
     if errCode == 0:
         if x < 0 or y < 0 or w <= 0 or h <= 0:
@@ -433,17 +474,17 @@ def addNode(neti: int, nodeId: str, x: float, y: float, w: float, h: float):
 
     if errCode < 0:
         raise ExceptionDict[errCode](
-            errorDict[errCode], neti, nodeId, x, y, w, h)
+            errorDict[errCode], neti, nodeID, x, y, w, h)
     else:
         if stackFlag:
             redoStack = TStack()
             netSetStack.push(networkSet)
-        newNode = TNode(nodeId, x, y, w, h)
+        newNode = TNode(nodeID, x, y, w, h)
         n.nodes.append(newNode)
         networkSet[neti] = n
 
 
-def getNodeIndex(neti:int, nodeId:str):
+def getNodeIndex(neti:int, nodeID:str):
     """
     GetNodeIndex get node index by id
     errCode: -2: node id not found,
@@ -457,11 +498,11 @@ def getNodeIndex(neti:int, nodeId:str):
     else:
         n = networkSet[neti]
         for i in range(len(n.nodes)):
-            if n.nodes[i].id == nodeId:
+            if n.nodes[i].id == nodeID:
                 index = i
                 errCode = 0
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], neti, nodeId)
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodeID)
     else:
         return index
 
@@ -560,9 +601,9 @@ def getNodeCenter(neti:int, nodei:int):
         return (X, Y)
 
 
-def getNodeId(neti:int, nodei:int):
+def getNodeID(neti:int, nodei:int):
     """
-    GetNodeId Get the id of the node
+    GetNodeID Get the id of the node
     errCode: -7: node index out of range
     -5: net index out of range
     """
@@ -581,11 +622,11 @@ def getNodeId(neti:int, nodei:int):
         return n.nodes[nodei].id
 
 
-def getListOfNodeIds(neti:int):
+def getListOfNodeIDs(neti:int):
     n = getNumberOfNodes(neti)
     nodeList = []
     for nodei in range(n):
-        nodeList.append(getNodeId(neti, nodei))
+        nodeList.append(getNodeID(neti, nodei))
     return nodeList
 
 
@@ -768,9 +809,180 @@ def getNodeOutlineThickness(neti:int, nodei:int):
         return n.nodes[nodei].outlineThickness
 
 
-def setNodeId(neti:int, nodei:int, newId:str):
+def getNodeFontPointSize(neti: int, nodei: int):
     """
-    setNodeId set the id of a node
+    getNodeFontPointSize
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    else:
+        return n.nodes[nodei].fontPointSize
+
+
+def getNodeFontFamily(neti: int, nodei: int):
+    """
+    getNodeFontFamily
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    else:
+        return n.nodes[nodei].fontFamily
+
+def getNodeFontStyle(neti: int, nodei: int):
+    """
+    getNodeFontStyle
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    else:
+        return n.nodes[nodei].fontStyle
+
+def getNodeFontWeight(neti: int, nodei: int):
+    """
+    getNodeFontWeight
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    else:
+        return n.nodes[nodei].fontWeight
+
+
+def getNodeFontName(neti: int, nodei: int):
+    """
+    getNodeFontName
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    else:
+        return n.nodes[nodei].fontName
+
+
+def getNodeFontColor(neti: int, nodei: int):
+    """
+    getNodeFontColor rgba tulple format, rgb range int[0,255] alpha range float[0,1]
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    else:
+        return (n.nodes[nodei].fontColor.r, n.nodes[nodei].fontColor.g, n.nodes[nodei].fontColor.b, float(n.nodes[nodei].fontColor.a)/255)
+
+
+def getNodeFontColorRGB(neti: int, nodei: int):
+    """
+    getNodeFontColorRGB getNodeFontColor rgb int format
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    else:
+        color1 = n.nodes[nodei].fontColor.r
+        color1 = (color1 << 8) | n.nodes[nodei].fontColor.g
+        color1 = (color1 << 8) | n.nodes[nodei].fontColor.b
+        return color1
+
+
+def getNodeFontColorAlpha(neti: int, nodei: int):
+    """
+    getNodeFontColorAlpha getNodeFontColor alpha value(float)
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei)
+    else:
+        return float(n.nodes[nodei].fontColor.a)/255
+
+
+def setNodeID(neti:int, nodei:int, newID:str):
+    """
+    setNodeID set the id of a node
     errCode -3: id repeat
     -5: net index out of range
     -7: node index out of range
@@ -785,15 +997,15 @@ def setNodeId(neti:int, nodei:int, newId:str):
             errCode = -7
         else:
             for i in n.nodes:
-                if i.id == newId:
+                if i.id == newID:
                     errCode = -3
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei, newId)
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei, newID)
     else:
         if stackFlag:
             redoStack = TStack()
             netSetStack.push(networkSet)
-        n.nodes[nodei].id = newId
+        n.nodes[nodei].id = newID
 
 
 def setNodeCoordinate(neti: int, nodei: int, x:float, y:float):
@@ -965,7 +1177,7 @@ def setNodeOutlineColorAlpha(neti:int, nodei:int, a:float):
         n.nodes[nodei].outlineColor.a = A1
 
 
-def setNodeOutlineThickness(neti:int, nodei:int, thickness:int):
+def setNodeOutlineThickness(neti:int, nodei:int, thickness:float):
     """
     setNodeOutlineThickness setNodeOutlineThickness
     errCode: -7: node index out of range
@@ -993,7 +1205,199 @@ def setNodeOutlineThickness(neti:int, nodei:int, thickness:int):
         n.nodes[nodei].outlineThickness = thickness
 
 
-def createReaction(neti:int, reaId:str): 
+def setNodeFontPointSize(neti: int, nodei: int, fontPointSize: int):
+    """
+    setNodeFontPointSize setNodeFontPointSize
+    errCode: -7: node index out of range
+    -5: net index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+        elif fontPointSize <= 0:
+            errCode = -12
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](
+            errorDict[errCode], neti, nodei, fontPointSize)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        n.nodes[nodei].fontPointSize = fontPointSize
+
+
+def setNodeFontFamily(neti: int, nodei: int, fontFamily: str):
+    """
+    setNodeFontFamily set the fontFamily of a node
+    errCode 
+    -5: net index out of range
+    -7: node index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+        elif fontFamily not in fontFamilyDict:
+            errCode = -12
+    if errCode < 0:
+        raise ExceptionDict[errCode](
+            errorDict[errCode], neti, nodei, fontFamily)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        n.nodes[nodei].fontFamily = fontFamily
+
+
+def setNodeFontStyle(neti: int, nodei: int, fontStyle: str):
+    """
+    setNodeFontStyle set the fontStyle of a node
+    errCode 
+    -5: net index out of range
+    -7: node index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+        elif fontStyle not in fontStyleDict:
+            errCode = -12
+    if errCode < 0:
+        raise ExceptionDict[errCode](
+            errorDict[errCode], neti, nodei, fontStyle)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        n.nodes[nodei].fontStyle = fontStyle
+
+def setNodeFontWeight(neti: int, nodei: int, fontWeight: str):
+    """
+    setNodeFontWeight set the fontWeight of a node
+    errCode 
+    -5: net index out of range
+    -7: node index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+        elif fontWeight not in fontWeightDict:
+            errCode = -12
+    if errCode < 0:
+        raise ExceptionDict[errCode](
+            errorDict[errCode], neti, nodei, fontWeight)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        n.nodes[nodei].fontWeight = fontWeight
+
+
+def setNodeFontName(neti: int, nodei: int, fontName: str):
+    """
+    setNodeFontName set the fontName of a node
+    errCode 
+    -5: net index out of range
+    -7: node index out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](
+            errorDict[errCode], neti, nodei, fontName)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        n.nodes[nodei].fontName = fontName
+
+
+def setNodeFontColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
+    """
+    setNodeFontColorRGB setNodeFontColorRGB
+    errCode: -7: node index out of range
+    -5: net index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+        elif r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
+            errCode = -12
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei,  r, g, b)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        n.nodes[nodei].fontColor.r = r
+        n.nodes[nodei].fontColor.g = g
+        n.nodes[nodei].fontColor.b = b
+
+
+def setNodeFontColorAlpha(neti: int, nodei: int, a: float):
+    """
+    setNodeFontColorAlpha setNodeFontColorAlpha
+    errCode: -7: node index out of range
+    -5: net index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        n = networkSet[neti]
+        if nodei < 0 or nodei >= len(n.nodes):
+            errCode = -7
+        elif a < 0 or a > 1:
+            errCode = -12
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, nodei, a)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        networkSet[neti].nodes[nodei].fontColor.a = int(a*255)
+
+def createReaction(neti:int, reaID:str): 
     """
     createReaction create an empty reacton
     errCode: -3: id repeat
@@ -1006,21 +1410,21 @@ def createReaction(neti:int, reaId:str):
     else:
         r = networkSet[neti].reactions
         for i in r:
-            if i.id == reaId:
+            if i.id == reaID:
                 errCode = -3
 
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], neti, reaId)
+        raise ExceptionDict[errCode](errorDict[errCode], neti, reaID)
     else:
         if stackFlag:
             redoStack = TStack()
             netSetStack.push(networkSet)
-        newReact = TReaction(reaId)
+        newReact = TReaction(reaID)
         r.append(newReact)
         networkSet[neti].reactions = r
 
 
-def getReactionIndex(neti:int, reaId:str):
+def getReactionIndex(neti:int, reaID:str):
     """
     getReactionIndex get reaction index by id
     return: -2: id can't find, >=0: ok
@@ -1034,12 +1438,12 @@ def getReactionIndex(neti:int, reaId:str):
         errCode = -2
         r = networkSet[neti].reactions
         for i in range(len(r)):
-            if r[i].id == reaId:
+            if r[i].id == reaID:
                 index = i
                 errCode = 0
 
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], neti, reaId)
+        raise ExceptionDict[errCode](errorDict[errCode], neti, reaID)
     else:
         return index
 
@@ -1107,9 +1511,9 @@ def getNumberOfReactions(neti:int):
         return len(r)
 
 
-def getReactionId(neti:int, reai:int):
+def getReactionID(neti:int, reai:int):
     """
-    getReactionId get the id of Reaction
+    getReactionID get the id of Reaction
     errCode: -6: reaction index out of range
     -5: net index out of range
     """
@@ -1128,11 +1532,11 @@ def getReactionId(neti:int, reai:int):
         return r[reai].id
 
 
-def getListOfReactionIds(neti:int):
+def getListOfReactionIDs(neti:int):
     n = getNumberOfReactions(neti)
     reaList = []
     for i in range(n):
-        reaList.append(getReactionId(neti, i))
+        reaList.append(getReactionID(neti, i))
     return reaList
 
 
@@ -1244,7 +1648,7 @@ def getReactionLineThickness(neti:int, reai:int):
         return r[reai].thickness
 
 
-def getReactionSrcNodeStoich(neti:int, reai:int, srcNodeId:str):
+def getReactionSrcNodeStoich(neti:int, reai:int, srcNodeID:str):
     """
     getReactionSrcNodeStoich get the SrcNode stoichiometry of Reaction
     errCode: -6: reaction index out of range,
@@ -1258,15 +1662,15 @@ def getReactionSrcNodeStoich(neti:int, reai:int, srcNodeId:str):
         r = networkSet[neti].reactions
         if reai < 0 or reai >= len(r):
             errCode = -6
-        elif srcNodeId not in r[reai].species[0]:
+        elif srcNodeID not in r[reai].species[0]:
             errCode = -2
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], neti, reai, srcNodeId)
+        raise ExceptionDict[errCode](errorDict[errCode], neti, reai, srcNodeID)
     else:
-        return r[reai].species[0][srcNodeId]
+        return r[reai].species[0][srcNodeID]
 
 
-def getReactionDestNodeStoich(neti:int, reai:int, destNodeId:str):
+def getReactionDestNodeStoich(neti:int, reai:int, destNodeID:str):
     """
     getReactionDestNodeStoich get the DestNode stoichiometry of Reaction
     return: positive float : ok, -6: reaction index out of range, -7: node index out of range
@@ -1280,13 +1684,13 @@ def getReactionDestNodeStoich(neti:int, reai:int, destNodeId:str):
         r = networkSet[neti].reactions
         if reai < 0 or reai >= len(r):
             errCode = -6
-        elif destNodeId not in r[reai].species[1]:
+        elif destNodeID not in r[reai].species[1]:
             errCode = -2
     if errCode < 0:
         raise ExceptionDict[errCode](
-            errorDict[errCode], neti, reai, destNodeId)
+            errorDict[errCode], neti, reai, destNodeID)
     else:
-        return r[reai].species[1][destNodeId]
+        return r[reai].species[1][destNodeID]
 
 
 def getNumberOfSrcNodes(neti:int, reai:int):
@@ -1384,22 +1788,22 @@ def getListOfReactionDestNodes(neti:int, reai:int):
 def getListOfReactionSrcStoich(neti:int, reai:int):
     n = getListOfReactionSrcNodes(neti, reai)
     srcStoichList = []
-    for srcNodeId in n:
-        srcStoichList.append(getReactionSrcNodeStoich(neti, reai, srcNodeId))
+    for srcNodeID in n:
+        srcStoichList.append(getReactionSrcNodeStoich(neti, reai, srcNodeID))
     return srcStoichList
 
 
 def getListOfReactionDestStoich(neti:int, reai:int):
     n = getListOfReactionDestNodes(neti, reai)
     destStoichList = []
-    for destNodeId in n:
+    for destNodeID in n:
         destStoichList.append(
-            getReactionDestNodeStoich(neti, reai, destNodeId))
+            getReactionDestNodeStoich(neti, reai, destNodeID))
     return destStoichList
 
 
 def printReactionInfo(neti:int, reai:int):
-    print("id:", getReactionId(neti, reai))
+    print("id:", getReactionID(neti, reai))
     print("rateLaw:", getReactionRateLaw(neti, reai))
     print("SrcNodes:", getListOfReactionSrcNodes(neti, reai))
     print("DestNodes:", getListOfReactionDestNodes(neti, reai))
@@ -1407,7 +1811,7 @@ def printReactionInfo(neti:int, reai:int):
     print("DestNodeStoichs:", getListOfReactionDestStoich(neti, reai))
 
 
-def addSrcNode(neti:int, reai:int, nodei:int, stoich:float):  # TODO
+def addSrcNode(neti:int, reai:int, nodei:int, stoich:float):  
     """
     addSrcNode add node and Stoich to reactionlist
     errCode:  0:ok,
@@ -1431,8 +1835,8 @@ def addSrcNode(neti:int, reai:int, nodei:int, stoich:float):  # TODO
             errCode = -8
         else:
             R = r[reai]
-            srcNodeId = networkSet[neti].nodes[nodei].id
-            if srcNodeId in r[reai].species[0]:
+            srcNodeID = networkSet[neti].nodes[nodei].id
+            if srcNodeID in r[reai].species[0]:
                 errCode = -3
 
     if errCode < 0:
@@ -1442,7 +1846,7 @@ def addSrcNode(neti:int, reai:int, nodei:int, stoich:float):  # TODO
         if stackFlag:
             redoStack = TStack()
             netSetStack.push(networkSet)
-        R.species[0][srcNodeId] = stoich
+        R.species[0][srcNodeID] = stoich
         networkSet[neti].reactions[reai] = R
 
 
@@ -1470,8 +1874,8 @@ def addDestNode(neti:int, reai:int, nodei:int, stoich:float):
             errCode = -8
         else:
             R = r[reai]
-            destNodeId = networkSet[neti].nodes[nodei].id
-            if destNodeId in R.species[1]:
+            destNodeID = networkSet[neti].nodes[nodei].id
+            if destNodeID in R.species[1]:
                 errCode = -3
 
     if errCode < 0:
@@ -1481,13 +1885,13 @@ def addDestNode(neti:int, reai:int, nodei:int, stoich:float):
         if stackFlag:
             redoStack = TStack()
             netSetStack.push(networkSet)
-        R.species[1][destNodeId] = stoich
+        R.species[1][destNodeID] = stoich
         networkSet[neti].reactions[reai] = R
 
 
-def deleteSrcNode(neti:int, reai:int, srcNodeId:str):
+def deleteSrcNode(neti:int, reai:int, srcNodeID:str):
     """
-    deleteSrcNode delete src nodes by id(Id).
+    deleteSrcNode delete src nodes by id(ID).
     errCode: -6: reaction index out of range,
     -5: net index out of range
     -2: id not found
@@ -1502,20 +1906,20 @@ def deleteSrcNode(neti:int, reai:int, srcNodeId:str):
             errCode = -6
         else:
             R = r[reai]
-            if srcNodeId not in R.species[0]:
+            if srcNodeID not in R.species[0]:
                 errCode = -2
 
     if errCode < 0:
-        raise ExceptionDict[errCode](errorDict[errCode], neti, reai, srcNodeId)
+        raise ExceptionDict[errCode](errorDict[errCode], neti, reai, srcNodeID)
     else:
         if stackFlag:
             redoStack = TStack()
             netSetStack.push(networkSet)
-        del R.species[0][srcNodeId]
+        del R.species[0][srcNodeID]
         networkSet[neti].reactions[reai] = R
 
 
-def deleteDestNode(neti:int, reai:int, destNodeId:str):
+def deleteDestNode(neti:int, reai:int, destNodeID:str):
     """
     deleteDestNode delete all dest nodes by id
     errCode: -6: reaction index out of range,
@@ -1532,18 +1936,48 @@ def deleteDestNode(neti:int, reai:int, destNodeId:str):
             errCode = -6
         else:
             R = r[reai]
-            if destNodeId not in R.species[1]:
+            if destNodeID not in R.species[1]:
                 errCode = -2
 
     if errCode < 0:
         raise ExceptionDict[errCode](
-            errorDict[errCode], neti, reai, destNodeId)
+            errorDict[errCode], neti, reai, destNodeID)
     else:
         if stackFlag:
             redoStack = TStack()
             netSetStack.push(networkSet)
-        del R.species[1][destNodeId]
+        del R.species[1][destNodeID]
         networkSet[neti].reactions[reai] = R
+
+
+def setReactionID(neti:int, reai:int, newID:str):
+    """
+    setReactionID edit id of reaction
+    errCode: 0:ok, -6: reaction index out of range
+    -5: net index out of range
+    -3: id repeat
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        r = networkSet[neti].reactions
+        if reai < 0 or reai >= len(r):
+            errCode = -6
+        else:
+            for i in r:
+                if i.id == newID:
+                    errCode = -3
+                    break
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, reai, newID)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        networkSet[neti].reactions[reai].id = newID
 
 
 def setRateLaw(neti:int, reai:int, rateLaw:str):
@@ -1568,6 +2002,65 @@ def setRateLaw(neti:int, reai:int, rateLaw:str):
             redoStack = TStack()
             netSetStack.push(networkSet)
         networkSet[neti].reactions[reai].rateLaw = rateLaw
+
+
+def setReactionSrcNodeStoich(neti: int, reai: int, srcNodeID: str, newStoich: float):
+    """
+    setReactionSrcNodeStoich edit Stoich by Reaction srcNodeID
+    errCode: -6: reaction index out of range,
+    -5: net index out of range, -2: id not found
+    -8: wrong stoich
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        r = networkSet[neti].reactions
+        if reai < 0 or reai >= len(r):
+            errCode = -6
+        elif srcNodeID not in r[reai].species[0]:
+            errCode = -2
+        elif newStoich <= 0.0:
+            errCode = -8
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](errorDict[errCode], neti, reai, srcNodeID, newStoich)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        networkSet[neti].reactions[reai].species[0][srcNodeID] = newStoich
+
+
+def setReactionDestNodeStoich(neti: int, reai: int, destNodeID: str, newStoich: float):
+    """
+    setReactionDestNodeStoich edit Stoich by Reaction destNodeID
+    errCode: -6: reaction index out of range,
+    -5: net index out of range, -2: id not found
+    -8: wrong stoich
+    """
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    errCode = 0
+    if neti < 0 or neti >= len(networkSet):
+        errCode = -5
+    else:
+        r = networkSet[neti].reactions
+        if reai < 0 or reai >= len(r):
+            errCode = -6
+        elif destNodeID not in r[reai].species[1]:
+            errCode = -2
+        elif newStoich <= 0.0:
+            errCode = -8
+
+    if errCode < 0:
+        raise ExceptionDict[errCode](
+            errorDict[errCode], neti, reai, destNodeID, newStoich)
+    else:
+        if stackFlag:
+            redoStack = TStack()
+            netSetStack.push(networkSet)
+        networkSet[neti].reactions[reai].species[1][destNodeID] = newStoich
 
 
 def setReactionFillColorRGB(neti: int, reai: int, R: int, G: int, B: int):
@@ -1627,7 +2120,7 @@ def setReactionFillColorAlpha(neti:int, reai:int, a:float):
         r[reai].fillColor.a = A1
 
 
-def setReactionLineThickness(neti:int, reai:int, thickness:int):
+def setReactionLineThickness(neti:int, reai:int, thickness:float):
     """
     setReactionLineThickness setReactionLineThickness
     errCode: -6: reaction index out of range
@@ -1655,10 +2148,10 @@ def setReactionLineThickness(neti:int, reai:int, thickness:int):
         networkSet[neti].reactions[reai].thickness = thickness
 
 
-def createUniUni(neti: int, reaId:str, rateLaw:str, srci: int, desti: int, srcStoich:float, destStoich:float):
+def createUniUni(neti: int, reaID:str, rateLaw:str, srci: int, desti: int, srcStoich:float, destStoich:float):
     startGroup()
-    createReaction(neti, reaId)
-    reai = getReactionIndex(neti, reaId)
+    createReaction(neti, reaID)
+    reai = getReactionIndex(neti, reaID)
 
     addSrcNode(neti, reai, srci, srcStoich)
     addDestNode(neti, reai, desti, destStoich)
@@ -1666,10 +2159,10 @@ def createUniUni(neti: int, reaId:str, rateLaw:str, srci: int, desti: int, srcSt
     endGroup()
 
 
-def CreateUniBi(neti: int, reaId: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich:float, dest2Stoich:float):
+def CreateUniBi(neti: int, reaID: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich:float, dest2Stoich:float):
     startGroup()
-    createReaction(neti, reaId)
-    reai = getReactionIndex(neti, reaId)
+    createReaction(neti, reaID)
+    reai = getReactionIndex(neti, reaID)
 
     addSrcNode(neti, reai, srci, srcStoich)
     addDestNode(neti, reai, dest1i, dest1Stoich)
@@ -1678,10 +2171,10 @@ def CreateUniBi(neti: int, reaId: str, rateLaw: str, srci: int, dest1i: int, des
     endGroup()
 
 
-def CreateBiUni(neti: int, reaId: str, rateLaw: str, src1i: int, src2i: int, desti: int, src1Stoich: float, src2Stoich: float, destStoich: float):
+def CreateBiUni(neti: int, reaID: str, rateLaw: str, src1i: int, src2i: int, desti: int, src1Stoich: float, src2Stoich: float, destStoich: float):
     startGroup()
-    createReaction(neti, reaId)
-    reai = getReactionIndex(neti, reaId)
+    createReaction(neti, reaID)
+    reai = getReactionIndex(neti, reaID)
 
     addSrcNode(neti, reai, src1i, src1Stoich)
     addSrcNode(neti, reai, src2i, src2Stoich)
@@ -1690,10 +2183,10 @@ def CreateBiUni(neti: int, reaId: str, rateLaw: str, src1i: int, src2i: int, des
     endGroup()
 
 
-def CreateBiBi(neti:int, reaId:str, rateLaw:str, src1i:int, src2i:int, dest1i:int, dest2i:int, src1Stoich:float, src2Stoich:float, dest1Stoich:float, dest2Stoich:float):
+def CreateBiBi(neti:int, reaID:str, rateLaw:str, src1i:int, src2i:int, dest1i:int, dest2i:int, src1Stoich:float, src2Stoich:float, dest1Stoich:float, dest2Stoich:float):
     startGroup()
-    createReaction(neti, reaId)
-    reai = getReactionIndex(neti, reaId)
+    createReaction(neti, reaID)
+    reai = getReactionIndex(neti, reaID)
 
     addSrcNode(neti, reai, src1i, src1Stoich)
     addSrcNode(neti, reai, src2i, src2Stoich)
@@ -1704,6 +2197,27 @@ def CreateBiBi(neti:int, reaId:str, rateLaw:str, src1i:int, src2i:int, dest1i:in
 
 
 # newNetwork("net1")
+# newNetwork("net2")
+# newNetwork("net3")
+
+# print(networkSet)
+# deleteNetwork(1)
+# print(networkSet)
+# a = TNetworkSet([111])
+# print(a)
+# print(type(networkSet[1:2]))
+
+# print(networkSet[0].__dict__,"\n")
+# print(type(networkSet))
+# print(networkSet[0], "\n")
+# print(type(set1))
+# print(set1[0].__dict__,"\n")
+# clearNetworks()
+# print(type(networkSet))
+# print(networkSet)
+# newNetwork("net1")
+# print(networkSet)
+
 # newNetwork("net2")
 # newNetwork("net3")
 # addNode(0, "node1", 1.1, 2.2, 3.3, 4.4)
@@ -1727,7 +2241,7 @@ def CreateBiBi(neti:int, reaId:str, rateLaw:str, src1i:int, src2i:int, dest1i:in
 # # print(networkSet[0].id)
 # print(networkSet)
 # print(getNetworkIndex("net1"))
-# print(getNetworkId(2))
+# print(getNetworkID(2))
 # print(getNodeIndex(0, "node1"))
 # print(getNodeIndex(0, "node2"))
 # print(getNodeIndex(0, "node3"))
@@ -1735,7 +2249,7 @@ def CreateBiBi(neti:int, reaId:str, rateLaw:str, src1i:int, src2i:int, dest1i:in
 # print(getNodeIndex(0, "node"))
 # print(networkSet[0].getFreenodes())
 # print(getNumberOfNodes(0))
-# print(getNodeId(0, 0))
+# print(getNodeID(0, 0))
 # print(getNodeCoordinateAndSize(0, 0))
 # print(getNodeFillColor(0, 0))
 # print(getNodeFillColorRGB(0, 0))
@@ -1745,8 +2259,8 @@ def CreateBiBi(neti:int, reaId:str, rateLaw:str, src1i:int, src2i:int, dest1i:in
 # print(getNodeOutlineColorRGB(0, 0))
 # print(getNodeOutlineColorAlpha(0, 0))
 # print(getNodeOutlineThickness(0, 0))
-# print(setNodeId(0, 0, "sdf"))
-# print(getNodeId(0, 0))
+# print(setNodeID(0, 0, "sdf"))
+# print(getNodeID(0, 0))
 # clearNetwork(0)
 # print(networkSet[0].getFreenodes())
 # print(getNumberOfNodes(0))

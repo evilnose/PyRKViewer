@@ -26,8 +26,7 @@ class EditPanel(fnb.FlatNotebook):
     node_form: wx.Panel
     reaction_form: wx.Panel
     null_message: wx.StaticText
-    FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | \
-        fnb.FNB_NODRAG | fnb.FNB_NO_TAB_FOCUS | fnb.FNB_VC8
+    FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | fnb.FNB_NODRAG | fnb.FNB_VC8
 
     def __init__(self, parent, canvas: Canvas, controller: IController, **kw):
         super().__init__(parent, agwStyle=EditPanel.FNB_STYLE, **kw)
@@ -64,38 +63,38 @@ class EditPanel(fnb.FlatNotebook):
         should_show_nodes = len(evt.node_idx) != 0
         should_show_reactions = len(evt.reaction_idx) != 0
 
-        showing_nodes = self.node_form.IsShown()
-        showing_reactions = self.reaction_form.IsShown()
+        node_index = -1
+        for i in range(self.GetPageCount()):
+            if self.GetPage(i) == self.node_form:
+                node_index = i
+                break
 
         cur_page = self.GetCurrentPage()
-        assert cur_page is not None or (not showing_nodes and not showing_reactions)
 
         if should_show_nodes:
             self.node_form.UpdateNodeSelection(evt.node_idx)
-            if not showing_nodes:
+            if node_index == -1:
                 self.InsertPage(0, self.node_form, 'Nodes')
                 self.node_form.Show()
-
-        if showing_nodes and not should_show_nodes:
+        elif node_index != -1:
             # find and remove existing page
-            for i in range(self.GetPageCount()):
-                if self.GetPage(i) == self.node_form:
-                    self.RemovePage(i)
-                    self.node_form.Hide()
-                    break
+            self.RemovePage(node_index)
+            self.node_form.Hide()
+
+        reaction_index = -1
+        for i in range(self.GetPageCount()):
+            if self.GetPage(i) == self.reaction_form:
+                reaction_index = i
+                break
 
         if should_show_reactions:
             self.reaction_form.UpdateReactionSelection(evt.reaction_idx)
-            if not showing_reactions:
+            if reaction_index == -1:
                 self.AddPage(self.reaction_form, 'Reactions')
                 self.reaction_form.Show()
-
-        if showing_reactions and not should_show_reactions:
-            for i in range(self.GetPageCount()):
-                if self.GetPage(i) == self.reaction_form:
-                    self.RemovePage(i)
-                    self.reaction_form.Hide()
-                    break
+        elif reaction_index != -1:
+            self.RemovePage(reaction_index)
+            self.reaction_form.Hide()
 
         # set the active tab to the same as before
         for i in range(self.GetPageCount()):
@@ -105,8 +104,6 @@ class EditPanel(fnb.FlatNotebook):
         
         # need to reset focus to canvas, since for some reason FlatNotebook sets focus to the first
         # field in a notebook page after it is added.
-        self.canvas.SetFocus()
-
         self.GetSizer().Layout()
 
     def OnDidDragMoveNodes(self, evt):
@@ -316,7 +313,7 @@ class MyFrame(wx.Frame):
         self.AddMenuItem(reaction_menu, 'Mark Selected as &Products',
                          'Mark selected nodes as products',
                          lambda _: canvas.SetProductsFromSelected(), entries,
-                         key=(wx.ACCEL_NORMAL, ord('T')))
+                         key=(wx.ACCEL_NORMAL, ord('F')))
         self.AddMenuItem(reaction_menu, '&Create Reaction From Selected',
                          'Create reaction from selected sources and targets',
                          lambda _: canvas.CreateReactionFromSelected(), entries,

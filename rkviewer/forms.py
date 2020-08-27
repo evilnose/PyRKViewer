@@ -386,8 +386,6 @@ class NodeForm(EditPanelForm):
         if len(self._selected_idx) != 0 and not self._dirty:
             self.UpdateAllFields()
 
-        self._dirty = False
-
         # clear validation errors
         for id_ in self.badges.keys():
             self._SetValidationState(True, id_)
@@ -408,6 +406,7 @@ class NodeForm(EditPanelForm):
 
             size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
+
 
     def UpdateDidDragMoveNodes(self):
         """Function called after the selected nodes were moved by dragging."""
@@ -622,6 +621,7 @@ class NodeForm(EditPanelForm):
 
     def UpdateAllFields(self):
         """Update the form field values based on current data."""
+        self._dirty = False
         assert len(self._selected_idx) != 0
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         prec = settings['decimal_precision']
@@ -684,16 +684,25 @@ class ReactionForm(EditPanelForm):
         sizer = self.InitAndGetSizer()
         self.CreateControls(sizer)
         self.SetSizer(sizer)
-        
+
     def CreateControls(self, sizer: wx.Sizer):
         self.id_ctrl = wx.TextCtrl(self)
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self._AppendControl(sizer, 'identifier', self.id_ctrl)
 
+        self.ratelaw_ctrl = wx.TextCtrl(self)
+        self.ratelaw_ctrl.Bind(wx.EVT_TEXT, self._OnRateLawText)
+        self._AppendControl(sizer, 'rate law', self.ratelaw_ctrl)
+
+        self.fill_ctrl, self.fill_alpha_ctrl = self._CreateColorControl(
+            'fill color', 'fill opacity',
+            self._OnFillColorChanged, self._FillAlphaCallback, sizer)
+
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
-        assert len(self._selected_idx) == 1
+        assert len(self._selected_idx) == 1, 'Reaction ID field should be disabled when ' + \
+            'multiple are selected'
         [reai] = self._selected_idx
         ctrl_id = self.id_ctrl.GetId()
         if len(new_id) == 0:
@@ -704,11 +713,43 @@ class ReactionForm(EditPanelForm):
                 if rxn.id_ == new_id:
                     self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
+
+            # loop terminated fine. There is no duplicate ID
+            self._dirty = True
+            self.controller.try_rename_reaction(self.net_index, reai, new_id)
+            self._SetValidationState(True, ctrl_id)
+
+    def _OnFillColorChanged(self, evt: wx.Event):
+        """Callback for the fill color control."""
+        fill = evt.GetColour()
+        reactions = [r for r in self._reactions if r.index in self._selected_idx]
+        self._dirty = True
+        self.controller.try_start_group()
+        for rxn in reactions:
+            if on_msw():
+                self.controller.try_set_reaction_fill_rgb(self.net_index, rxn.index, fill)
             else:
-                # loop terminated fine. There is no duplicate ID
-                self._dirty = True
-                assert False, 'We cannot set reaction ID yet!'
-        self._SetValidationState(True, self.id_ctrl.GetId())
+                # we can set both the RGB and the alpha at the same time
+                self.controller.try_set_reaction_fill_rgb(self.net_index, rxn.index, fill)
+                self.controller.try_set_reaction_fill_alpha(self.net_index, rxn.index, fill.Alpha())
+        self.controller.try_end_group()
+
+    def _FillAlphaCallback(self, alpha: float):
+        """Callback for when the fill alpha changes."""
+        reactions = (r for r in self._reactions if r.index in self._selected_idx)
+        self._dirty = True
+        self.controller.try_start_group()
+        for rxn in reactions:
+            self.controller.try_set_reaction_fill_alpha(self.net_index, rxn.index, alpha)
+        self.controller.try_end_group()
+
+    def _OnRateLawText(self, evt: wx.Event):
+        ratelaw = evt.GetString()
+        assert len(self._selected_idx) == 1, 'Reaction rate law field should be disabled when ' + \
+            'multiple are selected'
+        [reai] = self._selected_idx
+        self._dirty = True
+        self.controller.try_set_reaction_ratelaw(self.net_index, reai, ratelaw)
 
     def UpdateReactions(self, reactions: List[Reaction]):
         """Function called after the list of nodes have been updated."""
@@ -726,8 +767,39 @@ class ReactionForm(EditPanelForm):
         """Function called after the list of selected nodes have been updated."""
         self._selected_idx = selected_idx
         if len(self._selected_idx) != 0:
-            title_label = 'Edit Reaction' if len(self._selected_idx) == 1 else 'Edit Multiple Reactions'
+            title_label = 'Edit Reaction' if len(self._selected_idx) == 1 \
+                else 'Edit Multiple Reactions'
             self._title.SetLabel(title_label)
 
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
             self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
+            self.UpdateAllFields()
+
+    def UpdateAllFields(self):
+        assert len(self._selected_idx) != 0
+        reactions = [r for r in self._reactions if r.index in self._selected_idx]
+        id_text = '; '.join(sorted(list(r.id_ for r in reactions)))
+        fill: wx.Colour
+        fill_alpha: Optional[int]
+        ratelaw_text: str
+        prec = settings['decimal_precision']
+
+        if len(self._selected_idx) == 1:
+            [reaction] = reactions
+            self.id_ctrl.Enable()
+            fill = reaction.fill_color
+            fill_alpha = reaction.fill_color.Alpha()
+            ratelaw_text = reaction.rate_law
+            self.ratelaw_ctrl.Enable()
+        else:
+            self.id_ctrl.Disable()
+            fill, fill_alpha = self._GetMultiColor(list(r.fill_color for r in reactions))
+            ratelaw_text = 'multiple'
+            self.ratelaw_ctrl.Disable()
+
+        self.id_ctrl.ChangeValue(id_text)
+        self.fill_ctrl.SetColour(fill)
+        self.ratelaw_ctrl.ChangeValue(ratelaw_text)
+
+        if on_msw():
+            self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))

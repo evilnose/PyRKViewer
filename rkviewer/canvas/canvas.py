@@ -163,6 +163,11 @@ class Canvas(wx.ScrolledWindow):
     @input_mode.setter
     def input_mode(self, val: InputMode):
         self._input_mode = val
+        if val == InputMode.ADD:
+            self.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
+        else:
+            self.SetCursor(wx.Cursor(wx.CURSOR_DEFAULT))
+
         self._SetStatusText('mode', str(val))
 
     def UpdateSelectedIndices(self, indices: Set[int]):
@@ -461,12 +466,14 @@ class Canvas(wx.ScrolledWindow):
                             self._sel_reactions_idx.remove(in_rxn.index)
                         else:
                             self._sel_reactions_idx.add(in_rxn.index)
+                        self._PostUpdateSelection()
                     elif in_node is not None:
                         assert in_node.index != -1
                         if in_node.index in self._selected_idx:
                             self._selected_idx.remove(in_node.index)
                         else:
                             self._selected_idx.add(in_node.index)
+                        self._PostUpdateSelection()
                 else:
                     # clear selected nodes
                     self._selected_idx = set()
@@ -475,10 +482,10 @@ class Canvas(wx.ScrolledWindow):
                         self._sel_reactions_idx.add(in_rxn.index)
                     elif in_node is not None:
                         self._selected_idx.add(in_node.index)
+                    self._PostUpdateSelection()
 
                 # update multiselect
                 self._UpdateMultiSelect()
-                self._PostUpdateSelection()
 
                 # if clicked within a node, start dragging. Need to check for this again, since
                 # a new node may have been selected and the user wants to drag it immediately
@@ -517,6 +524,11 @@ class Canvas(wx.ScrolledWindow):
                                                                    cstate.scale), BOUNDS_EPS)
                 node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])
                 self.controller.try_add_node_g(self._net_index, node)
+                index = self.controller.get_node_index(self._net_index, node.id_)
+                self._selected_idx = {index}
+                self._sel_reactions_idx = set()
+                self._UpdateMultiSelect()
+                self._PostUpdateSelection()
                 self.Refresh()
             elif self.input_mode == InputMode.ZOOM:
                 zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
@@ -525,6 +537,8 @@ class Canvas(wx.ScrolledWindow):
         finally:
             self.Refresh()
             evt.Skip()
+            if not evt.foreign:
+                wx.CallAfter(self.SetFocus)
 
     @convert_position
     def OnLeftUp(self, evt):
@@ -532,6 +546,9 @@ class Canvas(wx.ScrolledWindow):
             self._UpdateNodePosAndSize(evt, False)
         finally:
             self.Refresh()
+            evt.Skip()
+            if not evt.foreign:
+                wx.CallAfter(self.SetFocus)
 
     def _UpdateNodePosAndSize(self, evt: wx.Event, keep_dragging: bool):
         """Send the updated node positions and sizes to the controller.
@@ -549,8 +566,8 @@ class Canvas(wx.ScrolledWindow):
         elif self._drag_selecting:
             self._drag_selecting = False  # stop multiselect regardless of keep_dragging
             self._selected_idx |= self._drag_selected_idx
-            self._UpdateMultiSelect()
             self._PostUpdateSelection()
+            self._UpdateMultiSelect()
         elif self.input_mode == InputMode.SELECT:
             # move dragged node
             if self._multiselect is not None:
@@ -729,11 +746,8 @@ class Canvas(wx.ScrolledWindow):
             # Draw reaction Beziers
             for rxn in self._reactions:
                 # need better accuracy, so use CalcScrolledPositionFloat
-                rxn.do_paint(gc, self.CalcScrolledPositionFloat)
-
-            for rxn in (r for r in self._reactions if r.index in self._sel_reactions_idx):
-                # need better accuracy, so use CalcScrolledPositionFloat
-                rxn.do_paint_selected(gc, self.CalcScrolledPositionFloat)
+                selected = rxn.index in self._sel_reactions_idx
+                rxn.do_paint(gc, self.CalcScrolledPositionFloat, selected)
 
             # Draw reactant and product marker outlines
             def draw_reaction_outline(color: wx.Colour):
@@ -878,11 +892,11 @@ class Canvas(wx.ScrolledWindow):
             for index in self._selected_idx:
                 self.controller.try_delete_node(self._net_index, index)
             self.controller.try_end_group()
+            self._PostUpdateSelection()
 
             # controller must have told view to cull the selected IDs
             assert len(self._selected_idx) == 0
             self._UpdateMultiSelect()
-            self._PostUpdateSelection()
 
     def SelectAll(self):
         self._selected_idx = {n.index for n in self._nodes}
@@ -920,6 +934,7 @@ class Canvas(wx.ScrolledWindow):
             sources=get_nodes_by_idx(self._nodes, self._reactant_idx),
             targets=get_nodes_by_idx(self._nodes, self._product_idx),
             fill_color=theme['reaction_fill'],
+            rate_law='',
         )
         self.controller.try_add_reaction_g(self._net_index, reaction)
         self._reactant_idx = set()
@@ -947,7 +962,8 @@ class Canvas(wx.ScrolledWindow):
 
         self._selected_idx = {self.controller.get_node_index(self._net_index, id_) for
                               id_ in pasted_ids}
-        self.controller.try_end_group()
+        self.controller.try_end_group()  # calls UpdateMultiSelect in a moment
+        self._PostUpdateSelection()
 
     def OnNodeDrop(self, pos):
         # TODO

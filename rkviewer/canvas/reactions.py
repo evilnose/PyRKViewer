@@ -14,7 +14,7 @@ from typing import Callable, List, Optional, Tuple
 from .state import cstate
 from .utils import padded_rect, within_rect
 from ..utils import Node, Vec2, clamp_point_outside, pairwise
-from ..config import settings
+from ..config import settings, theme
 
 
 MAXSEGS = 29  # Number of segments used to construct bezier
@@ -167,28 +167,29 @@ def init_bezier():
 
 class Reaction:
     def __init__(self, id_: str, *, sources: List[Node], targets: List[Node],
-                 fill_color: wx.Colour, index: int = -1):
+                 fill_color: wx.Colour, rate_law: str, index: int = -1):
         self.id_ = id_
         self.index = index
         self.fill_color = fill_color
+        self.rate_law = rate_law
         self._sources = sources
         self._targets = targets
         self.bezier = ReactionBezier(sources, targets)
 
         self.update_nodes(sources, targets)
 
-    def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
-        self.bezier.do_paint(gc, to_scrolled_fn)
+    def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn, selected: bool):
+        self.bezier.do_paint(gc, self.fill_color, to_scrolled_fn, selected)
 
         # draw centroid
-        pen = wx.Pen(self.fill_color)
+        color = theme['select_box_color'] if selected else self.fill_color
+        pen = wx.Pen(color)
+        brush = wx.Brush(color)
         gc.SetPen(pen)
+        gc.SetBrush(brush)
         radius = settings['reaction_radius'] * cstate.scale
         center = to_scrolled_fn(self.bezier.centroid * cstate.scale - Vec2.repeat(radius))
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
-
-    def do_paint_selected(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
-        self.bezier.do_paint_selected(gc, to_scrolled_fn)
 
     def update_nodes(self, sources: List[Node], targets: List[Node]):
         s = sum((n.position + n.size / 2 for n in sources + targets), Vec2())
@@ -287,8 +288,8 @@ class SpeciesBezier:
         # extend handle to make sure that an intersection is found between the handle and the
         # node rectangle sides. We're essentially making the handle a ray.
         longer_side = max(outer_rect.size.x, outer_rect.size.y)
-        extended_handle = node_center + (
-            self.handle.position - node_center).normalized(longer_side * 10)
+        long_dist = (longer_side + NODE_EDGE_GAP_DISTANCE) * 10
+        extended_handle = node_center + (self.handle.position - node_center).normalized(long_dist)
         handle_segment = (node_center, extended_handle)
         # check for intersection on the side
         sides = outer_rect.sides()
@@ -345,12 +346,18 @@ class SpeciesBezier:
         return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK)
                    for p1, p2 in pairwise(self.bezier_points))
 
-    def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
+    def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, to_scrolled_fn: ToScrolledFn,
+                 selected: bool):
         if self._dirty:
             self._recompute_curve()
             self._dirty = False
         # Draw bezier curve
-        gc.SetPen(wx.Pen(wx.BLACK, 2))
+        if selected:
+            #pen = wx.Pen(theme['selected_reaction_fill'], 2, style=wx.PENSTYLE_LONG_DASH)
+            pen = wx.Pen(theme['selected_reaction_fill'], 2)
+        else:
+            pen = wx.Pen(fill, 2)
+        gc.SetPen(pen)
         path = gc.CreatePath()
 
         path.MoveToPoint(*to_scrolled_fn(self.bezier_points[0] * cstate.scale))
@@ -360,18 +367,18 @@ class SpeciesBezier:
 
         # Draw arrow tip
         if not self.is_source:
-            self.paint_arrow_tip(gc, to_scrolled_fn)
+            color = theme['select_box_color'] if selected else fill
+            self.paint_arrow_tip(gc, color, to_scrolled_fn)
 
-    def do_paint_selected(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
-        node_intersect = Vec2(to_scrolled_fn(self.node_intersection * cstate.scale))
-        node_handle = Vec2(to_scrolled_fn(self.handle.position * cstate.scale))
-        paint_handle(gc, node_intersect, node_handle, self.handle.mouse_hovering)
+        if selected:
+            node_intersect = Vec2(to_scrolled_fn(self.node_intersection * cstate.scale))
+            node_handle = Vec2(to_scrolled_fn(self.handle.position * cstate.scale))
+            paint_handle(gc, node_intersect, node_handle, self.handle.mouse_hovering)
 
-    def paint_arrow_tip(self, gc, to_scrolled_fn: ToScrolledFn):
+    def paint_arrow_tip(self, gc: wx.Colour, fill: wx.Colour, to_scrolled_fn: ToScrolledFn):
         assert len(self.arrow_adjusted_coords) == 4
-        c = wx.BLACK
-        gc.SetPen(wx.Pen(c))
-        gc.SetBrush(wx.Brush(c))
+        gc.SetPen(wx.Pen(fill))
+        gc.SetBrush(wx.Brush(fill))
         gc.DrawLines([wx.Point2D(*to_scrolled_fn(coord * cstate.scale))
                       for coord in self.arrow_adjusted_coords])
 
@@ -445,16 +452,15 @@ class ReactionBezier:
         for sp_bz in self.dest_beziers:
             sp_bz.update_curve(self.centroid)
 
-    def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
+    def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, to_scrolled_fn: ToScrolledFn,
+                 selected: bool):
         for bz in chain(self.src_beziers, self.dest_beziers):
-            bz.do_paint(gc, to_scrolled_fn)
+            bz.do_paint(gc, fill, to_scrolled_fn, selected)
 
-    def do_paint_selected(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn):
-        for bz in chain(self.src_beziers, self.dest_beziers):
-            bz.do_paint_selected(gc, to_scrolled_fn)
-        centroid = Vec2(to_scrolled_fn(self.centroid * cstate.scale))
-        center_handles = [self.src_c_handle, self.dest_c_handle]
-        hovering = any(h.mouse_hovering for h in center_handles)
-        for handle in center_handles:
-            handle_pos = Vec2(to_scrolled_fn(handle.position * cstate.scale))
-            paint_handle(gc, centroid, handle_pos, hovering)
+        if selected:
+            centroid = Vec2(to_scrolled_fn(self.centroid * cstate.scale))
+            center_handles = [self.src_c_handle, self.dest_c_handle]
+            hovering = any(h.mouse_hovering for h in center_handles)
+            for handle in center_handles:
+                handle_pos = Vec2(to_scrolled_fn(handle.position * cstate.scale))
+                paint_handle(gc, centroid, handle_pos, hovering)

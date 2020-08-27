@@ -77,6 +77,22 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def try_rename_reaction(self, neti: int, reai: int, new_id: str) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: float) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_reaction_ratelaw(self, neti: int, reai: int, ratelaw: str) -> bool:
+        pass
+
+    @abc.abstractmethod
     def try_delete_node(self, neti: int, nodei: int) -> bool:
         pass
 

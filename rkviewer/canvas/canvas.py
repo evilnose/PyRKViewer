@@ -910,18 +910,18 @@ class Canvas(wx.ScrolledWindow):
         self._PostUpdateSelection()
         self.Refresh()
 
-    def SetReactantsFromSelected(self):
+    def MarkSelectedAsReactants(self):
         self._reactant_idx = copy.copy(self._selected_idx)
         # TODO make reactant/product/none state as field of a node?
         self._product_idx -= self._reactant_idx
         self.Refresh()
 
-    def SetProductsFromSelected(self):
+    def MarkSelectedAsProducts(self):
         self._product_idx = copy.copy(self._selected_idx)
         self._reactant_idx -= self._product_idx
         self.Refresh()
 
-    def CreateReactionFromSelected(self, id_='r'):
+    def CreateReactionFromMarked(self, id_='r'):
         if len(self._reactant_idx) == 0 or len(self._product_idx) == 0:
             print('TODO show error if no reactants or products')
             return

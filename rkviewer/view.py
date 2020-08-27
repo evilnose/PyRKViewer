@@ -48,7 +48,7 @@ class EditPanel(fnb.FlatNotebook):
         # overall sizer for alternating form and "nothing selected" displays
         #sizer = wx.BoxSizer(wx.HORIZONTAL)
         #sizer.Add(null_message, proportion=1, flag=wx.ALIGN_CENTER_VERTICAL)
-        #self.SetSizer(sizer)
+        # self.SetSizer(sizer)
 
         canvas.Bind(EVT_DID_UPDATE_CANVAS, self.OnDidUpdateCanvas)
         canvas.Bind(EVT_DID_UPDATE_SELECTION, self.OnDidUpdateSelection)
@@ -104,7 +104,7 @@ class EditPanel(fnb.FlatNotebook):
         # need to reset focus to canvas, since for some reason FlatNotebook sets focus to the first
         # field in a notebook page after it is added.
         self.GetSizer().Layout()
-        
+
         # need to manually show this for some reason
         if not should_show_nodes and not should_show_reactions:
             self.null_message.Show()
@@ -154,23 +154,42 @@ class Toolbar(wx.Panel):
 class ModePanel(wx.Panel):
     """ModePanel at the left of the app."""
 
-    def __init__(self, *args, toggle_callback, **kw):
+    def __init__(self, *args, toggle_callback, canvas: Canvas, **kw):
         super().__init__(*args, **kw)
 
         self.btn_group = ButtonGroup(toggle_callback)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.AddModeButton('Select', InputMode.SELECT, sizer)
-        self.AddModeButton('Add', InputMode.ADD, sizer)
-        self.AddModeButton('Zoom', InputMode.ZOOM, sizer)
+        self.AppendModeButton('Select', InputMode.SELECT, sizer)
+        self.AppendModeButton('Add', InputMode.ADD, sizer)
+        self.AppendModeButton('Zoom', InputMode.ZOOM, sizer)
+
+        self.AppendSeparator(sizer)
+        self.AppendNormalButton('Reactants', canvas.MarkSelectedAsReactants,
+                                sizer, tooltip='Mark selected nodes as reactants')
+        self.AppendNormalButton('Products', canvas.MarkSelectedAsProducts,
+                                sizer, tooltip='Mark selected nodes as products')
+        self.AppendNormalButton('Create Rxn', canvas.CreateReactionFromMarked,
+                                sizer, tooltip='Create reaction from marked reactants and products')
 
         self.SetSizer(sizer)
 
-    def AddModeButton(self, label: str, mode: InputMode, sizer: wx.Sizer):
+    def AppendModeButton(self, label: str, mode: InputMode, sizer: wx.Sizer):
         btn = wx.ToggleButton(self, label=label)
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
         self.btn_group.AddButton(btn, mode)
+
+    def AppendNormalButton(self, label: str, callback, sizer: wx.Sizer, tooltip: str = None):
+        btn = wx.Button(self, label=label)
+        if tooltip is not None:
+            btn.SetToolTip(tooltip)
+        btn.Bind(wx.EVT_BUTTON, lambda _: callback())
+        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+
+    def AppendSeparator(self, sizer: wx.Sizer):
+        line = wx.StaticLine(self, style=wx.LI_HORIZONTAL)
+        sizer.Add(line, wx.SizerFlags().Expand().Border(wx.TOP, 10))
 
 
 class MainPanel(wx.Panel):
@@ -204,7 +223,9 @@ class MainPanel(wx.Panel):
         self.mode_panel = ModePanel(self,
                                     size=(theme['mode_panel_width'],
                                           theme['canvas_height']),
-                                    toggle_callback=set_input_mode)
+                                    toggle_callback=set_input_mode,
+                                    canvas=self.canvas,
+                                    )
         self.mode_panel.SetBackgroundColour(theme['toolbar_bg'])
 
         toolbar_width = theme['canvas_width'] + theme['edit_panel_width'] + theme['vgap']
@@ -214,7 +235,7 @@ class MainPanel(wx.Panel):
                                edit_panel_callback=self.ToggleEditPanel)
         self.toolbar.SetBackgroundColour(theme['toolbar_bg'])
 
-        self.edit_panel = EditPanel(self, self.canvas, self.controller, 
+        self.edit_panel = EditPanel(self, self.canvas, self.controller,
                                     size=(theme['edit_panel_width'],
                                           theme['canvas_height']))
         self.edit_panel.SetBackgroundColour(theme['toolbar_bg'])
@@ -311,15 +332,15 @@ class MyFrame(wx.Frame):
         reaction_menu = wx.Menu()
         self.AddMenuItem(reaction_menu, 'Mark Selected as &Reactants',
                          'Mark selected nodes as reactants',
-                         lambda _: canvas.SetReactantsFromSelected(), entries,
+                         lambda _: canvas.MarkSelectedAsReactants(), entries,
                          key=(wx.ACCEL_NORMAL, ord('S')))
         self.AddMenuItem(reaction_menu, 'Mark Selected as &Products',
                          'Mark selected nodes as products',
-                         lambda _: canvas.SetProductsFromSelected(), entries,
+                         lambda _: canvas.MarkSelectedAsProducts(), entries,
                          key=(wx.ACCEL_NORMAL, ord('F')))
         self.AddMenuItem(reaction_menu, '&Create Reaction From Selected',
                          'Create reaction from selected sources and targets',
-                         lambda _: canvas.CreateReactionFromSelected(), entries,
+                         lambda _: canvas.CreateReactionFromMarked(), entries,
                          key=(wx.ACCEL_CTRL, ord('R')))
 
         menu_bar.Append(file_menu, '&File')

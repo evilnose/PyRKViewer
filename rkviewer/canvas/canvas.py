@@ -497,7 +497,7 @@ class Canvas(wx.ScrolledWindow):
                     return
 
                 # clicked on nothing; drag-selecting
-                if in_node is None:
+                if in_node is None and in_rxn is None:
                     self._drag_selecting = True
                     self._drag_select_start = logical_pos
                     self._drag_rect = Rect(self._drag_select_start, Vec2())
@@ -547,8 +547,6 @@ class Canvas(wx.ScrolledWindow):
         finally:
             self.Refresh()
             evt.Skip()
-            if not evt.foreign:
-                wx.CallAfter(self.SetFocus)
 
     def _UpdateNodePosAndSize(self, evt: wx.Event, keep_dragging: bool):
         """Send the updated node positions and sizes to the controller.
@@ -939,6 +937,9 @@ class Canvas(wx.ScrolledWindow):
         self.controller.try_add_reaction_g(self._net_index, reaction)
         self._reactant_idx = set()
         self._product_idx = set()
+        self._selected_idx = set()
+        self._sel_reactions_idx = {self.controller.get_reaction_index(self._net_index, id_)}
+        self._PostUpdateSelection()
         self.Refresh()
 
     def CopySelected(self):

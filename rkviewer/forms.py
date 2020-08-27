@@ -3,9 +3,11 @@
 # pylint: disable=maybe-no-member
 from rkviewer.mvc import IController
 import wx
+from wx.lib.scrolledpanel import ScrolledPanel
 from abc import abstractmethod
 import copy
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .canvas.canvas import Canvas
 from .canvas.reactions import Reaction
 from .canvas.utils import get_bounding_rect
@@ -57,7 +59,7 @@ def parse_precisions(text: str) -> Tuple[int, int]:
     return (x_prec, y_prec)
 
 
-class EditPanelForm(wx.Panel):
+class EditPanelForm(ScrolledPanel):
     """Base class for a form to be displayed on the edit panel.
 
     Attributes:
@@ -82,7 +84,7 @@ class EditPanelForm(wx.Panel):
     _dirty: bool  #: flag for if edits were made but the controller hasn't updated the view yet
 
     def __init__(self, parent, canvas: Canvas, controller: IController):
-        super().__init__(parent)
+        super().__init__(parent, style=wx.VSCROLL)
         self.canvas = canvas
         self.controller = controller
         self.net_index = 0
@@ -120,7 +122,7 @@ class EditPanelForm(wx.Panel):
         sizer.Add(MORE_RIGHT_PADDING, 0, wx.GBPosition(0, 4), wx.GBSpan(1, 1))
 
         # Ensure the input field takes up some percentage of width
-        width = self.GetSize()[0]
+        width = self.GetSize()[0] # TODO account for scrollbar
         right_width = (width - VGAP * 3 - MORE_LEFT_PADDING - MORE_RIGHT_PADDING -
                        self._info_length) * 0.7
         sizer.Add(right_width, 0, wx.GBPosition(0, 2), wx.GBSpan(1, 1))
@@ -161,6 +163,17 @@ class EditPanelForm(wx.Panel):
         """
         rows = sizer.GetRows()
         sizer.Add(0, height, wx.GBPosition(rows, 0), wx.GBSpan(1, 5))
+
+    def _AppendSubtitle(self, sizer: wx.Sizer, text: str) -> wx.StaticText:
+        self._AppendSpacer(sizer, 3)
+        line = wx.StaticLine(self, style=wx.HORIZONTAL)
+        sizer.Add(line, wx.GBPosition(sizer.GetRows(), 0), wx.GBSpan(1, 5), flag=wx.EXPAND)
+        statictext = wx.StaticText(self, label=text)
+        font = wx.Font(wx.FontInfo(9))
+        statictext.SetFont(font)
+        sizer.Add(statictext, wx.GBPosition(sizer.GetRows(), 0), wx.GBSpan(1, 5), flag=wx.ALIGN_CENTER)
+        self._AppendSpacer(sizer, 0)
+        return statictext
 
     @classmethod
     def _SetBestInsertion(cls, ctrl: wx.TextCtrl, orig_text: str, orig_insertion: int):
@@ -239,8 +252,9 @@ class EditPanelForm(wx.Panel):
 
         return ctrl, alpha_ctrl
 
-    def _MakeFloatCtrlFunction(self, ctrl_id: str,
-                               callback: FloatCallback, range_: Tuple[float, float]):
+    def _MakeFloatCtrlFunction(self, ctrl_id: str, callback: FloatCallback,
+                               range_: Tuple[Optional[float], Optional[float]],
+                               left_incl: bool = True, right_incl: bool = True):
         """Helper method that creates a validation function for a TextCtrl that only allows floats.
 
         Args:
@@ -252,7 +266,6 @@ class EditPanelForm(wx.Panel):
             The validation function.
         """
         lo, hi = range_
-        assert lo <= hi
 
         def float_ctrl_fn(evt):
             text = evt.GetString()
@@ -263,9 +276,36 @@ class EditPanelForm(wx.Panel):
                 self._SetValidationState(False, ctrl_id, "Value must be a number")
                 return
 
-            if value < lo or value > hi:
+            good = True
+            if left_incl:
+                if lo is not None and value < lo:
+                    good = False
+            else:
+                if lo is not None and value <= lo:
+                    good = False
+
+            if right_incl:
+                if hi is not None and value > hi:
+                    good = False
+            else:
+                if hi is not None and value >= hi:
+                    good = False
+
+            if not good:
+                err_msg: str
+                if lo is not None and hi is not None:
+                    left = '[' if left_incl else '('
+                    right = ']' if right_incl else ')'
+                    err_msg = "Value must be in range {}{}, {}{}".format(left, lo, hi, right)
+                else:
+                    if lo is not None:
+                        incl_text = 'or equal to' if left_incl else ''
+                        err_msg = "Value must greater than {} {}".format(incl_text, lo)
+                    else:
+                        incl_text = 'or equal to' if right_incl else ''
+                        err_msg = "Value must less than {} {}".format(incl_text, hi)
                 self._SetValidationState(
-                    False, ctrl_id, "Value must be in range [{}, {}]".format(lo, hi))
+                    False, ctrl_id, err_msg)
                 return
 
             callback(value)
@@ -379,6 +419,7 @@ class NodeForm(EditPanelForm):
         sizer = self.InitAndGetSizer()
         self.CreateControls(sizer)
         self.SetSizer(sizer)
+        self.SetupScrolling()
 
     def UpdateNodes(self, nodes: List[Node]):
         """Function called after the list of nodes have been updated."""
@@ -406,7 +447,6 @@ class NodeForm(EditPanelForm):
 
             size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
-
 
     def UpdateDidDragMoveNodes(self):
         """Function called after the selected nodes were moved by dragging."""
@@ -673,8 +713,14 @@ class NodeForm(EditPanelForm):
         self.border_width_ctrl.ChangeValue(border_width)
 
 
-class ReactionForm(EditPanelForm):
+@dataclass
+class StoichInfo:
+    """Helper class that stores node stoichiometry info for reaction form"""
+    node_id: str
+    stoich: float
 
+
+class ReactionForm(EditPanelForm):
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
 
@@ -684,6 +730,7 @@ class ReactionForm(EditPanelForm):
         sizer = self.InitAndGetSizer()
         self.CreateControls(sizer)
         self.SetSizer(sizer)
+        self.SetupScrolling()
 
     def CreateControls(self, sizer: wx.Sizer):
         self.id_ctrl = wx.TextCtrl(self)
@@ -697,6 +744,11 @@ class ReactionForm(EditPanelForm):
         self.fill_ctrl, self.fill_alpha_ctrl = self._CreateColorControl(
             'fill color', 'fill opacity',
             self._OnFillColorChanged, self._FillAlphaCallback, sizer)
+
+        self._reactant_subtitle = None
+        self._product_subtitle = None
+        self.reactant_stoich_ctrls = list()
+        self.product_stoich_ctrls = list()
 
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -757,11 +809,10 @@ class ReactionForm(EditPanelForm):
         if len(self._selected_idx) != 0 and not self._dirty:
             self.UpdateAllFields()
 
+            # clear validation errors
+            for id_ in self.badges.keys():
+                self._SetValidationState(True, id_)
         self._dirty = False
-
-        # clear validation errors
-        for id_ in self.badges.keys():
-            self._SetValidationState(True, id_)
 
     def UpdateReactionSelection(self, selected_idx: List[int]):
         """Function called after the list of selected nodes have been updated."""
@@ -775,27 +826,125 @@ class ReactionForm(EditPanelForm):
             self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
             self.UpdateAllFields()
 
+    '''
+    def _RemoveLastControl(self, ctrl: wx.Control):
+        sizer = self.GetSizer()
+
+        label = self.labels[ctrl.GetId()]
+        sizer.Detach(label)
+        label.Destroy()
+
+        badge = self.badges[ctrl.GetId()]
+        sizer.Detach(badge)
+        badge.Destroy()
+
+        sizer.Detach(ctrl)
+        ctrl.Destroy()
+
+        sizer.Remove(sizer.GetItemCount() - 1)  # remove the spacer
+    '''
+
+    def _UpdateStoichFields(self, reai: int, reactants: List[StoichInfo], products: List[StoichInfo]):
+        sizer = self.GetSizer()
+
+        if self._reactant_subtitle is not None:
+            start_row = sizer.GetItemPosition(self._reactant_subtitle).GetRow() - 2
+
+            index = 0
+            while index < sizer.GetItemCount():
+                pos = sizer.GetItemPosition(index)
+                if pos.GetRow() >= start_row:
+                    item = sizer.GetItem(index)
+                    if item.IsWindow():
+                        window = item.GetWindow()
+                        winid = window.GetId()
+                        if winid in self.badges:
+                            del self.badges[winid]
+                            del self.labels[winid]
+                        item.GetWindow().Destroy()
+                    else:
+                        sizer.Remove(index)
+                else:
+                    index += 1
+
+            self._reactant_subtitle = None
+            self._product_subtitle = None
+            # reset rows
+            sizer.SetRows(start_row)
+
+        if len(reactants) != 0:
+            # add back the fields
+            self._reactant_subtitle = self._AppendSubtitle(sizer, 'Reactants')
+            for stoich in reactants:
+                stoich_ctrl = wx.TextCtrl(self, value=no_rzeros(stoich.stoich, precision=2))
+                self._AppendControl(sizer, stoich.node_id, stoich_ctrl)
+                inner_callback = self._MakeSetSrcStoichFunction(reai, stoich.node_id)
+                callback = self._MakeFloatCtrlFunction(stoich_ctrl.GetId(), inner_callback, (0, None),
+                                                    left_incl=False)
+                stoich_ctrl.Bind(wx.EVT_TEXT, callback)
+
+            self._product_subtitle = self._AppendSubtitle(sizer, 'Products')
+            for stoich in products:
+                stoich_ctrl = wx.TextCtrl(self, value=no_rzeros(stoich.stoich, precision=2))
+                self._AppendControl(sizer, stoich.node_id, stoich_ctrl)
+                inner_callback = self._MakeSetDestStoichFunction(reai, stoich.node_id)
+                callback = self._MakeFloatCtrlFunction(
+                    stoich_ctrl.GetId(), inner_callback, (0, None), left_incl=False)
+                stoich_ctrl.Bind(wx.EVT_TEXT, callback)
+
+        sizer.Layout()
+
+    def _MakeSetSrcStoichFunction(self, reai: int, node_id: str):
+        def ret(val: float):
+            self._dirty = True
+            self.controller.try_set_src_node_stoich(self.net_index, reai, node_id, val)
+
+        return ret
+
+    def _MakeSetDestStoichFunction(self, reai: int, node_id: str):
+        def ret(val: float):
+            self._dirty = True
+            self.controller.try_set_dest_node_stoich(self.net_index, reai, node_id, val)
+
+        return ret
+
+    def _GetSrcStoichs(self, reai: int):
+        ids = self.controller.get_list_of_src_ids(self.net_index, reai)
+        return [StoichInfo(id_, self.controller.get_src_node_stoich(self.net_index, reai, id_))
+                for id_ in ids]
+
+    def _GetDestStoichs(self, reai: int):
+        ids = self.controller.get_list_of_dest_ids(self.net_index, reai)
+        return [StoichInfo(id_, self.controller.get_dest_node_stoich(self.net_index, reai, id_))
+                for id_ in ids]
+
     def UpdateAllFields(self):
+        """Update all reaction fields from current data."""
+
         assert len(self._selected_idx) != 0
         reactions = [r for r in self._reactions if r.index in self._selected_idx]
         id_text = '; '.join(sorted(list(r.id_ for r in reactions)))
         fill: wx.Colour
         fill_alpha: Optional[int]
         ratelaw_text: str
+
         prec = settings['decimal_precision']
 
         if len(self._selected_idx) == 1:
             [reaction] = reactions
+            reai = reaction.index
             self.id_ctrl.Enable()
             fill = reaction.fill_color
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
             self.ratelaw_ctrl.Enable()
+            self._UpdateStoichFields(reai, self._GetSrcStoichs(reai), self._GetDestStoichs(reai))
         else:
             self.id_ctrl.Disable()
             fill, fill_alpha = self._GetMultiColor(list(r.fill_color for r in reactions))
             ratelaw_text = 'multiple'
             self.ratelaw_ctrl.Disable()
+            self._UpdateStoichFields(0, [], [])
 
         self.id_ctrl.ChangeValue(id_text)
         self.fill_ctrl.SetColour(fill)

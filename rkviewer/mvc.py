@@ -1,7 +1,7 @@
 # pylint: disable=maybe-no-member
 import wx
 import abc
-from typing import List
+from typing import List, Optional
 from .utils import Vec2, Node
 from .canvas.reactions import Reaction
 
@@ -97,12 +97,40 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def try_set_src_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def get_src_node_stoich(self, neti: int, reai: int, node_id: str) -> float:
+        pass
+
+    @abc.abstractmethod
+    def get_dest_node_stoich(self, neti: int, reai: int, node_id: str) -> float:
+        pass
+
+    @abc.abstractmethod
+    def get_list_of_src_ids(self, neti: int, reai: int) -> List[str]:
+        pass
+
+    @abc.abstractmethod
+    def get_list_of_dest_ids(self, neti: int, reai: int) -> List[str]:
+        pass
+
+    @abc.abstractmethod
     def get_list_of_node_ids(self, neti: int) -> List[str]:
         """Try getting the list of node IDs"""
         pass
 
     @abc.abstractmethod
     def get_node_index(self, neti: int, node_id: str) -> int:
+        pass
+
+    @abc.abstractmethod
+    def get_reaction_index(self, neti: int, rxn_id: str) -> int:
         pass
 
     @abc.abstractmethod

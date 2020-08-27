@@ -9,7 +9,7 @@ from .canvas.reactions import Reaction
 from .mvc import IController, IView
 
 
-def try_func(fn):
+def try_setter(fn):
     def ret(self, *args):
         try:
             fn(self, *args)
@@ -95,7 +95,7 @@ class Controller(IController):
         self._update_view()
         return True
 
-    @try_func
+    @try_setter
     def try_add_node_g(self, neti: int, node: Node):
         '''
         Add node represented by the given Node variable.
@@ -114,56 +114,56 @@ class Controller(IController):
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
         self.try_end_group()
 
-    @try_func
+    @try_setter
     def try_move_node(self, neti: int, nodei: int, pos: Vec2):
         assert pos.x >= 0 and pos.y >= 0
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
 
-    @try_func
+    @try_setter
     def try_set_node_size(self, neti: int, nodei: int, size: Vec2):
         iod.setNodeSize(neti, nodei, size.x, size.y)
 
-    @try_func
+    @try_setter
     def try_rename_node(self, neti: int, nodei: int, new_id: str):
         iod.setNodeID(neti, nodei, new_id)
 
-    @try_func
+    @try_setter
     def try_set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour):
         iod.setNodeFillColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
-    @try_func
+    @try_setter
     def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: float):
         iod.setNodeFillColorAlpha(neti, nodei, alpha)
 
-    @try_func
+    @try_setter
     def try_set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour):
         iod.setNodeOutlineColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
-    @try_func
+    @try_setter
     def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: float):
         iod.setNodeOutlineColorAlpha(neti, nodei, alpha)
 
-    @try_func
+    @try_setter
     def try_rename_reaction(self, neti: int, reai: int, new_id: str):
         iod.setReactionID(neti, reai, new_id)
 
-    @try_func
+    @try_setter
     def try_set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour):
         iod.setReactionFillColorRGB(neti, reai, color.Red(), color.Green(), color.Blue())
 
-    @try_func
+    @try_setter
     def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: float):
         iod.setReactionFillColorAlpha(neti, reai, alpha)
 
-    @try_func
+    @try_setter
     def try_set_node_border_width(self, neti: int, nodei: int, width: float):
         print('warning: TODO decide if node width is int or float')
 
-    @try_func
+    @try_setter
     def try_delete_node(self, neti: int, nodei: int):
         iod.deleteNode(neti, nodei)
 
-    @try_func
+    @try_setter
     def try_add_reaction_g(self, neti: int, reaction: Reaction):
         """Try create a reaction."""
         self.try_start_group()
@@ -182,15 +182,38 @@ class Controller(IController):
                                     reaction.fill_color.Blue())
         self.try_end_group()
 
-    @try_func
+    @try_setter
     def try_set_reaction_ratelaw(self, neti: int, reai: int, ratelaw: str):
         iod.setRateLaw(neti, reai, ratelaw)
+
+    @try_setter
+    def try_set_src_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
+        iod.setReactionSrcNodeStoich(neti, reai, node_id, stoich)
+
+    @try_setter
+    def try_set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
+        iod.setReactionDestNodeStoich(neti, reai, node_id, stoich)
+
+    def get_src_node_stoich(self, neti: int, reai: int, node_id: str):
+        return iod.getReactionSrcNodeStoich(neti, reai, node_id)
+
+    def get_dest_node_stoich(self, neti: int, reai: int, node_id: str):
+        return iod.getReactionDestNodeStoich(neti, reai, node_id)
+
+    def get_list_of_src_ids(self, neti: int, reai: int):
+        return iod.getListOfReactionSrcNodes(neti, reai)
+
+    def get_list_of_dest_ids(self, neti: int, reai: int):
+        return iod.getListOfReactionDestNodes(neti, reai)
 
     def get_list_of_node_ids(self, neti: int) -> List[str]:
         return iod.getListOfNodeIDs(neti)
 
     def get_node_index(self, neti: int, node_id: str) -> int:
         return iod.getNodeIndex(neti, node_id)
+
+    def get_reaction_index(self, neti: int, rxn_id: str) -> int:
+        return iod.getReactionIndex(neti, rxn_id)
 
     # get the updated list of nodes from model and update
     def _update_view(self):

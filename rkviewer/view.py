@@ -101,10 +101,13 @@ class EditPanel(fnb.FlatNotebook):
             if self.GetPage(i) == cur_page:
                 self.SetSelection(i)
                 break
-        
         # need to reset focus to canvas, since for some reason FlatNotebook sets focus to the first
         # field in a notebook page after it is added.
         self.GetSizer().Layout()
+        
+        # need to manually show this for some reason
+        if not should_show_nodes and not should_show_reactions:
+            self.null_message.Show()
 
     def OnDidDragMoveNodes(self, evt):
         self.node_form.UpdateDidDragMoveNodes()
@@ -238,9 +241,9 @@ class MainPanel(wx.Panel):
     def ToggleEditPanel(self, evt):
         sizer = self.GetSizer()
         if self.edit_panel.IsShown():
-            self.edit_panel.Hide()
             sizer.Detach(self.edit_panel)
             sizer.SetItemSpan(self.canvas, wx.GBSpan(1, 2))
+            self.edit_panel.Hide()
         else:
             sizer.SetItemSpan(self.canvas, wx.GBSpan(1, 1))
             sizer.Add(self.edit_panel, wx.GBPosition(1, 2), flag=wx.EXPAND)

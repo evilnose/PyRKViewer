@@ -4,7 +4,8 @@
 import wx
 from typing import Collection, List, Optional, Set
 import iodine as iod
-from .utils import Vec2, Node, get_nodes_by_ident, get_nodes_by_idx, rgba_to_wx_colour
+from .canvas.geometry import Vec2, Node
+from .utils import  get_nodes_by_ident, get_nodes_by_idx, rgba_to_wx_colour
 from .canvas.reactions import Reaction
 from .mvc import IController, IView
 

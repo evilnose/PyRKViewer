@@ -2,7 +2,7 @@
 import wx
 import abc
 from typing import List, Optional
-from .utils import Vec2, Node
+from .canvas.geometry import Vec2, Node
 from .canvas.reactions import Reaction
 
 

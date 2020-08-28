@@ -5,8 +5,8 @@ import wx
 import abc
 import copy
 from typing import Any, Callable, Dict, List, Optional
-from .utils import draw_rect, get_bounding_rect, within_rect
-from ..utils import Vec2, Rect, Node, clamp_point
+from .geometry import Vec2, Rect, Node, clamp_point, get_bounding_rect, within_rect
+from .utils import draw_rect
 from ..config import theme
 
 

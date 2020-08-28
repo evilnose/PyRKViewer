@@ -8,9 +8,10 @@ import copy
 from enum import Enum, unique
 from typing import Collection, Optional, Any, Set, Tuple, List, Dict
 from .reactions import BezierHandle, ReactionBezier, init_bezier, Reaction
-from .utils import padded_rect, rects_overlap, within_rect, draw_rect
+from .geometry import Vec2, Rect, Node, padded_rect, rects_overlap, within_rect, clamp_rect_pos
+from .utils import draw_rect
 from .widgets import CanvasOverlay, Minimap, MultiSelect
-from ..utils import Vec2, Rect, Node, get_nodes_by_idx, clamp_rect_pos, rgba_to_wx_colour
+from ..utils import get_nodes_by_idx, rgba_to_wx_colour
 from ..mvc import IController
 from ..utils import convert_position
 from ..config import theme, settings

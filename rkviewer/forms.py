@@ -8,12 +8,11 @@ from abc import abstractmethod
 import copy
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from .config import theme, settings
+from .utils import get_nodes_by_idx, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas
 from .canvas.reactions import Reaction
-from .canvas.utils import get_bounding_rect
-from .utils import Node, Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_nodes_by_idx, \
-    no_rzeros, on_msw, resource_path
-from .config import theme, settings
+from .canvas.geometry import Node, Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 
 
 def parse_num_pair(text: str) -> Optional[Tuple[float, float]]:

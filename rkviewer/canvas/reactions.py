@@ -12,8 +12,8 @@ import math
 from itertools import chain
 from typing import Callable, List, Optional, Tuple
 from .state import cstate
-from .utils import padded_rect, within_rect
-from ..utils import Node, Vec2, clamp_point_outside, pairwise
+from .geometry import Node, Vec2, padded_rect
+from ..utils import pairwise
 from ..config import settings, theme
 
 

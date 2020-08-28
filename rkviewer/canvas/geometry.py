@@ -4,7 +4,7 @@ import wx
 import copy
 from enum import Enum
 import math
-from typing import Any, Callable, Collection, Iterable, List, Set, Tuple, TypeVar
+from typing import Any, Callable, List, Tuple, TypeVar
 from .state import cstate
 
 

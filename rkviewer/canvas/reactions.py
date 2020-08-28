@@ -178,19 +178,6 @@ class Reaction:
 
         self.update_nodes(sources, targets)
 
-    def do_paint(self, gc: wx.GraphicsContext, to_scrolled_fn: ToScrolledFn, selected: bool):
-        self.bezier.do_paint(gc, self.fill_color, to_scrolled_fn, selected)
-
-        # draw centroid
-        color = theme['select_box_color'] if selected else self.fill_color
-        pen = wx.Pen(color)
-        brush = wx.Brush(color)
-        gc.SetPen(pen)
-        gc.SetBrush(brush)
-        radius = settings['reaction_radius'] * cstate.scale
-        center = to_scrolled_fn(self.bezier.centroid * cstate.scale - Vec2.repeat(radius))
-        gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
-
     def update_nodes(self, sources: List[Node], targets: List[Node]):
         s = sum((n.position + n.size / 2 for n in sources + targets), Vec2())
         self._position = s / (len(sources) + len(targets))

@@ -1,7 +1,6 @@
 """All sorts of form widgets, mainly those used in EditPanel.
 """
 # pylint: disable=maybe-no-member
-from rkviewer.mvc import IController
 import wx
 from wx.lib.scrolledpanel import ScrolledPanel
 from abc import abstractmethod
@@ -9,6 +8,7 @@ import copy
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .config import theme, settings
+from .mvc import IController
 from .utils import get_nodes_by_idx, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas
 from .canvas.reactions import Reaction

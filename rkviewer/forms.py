@@ -733,6 +733,7 @@ class ReactionForm(EditPanelForm):
         self.SetupScrolling()
 
     def CreateControls(self, sizer: wx.Sizer):
+        # TODO create field for stroke thickness
         self.id_ctrl = wx.TextCtrl(self)
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self._AppendControl(sizer, 'identifier', self.id_ctrl)

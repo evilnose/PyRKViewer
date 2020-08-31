@@ -60,27 +60,3 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
     if border is not None:
         gc.StrokePath(path)
 
-
-class HookedSet(set):
-    def __init__(self, *args, changed_fn, **kw):
-        super().__init__(*args, **kw)
-        self._changed_fn = changed_fn
-
-    @classmethod
-    def _wrap_methods(cls, names):
-        def wrap_method_closure(name):
-            def inner(self, *args):
-                result = getattr(set, name)(self, *args)
-                if isinstance(result, set) and not hasattr(result, '_changed_fn'):
-                    result = cls(result, changed_fn=self._changed_fn)
-                return result
-            setattr(cls, name, inner)
-
-        for name in names:
-            wrap_method_closure(name)
-
-
-HookedSet._wrap_methods(['__isub__', '__iand__', '__ixor__', '__ior__', 'add', 'remove', 'discard',
-                         'pop', 'clear', 'difference_update', 'symmetric_difference_update',
-                         'intersection_update', 'update'
-                         ])

@@ -1,18 +1,19 @@
 """The interface of canvas for wxPython."""
 # pylint: disable=maybe-no-member
 from itertools import chain
+from rkviewer.canvas.observer import Observer, SetSubject, Subject
 import typing
 import wx
 import copy
 from enum import Enum, unique
-from typing import Collection, Optional, Any, Sequence, Set, Tuple, List, Dict
+from typing import Collection, FrozenSet, Optional, Any, Sequence, Set, Tuple, List, Dict
 from .elements import CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
 from .state import cstate
 from .events import DidDragMoveNodesEvent, DidDragResizeNodesEvent, \
     DidUpdateSelectionEvent, DidUpdateCanvasEvent
 from .geometry import Vec2, Rect, Node, padded_rect, rects_overlap, within_rect, clamp_rect_pos
 from .reactions import BezierHandle, ReactionBezier, init_bezier, Reaction
-from .utils import HookedSet, draw_rect
+from .utils import draw_rect
 from .widgets import CanvasOverlay, Minimap, MultiSelect
 from ..utils import get_nodes_by_idx, rgba_to_wx_colour
 from ..mvc import IController
@@ -67,8 +68,8 @@ class Canvas(wx.ScrolledWindow):
     _elements: LayeredElements
     _zoom_level: int  #: The current zoom level. See SetZoomLevel() for more detail.
     #: The zoom scale. This always corresponds one-to-one with zoom_level. See property for detail.
-    _selected_idx: Set[int]  #: The list of indices of the currently selected nodes.
-    _sel_reactions_idx: Set[int]
+    _selected_idx: SetSubject  #: The list of indices of the currently selected nodes.
+    _sel_reactions_idx: SetSubject
     _reactant_idx: Set[int]  #: The list of indices of the currently designated reactant nodes.
     _product_idx: Set[int]  #: The list of indices of the currently designated product nodes
     _select_box: SelectBox  #: The select box element.
@@ -129,8 +130,8 @@ class Canvas(wx.ScrolledWindow):
         bounds = Rect(BOUNDS_EPS_VEC, self.realsize * cstate.scale - BOUNDS_EPS_VEC)
         self._select_box = SelectBox([], bounds, self.controller, self._net_index,
                                      self.CalcScrolledPositionFloat, Canvas.SELECT_BOX_LAYER)
-        self._selected_idx = self.MakeSelectBoxSet()
-        self._sel_reactions_idx = self.MakeSelectBoxSet()
+        self._selected_idx = SetSubject()
+        self._sel_reactions_idx = SetSubject()
         self._reactant_idx = set()
         self._product_idx = set()
 
@@ -182,9 +183,6 @@ class Canvas(wx.ScrolledWindow):
             self.SetCursor(wx.Cursor(wx.CURSOR_DEFAULT))
 
         self._SetStatusText('mode', str(val))
-
-    def UpdateSelectedIndices(self, indices: Set[int]):
-        self._selected_idx = indices
 
     def RegisterAllChildren(self, widget):
         """Connect all descendants of this widget to relevant events.
@@ -251,11 +249,11 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.nodes = self._nodes
 
     def CreateNodeElement(self, node: Node) -> NodeElement:
-        return NodeElement(node, self._selected_idx, self.CalcScrolledPositionFloat,
+        return NodeElement(node, self._selected_idx.item, self.CalcScrolledPositionFloat,
                            Canvas.NODE_LAYER)
 
     def CreateReactionElement(self, rxn: Reaction) -> ReactionElement:
-        return ReactionElement(rxn, self._sel_reactions_idx, self.CalcScrolledPositionFloat,
+        return ReactionElement(rxn, self._sel_reactions_idx.item, self.CalcScrolledPositionFloat,
                                Canvas.REACTION_LAYER)
 
     def Reset(self, nodes: List[Node], reactions: List[Reaction]):
@@ -267,8 +265,8 @@ class Canvas(wx.ScrolledWindow):
         self._elements = LayeredElements(chain(node_elements, reaction_elements))
         self._elements.add(self._select_box)
 
-        idx = set(n.index for n in nodes)
-        self._selected_idx &= idx  # cull removed nodes
+        idx = frozenset(n.index for n in nodes)
+        self._selected_idx.item &= idx  # cull removed nodes
 
         evt = DidUpdateCanvasEvent(nodes=self._nodes, reactions=self._reactions)
         wx.PostEvent(self, evt)
@@ -413,21 +411,21 @@ class Canvas(wx.ScrolledWindow):
                 # not resizing or dragging
                 if multi:
                     if rxn is not None:
-                        if rxn.index in self._sel_reactions_idx:
+                        if rxn.index in self._sel_reactions_idx.item:
                             self._sel_reactions_idx.remove(rxn.index)
                         else:
                             self._sel_reactions_idx.add(rxn.index)
                         self._PostUpdateSelection()
                     elif node is not None:
-                        if node.index in self._selected_idx:
+                        if node.index in self._selected_idx.item:
                             self._selected_idx.remove(node.index)
                         else:
                             self._selected_idx.add(node.index)
                         self._PostUpdateSelection()
                 else:
                     # clear selected nodes
-                    self._selected_idx = self.MakeSelectBoxSet()
-                    self._sel_reactions_idx = self.MakeSelectBoxSet()
+                    self._selected_idx.item = frozenset()
+                    self._sel_reactions_idx.item = frozenset()
                     if rxn is not None:
                         self._sel_reactions_idx.add(rxn.index)
                     elif node is not None:
@@ -468,8 +466,8 @@ class Canvas(wx.ScrolledWindow):
                 node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])
                 self.controller.try_add_node_g(self._net_index, node)
                 index = self.controller.get_node_index(self._net_index, node.id_)
-                self._selected_idx = self.MakeSelectBoxSet((index,))
-                self._sel_reactions_idx.clear()
+                self._selected_idx.item = frozenset((index,))
+                self._sel_reactions_idx.item = frozenset()
                 self._PostUpdateSelection()
                 self.Refresh()
             elif self.input_mode == InputMode.ZOOM:
@@ -506,7 +504,7 @@ class Canvas(wx.ScrolledWindow):
                 self._minimap.OnLeftUp(evt)
         elif self._drag_selecting:
             self._drag_selecting = False 
-            self._selected_idx |= self._drag_selected_idx
+            self._selected_idx.item |= self._drag_selected_idx
             self._PostUpdateSelection()
         elif self.input_mode == InputMode.SELECT:
             # perform left_up on dragged_element if it exists, or just find the node under the
@@ -707,7 +705,7 @@ class Canvas(wx.ScrolledWindow):
 
     def _GetSelectedNodes(self) -> List[Node]:
         """Get the list of selected nodes using self._selected_idx."""
-        return get_nodes_by_idx(self._nodes, self._selected_idx)
+        return get_nodes_by_idx(self._nodes, self._selected_idx.item)
 
     def _GetNodeResizeHandleRects(self, outline_rect: Rect) -> List[Rect]:
         """Helper that computes the scaled positions and sizes of the resize handles.
@@ -771,37 +769,34 @@ class Canvas(wx.ScrolledWindow):
                                                    reaction_idx=self._sel_reactions_idx))
 
     def DeleteSelectedNodes(self):
-        if len(self._selected_idx) != 0:
+        if len(self._selected_idx.item) != 0:
             assert self._multiselect is not None
             self.controller.try_start_group()
-            for index in self._selected_idx:
+            for index in self._selected_idx.item:
                 self.controller.try_delete_node(self._net_index, index)
             self.controller.try_end_group()
             self._PostUpdateSelection()
 
-            # controller must have told view to cull the selected IDs
-            assert len(self._selected_idx) == 0
-
     def SelectAll(self):
-        self._selected_idx = self.MakeSelectBoxSet(n.index for n in self._nodes)
-        self._sel_reactions_idx = self.MakeSelectBoxSet(r.index for r in self._reactions)
+        self._selected_idx.item = frozenset(n.index for n in self._nodes)
+        self._sel_reactions_idx.item = frozenset(r.index for r in self._reactions)
         self._PostUpdateSelection()
         self.Refresh()
 
     def ClearSelection(self):
-        self._selected_idx.clear()
-        self._sel_reactions_idx.clear()
+        self._selected_idx.item = frozenset()
+        self._sel_reactions_idx.item = frozenset()
         self._PostUpdateSelection()
         self.Refresh()
 
     def MarkSelectedAsReactants(self):
-        self._reactant_idx = copy.copy(self._selected_idx)
+        self._reactant_idx = set(self._selected_idx.item)
         # TODO make reactant/product/none state as field of a node?
         self._product_idx -= self._reactant_idx
         self.Refresh()
 
     def MarkSelectedAsProducts(self):
-        self._product_idx = copy.copy(self._selected_idx)
+        self._product_idx = set(self._selected_idx.item)
         self._reactant_idx -= self._product_idx
         self.Refresh()
 
@@ -821,9 +816,8 @@ class Canvas(wx.ScrolledWindow):
         self.controller.try_add_reaction_g(self._net_index, reaction)
         self._reactant_idx.clear()
         self._product_idx.clear()
-        self._selected_idx.clear()
-        self._sel_reactions_idx = self.MakeSelectBoxSet(
-            self.controller.get_reaction_index(self._net_index, id_))
+        self._selected_idx.item = frozenset()
+        self._sel_reactions_idx.item = frozenset((self.controller.get_reaction_index(self._net_index, id_),))
         self._PostUpdateSelection()
         self.Refresh()
 

@@ -9,7 +9,7 @@ import copy
 from typing import Callable, Collection, Iterator, List, Optional
 from .geometry import Node, Rect, Vec2, clamp_point,  get_bounding_rect, padded_rect, within_rect
 from .state import cstate
-from .reactions import Reaction, ToScrolledFn
+from .reactions import BezierHandle, Reaction, ToScrolledFn
 from .utils import draw_rect
 from ..config import settings, theme
 
@@ -83,11 +83,12 @@ class LayeredElements:
 class NodeElement(CanvasElement):
     node: Node
 
-    def __init__(self, node: Node, selected_idx: Collection[int], to_scrolled_fn: ToScrolledFn,
+    # HACK no type for canvas since otherwise there is circular dependency
+    def __init__(self, node: Node, canvas, to_scrolled_fn: ToScrolledFn,
                  layer: int):
         super().__init__(to_scrolled_fn, layer)
         self.node = node
-        self.selected_idx = selected_idx
+        self.canvas = canvas
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return within_rect(logical_pos, self.node.s_rect)
@@ -115,7 +116,8 @@ class NodeElement(CanvasElement):
         ty = (height - th) / 2
         gc.DrawText(self.node.id_, tx + scrolled_pos.x, ty + scrolled_pos.y)
 
-        if self.node.index in self.selected_idx and len(self.selected_idx) > 1:
+        selected_idx = self.canvas.selected_idx.item_copy()
+        if self.node.index in selected_idx and len(selected_idx) > 1:
             rect = self.to_scrolled_rect(self.node.s_rect)
             rect = padded_rect(rect, theme['select_outline_padding'] * cstate.scale)
 
@@ -129,18 +131,46 @@ class NodeElement(CanvasElement):
 
 class ReactionElement(CanvasElement):
     reaction: Reaction
+    _hovered_handle: Optional[BezierHandle]
 
-    def __init__(self, reaction: Reaction, selected_idx: Collection[int], to_scrolled_fn: ToScrolledFn,
+    # HACK no type for canvas since otherwise there is circular dependency
+    def __init__(self, reaction: Reaction, canvas, to_scrolled_fn: ToScrolledFn,
                  layer: int):
         super().__init__(to_scrolled_fn, layer)
         self.reaction = reaction
-        self.selected_idx = selected_idx
+        self.canvas = canvas
+        self._hovered_handle = None
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return self.reaction.bezier.is_mouse_on(logical_pos)
+        return self.reaction.bezier.is_mouse_on(logical_pos) or \
+            self.reaction.bezier.in_which_handle(logical_pos) is not None
+
+    def do_mouse_enter(self, logical_pos: Vec2):
+        self.do_mouse_move(logical_pos)
+
+    def do_mouse_move(self, logical_pos: Vec2):
+        if self._hovered_handle is not None:
+            self._hovered_handle.mouse_hovering = False
+
+        self._hovered_handle = self.reaction.bezier.in_which_handle(logical_pos)
+
+        if self._hovered_handle is not None:
+            self._hovered_handle.mouse_hovering = True
+        return True
+
+    def do_mouse_leave(self, logical_pos: Vec2):
+        if self._hovered_handle is not None:
+            self._hovered_handle.mouse_hovering = False
+            self._hovered_handle = None
+        return True
+
+    def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2):
+        if self._hovered_handle is not None:
+            self._hovered_handle.do_drag(logical_pos)
+            return True
 
     def do_paint(self, gc: wx.GraphicsContext):
-        selected = self.reaction.index in self.selected_idx
+        selected = self.reaction.index in self.canvas.sel_reactions_idx.item_copy()
 
         self.reaction.bezier.do_paint(gc, self.reaction.fill_color, self.to_scrolled_fn, selected)
 
@@ -151,9 +181,12 @@ class ReactionElement(CanvasElement):
         gc.SetPen(pen)
         gc.SetBrush(brush)
         radius = settings['reaction_radius'] * cstate.scale
-        center = self.to_scrolled_fn(self.reaction.bezier.centroid *
-                                     cstate.scale - Vec2.repeat(radius))
+        center = self.to_scrolled_fn(self.reaction.bezier.centroid * cstate.scale -
+                                     Vec2.repeat(radius))
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
+
+    def do_left_down(self, logical_pos: Vec2):
+        return True
 
 
 class SelectBox(CanvasElement):
@@ -162,6 +195,7 @@ class SelectBox(CanvasElement):
 
     nodes: List[Node]
     _padding: float  #: padding for the bounding rectangle around the selected nodes
+    related_elts: List[CanvasElement]
     _drag_rel: Vec2  #: relative position of the mouse to the bounding rect when dragging started
     _rel_positions: Optional[List[Vec2]]  #: relative positions of the nodes to the bounding rect
     _resize_handle: int  #: the node resize handle. See Canvas::_GetNodeResizeHandles for details.
@@ -249,6 +283,9 @@ class SelectBox(CanvasElement):
     def pos_inside(self, logical_pos: Vec2):
         return self._pos_inside_part(logical_pos) != -2
 
+    def do_mouse_enter(self, logical_pos: Vec2):
+        self.do_mouse_move(logical_pos)
+
     def do_mouse_move(self, logical_pos: Vec2):
         self._hovered_part = self._pos_inside_part(logical_pos)
         return True
@@ -287,7 +324,16 @@ class SelectBox(CanvasElement):
         # TODO check if multi-clicked in node
         if len(self.nodes) == 0:
             return False
-        handle = self._pos_inside_part(logical_pos)
+
+        # if multi-selecting and clicked on a node/reaction, then the user must mean to de-select
+        # that element. In this exceptional case we return False so that canvas can continue the
+        # pos_inside loop and find the node/reaction in question later.
+        if cstate.multi_select:
+            for elt in self.related_elts:
+                if elt.pos_inside(logical_pos):
+                    return False
+
+        handle = self._hovered_part
         assert self._mode == SelectBox.Mode.IDLE
         if handle >= 0:
             self._mode = SelectBox.Mode.RESIZING

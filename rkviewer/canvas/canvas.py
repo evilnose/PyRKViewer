@@ -1,9 +1,8 @@
 """The interface of canvas for wxPython."""
 # pylint: disable=maybe-no-member
-from itertools import chain
-from rkviewer.canvas.observer import Observer, SetSubject, Subject
-import typing
 import wx
+from itertools import chain
+import typing
 import copy
 from enum import Enum, unique
 from typing import Collection, FrozenSet, Optional, Any, Sequence, Set, Tuple, List, Dict
@@ -13,6 +12,7 @@ from .events import DidDragMoveNodesEvent, DidDragResizeNodesEvent, \
     DidUpdateSelectionEvent, DidUpdateCanvasEvent
 from .geometry import Vec2, Rect, Node, padded_rect, rects_overlap, within_rect, clamp_rect_pos
 from .reactions import BezierHandle, ReactionBezier, init_bezier, Reaction
+from .observer import Observer, SetSubject, Subject
 from .utils import draw_rect
 from .widgets import CanvasOverlay, Minimap, MultiSelect
 from ..utils import get_nodes_by_idx, rgba_to_wx_colour
@@ -69,7 +69,7 @@ class Canvas(wx.ScrolledWindow):
     _zoom_level: int  #: The current zoom level. See SetZoomLevel() for more detail.
     #: The zoom scale. This always corresponds one-to-one with zoom_level. See property for detail.
     _selected_idx: SetSubject  #: The list of indices of the currently selected nodes.
-    _sel_reactions_idx: SetSubject
+    sel_reactions_idx: SetSubject
     _reactant_idx: Set[int]  #: The list of indices of the currently designated reactant nodes.
     _product_idx: Set[int]  #: The list of indices of the currently designated product nodes
     _select_box: SelectBox  #: The select box element.
@@ -131,11 +131,11 @@ class Canvas(wx.ScrolledWindow):
         self._select_box = SelectBox([], bounds, self.controller, self._net_index,
                                      self.CalcScrolledPositionFloat, self.SetCursor,
                                      Canvas.SELECT_BOX_LAYER)
-        self._selected_idx = SetSubject()
-        self._sel_reactions_idx = SetSubject()
+        self.selected_idx = SetSubject()
+        self.sel_reactions_idx = SetSubject()
         selection_obs = Observer(lambda _: self._SelectionChanged())
-        self._selected_idx.attach(selection_obs)
-        self._sel_reactions_idx.attach(selection_obs)
+        self.selected_idx.attach(selection_obs)
+        self.sel_reactions_idx.attach(selection_obs)
         self._reactant_idx = set()
         self._product_idx = set()
 
@@ -253,24 +253,26 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.nodes = self._nodes
 
     def CreateNodeElement(self, node: Node) -> NodeElement:
-        return NodeElement(node, self._selected_idx.item_copy(), self.CalcScrolledPositionFloat,
+        return NodeElement(node, self, self.CalcScrolledPositionFloat,
                            Canvas.NODE_LAYER)
 
     def CreateReactionElement(self, rxn: Reaction) -> ReactionElement:
-        return ReactionElement(rxn, self._sel_reactions_idx.item_copy(), self.CalcScrolledPositionFloat,
+        return ReactionElement(rxn, self, self.CalcScrolledPositionFloat,
                                Canvas.REACTION_LAYER)
 
     def Reset(self, nodes: List[Node], reactions: List[Reaction]):
         """Update the list of nodes and apply the current scale."""
         self._nodes = nodes
         self._reactions = reactions
-        node_elements = [self.CreateNodeElement(n) for n in nodes]
-        reaction_elements = [self.CreateReactionFromMarked(r) for r in reactions]
-        self._elements = LayeredElements(chain(node_elements, reaction_elements))
+        node_elements: List[CanvasElement] = [self.CreateNodeElement(n) for n in nodes]
+        reaction_elements: List[CanvasElement] = [self.CreateReactionElement(r) for r in reactions]
+        select_elements = node_elements + reaction_elements
+        self._elements = LayeredElements(select_elements)
+        self._select_box.related_elts = select_elements
         self._elements.add(self._select_box)
 
         idx = frozenset(n.index for n in nodes)
-        self._selected_idx.set_item(self._selected_idx.item_copy() & idx)  # cull removed nodes
+        self.selected_idx.set_item(self.selected_idx.item_copy() & idx)  # cull removed nodes
 
         evt = DidUpdateCanvasEvent(nodes=self._nodes, reactions=self._reactions)
         wx.PostEvent(self, evt)
@@ -390,8 +392,6 @@ class Canvas(wx.ScrolledWindow):
                 else:
                     self.dragged_element = None
 
-                multi = wx.GetKeyState(wx.WXK_CONTROL) or wx.GetKeyState(wx.WXK_SHIFT)
-
                 node = None
                 rxn = None
                 if isinstance(self.dragged_element, NodeElement):
@@ -402,30 +402,33 @@ class Canvas(wx.ScrolledWindow):
                     rxn = r_elem.reaction
 
                 # not resizing or dragging
-                if multi:
+                if cstate.multi_select:
                     if rxn is not None:
-                        if rxn.index in self._sel_reactions_idx.item_copy():
-                            self._sel_reactions_idx.remove(rxn.index)
+                        if rxn.index in self.sel_reactions_idx.item_copy():
+                            self.sel_reactions_idx.remove(rxn.index)
                         else:
-                            self._sel_reactions_idx.add(rxn.index)
+                            self.sel_reactions_idx.add(rxn.index)
                     elif node is not None:
-                        if node.index in self._selected_idx.item_copy():
-                            self._selected_idx.remove(node.index)
+                        if node.index in self.selected_idx.item_copy():
+                            self.selected_idx.remove(node.index)
                         else:
-                            self._selected_idx.add(node.index)
+                            self.selected_idx.add(node.index)
                 else:
-                    if self.dragged_element is None:
-                        # clear selected nodes
-                        self._selected_idx.set_item(set())
-                        self._sel_reactions_idx.set_item(set())
-                    elif rxn is not None:
-                        self._sel_reactions_idx.set_item({rxn.index})
+                    if rxn is not None:
+                        self.sel_reactions_idx.set_item({rxn.index})
+                        self.selected_idx.set_item(set())
                     elif node is not None:
-                        self._selected_idx.set_item({node.index})
+                        self.selected_idx.set_item({node.index})
+                        self.sel_reactions_idx.set_item(set())
+                    elif self.dragged_element is None:
+                        # clear selected nodes
+                        self.selected_idx.set_item(set())
+                        self.sel_reactions_idx.set_item(set())
 
-                # if clicked on a new node or reaction, immediately allow dragging on the
+                # if clicked on a new node, immediately allow dragging on the
                 # updated select box
-                if not multi and (node or rxn) and self._select_box.pos_inside(logical_pos):
+                if not cstate.multi_select and node and self._select_box.pos_inside(logical_pos):
+                    self._select_box.do_mouse_enter(logical_pos)
                     good = self._select_box.do_left_down(logical_pos)
                     assert good
                     self.dragged_element = self._select_box
@@ -457,8 +460,8 @@ class Canvas(wx.ScrolledWindow):
                 node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])
                 self.controller.try_add_node_g(self._net_index, node)
                 index = self.controller.get_node_index(self._net_index, node.id_)
-                self._selected_idx.set_item({index})
-                self._sel_reactions_idx.set_item(set())
+                self.selected_idx.set_item({index})
+                self.sel_reactions_idx.set_item(set())
                 self.Refresh()
             elif self.input_mode == InputMode.ZOOM:
                 zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
@@ -494,7 +497,7 @@ class Canvas(wx.ScrolledWindow):
                 self._minimap.OnLeftUp(evt)
         elif self._drag_selecting:
             self._drag_selecting = False
-            self._selected_idx.set_item(self._selected_idx.item_copy() | self._drag_selected_idx)
+            self.selected_idx.set_item(self.selected_idx.item_copy() | self._drag_selected_idx)
         elif self.input_mode == InputMode.SELECT:
             # perform left_up on dragged_element if it exists, or just find the node under the
             # cursor
@@ -540,7 +543,8 @@ class Canvas(wx.ScrolledWindow):
 
                     if self.dragged_element is not None:
                         rel_pos = logical_pos - self._last_drag_pos
-                        self.dragged_element.do_mouse_drag(logical_pos, rel_pos)
+                        if self.dragged_element.do_mouse_drag(logical_pos, rel_pos):
+                            redraw = True
                         self._last_drag_pos = rel_pos
 
                         # TODO may want to move this into the element
@@ -548,13 +552,13 @@ class Canvas(wx.ScrolledWindow):
                             adjusted = False
                             if self._select_box.mode == SelectBox.Mode.MOVING:
                                 new_positions = [n.position for n in self._GetSelectedNodes()]
-                                evt = DidDragMoveNodesEvent(indices=self._selected_idx,
+                                evt = DidDragMoveNodesEvent(indices=self.selected_idx,
                                                             new_positions=new_positions)
                                 wx.PostEvent(self, evt)
                                 adjusted = True
                             else:
                                 new_sizes = [n.size for n in self._GetSelectedNodes()]
-                                evt = DidDragResizeNodesEvent(indices=self._selected_idx,
+                                evt = DidDragResizeNodesEvent(indices=self.selected_idx,
                                                               new_sizes=new_sizes)
                                 wx.PostEvent(self, evt)
                                 adjusted = True
@@ -628,10 +632,10 @@ class Canvas(wx.ScrolledWindow):
             # Draw outline for selected nodes and bounding box
             # TODO figure something out for _drag_selected_idx
             '''
-            cur_selected_idx = self._selected_idx | self._drag_selected_idx
+            cur_selected_idx = self.selected_idx | self._drag_selected_idx
             nodes = get_nodes_by_idx(self._nodes, cur_selected_idx)
             if len(nodes) > 0:
-                if len(self._selected_idx) > 0:
+                if len(self.selected_idx) > 0:
                     assert self._multiselect is not None
                     width = theme['select_outline_width'] if len(nodes) == 1 else \
                         theme['select_outline_width']
@@ -694,8 +698,8 @@ class Canvas(wx.ScrolledWindow):
                   border_width=theme['select_outline_width'])
 
     def _GetSelectedNodes(self) -> List[Node]:
-        """Get the list of selected nodes using self._selected_idx."""
-        return get_nodes_by_idx(self._nodes, self._selected_idx.item_copy())
+        """Get the list of selected nodes using self.selected_idx."""
+        return get_nodes_by_idx(self._nodes, self.selected_idx.item_copy())
 
     def _GetNodeResizeHandleRects(self, outline_rect: Rect) -> List[Rect]:
         """Helper that computes the scaled positions and sizes of the resize handles.
@@ -755,37 +759,37 @@ class Canvas(wx.ScrolledWindow):
             self._EndDrag(evt, True)
 
     def _SelectionChanged(self):
-        node_idx = self._selected_idx.item_copy()
+        node_idx = self.selected_idx.item_copy()
         self._select_box.update_nodes([n for n in self._nodes if n.index in node_idx])
         wx.PostEvent(self, DidUpdateSelectionEvent(node_idx=node_idx,
-                                                   reaction_idx=self._sel_reactions_idx.item_copy()))
+                                                   reaction_idx=self.sel_reactions_idx.item_copy()))
 
     def DeleteSelectedNodes(self):
-        if len(self._selected_idx.item_copy()) != 0:
+        if len(self.selected_idx.item_copy()) != 0:
             assert self._multiselect is not None
             self.controller.try_start_group()
-            for index in self._selected_idx.item_copy():
+            for index in self.selected_idx.item_copy():
                 self.controller.try_delete_node(self._net_index, index)
             self.controller.try_end_group()
 
     def SelectAll(self):
-        self._selected_idx.set_item({n.index for n in self._nodes})
-        self._sel_reactions_idx.set_item({r.index for r in self._reactions})
+        self.selected_idx.set_item({n.index for n in self._nodes})
+        self.sel_reactions_idx.set_item({r.index for r in self._reactions})
         self.Refresh()
 
     def ClearSelection(self):
-        self._selected_idx.set_item(set())
-        self._sel_reactions_idx.set_item(set())
+        self.selected_idx.set_item(set())
+        self.sel_reactions_idx.set_item(set())
         self.Refresh()
 
     def MarkSelectedAsReactants(self):
-        self._reactant_idx = self._selected_idx.item_copy()
+        self._reactant_idx = self.selected_idx.item_copy()
         # TODO make reactant/product/none state as field of a node?
         self._product_idx -= self._reactant_idx
         self.Refresh()
 
     def MarkSelectedAsProducts(self):
-        self._product_idx = self._selected_idx.item_copy()
+        self._product_idx = self.selected_idx.item_copy()
         self._reactant_idx -= self._product_idx
         self.Refresh()
 
@@ -805,8 +809,8 @@ class Canvas(wx.ScrolledWindow):
         self.controller.try_add_reaction_g(self._net_index, reaction)
         self._reactant_idx.clear()
         self._product_idx.clear()
-        self._selected_idx.set_item(set())
-        self._sel_reactions_idx.set_item({self.controller.get_reaction_index(self._net_index, id_)})
+        self.selected_idx.set_item(set())
+        self.sel_reactions_idx.set_item({self.controller.get_reaction_index(self._net_index, id_)})
         self.Refresh()
 
     def CopySelected(self):
@@ -828,6 +832,6 @@ class Canvas(wx.ScrolledWindow):
             pasted_ids.add(node.id_)
             self.controller.try_add_node_g(self._net_index, node)
 
-        self._selected_idx.set_item({self.controller.get_node_index(self._net_index, id_)
+        self.selected_idx.set_item({self.controller.get_node_index(self._net_index, id_)
                                      for id_ in pasted_ids})
         self.controller.try_end_group()  # calls UpdateMultiSelect in a moment

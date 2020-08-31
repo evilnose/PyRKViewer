@@ -15,6 +15,7 @@ from ..config import settings, theme
 
 
 ToScrolledFn = Callable[[Vec2], Vec2]
+SetCursorFn = Callable[[wx.Cursor], None]
 
 
 class CanvasElement:
@@ -97,7 +98,7 @@ class NodeElement(CanvasElement):
         gc.SetFont(gfont)
 
         scrolled_pos = self.to_scrolled_fn(self.node.s_position)
-        width, height = self.node.s_size
+        width, height = self.node.size
         border_width = self.node.border_width * cstate.scale
 
         draw_rect(
@@ -121,6 +122,9 @@ class NodeElement(CanvasElement):
             # draw rect
             draw_rect(gc, rect, border=theme['select_box_color'],
                       border_width=theme['select_outline_width'])
+
+    def do_left_down(self, _: Vec2):
+        return True
 
 
 class ReactionElement(CanvasElement):
@@ -153,6 +157,9 @@ class ReactionElement(CanvasElement):
 
 
 class SelectBox(CanvasElement):
+    CURSOR_TYPES = [wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE,
+                    wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE]
+
     nodes: List[Node]
     _padding: float  #: padding for the bounding rectangle around the selected nodes
     _drag_rel: Vec2  #: relative position of the mouse to the bounding rect when dragging started
@@ -170,17 +177,20 @@ class SelectBox(CanvasElement):
         RESIZING = 2
 
     def __init__(self, nodes: List[Node], bounds: Rect, controller: IController, net_index: int,
-                 to_scrolled_fn: ToScrolledFn, layer: int):
+                 to_scrolled_fn: ToScrolledFn, set_cursor_fn: SetCursorFn, layer: int):
         super().__init__(to_scrolled_fn, layer)
         self.update_nodes(nodes)
+        self.set_cursor_fn = set_cursor_fn
         self.controller = controller
         self.net_index = net_index
         self._mode = SelectBox.Mode.IDLE
 
+        self._drag_rel = Vec2()
         self._rel_positions = None
         self._orig_rect = None
         self._resize_handle = -1
         self._min_resize_ratio = Vec2()
+        self._hovered_part = -2
 
         self._bounds = bounds
 
@@ -193,8 +203,11 @@ class SelectBox(CanvasElement):
         if len(nodes) > 0:
             self._padding = theme['select_box_padding'] if len(nodes) > 1 else \
                 theme['select_outline_padding']
-            rects = [n.s_rect for n in nodes]
-            self.bounding_rect = get_bounding_rect(rects, self._padding)
+            rects = [n.rect for n in nodes]
+            self.bounding_rect = get_bounding_rect(rects)
+
+    def outline_rect(self) -> Rect:
+        return padded_rect(self.bounding_rect * cstate.scale, self._padding)
 
     def _resize_handle_rects(self):
         """Helper that computes the scaled positions and sizes of the resize handles.
@@ -204,7 +217,8 @@ class SelectBox(CanvasElement):
             rectangles. They are ordered such that the top-left handle is the first element, and
             all other handles follow in clockwise fashion.
         """
-        pos, size = self.bounding_rect.as_tuple()
+        outline_rect = self.outline_rect()
+        pos, size = outline_rect.as_tuple()
         centers = [pos, pos + Vec2(size.x / 2, 0),
                    pos + Vec2(size.x, 0), pos + Vec2(size.x, size.y / 2),
                    pos + size, pos + Vec2(size.x / 2, size.y),
@@ -227,7 +241,7 @@ class SelectBox(CanvasElement):
             if within_rect(logical_pos, rect):
                 return i
 
-        if within_rect(logical_pos, self.bounding_rect):
+        if within_rect(logical_pos, self.bounding_rect * cstate.scale):
             return -1
         else:
             return -2
@@ -235,22 +249,39 @@ class SelectBox(CanvasElement):
     def pos_inside(self, logical_pos: Vec2):
         return self._pos_inside_part(logical_pos) != -2
 
+    def do_mouse_move(self, logical_pos: Vec2):
+        self._hovered_part = self._pos_inside_part(logical_pos)
+        return True
+
+    def do_mouse_leave(self, logical_pos: Vec2):
+        self._hovered_part = -2
+        return True
+
     def do_paint(self, gc: wx.GraphicsContext):
         if len(self.nodes) > 0:
             outline_width = theme['select_outline_width'] if len(self.nodes) == 1 else \
                 theme['select_outline_width']
-            pos, size = self.bounding_rect.as_tuple()
+            pos, size = self.outline_rect().as_tuple()
             adj_pos = Vec2(self.to_scrolled_fn(pos))
 
             # draw main outline
             draw_rect(gc, Rect(adj_pos, size), border=theme['select_box_color'],
-                    border_width=outline_width)
+                      border_width=outline_width)
 
             for handle_rect in self._resize_handle_rects():
                 # convert to device position for drawing
                 rpos, rsize = handle_rect.as_tuple()
                 rpos = Vec2(self.to_scrolled_fn(rpos))
                 draw_rect(gc, Rect(rpos, rsize), fill=theme['select_box_color'])
+
+            if self._hovered_part >= 0:
+                cursor = SelectBox.CURSOR_TYPES[self._hovered_part]
+                self.set_cursor_fn(wx.Cursor(cursor))
+                pass
+            elif self._hovered_part == -1:
+                self.set_cursor_fn(wx.Cursor(wx.CURSOR_ARROW))
+            else:
+                self.set_cursor_fn(wx.Cursor(wx.CURSOR_ARROW))
 
     def do_left_down(self, logical_pos: Vec2):
         # TODO check if multi-clicked in node
@@ -265,7 +296,7 @@ class SelectBox(CanvasElement):
             min_height = min(n.size.y for n in self.nodes)
             self._min_resize_ratio = Vec2(theme['min_node_width'] / min_width,
                                           theme['min_node_height'] / min_height)
-            self._orig_rect = copy.copy(self.bounding_rect)
+            self._orig_rect = self.outline_rect()
             self._orig_positions = [n.s_position - self._orig_rect.position - Vec2.repeat(self._padding)
                                     for n in self.nodes]
             self._orig_sizes = [n.s_size for n in self.nodes]
@@ -273,11 +304,13 @@ class SelectBox(CanvasElement):
         elif handle == -1:
             self._mode = SelectBox.Mode.MOVING
             self._rel_positions = [n.s_position - logical_pos for n in self.nodes]
+            self._drag_rel = self.bounding_rect.position * cstate.scale - logical_pos
             return True
 
         return False
 
     def do_left_up(self, logical_pos: Vec2):
+        assert len(self.nodes) != 0
         if self._mode == SelectBox.Mode.MOVING:
             self.controller.try_start_group()
             for node in self.nodes:
@@ -307,7 +340,7 @@ class SelectBox(CanvasElement):
         dragged_idx = self._resize_handle // 2
         fixed_idx = int((dragged_idx + 2) % 4)  # get the vertex opposite dragged idx as fixed_idx
         orig_dragged_point = self._orig_rect.nth_vertex(dragged_idx)
-        cur_dragged_point = self.bounding_rect.nth_vertex(dragged_idx)
+        cur_dragged_point = self.outline_rect().nth_vertex(dragged_idx)
         fixed_point = self._orig_rect.nth_vertex(fixed_idx)
 
         target_point = pos
@@ -322,7 +355,7 @@ class SelectBox(CanvasElement):
                 target_point.y = orig_dragged_point.y
 
         # clamp target point
-        target_point = clamp_point(target_point, self._bounds)
+        target_point = clamp_point(target_point, self._bounds * cstate.scale)
 
         # STEP 2, get and validate rect ratio
 
@@ -366,12 +399,12 @@ class SelectBox(CanvasElement):
         # STEP 4 calculate and apply new node positions and sizes
         for node, orig_pos, orig_size in zip(self.nodes, self._orig_positions, self._orig_sizes):
             assert orig_pos.x >= -1e-6 and orig_pos.y >= -1e-6
-            node.s_position = br_pos + orig_pos.elem_mul(size_ratio) + pad_off
-            node.s_size = orig_size.elem_mul(size_ratio)
+            node.position = (br_pos + orig_pos.elem_mul(size_ratio)) / cstate.scale + pad_off
+            node.size = orig_size.elem_mul(size_ratio) / cstate.scale
 
         # STEP 5 apply new bounding_rect position and size
-        self.bounding_rect.position = br_pos
-        self.bounding_rect.size = target_size + pad_off * 2
+        self.bounding_rect.position = br_pos / cstate.scale + pad_off
+        self.bounding_rect.size = target_size / cstate.scale
 
     def _move(self, pos: Vec2):
         # campute tentative new positions. May need to clamp it.
@@ -382,8 +415,9 @@ class SelectBox(CanvasElement):
         max_y = max(p.y + n.s_size.y for p, n in zip(new_positions, self.nodes))
         offset = Vec2(0, 0)
 
-        lim_topleft = self._bounds.position
-        lim_botright = self._bounds.position + self._bounds.size
+        s_bounds = self._bounds * cstate.scale
+        lim_topleft = s_bounds.position
+        lim_botright = s_bounds.position + self._bounds.size
 
         if min_x < lim_topleft.x:
             assert max_x <= lim_botright.x
@@ -397,6 +431,6 @@ class SelectBox(CanvasElement):
         elif max_y > lim_botright.y:
             offset += Vec2(0, lim_botright.y - max_y)
 
-        self.bounding_rect.position = pos + offset + self._drag_rel
+        self.bounding_rect.position = (pos + offset + self._drag_rel) / cstate.scale
         for node, np in zip(self.nodes, new_positions):
-            node.s_position = np + offset
+            node.position = (np + offset) / cstate.scale

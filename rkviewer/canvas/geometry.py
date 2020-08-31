@@ -174,6 +174,13 @@ class Rect:
     def __eq__(self, other: Rect) -> bool:
         return self.position == other.position and self.size == other.size
 
+    def __mul__(self, k) -> Rect:
+        return Rect(self.position * k, self.size * k)
+
+    __rmul__ = __mul__
+
+    __imul__ = __mul__
+
     def as_tuple(self) -> Tuple[Vec2, Vec2]:
         """Return the position and the size in a tuple."""
         return (self.position, self.size)

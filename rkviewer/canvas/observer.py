@@ -37,12 +37,10 @@ class SetSubject(Subject[Set[T]]):
     def __init__(self, *args):
         super().__init__(set(*args))
 
-    @property
-    def item(self) -> FrozenSet:
-        return frozenset(self._item)
+    def item_copy(self) -> Set:
+        return set(self._item)
 
-    @item.setter
-    def item(self, item: FrozenSet):
+    def set_item(self, item: Set):
         self._item = item
         self.notify()
 

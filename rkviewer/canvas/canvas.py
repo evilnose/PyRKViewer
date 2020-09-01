@@ -46,9 +46,20 @@ class Canvas(wx.ScrolledWindow):
         MIN_ZOOM_LEVEL: The minimum zoom level the user is allowed to reach. See SetZoomLevel()
             for more detail.
         MAX_ZOOM_LEVEL: The maximum zoom level the user is allowed to reach.
+        NODE_LAYER: The node layer.
+        REACTION_LAYER: The reaction layer.
+        SELECT_BOX_LAYER: The layer for the select box.
 
         controller: The associated controller instance.
         realsize: The actual, total size of canvas, including the part offscreen.
+        net_index: The index of the current network. Rightn now it can be zero.
+        selected_idx: The set of indices of the currently selected nodes.
+        sel_reactions_idx: The set of indices of the currently selected reactions.
+        drag_selected_idx: The set of indices tentatively selected during dragging. This is added
+                           to selected_idx only after the user has stopped drag-selecting.
+        hovered_element: The element over which the mouse is hovering, or None.
+        zoom_slider: The zoom slider widget.
+        input_mode: The current input mode.
     """
     MIN_ZOOM_LEVEL: int = -7
     MAX_ZOOM_LEVEL: int = 7
@@ -58,17 +69,19 @@ class Canvas(wx.ScrolledWindow):
 
     controller: IController
     realsize: Vec2
+    selected_idx: SetSubject
+    sel_reactions_idx: SetSubject
+    drag_selected_idx: Set[int]
+    hovered_element: Optional[CanvasElement]
+    zoom_slider: wx.Slider
 
     #: Current network index. Right now this is always 0 since there is only one tab.
     _net_index: int
-    _input_mode: InputMode
     _nodes: List[Node]  #: List of Node instances. This contains data needed to render them.
     _reactions: List[Reaction]  #: List of ReactionBezier instances.
     _elements: LayeredElements
     _zoom_level: int  #: The current zoom level. See SetZoomLevel() for more detail.
     #: The zoom scale. This always corresponds one-to-one with zoom_level. See property for detail.
-    selected_idx: SetSubject  #: The list of indices of the currently selected nodes.
-    sel_reactions_idx: SetSubject
     _reactant_idx: Set[int]  #: The list of indices of the currently designated reactant nodes.
     _product_idx: Set[int]  #: The list of indices of the currently designated product nodes
     _select_box: SelectBox  #: The select box element.
@@ -77,20 +90,15 @@ class Canvas(wx.ScrolledWindow):
     _drag_selecting: bool  #: If currently dragging the selection rectangle.
     _drag_select_start: Vec2  #: The (logical) mouse position when the user started drag selecting.
     _drag_rect: Rect  #: The current drag-selection rectangle.
-    drag_selected_idx: Set[int]  #: The currently selected nodes using drag-selection rectangle.
-    _reverse_status: Dict[str, int]  #: TODO
+    _reverse_status: Dict[str, int]  #: Maps status string in .config.settings to its index.
+    #: Flag for whether the mouse is currently outside of the root app window.
     _mouse_outside_frame: bool
-    _copied_nodes: List[Node]
-    hovered_element: Optional[CanvasElement]
-    # TODO if any more _hovered_... is added, instead create a system in which every canvas widget
-    # e.g. Node, Reaction derive from a CanvasElement class, which provides common widget actions
-    # such as "IsMouseOn()" to check if mouse is on top of it and "OnMouseEnter()" event functions.
-    # this way we can store all canvas elements in an array and be able to treat mouse enter/exit,
-    # paint, click, etc. events more generally.
+    _copied_nodes: List[Node]  #: Copy of nodes currently in clipboard
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
         # ensure the parent's __init__ is called
-        super().__init__(*args, style=wx.DEFAULT_FRAME_STYLE & ~wx.MAXIMIZE_BOX ^ wx.RESIZE_BORDER, **kw)
+        super().__init__(*args, style=wx.DEFAULT_FRAME_STYLE & ~wx.MAXIMIZE_BOX ^ wx.RESIZE_BORDER,
+                         **kw)
 
         init_bezier()
         self.controller = controller
@@ -100,6 +108,8 @@ class Canvas(wx.ScrolledWindow):
         self._node_elements = list()
         self._reaction_elements = list()
         self._elements = LayeredElements()
+        self.hovered_element = None
+        self.dragged_element = None
 
         # prevent flickering
         self.SetDoubleBuffered(True)
@@ -112,7 +122,6 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
-        #self.GetTopLevelParent().Bind(wx.EVT_CHAR_HOOK, self.TempOnKeyDown)
 
         # state variables
         self._input_mode = InputMode.SELECT
@@ -143,7 +152,6 @@ class Canvas(wx.ScrolledWindow):
         self.zoom_slider.SetBackgroundColour(theme['zoom_slider_bg'])
         self.Bind(wx.EVT_SLIDER, self.OnSlider)
 
-        # TODO document everything below
         # Set a placeholder value for position; we will set it later in SetOverlayPositions().
         self._minimap = Minimap(pos=Vec2(), width=200, realsize=self.realsize,
                                 window_size=Vec2(self.GetSize()), pos_callback=self.SetOriginPos)
@@ -164,13 +172,8 @@ class Canvas(wx.ScrolledWindow):
         self._mouse_outside_frame = True
         self._copied_nodes = list()
 
-        self.hovered_element = None
-        self.dragged_element = None
-
         wx.CallAfter(lambda: self.SetZoomLevel(0, Vec2(0, 0)))
 
-        # TODO add List[CanvasOverlay] to store all overlays, so that overlay mouse checking code
-        # can be generalized
         self.SetOverlayPositions()
 
     @property
@@ -256,12 +259,10 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.nodes = self._nodes
 
     def CreateNodeElement(self, node: Node) -> NodeElement:
-        return NodeElement(node, self, self.CalcScrolledPositionFloat,
-                           Canvas.NODE_LAYER)
+        return NodeElement(node, self, self.CalcScrolledPositionFloat, Canvas.NODE_LAYER)
 
     def CreateReactionElement(self, rxn: Reaction) -> ReactionElement:
-        return ReactionElement(rxn, self, self.CalcScrolledPositionFloat,
-                               Canvas.REACTION_LAYER)
+        return ReactionElement(rxn, self, self.CalcScrolledPositionFloat, Canvas.REACTION_LAYER)
 
     def Reset(self, nodes: List[Node], reactions: List[Reaction]):
         """Update the list of nodes and apply the current scale."""
@@ -286,6 +287,7 @@ class Canvas(wx.ScrolledWindow):
         self._status_bar.SetStatusText(text, idx)
 
     def SetOriginPos(self, pos: Vec2):
+        """Set the origin position (position of the topleft corner) to pos by scrolling."""
         pos *= cstate.scale
         # check if out of bounds
         pos.x = max(pos.x, 0)
@@ -339,18 +341,23 @@ class Canvas(wx.ScrolledWindow):
         self.Refresh()
 
     def ZoomCenter(self, zooming_in: bool):
+        """Zoom in on the center of the visible window."""
         self.IncrementZoom(zooming_in, Vec2(self.GetSize()) / 2)
 
     def IncrementZoom(self, zooming_in: bool, anchor: Vec2):
+        """Zoom in/out by one step on the anchor, if within zoom range."""
         new_zoom = self._zoom_level + (1 if zooming_in else -1)
         if new_zoom < self.MIN_ZOOM_LEVEL or new_zoom > self.MAX_ZOOM_LEVEL:
             return
         self.SetZoomLevel(new_zoom, anchor)
 
     def ResetZoom(self):
+        """Reset the zoom level, with the anchor on the center of the visible window."""
         self.SetZoomLevel(0, Vec2(self.GetSize()) / 2)
 
     def _GetUniqueName(self, base: str, names: Collection[str], *args: Collection[str]) -> str:
+        """Given a base name "x", try "x_0", "x_1", ... until it is unique in all the collections.
+        """
         increment = 0
         # keep incrementing as long as there is duplicate ID
         while True:
@@ -518,6 +525,11 @@ class Canvas(wx.ScrolledWindow):
             overlay.OnLeftUp(evt)
 
     def CalcScrolledPositionFloat(self, pos: Vec2) -> Vec2:
+        """Convert logical position to scrolled (device) position, retaining floating point.
+
+        self.CalcScrolledPosition() converts the input floats to ints. This is needed if better
+        accuracy is needed.
+        """
         return Vec2(self.CalcScrolledPosition(wx.Point(0, 0))) + pos
 
     @convert_position
@@ -575,7 +587,6 @@ class Canvas(wx.ScrolledWindow):
                         redraw = True
                     else:
                         hovered: Optional[CanvasElement] = None
-                        # TODO OPTIMIZE use a better data structure
                         for el in self._elements.top_down():
                             if el.pos_inside(logical_pos):
                                 hovered = el
@@ -738,14 +749,15 @@ class Canvas(wx.ScrolledWindow):
             self._EndDrag(evt, True)
 
     def _SelectionChanged(self):
+        """Callback passed to observer for when the node/reaction selection has changed."""
         node_idx = self.selected_idx.item_copy()
         rxn_idx = self.sel_reactions_idx.item_copy()
         self._select_box.update_nodes([n for n in self._nodes if n.index in node_idx])
         wx.PostEvent(self, SelectionDidUpdateEvent(node_idx=node_idx, reaction_idx=rxn_idx))
 
     def DeleteSelectedNodes(self):
-        # TODO delete associated reactions too
-        # Also TODO allow deletion of reactions
+        # TODO if node is not free (from iodine), show the error somehow
+        # TODO allow deletion of reactions
         if len(self.selected_idx.item_copy()) != 0:
             self.controller.try_start_group()
             for index in self.selected_idx.item_copy():
@@ -813,5 +825,5 @@ class Canvas(wx.ScrolledWindow):
             self.controller.try_add_node_g(self._net_index, node)
 
         self.selected_idx.set_item({self.controller.get_node_index(self._net_index, id_)
-                                     for id_ in pasted_ids})
+                                    for id_ in pasted_ids})
         self.controller.try_end_group()  # calls UpdateMultiSelect in a moment

@@ -25,6 +25,7 @@ def convert_position(fn):
 
 
 def no_rzeros(num: float, precision: int) -> str:
+    """Returns string of the num with the given precision, but with trailing zeros removed."""
     assert precision > 0
     fmt = '{:.' + str(precision) + 'f}'
     return fmt.format(num).rstrip('0').rstrip('.')
@@ -36,7 +37,7 @@ def on_msw() -> bool:
 
 
 def resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller."""
+    """Get absolute path to resource, works for dev and PyInstaller."""
     if hasattr(sys, '_MEIPASS'):
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = getattr(sys, '_MEIPASS')
@@ -47,7 +48,7 @@ def resource_path(relative_path):
 
 
 def pairwise(iterable: Iterable) -> Iterable:
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
@@ -64,4 +65,3 @@ def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
     g = (rgb >> 8) & 0xff
     r = (rgb >> 16) & 0xff
     return wx.Colour(r, g, b, int(alpha * 255))
-

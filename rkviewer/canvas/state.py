@@ -4,6 +4,13 @@ from dataclasses import dataclass
 
 @dataclass
 class CanvasState:
+    """The current global state of the canvas.
+
+    Attributes:
+        scale: The zoom scale of the canvas.
+        multi_select: Whether the user is pressing the keys that signify multiple selection of
+                      items.
+    """
     scale: float = 1
     
     @property

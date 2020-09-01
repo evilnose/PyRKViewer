@@ -36,6 +36,11 @@ Attributes:
 """
 
 CMoveNodeEvent, EVT_C_MOVE_NODE = NewEvent()  # TODO document
+"""Called after the controller is notified of a node being moved.
+
+One should use this to request controller to save unsaved changes elsewhere, e.g. if any
+associated reactions were changed and need to be saved.
+"""
 
 NodeDidMoveEvent, EVT_NODE_DID_MOVE = NewEvent()
 """Called after the position of a node changes in any situation.

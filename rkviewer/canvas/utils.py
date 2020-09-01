@@ -4,18 +4,9 @@ This includes drawing helpers and 2D geometry functions.
 """
 # pylint: disable=maybe-no-member
 import wx
-from typing import Any, Collection, List, Optional
+from typing import Collection, List, Optional
 from .geometry import Rect
 from .data import Node
-
-
-def super_hook(func):
-    def ret(self, *args, **kw):
-        super_method = getattr(super(self), func.__name__)
-        super_method(*args, **kw)
-        self.changed_fn()
-
-    return ret
 
 
 def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
@@ -26,10 +17,10 @@ def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
 
 
 def get_nodes_by_ident(nodes: List[Node], ids: Collection[str]):
+    """Simple helper that maps the given list of IDs to their corresponding nodes."""
     ret = [n for n in nodes if n.id_ in ids]
     assert len(ret) == len(ids)
     return ret
-
 
 
 def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] = None,

@@ -1,18 +1,19 @@
+"""Classes for storing and managing data for graph elements."""
 # pylint: disable=maybe-no-member
-from rkviewer.canvas.events import EVT_NODE_DID_MOVE, NodeDidMoveEvent, get_canvas
 import wx
 import copy
-from enum import Enum
 import math
 from itertools import chain
 from typing import Callable, List, Optional, Tuple
-from .geometry import Vec2, Rect, padded_rect
+from .events import NodeDidMoveEvent, get_canvas
+from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, segments_intersect
 from .state import cstate
 from ..config import settings, theme
 from ..utils import pairwise
 
+
 MAXSEGS = 29  # Number of segments used to construct bezier
-HANDLE_RADIUS = 4  # Radius of the contro lhandle
+HANDLE_RADIUS = 5  # Radius of the contro lhandle
 HANDLE_BUFFER = 2
 NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
 TIP_DISPLACEMENT = 4
@@ -38,7 +39,6 @@ class Node:
     border_width: float
     _position: Vec2
     _size: Vec2
-    _scale: float
 
     # force keyword-only arguments
     def __init__(self, id_: str, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
@@ -113,8 +113,7 @@ ToScrolledFn = Callable[[Vec2], Vec2]
 
 
 def zeros2d(n_rows, n_cols) -> List[List[float]]:
-    """Return a 2D list of zeros with dimensions (n_rows, n_cols).
-    """
+    """Return a 2D list of zeros with dimensions (n_rows, n_cols)."""
     ret = [None] * n_rows
     for i in range(n_rows):
         ret[i] = [0] * n_cols
@@ -126,111 +125,24 @@ def zeros2d(n_rows, n_cols) -> List[List[float]]:
 # would probably double the size of the executable.
 # Also can solve this easily by upgrading to Python 3.8, which has a built-in comb method.
 def comb(n: int, i: int):
+    """Compute the bonimial coefficient/combinations C(n, i)"""
     return math.factorial(n) / (math.factorial(i) * math.factorial(n-i))
 
 
 def compute_centroid(reactants: List[Node], products: List[Node]) -> Vec2:
+    """Compute the centroid position of a list of reactant and product nodes."""
     total = sum((n.center_point for n in chain(reactants, products)), Vec2())
     return total / (len(reactants) + len(products))
 
 
-# TODO move the following to a geometry module, along with Vec2
-def pt_on_line(a: Vec2, b: Vec2, point: Vec2, threshold: float = 0) -> bool:
-    delta = b - a
-    b_comp_sq = delta.norm_sq
-    direction = delta.normalized()
-    ap = point - a
-    comp = ap.dot(direction)
-
-    # projection not on the line
-    if comp < 0 or comp * comp > b_comp_sq:
-        return False
-
-    projected = a + comp * direction
-    return (point - projected).norm_sq <= threshold ** 2
-
-
-def pt_in_circle(center: Vec2, radius: float, point: Vec2) -> bool:
-    return (point - center).norm_sq <= radius ** 2
-
-
-class Orientation(Enum):
-    CLOCKWISE = 0
-    COUNTERCLOCKWISE = 1
-    COLINEAR = 2
-
-
-def determinant(v1: Vec2, v2: Vec2):
-    return v1.x * v2.y - v2.x * v1.y
-
-
-def orientation(p1: Vec2, p2: Vec2, p3: Vec2) -> Orientation:
-    det = determinant(p3 - p2, p2 - p1)
-    if det == 1:
-        return Orientation.CLOCKWISE
-    elif det == -1:
-        return Orientation.COUNTERCLOCKWISE
-    else:
-        return Orientation.COLINEAR
-
-
-def segments_intersect(seg1: Tuple[Vec2, Vec2], seg2: Tuple[Vec2, Vec2]) -> Optional[Vec2]:
-    """Returns the intersection point if line1 and line2 intersect, and None otherwise."""
-    p1, q1 = seg1
-    p2, q2 = seg2
-    lk = q2 - p2
-    nm = p1 - q1
-    mk = q1 - p2
-
-    det = determinant(nm, lk)
-    if abs(det) < 1e-6:
-        return None
-    else:
-        detinv = 1.0 / det
-        s = (nm.x * mk.y - nm.y * mk.x) * detinv
-        t = (lk.x * mk.y - lk.y * mk.x) * detinv
-        if s < 0.0 or s > 1.0 or t < 0.0 or t > 1.0:
-            return None
-        else:
-            return p2 + lk * s
-
-
-def linear_coefficients(p: Vec2, q: Vec2) -> Tuple[float, float]:
-    delta = q - p
-    slope = delta.y / delta.x
-    c = p.y - p.x * slope
-    return (slope, c)
-
-
-def segment_intersects_line(seg: Tuple[Vec2, Vec2], line: Tuple[Vec2, Vec2]) -> Optional[Vec2]:
-    """Returns the intersection between seg and line or None if there is no intersection.
-
-    line is defined by any two points on it.
-    """
-    o1 = orientation(seg[0], line[0], line[1])
-    if o1 == Orientation.COLINEAR:
-        return seg[0]
-    o2 = orientation(seg[1], line[0], line[1])
-    if o2 == Orientation.COLINEAR:
-        return seg[1]
-
-    if o1 != o2:
-        # intersects
-        a, c = linear_coefficients(*seg)
-        b, d = linear_coefficients(*line)
-        t = (d - c) / (a - b)
-        return Vec2(t, a * t + c)
-    else:
-        return None
-
-
-BezJ = zeros2d(MAXSEGS + 1, 5)
-BezJPrime = zeros2d(MAXSEGS + 1, 5)
-INITIALIZED = False
-CURVE_SLACK = 5
+BezJ = zeros2d(MAXSEGS + 1, 5)  #: Precomputed Bezier curve data
+BezJPrime = zeros2d(MAXSEGS + 1, 5)  #: Precomputed bezier curve data
+INITIALIZED = False  #: Flag for asserting that the above data is initialized
+CURVE_SLACK = 5  #: Distance allowed on either side of a curve for testing click hit.
 
 
 def init_bezier():
+    """Initialize (precompute) the Bezier data."""
     global INITIALIZED
 
     if not INITIALIZED:
@@ -249,9 +161,35 @@ def init_bezier():
 
 
 class Reaction:
+    """Class that keeps track of data for a reaction as well as its Bezier curve.
+
+    Attributes:
+        id_: reaction ID.
+        index: reaction index.
+        fill_color: reaction fill color.
+        rate_law: reaction rate law.
+        bezier: Instance that keeps track of the Bezier curve data associated to this reaction.
+        position: The centroid position.
+        s_position: The scaled centroid position. TODO this is sort of redundant.
+        sources: The source (reactant) nodes.
+        target: The target (product) nodes.
+    """
+
     def __init__(self, id_: str, *, sources: List[Node], targets: List[Node],
                  handle_pos: List[Vec2] = None, fill_color: wx.Colour, rate_law: str,
                  index: int = -1):
+        """Constructor for a reaction.
+
+        Args:
+            id_: Reaction ID.
+            sources: List of source (reactant) nodes.
+            targets: List of target (product) nodes.
+            handle_pos: List of handle positions. Refer to the identically named argument in the
+                        ReactionBezier constructor.
+            fill_color: Fill color of the curve.
+            rate_law: The rate law string of the reaction; may not be valid.
+            index: Reaction index.
+        """
         self.id_ = id_
         self.index = index
         self.fill_color = fill_color
@@ -263,6 +201,7 @@ class Reaction:
         self.update_nodes(sources, targets)
 
     def update_nodes(self, sources: List[Node], targets: List[Node]):
+        """Called when the node position/size has changed."""
         s = sum((n.position + n.size / 2 for n in sources + targets), Vec2())
         self._position = s / (len(sources) + len(targets))
 
@@ -284,6 +223,7 @@ class Reaction:
 
 
 def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: bool):
+    """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
     c = wx.Colour(255, 112, 0) if hovering else wx.Colour(0, 102, 204)
     brush = wx.Brush(c)
     pen = wx.Pen(c)
@@ -303,6 +243,14 @@ def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: boo
 
 
 class BezierHandle:
+    """Class that keeps track of a Bezier control handle (tip).
+
+    Attributes:
+        position: Position of the tip of the handle.
+        mouse_hovering: Whether the mouse is currently hovering over the handle. This should be
+                        updated outside manually.
+        on_moved: The callback for when the handle is moved.
+    """
     position: Vec2
     _mouse_offset: Vec2  #: Convenient field that stores (center - mouse_pos) on mouse down.
     mouse_hovering: bool
@@ -324,6 +272,26 @@ class BezierHandle:
 
 
 class SpeciesBezier:
+    """Class that keeps track of the Bezier curve associated with a reaction species.
+
+    Attributes:
+        node: The associated node.
+        node_intersection: The intersection point between the handle and the padded node, i.e. the
+                           point after which the handle is not drawn, to create a gap.
+        handle: Beizer handle for the side on the species.
+        cnetroid_handle: Bezier handle for the centroid, shared among all reactants/products of
+                         this reaction.
+        is_source: Whether this species is considered a source or a dest node.
+        arrow_adjusted_coords: Coordinate array for the arrow vertices.
+    """
+    node: Node
+    node_intersection: Optional[Vec2]
+    handle: BezierHandle
+    centroid_handle: BezierHandle
+    is_source: bool
+    bezier_points: List[Vec2]
+    _dirty: bool  #: Whether the Bezier curve needs to be recomputed.
+
     def __init__(self, node: Node, handle: BezierHandle, centroid: Vec2,
                  centroid_handle: BezierHandle, is_source: bool):
         assert INITIALIZED, 'Bezier matrices not initialized! Call init_bezier()'
@@ -331,10 +299,10 @@ class SpeciesBezier:
         self.node = node
         self.node_intersection = None
         self.handle = handle
+        self.centroid_handle = centroid_handle
         self.is_source = is_source
         self.bezier_points = [Vec2() for _ in range(MAXSEGS + 1)]
         self._dirty = True
-        self.centroid_handle = centroid_handle
         self.update_curve(centroid)
         self.arrow_adjusted_coords = list()
 
@@ -345,6 +313,7 @@ class SpeciesBezier:
         self._dirty = True
 
     def _recompute_curve(self):
+        """Recompute the curve points and arrow points."""
         node_center = self.node.position + self.node.size / 2
 
         # add a padding to node, so that the Bezier curve starts outside the node. The portion
@@ -367,7 +336,7 @@ class SpeciesBezier:
                 break
 
         assert self.node_intersection is not None
-        #node_end = segments_intersect((node_center, self.handle), )
+
         # Scale up dimensions (mult by 1000) to get a smooth curve
         for i in range(MAXSEGS+1):
             tmp = Vec2()
@@ -383,6 +352,8 @@ class SpeciesBezier:
                                       self.node_intersection - extended_handle)
 
     def _recompute_arrow_tip(self, tip, slope):
+        """Helper that recomputes the vertex coordinates of the arrow, given the tip pos and slope.
+        """
         alpha = -math.atan2(slope.y, slope.x)
         cosine = math.cos(alpha)
         sine = math.sin(alpha)
@@ -451,12 +422,35 @@ class SpeciesBezier:
 
 
 class ReactionBezier:
+    """Class that keeps track of all Bezier curve data for a reaction.
+
+    Attributes:
+        src_beziers: List of SpeciesBezier instances for reactants.
+        dest_beziers: List of SpeciesBezier instances for products.
+        src_c_handle: Centroid bezier handle that controls the reactant curves.
+        dest_c_handle: Centroid bezier handle that controls the product curves.
+        handles: List of all the BezierHandle instances, stored for convenience.
+    """
     src_beziers: List[SpeciesBezier]
     dest_beziers: List[SpeciesBezier]
     src_c_handle: BezierHandle
     dest_c_handle: BezierHandle
+    handles: List[BezierHandle]
 
-    def __init__(self, reactants: List[Node], products: List[Node], handle_positions: List[Vec2] = None):
+    def __init__(self, reactants: List[Node], products: List[Node],
+                 handle_positions: List[Vec2] = None):
+        """Constructor.
+
+        Args:
+            reactants: List of reactant nodes.
+            products: List of product nodes.
+            handle_positions: The list of positions of the handles. 0th element is the position of
+                              the reactant-side centroid handle, followed by the reactant handle
+                              positions given in the same order as the reactants list, and
+                              similarly followed by the product handle positins. Leave as None to
+                              automatically initialize the handle positions (e.g. when a new
+                              reaction is created).
+        """
         self.reactants = reactants
         self.products = products
         self.centroid = compute_centroid(reactants, products)
@@ -498,6 +492,7 @@ class ReactionBezier:
             index += 1
 
     def make_handle_moved_func(self, sb: SpeciesBezier):
+        """Manufacture a callback function (on_moved) for the given SpeciesBezier."""
         return lambda _: sb.update_curve(self.centroid)
 
     def is_mouse_on(self, pos: Vec2) -> bool:
@@ -510,22 +505,30 @@ class ReactionBezier:
         return any(bz.is_on_curve(pos) for bz in chain(self.src_beziers, self.dest_beziers))
 
     def in_which_handle(self, pos: Vec2) -> Optional[BezierHandle]:
+        """Return the handle that pos is inside, or None if it's not in any."""
         for handle in self.handles:
             if pt_in_circle(pos, HANDLE_RADIUS, handle.position * cstate.scale):
                 return handle
         return None
 
     def _src_handle_moved(self, pos):
+        """Special callback for when the source centroid handle is moved."""
         self.dest_c_handle.position = 2 * self.centroid - pos
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
     def _dest_handle_moved(self, pos):
+        """Special callback for when the dest centroid handle is moved."""
         self.src_c_handle.position = 2 * self.centroid - pos
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
     def nodes_updated(self):
+        """Function called after reactant/product nodes have been updated.
+        
+        It is assumed that the node referenced held by this instance has been changed
+        automatically.
+        """
         for sp_bz in self.src_beziers:
             sp_bz.update_curve(self.centroid)
         for sp_bz in self.dest_beziers:

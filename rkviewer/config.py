@@ -1,4 +1,4 @@
-"""Types and helper classes.
+"""Configuration parameters.
 """
 # pylint: disable=maybe-no-member
 import wx

@@ -12,7 +12,7 @@ from .canvas.data import Node, Reaction
 from .config import settings, theme
 from .forms import NodeForm, ReactionForm
 from .mvc import IController, IView
-from .overlays import ButtonGroup
+from .widgets import ButtonGroup
 
 
 class EditPanel(fnb.FlatNotebook):

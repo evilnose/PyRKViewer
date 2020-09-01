@@ -2,13 +2,12 @@ from __future__ import annotations  # For referencing self in a class
 # pylint: disable=maybe-no-member
 import enum
 from itertools import chain
-from rkviewer.canvas.events import EVT_C_MOVE_NODE, EVT_NODE_DID_MOVE, NodeDidMoveEvent
+from rkviewer.canvas.events import EVT_C_MOVE_NODE, EVT_NODE_DID_MOVE
 from rkviewer.mvc import IController
 import wx
 from abc import abstractmethod
 import bisect
-import copy
-from typing import Callable, Collection, Iterator, List, Optional
+from typing import Any, Callable, Iterator, List, Optional
 from .data import Node, BezierHandle, Reaction, ToScrolledFn
 from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, within_rect
 from .state import cstate
@@ -21,6 +20,13 @@ SetCursorFn = Callable[[wx.Cursor], None]
 
 
 class CanvasElement:
+    """Base class for an element positioned on the canvas.
+
+    Attributes:
+        layer: The layer number of this element.
+        to_scrolled_fn: Function for converting logical to scrolled (device) position.
+                        TODO move this out as a module-level function.
+    """
     layer: int
     to_scrolled_fn: ToScrolledFn
 
@@ -30,28 +36,36 @@ class CanvasElement:
 
     @abstractmethod
     def pos_inside(self, logical_pos: Vec2) -> bool:
+        """Returns whether logical_pos is inside the diplayed shape of this element."""
         pass
 
     @abstractmethod
     def do_paint(self, gc: wx.GraphicsContext):
+        """Paint the shape onto the given GraphicsContext."""
         pass
 
     def do_mouse_enter(self, logical_pos: Vec2) -> bool:
+        """Handler for when the mouse has entered the shape."""
         return False
 
     def do_mouse_leave(self, logical_pos: Vec2) -> bool:
+        """Handler for when the mouse has exited the shape"""
         return False
 
     def do_mouse_move(self, logical_pos: Vec2) -> bool:
+        """Handler for when the mouse moves inside the shape, with the left mouse button up."""
         return False
 
     def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
+        """Handler for when the mouse drags inside the shape, with the left mouse button down."""
         return False
 
     def do_left_down(self, logical_pos: Vec2) -> bool:
+        """Handler for when the mouse left button is pressed down inside the shape."""
         return False
 
     def do_left_up(self, logical_pos: Vec2) -> bool:
+        """Handler for when the mouse left button is springs up inside the shape."""
         return False
 
     def to_scrolled_rect(self, rect: Rect):
@@ -60,12 +74,20 @@ class CanvasElement:
         return Rect(adj_pos, rect.size)
 
 
-# TODO add option to change layer
+# TODO add option to change layer of element
 class LayeredElements:
+    """Class that keeps track of layered canvas elements.
+
+    Attributes:
+        keys: Sorted list of the layer numbers of the elements; matches 1-1 with elements.
+        elements: List of CanvasElements; match 1-1 with keys.
+    """
+    keys: List[int]
+    elements: List[CanvasElement]
+
     def __init__(self, elements=list()):
         self.keys = list()
         self.elements = list()
-        self._ri = -1
         for el in elements:
             self.add(el)
 
@@ -76,18 +98,27 @@ class LayeredElements:
         self.elements.insert(idx, el)
 
     def bottom_up(self) -> Iterator[CanvasElement]:
+        """Returns an iterator from the bottom to the top layer.
+
+        In the same layer, elements are returned in the original order they were added.
+        """
         return iter(self.elements)
 
     def top_down(self) -> Iterator[CanvasElement]:
+        """Returns an iterator from the top to the bottom layer.
+
+        In the same layer, elements are returned in the reverse order they were added.
+        """
         return reversed(self.elements)
 
 
 class NodeElement(CanvasElement):
+    """CanvasElement for nodes."""
     node: Node
+    canvas: Any
 
-    # HACK no type for canvas since otherwise there is circular dependency
-    def __init__(self, node: Node, canvas, to_scrolled_fn: ToScrolledFn,
-                 layer: int):
+    # HACK no type for canvas since otherwise there would be circular dependency
+    def __init__(self, node: Node, canvas, to_scrolled_fn: ToScrolledFn, layer: int):
         super().__init__(to_scrolled_fn, layer)
         self.node = node
         self.canvas = canvas
@@ -133,7 +164,7 @@ class NodeElement(CanvasElement):
 
 
 class ReactionElement(CanvasElement):
-    """ TODO document
+    """CanvasElement for reactions.
 
     Note that if new nodes are constructed, all ReactionBezier instances that use these nodes should be
     re-constructed with the new nodes. On the other hand, if the nodes are merely modified, the
@@ -155,6 +186,7 @@ class ReactionElement(CanvasElement):
         canvas.Bind(EVT_C_MOVE_NODE, self.c_node_moved)
 
     def node_moved(self, evt):
+        """Handler for after a node has moved."""
         node: Node = evt.node
         # OPTIMIZE ONLY IF NECESSARY(Gary): have reverse map from node to its list of reactions.
         # and handle this event only once at someplace else
@@ -165,6 +197,7 @@ class ReactionElement(CanvasElement):
                 break
 
     def c_node_moved(self, evt):
+        """Handler for after the controller is told to move a node."""
         index = 0
         for bz in chain(self.reaction.bezier.src_beziers, self.reaction.bezier.dest_beziers):
             if bz.node.index == evt.nodei:
@@ -246,12 +279,26 @@ class ReactionElement(CanvasElement):
 
 
 class SelectBox(CanvasElement):
+    """Class that represents a select box, i.e. the bounding box draw around the selected nodes.
+
+    Supports moving and resizing operations.
+
+    Attributes:
+        CURSOR_TYPES: List of cursor types starting with that for the top-left handle and going
+                      clockwise.
+        nodes: List of selected nodes, as contained in this select box.
+        related_elts: List of NodeElements related to each node instance; matches the node list
+                      1-1.
+        bounding_rect: The exact bounding rectangle (without padding).
+        mode: Current input mode of the SelectBox.
+    """
     CURSOR_TYPES = [wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE,
                     wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE]
 
     nodes: List[Node]
-    _padding: float  #: padding for the bounding rectangle around the selected nodes
     related_elts: List[CanvasElement]
+    bounding_rect: Rect
+    _padding: float  #: padding for the bounding rectangle around the selected nodes
     _drag_rel: Vec2  #: relative position of the mouse to the bounding rect when dragging started
     _rel_positions: Optional[List[Vec2]]  #: relative positions of the nodes to the bounding rect
     _resize_handle: int  #: the node resize handle. See Canvas::_GetNodeResizeHandles for details.
@@ -259,7 +306,6 @@ class SelectBox(CanvasElement):
     _min_resize_ratio: Vec2
     _orig_rect: Optional[Rect]  #: the bounding rect when dragging/resizing started
     _bounds: Rect  #: the bounds that the bounding rect may not exceed
-    bounding_rect: Rect
 
     class Mode(enum.Enum):
         IDLE = 0
@@ -297,6 +343,7 @@ class SelectBox(CanvasElement):
             self.bounding_rect = get_bounding_rect(rects)
 
     def outline_rect(self) -> Rect:
+        """Helper that returns the scaled, padded bounding rectangle."""
         return padded_rect(self.bounding_rect * cstate.scale, self._padding)
 
     def _resize_handle_rects(self):
@@ -377,7 +424,6 @@ class SelectBox(CanvasElement):
                 self.set_cursor_fn(wx.Cursor(wx.CURSOR_ARROW))
 
     def do_left_down(self, logical_pos: Vec2):
-        # TODO check if multi-clicked in node
         if len(self.nodes) == 0:
             return False
 
@@ -436,6 +482,7 @@ class SelectBox(CanvasElement):
         return True
 
     def _resize(self, pos: Vec2):
+        """Helper that performs resize on the bounding box, given the logical mouse position."""
         # STEP 1, get new rect vertices
         # see class comment for resize handle format. For side-handles, get the vertex in the
         # counter-clockwise direction
@@ -509,6 +556,7 @@ class SelectBox(CanvasElement):
         self.bounding_rect.size = target_size / cstate.scale
 
     def _move(self, pos: Vec2):
+        """Helper that performs resize on the bounding box, given the logical mouse position."""
         # campute tentative new positions. May need to clamp it.
         new_positions = [pos + rp for rp in self._rel_positions]
         min_x = min(p.x for p in new_positions)

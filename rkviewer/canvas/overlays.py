@@ -1,4 +1,4 @@
-"""Canvas widgets that are drawn within the canvas.
+"""Widgets that are floating on top of the canvas (overlaid) which do not change position on scroll.
 """
 # pylint: disable=maybe-no-member
 import wx

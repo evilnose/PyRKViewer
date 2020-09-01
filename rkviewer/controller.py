@@ -13,6 +13,7 @@ from .mvc import IController, IView
 
 
 def try_setter(fn):
+    """Decorator for controller setter methods that catches Errors and auto updates views."""
     # If programmatic is True, then do not trigger a C-Event
     def ret(self, *args):
         try:
@@ -44,7 +45,6 @@ class Controller(IController):
         self.group_depth = 0
 
     def try_start_group(self) -> bool:
-        # TODO record group depth
         try:
             iod.startGroup()
             self.group_depth += 1

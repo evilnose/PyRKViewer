@@ -4,7 +4,7 @@ import wx
 import copy
 from enum import Enum
 import math
-from typing import Any, Callable, List, Tuple, TypeVar
+from typing import Any, Callable, List, Optional, Tuple, TypeVar
 
 
 TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int.
@@ -272,6 +272,10 @@ def clamp_point(pos: Vec2, bounds: Rect, padding=0) -> Vec2:
 
 
 def clamp_point_outside(pos: Vec2, bounds: Rect) -> Vec2:
+    """Clamp the point so that it is outside the given bounds rectangle.
+    
+    The point is clamped so that its new position differs minimally from the old position.
+    """
     botright = bounds.position + bounds.size
     # (distance, tiebreak, direction for recording)
     left = (pos.x - bounds.position.x, 0, Direction.LEFT)
@@ -297,8 +301,7 @@ def clamp_point_outside(pos: Vec2, bounds: Rect) -> Vec2:
 
 
 def within_rect(pos: Vec2, rect: Rect) -> bool:
-    """Returns whether the given position is within the rectangle, inclusive.
-    """
+    """Returns whether the given position is within the rectangle, inclusive."""
     end = rect.position + rect.size
     return pos.x >= rect.position.x and pos.y >= rect.position.y and pos.x <= end.x and \
         pos.y <= end.y
@@ -328,6 +331,7 @@ def get_bounding_rect(rects: List[Rect], padding: float = 0) -> Rect:
 
 
 def padded_rect(rect: Rect, padding: float) -> Rect:
+    """Return a rectangle padded by length padding, with the same center as the original."""
     return Rect(rect.position - Vec2.repeat(padding), rect.size + Vec2.repeat(padding) * 2)
 
 
@@ -343,3 +347,97 @@ def rects_overlap(r1: Rect, r2: Rect) -> bool:
             return False
 
     return True
+
+
+def pt_on_line(a: Vec2, b: Vec2, point: Vec2, threshold: float = 0) -> bool:
+    """Returns whether point is on line ab, with the given threshold distance on either side."""
+    delta = b - a
+    b_comp_sq = delta.norm_sq
+    direction = delta.normalized()
+    ap = point - a
+    comp = ap.dot(direction)
+
+    # projection not on the line
+    if comp < 0 or comp * comp > b_comp_sq:
+        return False
+
+    projected = a + comp * direction
+    return (point - projected).norm_sq <= threshold ** 2
+
+
+def pt_in_circle(center: Vec2, radius: float, point: Vec2) -> bool:
+    """Returns whether point is inside the circle with the given center and radius."""
+    return (point - center).norm_sq <= radius ** 2
+
+
+class Orientation(Enum):
+    CLOCKWISE = 0
+    COUNTERCLOCKWISE = 1
+    COLINEAR = 2
+
+
+def determinant(v1: Vec2, v2: Vec2):
+    """Computes the 2D determinant of the two vectors."""
+    return v1.x * v2.y - v2.x * v1.y
+
+
+def orientation(p1: Vec2, p2: Vec2, p3: Vec2) -> Orientation:
+    """Compute the orientation of the three points listed in order."""
+    det = determinant(p3 - p2, p2 - p1)
+    if det == 1:
+        return Orientation.CLOCKWISE
+    elif det == -1:
+        return Orientation.COUNTERCLOCKWISE
+    else:
+        return Orientation.COLINEAR
+
+
+def segments_intersect(seg1: Tuple[Vec2, Vec2], seg2: Tuple[Vec2, Vec2]) -> Optional[Vec2]:
+    """Returns the intersection point if line1 and line2 intersect, and None otherwise."""
+    p1, q1 = seg1
+    p2, q2 = seg2
+    lk = q2 - p2
+    nm = p1 - q1
+    mk = q1 - p2
+
+    det = determinant(nm, lk)
+    if abs(det) < 1e-6:
+        return None
+    else:
+        detinv = 1.0 / det
+        s = (nm.x * mk.y - nm.y * mk.x) * detinv
+        t = (lk.x * mk.y - lk.y * mk.x) * detinv
+        if s < 0.0 or s > 1.0 or t < 0.0 or t > 1.0:
+            return None
+        else:
+            return p2 + lk * s
+
+
+def linear_coefficients(p: Vec2, q: Vec2) -> Tuple[float, float]:
+    """Given two points that define a line ax + c, return (a, c)"""
+    delta = q - p
+    slope = delta.y / delta.x
+    c = p.y - p.x * slope
+    return (slope, c)
+
+
+def segment_intersects_line(seg: Tuple[Vec2, Vec2], line: Tuple[Vec2, Vec2]) -> Optional[Vec2]:
+    """Returns the intersection between seg and line or None if there is no intersection.
+
+    line is defined by any two points on it.
+    """
+    o1 = orientation(seg[0], line[0], line[1])
+    if o1 == Orientation.COLINEAR:
+        return seg[0]
+    o2 = orientation(seg[1], line[0], line[1])
+    if o2 == Orientation.COLINEAR:
+        return seg[1]
+
+    if o1 != o2:
+        # intersects
+        a, c = linear_coefficients(*seg)
+        b, d = linear_coefficients(*line)
+        t = (d - c) / (a - b)
+        return Vec2(t, a * t + c)
+    else:
+        return None

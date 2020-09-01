@@ -1,15 +1,17 @@
 from __future__ import annotations  # For referencing self in a class
 # pylint: disable=maybe-no-member
 import enum
+from itertools import chain
+from rkviewer.canvas.events import EVT_C_MOVE_NODE, EVT_NODE_DID_MOVE, NodeDidMoveEvent
 from rkviewer.mvc import IController
 import wx
 from abc import abstractmethod
 import bisect
 import copy
 from typing import Callable, Collection, Iterator, List, Optional
-from .geometry import Node, Rect, Vec2, clamp_point,  get_bounding_rect, padded_rect, within_rect
+from .data import Node, BezierHandle, Reaction, ToScrolledFn
+from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, within_rect
 from .state import cstate
-from .reactions import BezierHandle, Reaction, ToScrolledFn
 from .utils import draw_rect
 from ..config import settings, theme
 
@@ -99,7 +101,7 @@ class NodeElement(CanvasElement):
         gc.SetFont(gfont)
 
         scrolled_pos = self.to_scrolled_fn(self.node.s_position)
-        width, height = self.node.size
+        width, height = self.node.s_size
         border_width = self.node.border_width * cstate.scale
 
         draw_rect(
@@ -117,7 +119,8 @@ class NodeElement(CanvasElement):
         gc.DrawText(self.node.id_, tx + scrolled_pos.x, ty + scrolled_pos.y)
 
         selected_idx = self.canvas.selected_idx.item_copy()
-        if self.node.index in selected_idx and len(selected_idx) > 1:
+        if (self.node.index in selected_idx and len(selected_idx) > 1) or (
+                self.node.index in self.canvas.drag_selected_idx):
             rect = self.to_scrolled_rect(self.node.s_rect)
             rect = padded_rect(rect, theme['select_outline_padding'] * cstate.scale)
 
@@ -130,6 +133,12 @@ class NodeElement(CanvasElement):
 
 
 class ReactionElement(CanvasElement):
+    """ TODO document
+
+    Note that if new nodes are constructed, all ReactionBezier instances that use these nodes should be
+    re-constructed with the new nodes. On the other hand, if the nodes are merely modified, the
+    corresponding update methods should be called.
+    """
     reaction: Reaction
     _hovered_handle: Optional[BezierHandle]
 
@@ -140,6 +149,34 @@ class ReactionElement(CanvasElement):
         self.reaction = reaction
         self.canvas = canvas
         self._hovered_handle = None
+        self._dragged = False
+
+        canvas.Bind(EVT_NODE_DID_MOVE, self.node_moved)
+        canvas.Bind(EVT_C_MOVE_NODE, self.c_node_moved)
+
+    def node_moved(self, evt):
+        node: Node = evt.node
+        # OPTIMIZE ONLY IF NECESSARY(Gary): have reverse map from node to its list of reactions.
+        # and handle this event only once at someplace else
+        for bz in chain(self.reaction.bezier.src_beziers, self.reaction.bezier.dest_beziers):
+            if bz.node.index == node.index:
+                bz.handle.position += bz.node.position - evt.old_pos
+                bz.update_curve(self.reaction.bezier.centroid)
+                break
+
+    def c_node_moved(self, evt):
+        index = 0
+        for bz in chain(self.reaction.bezier.src_beziers, self.reaction.bezier.dest_beziers):
+            if bz.node.index == evt.nodei:
+                ctrl = self.canvas.controller
+                neti = self.canvas.net_index
+                reai = self.reaction.index
+                if index >= len(self.reaction.bezier.src_beziers):
+                    ctrl.try_set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.position)
+                else:
+                    ctrl.try_set_src_node_handle(neti, reai, bz.node.id_, bz.handle.position)
+                break
+            index += 1
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return self.reaction.bezier.is_mouse_on(logical_pos) or \
@@ -164,7 +201,29 @@ class ReactionElement(CanvasElement):
             self._hovered_handle = None
         return True
 
+    def do_left_down(self, logical_pos: Vec2):
+        return True
+
+    def do_left_up(self, logical_pos: Vec2):
+        if self._dragged:
+            self._dragged = False
+            # update every handle for convenience, even though not all might have moved
+
+            bez = self.reaction.bezier
+            ctrl = self.canvas.controller
+            neti = self.canvas.net_index
+            reai = self.reaction.index
+            ctrl.try_start_group()
+            ctrl.try_set_center_handle(neti, reai, bez.src_c_handle.position)
+
+            for species in bez.src_beziers:
+                ctrl.try_set_src_node_handle(neti, reai, species.node.id_, species.handle.position)
+            for species in bez.dest_beziers:
+                ctrl.try_set_dest_node_handle(neti, reai, species.node.id_, species.handle.position)
+            ctrl.try_end_group()
+
     def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2):
+        self._dragged = True
         if self._hovered_handle is not None:
             self._hovered_handle.do_drag(logical_pos)
             return True
@@ -184,9 +243,6 @@ class ReactionElement(CanvasElement):
         center = self.to_scrolled_fn(self.reaction.bezier.centroid * cstate.scale -
                                      Vec2.repeat(radius))
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
-
-    def do_left_down(self, logical_pos: Vec2):
-        return True
 
 
 class SelectBox(CanvasElement):

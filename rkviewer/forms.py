@@ -9,10 +9,12 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .config import theme, settings
 from .mvc import IController
-from .utils import get_nodes_by_idx, no_rzeros, on_msw, resource_path
+from .utils import no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas
-from .canvas.reactions import Reaction
-from .canvas.geometry import Node, Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
+from .canvas.utils import get_nodes_by_idx
+from .canvas.data import Reaction
+from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
+from .canvas.data import Node
 
 
 def parse_num_pair(text: str) -> Optional[Tuple[float, float]]:
@@ -303,8 +305,7 @@ class EditPanelForm(ScrolledPanel):
                     else:
                         incl_text = 'or equal to' if right_incl else ''
                         err_msg = "Value must less than {} {}".format(incl_text, hi)
-                self._SetValidationState(
-                    False, ctrl_id, err_msg)
+                self._SetValidationState(False, ctrl_id, err_msg)
                 return
 
             callback(value)

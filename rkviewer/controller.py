@@ -1,16 +1,19 @@
 """Implementation of a controller.
 """
 # pylint: disable=maybe-no-member
+from rkviewer.canvas.events import CMoveNodeEvent, EVT_NODE_DID_MOVE, get_canvas
 import wx
 from typing import Collection, List, Optional, Set
 import iodine as iod
-from .canvas.geometry import Vec2, Node
-from .utils import  get_nodes_by_ident, get_nodes_by_idx, rgba_to_wx_colour
-from .canvas.reactions import Reaction
+from .utils import rgba_to_wx_colour
+from .canvas.data import Node, Reaction
+from .canvas.geometry import Vec2
+from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView
 
 
 def try_setter(fn):
+    # If programmatic is True, then do not trigger a C-Event
     def ret(self, *args):
         try:
             fn(self, *args)
@@ -116,9 +119,13 @@ class Controller(IController):
         self.try_end_group()
 
     @try_setter
-    def try_move_node(self, neti: int, nodei: int, pos: Vec2):
+    def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic=False):
         assert pos.x >= 0 and pos.y >= 0
+        self.try_start_group()
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
+        if not programmatic:
+            wx.PostEvent(get_canvas(), CMoveNodeEvent(nodei=nodei, new_pos=pos))
+        wx.CallAfter(self.try_end_group)
 
     @try_setter
     def try_set_node_size(self, neti: int, nodei: int, size: Vec2):
@@ -181,6 +188,15 @@ class Controller(IController):
                                     reaction.fill_color.Red(),
                                     reaction.fill_color.Green(),
                                     reaction.fill_color.Blue())
+        for bez, node in zip(reaction.bezier.src_beziers, reaction.sources):
+            pos = bez.handle.position
+            iod.setReactionSrcNodeHandlePosition(neti, reai, node.id_, pos.x, pos.y)
+        for bez, node in zip(reaction.bezier.dest_beziers, reaction.targets):
+            pos = bez.handle.position
+            iod.setReactionDestNodeHandlePosition(neti, reai, node.id_, pos.x, pos.y)
+
+        cpos = reaction.bezier.src_c_handle.position
+        iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
         self.try_end_group()
 
     @try_setter
@@ -194,6 +210,27 @@ class Controller(IController):
     @try_setter
     def try_set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
         iod.setReactionDestNodeStoich(neti, reai, node_id, stoich)
+
+    @try_setter
+    def try_set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+        iod.setReactionSrcNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
+
+    @try_setter
+    def try_set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+        iod.setReactionDestNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
+
+    @try_setter
+    def try_set_center_handle(self, neti: int, reai: int, pos: Vec2):
+        iod.setReactionCenterHandlePosition(neti, reai, pos.x, pos.y)
+
+    def get_src_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+        return Vec2(iod.getReactionSrcNodeHandlePosition(neti, reai, node_id))
+
+    def get_dest_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+        return Vec2(iod.getReactionDestNodeHandlePosition(neti, reai, node_id))
+
+    def get_center_handle(self, neti: int, reai: int) -> Vec2:
+        return Vec2(iod.getReactionCenterHandlePosition(neti, reai))
 
     def get_src_node_stoich(self, neti: int, reai: int, node_id: str):
         return iod.getReactionSrcNodeStoich(neti, reai, node_id)
@@ -253,12 +290,21 @@ class Controller(IController):
             targets = get_nodes_by_ident(nodes, tids)
             fill_rgb = iod.getReactionFillColorRGB(neti, reai)
             fill_alpha = iod.getReactionFillColorAlpha(neti, reai)
+
+            items = list()
+            items.append(self.get_center_handle(neti, reai))
+            for nid in iod.getListOfReactionSrcNodes(neti, reai):
+                items.append(self.get_src_node_handle(neti, reai, nid))
+            for nid in iod.getListOfReactionDestNodes(neti, reai):
+                items.append(self.get_dest_node_handle(neti, reai, nid))
+
             reaction = Reaction(id_,
                                 sources=sources,
                                 targets=targets,
                                 fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
                                 index=reai,
-                                rate_law=iod.getReactionRateLaw(neti, reai)
+                                rate_law=iod.getReactionRateLaw(neti, reai),
+                                handle_pos=items
                                 )
             reactions.append(reaction)
 

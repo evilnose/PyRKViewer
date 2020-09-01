@@ -4,8 +4,9 @@ This includes drawing helpers and 2D geometry functions.
 """
 # pylint: disable=maybe-no-member
 import wx
-from typing import Optional
+from typing import Any, Collection, List, Optional
 from .geometry import Rect
+from .data import Node
 
 
 def super_hook(func):
@@ -15,6 +16,20 @@ def super_hook(func):
         self.changed_fn()
 
     return ret
+
+
+def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
+    """Simple helper that maps the given list of indices to their corresponding nodes."""
+    ret = [n for n in nodes if n.index in indices]
+    assert len(ret) == len(indices)
+    return ret
+
+
+def get_nodes_by_ident(nodes: List[Node], ids: Collection[str]):
+    ret = [n for n in nodes if n.id_ in ids]
+    assert len(ret) == len(ids)
+    return ret
+
 
 
 def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] = None,

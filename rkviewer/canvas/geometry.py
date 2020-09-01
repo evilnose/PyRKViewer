@@ -1,11 +1,10 @@
-from __future__ import annotations  # For returning self in a class
+from __future__ import annotations
 # pylint: disable=maybe-no-member
 import wx
 import copy
 from enum import Enum
 import math
 from typing import Any, Callable, List, Tuple, TypeVar
-from .state import cstate
 
 
 TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int.
@@ -210,94 +209,6 @@ class Rect:
 
     def __repr__(self):
         return 'Rect({}, {})'.format(self.position, self.size)
-
-
-class Node:
-    """Class that represents a Node for rendering purposes.
-
-    Attributes:
-        index: The index of the node. If this node has not yet been added to the NOM, this takes on
-               the value of -1.
-        id_: The ID of the node.
-        fill_color: The fill color of the node.
-        border_color: The border color of the node.
-        border_width: The border width of the node.
-    """
-    index: int
-    id_: str
-    fill_color: wx.Colour
-    border_color: wx.Colour
-    border_width: float
-    _position: Vec2
-    _size: Vec2
-    _scale: float
-
-    # force keyword-only arguments
-    def __init__(self, id_: str, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, index: int = -1):
-        self.index = index
-        self.id_ = id_
-        self.position = pos
-        self.size = size
-        self.fill_color = fill_color
-        self.border_color = border_color
-        self.border_width = border_width
-
-    @property
-    def position(self):
-        """The unscaled position of the node."""
-        return self._position
-
-    @position.setter
-    def position(self, val: Vec2):
-        self._position = val
-
-    @property
-    def s_position(self):
-        """The scaled position of the node obtained by multiplying the scale."""
-        return self._position * cstate.scale
-
-    @s_position.setter
-    def s_position(self, val: Vec2):
-        self._position = val / cstate.scale
-
-    @property
-    def size(self):
-        """The unscaled size of the node."""
-        return self._size
-
-    @size.setter
-    def size(self, val: Vec2):
-        self._size = val
-
-    @property
-    def s_size(self):
-        """The scaled size of the node obtained by multiplying the scale."""
-        return self._size * cstate.scale
-
-    @s_size.setter
-    def s_size(self, val: Vec2):
-        self._size = val / cstate.scale
-
-    @property
-    def s_rect(self):
-        """Return scaled position/size as Rect.
-
-        Note that the fields of the returned rect is copied, so one cannot modify this node through
-        the rect.
-        """
-        return Rect(copy.copy(self.s_position), copy.copy(self.s_size))
-
-    @property
-    def rect(self):
-        """The same as s_rect, but the rectangle is unscaled.
-        """
-        return Rect(copy.copy(self.position), copy.copy(self.size))
-
-
-    @property
-    def center_point(self) -> Vec2:
-        return self.position + self.size / 2
 
 
 class Direction(Enum):

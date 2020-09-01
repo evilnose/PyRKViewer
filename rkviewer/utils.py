@@ -4,9 +4,7 @@ import wx
 from itertools import tee
 import os
 import sys
-from typing import Any, Callable, Collection, Iterable, List, Set, Tuple, TypeVar
-from .canvas.state import cstate
-from .canvas.geometry import Node
+from typing import Collection, Iterable, List
 
 
 def convert_position(fn):
@@ -23,19 +21,6 @@ def convert_position(fn):
         fn(self, copy)
         evt.Skip()
 
-    return ret
-
-
-def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
-    """Simple helper that maps the given list of indices to their corresponding nodes."""
-    ret = [n for n in nodes if n.index in indices]
-    assert len(ret) == len(indices)
-    return ret
-
-
-def get_nodes_by_ident(nodes: List[Node], ids: Collection[str]):
-    ret = [n for n in nodes if n.id_ in ids]
-    assert len(ret) == len(ids)
     return ret
 
 

@@ -2,8 +2,8 @@
 import wx
 import abc
 from typing import List, Optional
-from .canvas.geometry import Vec2, Node
-from .canvas.reactions import Reaction
+from .canvas.geometry import Vec2
+from .canvas.data import Node, Reaction
 
 
 class IController(abc.ABC):
@@ -106,6 +106,30 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def get_src_node_stoich(self, neti: int, reai: int, node_id: str) -> float:
+        pass
+
+    @abc.abstractmethod
+    def try_set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+        pass
+
+    @abc.abstractmethod
+    def try_set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+        pass
+
+    @abc.abstractmethod
+    def try_set_center_handle(self, neti: int, reai: int, pos: Vec2):
+        pass
+
+    @abc.abstractmethod
+    def get_src_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+        pass
+
+    @abc.abstractmethod
+    def get_dest_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+        pass
+
+    @abc.abstractmethod
+    def get_center_handle(self, neti: int, reai: int) -> Vec2:
         pass
 
     @abc.abstractmethod

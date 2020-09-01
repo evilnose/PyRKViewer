@@ -6,14 +6,13 @@ import wx.lib.agw.flatnotebook as fnb
 import copy
 from typing import Callable, List, Dict, Any, Optional, Set, Tuple
 from .canvas.events import EVT_DID_DRAG_MOVE_NODES, EVT_DID_DRAG_RESIZE_NODES, \
-    EVT_DID_UPDATE_SELECTION, EVT_DID_UPDATE_CANVAS
+    EVT_SELECTION_DID_UPDATE, EVT_DID_UPDATE_CANVAS
 from .canvas.canvas import Canvas, InputMode
-from .canvas.reactions import Reaction
+from .canvas.data import Node, Reaction
 from .config import settings, theme
 from .forms import NodeForm, ReactionForm
 from .mvc import IController, IView
-from .utils import Node
-from .widgets import ButtonGroup
+from .overlays import ButtonGroup
 
 
 class EditPanel(fnb.FlatNotebook):
@@ -51,7 +50,7 @@ class EditPanel(fnb.FlatNotebook):
         # self.SetSizer(sizer)
 
         canvas.Bind(EVT_DID_UPDATE_CANVAS, self.OnDidUpdateCanvas)
-        canvas.Bind(EVT_DID_UPDATE_SELECTION, self.OnDidUpdateSelection)
+        canvas.Bind(EVT_SELECTION_DID_UPDATE, self.OnSelectionDidUpdate)
         canvas.Bind(EVT_DID_DRAG_MOVE_NODES, self.OnDidDragMoveNodes)
         canvas.Bind(EVT_DID_DRAG_RESIZE_NODES, self.OnDidDragResizeNodes)
 
@@ -59,7 +58,7 @@ class EditPanel(fnb.FlatNotebook):
         self.node_form.UpdateNodes(evt.nodes)
         self.reaction_form.UpdateReactions(evt.reactions)
 
-    def OnDidUpdateSelection(self, evt):
+    def OnSelectionDidUpdate(self, evt):
         should_show_nodes = len(evt.node_idx) != 0
         should_show_reactions = len(evt.reaction_idx) != 0
 

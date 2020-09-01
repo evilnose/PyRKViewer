@@ -5,7 +5,19 @@ handlers to these events.
 """
 
 # pylint: disable=maybe-no-member
+import wx
 from wx.lib.newevent import NewEvent
+
+
+def get_canvas():
+    """
+    A hacky way to get the canvas object. Must be called after the app has started running.
+    """
+    windows = wx.GetTopLevelWindows()
+    for window in windows:
+        if hasattr(window, 'main_panel'):
+            return window.main_panel.canvas
+    assert False, "Could not find the main window (of type MyFrame)!"
 
 
 #WillSelectNodesEvent, EVT_WILL_SELECT_NODES = NewEvent()
@@ -15,12 +27,29 @@ Note:
     Not implemented.
 """
 
-DidUpdateSelectionEvent, EVT_DID_UPDATE_SELECTION = NewEvent()
+SelectionDidUpdateEvent, EVT_SELECTION_DID_UPDATE = NewEvent()
 """Called after the list of selected nodes and/or reactions has changed.
 
 Attributes:
     node_idx (Set[int]): The indices of the list of selected nodes.
     reaction_idx (Set[int]): The indices of the list of selected reactions.
+"""
+
+CMoveNodeEvent, EVT_C_MOVE_NODE = NewEvent()  # TODO document
+
+NodeDidMoveEvent, EVT_NODE_DID_MOVE = NewEvent()
+"""Called after the position of a node changes in any situation.
+
+TODO implement this manually for move by form and move by dragging. Also provide a list of
+indices. After that, update elements.py so that if all nodes in a reaction are moved at once,
+move the centroid handle of the bezier as well.
+
+If multiple nodes are moved at once (e.g. by dragging), then this event is issued multiple times,
+once for each node.
+
+Attributes:
+    node (Node): The node that was moved.
+    old_pos (Vec2): The position of the node before it was moved.
 """
 
 DidDragMoveNodesEvent, EVT_DID_DRAG_MOVE_NODES = NewEvent()

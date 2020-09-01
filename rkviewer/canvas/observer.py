@@ -41,14 +41,20 @@ class SetSubject(Subject[Set[T]]):
         return set(self._item)
 
     def set_item(self, item: Set):
+        equal = self._item == item
         self._item = item
-        self.notify()
+        if not equal:
+            self.notify()
 
     def remove(self, el: T):
+        equal = el not in self._item
         self._item.remove(el)
-        self.notify()
+        if not equal:
+            self.notify()
 
     def add(self, el: T):
+        equal = el in self._item
         self._item.add(el)
-        self.notify()
+        if not equal:
+            self.notify()
     

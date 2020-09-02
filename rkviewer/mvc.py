@@ -28,6 +28,11 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def in_group(self) -> bool:
+        """Returns whether the controller is in the middle of a group operation."""
+        pass
+
+    @abc.abstractmethod
     def try_undo(self) -> bool:
         """Try to undo last operation"""
         pass

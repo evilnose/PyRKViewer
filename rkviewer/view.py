@@ -3,16 +3,16 @@
 # pylint: disable=maybe-no-member
 import wx
 import wx.lib.agw.flatnotebook as fnb
-import copy
 from typing import Callable, List, Dict, Any, Optional, Set, Tuple
-from .canvas.events import EVT_DID_DRAG_MOVE_NODES, EVT_DID_DRAG_RESIZE_NODES, \
-    EVT_SELECTION_DID_UPDATE, EVT_DID_UPDATE_CANVAS
+from .canvas.events import DidDragResizeNodesEvent, NodesDidMoveEvent, bind_handler, CanvasDidUpdateEvent, \
+    SelectionDidUpdateEvent
 from .canvas.canvas import Canvas, InputMode
 from .canvas.data import Node, Reaction
+from .canvas.state import cstate
 from .config import settings, theme
 from .forms import NodeForm, ReactionForm
 from .mvc import IController, IView
-from .widgets import ButtonGroup
+from .utils import ButtonGroup
 
 
 class EditPanel(fnb.FlatNotebook):
@@ -49,12 +49,12 @@ class EditPanel(fnb.FlatNotebook):
         #sizer.Add(null_message, proportion=1, flag=wx.ALIGN_CENTER_VERTICAL)
         # self.SetSizer(sizer)
 
-        canvas.Bind(EVT_DID_UPDATE_CANVAS, self.OnDidUpdateCanvas)
-        canvas.Bind(EVT_SELECTION_DID_UPDATE, self.OnSelectionDidUpdate)
-        canvas.Bind(EVT_DID_DRAG_MOVE_NODES, self.OnDidDragMoveNodes)
-        canvas.Bind(EVT_DID_DRAG_RESIZE_NODES, self.OnDidDragResizeNodes)
+        bind_handler(CanvasDidUpdateEvent, self.OnCanvasDidUpdate)
+        bind_handler(SelectionDidUpdateEvent, self.OnSelectionDidUpdate)
+        bind_handler(NodesDidMoveEvent, self.OnNodesDidMove)
+        bind_handler(DidDragResizeNodesEvent, self.OnDidDragResizeNodes)
 
-    def OnDidUpdateCanvas(self, evt):
+    def OnCanvasDidUpdate(self, evt):
         self.node_form.UpdateNodes(evt.nodes)
         self.reaction_form.UpdateReactions(evt.reactions)
 
@@ -108,8 +108,9 @@ class EditPanel(fnb.FlatNotebook):
         if not should_show_nodes and not should_show_reactions:
             self.null_message.Show()
 
-    def OnDidDragMoveNodes(self, evt):
-        self.node_form.UpdateDidDragMoveNodes()
+    def OnNodesDidMove(self, evt):
+        if evt.dragged:
+            self.node_form.UpdateDidDragMoveNodes()
 
     def OnDidDragResizeNodes(self, evt):
         self.node_form.UpdateDidDragResizeNodes()
@@ -210,6 +211,7 @@ class MainPanel(wx.Panel):
                              size=(theme['canvas_width'], theme['canvas_height']),
                              realsize=(4 * theme['canvas_width'], 4 * theme['canvas_height']),
                              )
+        cstate.canvas = self.canvas  # set global value canvas
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()

@@ -1,12 +1,12 @@
 """Implementation of a controller.
 """
 # pylint: disable=maybe-no-member
-from rkviewer.canvas.events import CMoveNodeEvent, EVT_NODE_DID_MOVE, get_canvas
 import wx
 from typing import Collection, List, Optional, Set
 import iodine as iod
 from .utils import rgba_to_wx_colour
 from .canvas.data import Node, Reaction
+from .canvas.events import DidCommitNodePositionsEvent, post_event
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView
@@ -70,6 +70,9 @@ class Controller(IController):
         self._update_view()
         return True
 
+    def in_group(self) -> bool:
+        return self.group_depth > 0
+
     def try_undo(self) -> bool:
         if self.stacklen == 0:
             return False
@@ -121,11 +124,10 @@ class Controller(IController):
     @try_setter
     def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic=False):
         assert pos.x >= 0 and pos.y >= 0
-        self.try_start_group()
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
+        # dispatch event if the call was caused by user input
         if not programmatic:
-            wx.PostEvent(get_canvas(), CMoveNodeEvent(nodei=nodei, new_pos=pos))
-        wx.CallAfter(self.try_end_group)
+            post_event(DidCommitNodePositionsEvent())
 
     @try_setter
     def try_set_node_size(self, neti: int, nodei: int, size: Vec2):

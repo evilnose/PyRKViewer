@@ -5,7 +5,6 @@ import copy
 import math
 from itertools import chain
 from typing import Callable, List, Optional, Tuple
-from .events import NodeDidMoveEvent, get_canvas
 from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, segments_intersect
 from .state import cstate
 from ..config import settings, theme
@@ -58,9 +57,7 @@ class Node:
 
     @position.setter
     def position(self, val: Vec2):
-        evt = NodeDidMoveEvent(node=self, old_pos=self._position)
         self._position = val
-        wx.PostEvent(get_canvas(), evt)
 
     @property
     def s_position(self):
@@ -467,9 +464,9 @@ class ReactionBezier:
             src_handle_pos = (self.reactants[0].center_point + self.centroid) / 2
             handle_pos = [(n.center_point + self.centroid) / 2 for n in chain(reactants, products)]
 
-        self.src_c_handle = BezierHandle(src_handle_pos, self._src_handle_moved)
+        self.src_c_handle = BezierHandle(src_handle_pos, lambda _: self.src_handle_moved())
         self.dest_c_handle = BezierHandle(2 * self.centroid - src_handle_pos,
-                                          self._dest_handle_moved)
+                                          lambda _: self.dest_handle_moved())
 
         self.handles = [self.src_c_handle, self.dest_c_handle]
 
@@ -511,15 +508,15 @@ class ReactionBezier:
                 return handle
         return None
 
-    def _src_handle_moved(self, pos):
+    def src_handle_moved(self):
         """Special callback for when the source centroid handle is moved."""
-        self.dest_c_handle.position = 2 * self.centroid - pos
+        self.dest_c_handle.position = 2 * self.centroid - self.src_c_handle.position
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
-    def _dest_handle_moved(self, pos):
+    def dest_handle_moved(self):
         """Special callback for when the dest centroid handle is moved."""
-        self.src_c_handle.position = 2 * self.centroid - pos
+        self.src_c_handle.position = 2 * self.centroid - self.dest_c_handle.position
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
@@ -539,7 +536,7 @@ class ReactionBezier:
         new_centroid = compute_centroid(self.reactants, self.products)
         if new_centroid != self.centroid:
             self.centroid = new_centroid
-            self._src_handle_moved(self.src_c_handle.position)
+            self.src_handle_moved()
 
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.do_paint(gc, fill, to_scrolled_fn, selected)

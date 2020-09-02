@@ -2,17 +2,17 @@ from __future__ import annotations  # For referencing self in a class
 # pylint: disable=maybe-no-member
 import enum
 from itertools import chain
-from rkviewer.canvas.events import EVT_C_MOVE_NODE, EVT_NODE_DID_MOVE
-from rkviewer.mvc import IController
 import wx
 from abc import abstractmethod
 import bisect
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Any, Callable, Iterator, List, Optional, Set
 from .data import Node, BezierHandle, Reaction, ToScrolledFn
+from .events import DidDragResizeNodesEvent, NodesDidMoveEvent, bind_handler, post_event
 from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, within_rect
 from .state import cstate
 from .utils import draw_rect
 from ..config import settings, theme
+from ..mvc import IController
 
 
 ToScrolledFn = Callable[[Vec2], Vec2]
@@ -172,6 +172,11 @@ class ReactionElement(CanvasElement):
     """
     reaction: Reaction
     _hovered_handle: Optional[BezierHandle]
+    _dragging: bool
+    #: Set of indices of the nodes that have been moved, but not committed.
+    _dirty_indices: Set[int]
+    #: Works in tandem with _dirty_indices. True if all nodes of the reaction are being moved.
+    _moving_all: bool
 
     # HACK no type for canvas since otherwise there is circular dependency
     def __init__(self, reaction: Reaction, canvas, to_scrolled_fn: ToScrolledFn,
@@ -180,36 +185,48 @@ class ReactionElement(CanvasElement):
         self.reaction = reaction
         self.canvas = canvas
         self._hovered_handle = None
-        self._dragged = False
+        self._dragging = False
+        self._dirty_indices = set()
+        self._moving_all = False
 
-        canvas.Bind(EVT_NODE_DID_MOVE, self.node_moved)
-        canvas.Bind(EVT_C_MOVE_NODE, self.c_node_moved)
-
-    def node_moved(self, evt):
+    def nodes_moved(self, nodes: List[Node], offset: Vec2):
         """Handler for after a node has moved."""
-        node: Node = evt.node
-        # OPTIMIZE ONLY IF NECESSARY(Gary): have reverse map from node to its list of reactions.
-        # and handle this event only once at someplace else
-        for bz in chain(self.reaction.bezier.src_beziers, self.reaction.bezier.dest_beziers):
-            if bz.node.index == node.index:
-                bz.handle.position += bz.node.position - evt.old_pos
-                bz.update_curve(self.reaction.bezier.centroid)
-                break
+        # If already moving (i.e. self._dirty_indices is not empty), then skip forward
+        if len(self._dirty_indices) == 0:
+            self._dirty_indices = {n.index for n in nodes}
+            my_indices = {n.index for n in chain(self.reaction.sources, self.reaction.targets)}
+            self._moving_all = my_indices <= self._dirty_indices
 
-    def c_node_moved(self, evt):
+        for node in nodes:
+            # OPTIMIZE ONLY IF NECESSARY(Gary): have reverse map from node to its list of reactions.
+            # and handle this event only once at someplace else
+            for bz in chain(self.reaction.bezier.src_beziers, self.reaction.bezier.dest_beziers):
+                if bz.node.index == node.index:
+                    bz.handle.position += offset
+                    bz.update_curve(self.reaction.bezier.centroid)
+                    break
+
+        if self._moving_all:
+            self.reaction.bezier.src_c_handle.position += offset
+            self.reaction.bezier.src_handle_moved()
+
+    def commit_node_pos(self):
         """Handler for after the controller is told to move a node."""
+        ctrl = self.canvas.controller
+        neti = self.canvas.net_index
+        reai = self.reaction.index
         index = 0
         for bz in chain(self.reaction.bezier.src_beziers, self.reaction.bezier.dest_beziers):
-            if bz.node.index == evt.nodei:
-                ctrl = self.canvas.controller
-                neti = self.canvas.net_index
-                reai = self.reaction.index
+            if bz.node.index in self._dirty_indices:
                 if index >= len(self.reaction.bezier.src_beziers):
                     ctrl.try_set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.position)
                 else:
                     ctrl.try_set_src_node_handle(neti, reai, bz.node.id_, bz.handle.position)
-                break
             index += 1
+
+        if self._moving_all:
+            ctrl.try_set_center_handle(neti, reai, self.reaction.bezier.src_c_handle.position)
+        self._dirty_indices = set()
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return self.reaction.bezier.is_mouse_on(logical_pos) or \
@@ -238,8 +255,8 @@ class ReactionElement(CanvasElement):
         return True
 
     def do_left_up(self, logical_pos: Vec2):
-        if self._dragged:
-            self._dragged = False
+        if self._dragging:
+            self._dragging = False
             # update every handle for convenience, even though not all might have moved
 
             bez = self.reaction.bezier
@@ -256,7 +273,7 @@ class ReactionElement(CanvasElement):
             ctrl.try_end_group()
 
     def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2):
-        self._dragged = True
+        self._dragging = True
         if self._hovered_handle is not None:
             self._hovered_handle.do_drag(logical_pos)
             return True
@@ -546,6 +563,8 @@ class SelectBox(CanvasElement):
                       min(fixed_point.y, target_point.y))
 
         # STEP 4 calculate and apply new node positions and sizes
+        # incremental ratio for the event
+        inc_ratio = orig_size.elem_mul(size_ratio / cstate.scale).elem_div(self.nodes[0].size)
         for node, orig_pos, orig_size in zip(self.nodes, self._orig_positions, self._orig_sizes):
             assert orig_pos.x >= -1e-6 and orig_pos.y >= -1e-6
             node.position = (br_pos + orig_pos.elem_mul(size_ratio)) / cstate.scale + pad_off
@@ -554,6 +573,9 @@ class SelectBox(CanvasElement):
         # STEP 5 apply new bounding_rect position and size
         self.bounding_rect.position = br_pos / cstate.scale + pad_off
         self.bounding_rect.size = target_size / cstate.scale
+        
+        # STEP 6 post event
+        post_event(DidDragResizeNodesEvent(nodes=self.nodes, ratio=inc_ratio))
 
     def _move(self, pos: Vec2):
         """Helper that performs resize on the bounding box, given the logical mouse position."""
@@ -582,5 +604,7 @@ class SelectBox(CanvasElement):
             offset += Vec2(0, lim_botright.y - max_y)
 
         self.bounding_rect.position = (pos + offset + self._drag_rel) / cstate.scale
+        pos_offset = (new_positions[0] + offset) / cstate.scale - self.nodes[0].position
         for node, np in zip(self.nodes, new_positions):
             node.position = (np + offset) / cstate.scale
+        post_event(NodesDidMoveEvent(self.nodes, pos_offset, dragged=True))

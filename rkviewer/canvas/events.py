@@ -4,87 +4,102 @@ These events may later be used within a plugin system, where plugins are allowed
 handlers to these events.
 """
 
-# pylint: disable=maybe-no-member
-import wx
-from wx.lib.newevent import NewEvent
+from dataclasses import dataclass
+from rkviewer.canvas.geometry import Vec2
+from rkviewer.canvas.data import Node, Reaction
+from collections import defaultdict
+from typing import Callable, DefaultDict, Dict, List, Set, Type, TypeVar
 
 
-def get_canvas():
+class CanvasEvent:
+    pass
+
+
+@dataclass
+class SelectionDidUpdateEvent(CanvasEvent):
+    """Called after the list of selected nodes and/or reactions has changed.
+
+    Attributes:
+        node_idx (Set[int]): The indices of the list of selected nodes.
+        reaction_idx (Set[int]): The indices of the list of selected reactions.
     """
-    A hacky way to get the canvas object. Must be called after the app has started running.
+    node_idx: Set[int]
+    reaction_idx: Set[int]
+
+
+@dataclass
+class CanvasDidUpdateEvent(CanvasEvent):
+    """Called after the canvas has been updated by the controller.
+
+    Attributes:
+        nodes (list[Node]): The list of nodes.
+        reaction (list[Reaction]): The list of reactions.
     """
-    windows = wx.GetTopLevelWindows()
-    for window in windows:
-        if hasattr(window, 'main_panel'):
-            return window.main_panel.canvas
-    assert False, "Could not find the main window (of type MyFrame)!"
+    nodes: List[Node]
+    reactions: List[Reaction]
 
 
-#WillSelectNodesEvent, EVT_WILL_SELECT_NODES = NewEvent()
-"""Called before the list of selected nodes changes.
+@dataclass
+class NodesDidMoveEvent(CanvasEvent):
+    """Called after the position of a node changes in any situation.
 
-Note:
-    Not implemented.
-"""
+    TODO implement this manually for move by form and move by dragging. Also provide a list of
+    indices. After that, update elements.py so that if all nodes in a reaction are moved at once,
+    move the centroid handle of the bezier as well.
 
-SelectionDidUpdateEvent, EVT_SELECTION_DID_UPDATE = NewEvent()
-"""Called after the list of selected nodes and/or reactions has changed.
+    If multiple nodes are moved at once (e.g. by dragging), then this event is issued multiple
+    times, once for each node.
 
-Attributes:
-    node_idx (Set[int]): The indices of the list of selected nodes.
-    reaction_idx (Set[int]): The indices of the list of selected reactions.
-"""
+    Attributes:
+        nodes: The nodes that were moved.
+        offset: The position offset.
+    """
+    nodes: List[Node]
+    offset: Vec2
+    dragged: bool
 
-CMoveNodeEvent, EVT_C_MOVE_NODE = NewEvent()  # TODO document
-"""Called after the controller is notified of a node being moved.
 
-One should use this to request controller to save unsaved changes elsewhere, e.g. if any
-associated reactions were changed and need to be saved.
-"""
+@dataclass
+class DidCommitNodePositionsEvent(CanvasEvent):
+    """Called after the position of a node changes in any situation.
 
-NodeDidMoveEvent, EVT_NODE_DID_MOVE = NewEvent()
-"""Called after the position of a node changes in any situation.
+    TODO implement this manually for move by form and move by dragging. Also provide a list of
+    indices. After that, update elements.py so that if all nodes in a reaction are moved at once,
+    move the centroid handle of the bezier as well.
 
-TODO implement this manually for move by form and move by dragging. Also provide a list of
-indices. After that, update elements.py so that if all nodes in a reaction are moved at once,
-move the centroid handle of the bezier as well.
+    If multiple nodes are moved at once (e.g. by dragging), then this event is issued multiple
+    times, once for each node.
 
-If multiple nodes are moved at once (e.g. by dragging), then this event is issued multiple times,
-once for each node.
+    Attributes:
+        nodes: The nodes that were moved.
+        offset: The position offset.
+    """
 
-Attributes:
-    node (Node): The node that was moved.
-    old_pos (Vec2): The position of the node before it was moved.
-"""
 
-DidDragMoveNodesEvent, EVT_DID_DRAG_MOVE_NODES = NewEvent()
-"""Called after the list of selected nodes has been moved by dragging.
+@dataclass
+class DidDragResizeNodesEvent(CanvasEvent):
+    """Called after the list of selected nodes has been moved by dragging.
 
-Attributes:
-    node_ids (List[str]): The list of IDs of the resized nodes.
-    new_positions (List[Vec2]): The list of new positions of the resized nodes.
+    Attributes:
+        nodes (List[Node]): The list of resized nodes.
+        ratio: (Vec2): The resize ratio.
 
-Note:
-    This event triggers only if the user has performed a drag operation, and not, for example,
-    if the user moved a node in the edit panel.
-"""
+    Note:
+        This event triggers only if the user has performed a drag operation, and not, for example,
+        if the user moved a node in the edit panel.
+    """
+    nodes: List[Node]
+    ratio: Vec2
 
-DidDragResizeNodesEvent, EVT_DID_DRAG_RESIZE_NODES = NewEvent()
-"""Called after the list of selected nodes has been resized by dragging.
 
-Attributes:
-    node_ids (List[str]): The list of IDs of the resized nodes.
-    new_sizes (List[Vec2]): The list of new sizes of the resized nodes.
+EventCallback = Callable[[CanvasEvent], None]
+event_map: DefaultDict[Type[CanvasEvent], List[EventCallback]] = defaultdict(list)
 
-Note:
-    This event triggers only if the user has performed a drag operation, and not, for example,
-    if the user resized a node in the edit panel.
-"""
 
-DidUpdateCanvasEvent, EVT_DID_UPDATE_CANVAS = NewEvent()
-"""Called after the canvas has been updated by the controller.
+def bind_handler(cls: Type[CanvasEvent], callback: EventCallback):
+    event_map[cls].append(callback)
 
-Attributes:
-    nodes (list[Node]): The list of nodes.
-    reaction (list[Reaction]): The list of reactions.
-"""
+
+def post_event(evt: CanvasEvent):
+    for callback in event_map[type(evt)]:
+        callback(evt)

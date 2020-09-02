@@ -10,11 +10,11 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .config import theme, settings
 from .mvc import IController
 from .utils import no_rzeros, on_msw, resource_path
-from .canvas.canvas import Canvas
-from .canvas.utils import get_nodes_by_idx
+from .canvas.canvas import Canvas, Node
 from .canvas.data import Reaction
+from .canvas.events import NodesDidMoveEvent, post_event
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
-from .canvas.data import Node
+from .canvas.utils import get_nodes_by_idx
 
 
 def parse_num_pair(text: str) -> Optional[Tuple[float, float]]:
@@ -530,12 +530,15 @@ class NodeForm(EditPanelForm):
         clamped = None
         if len(nodes) == 1:
             [node] = nodes
-
             clamped = clamp_rect_pos(Rect(pos, node.size), bounds)
             if node.position != clamped or pos != clamped:
                 self._dirty = True
-                self.controller.try_move_node(self.net_index, node.index,
-                                              Vec2(clamped.x, clamped.y))
+                self.controller.try_start_group()
+                node.position = clamped
+                post_event(NodesDidMoveEvent(nodes, clamped - node.position, dragged=False))
+                self.controller.try_move_node(self.net_index, node.index, node.position)
+                # TODO  tell controller to update view
+                self.controller.try_end_group()
         else:
             clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
             if self._bounding_rect.position != pos or pos != clamped:
@@ -543,8 +546,11 @@ class NodeForm(EditPanelForm):
                 self._dirty = True
                 self.controller.try_start_group()
                 for node in nodes:
-                    self.controller.try_move_node(self.net_index, node.index,
-                                                  node.position + offset)
+                    node.position += offset
+                post_event(NodesDidMoveEvent(nodes, offset, dragged=False))
+                for node in nodes:
+                    self.controller.try_move_node(self.net_index, node.index, node.position)
+                # TODO tell controller to update view
                 self.controller.try_end_group()
         self._SetValidationState(True, self.pos_ctrl.GetId())
 
@@ -598,6 +604,7 @@ class NodeForm(EditPanelForm):
                     self.controller.try_move_node(self.net_index, node.index, new_pos)
                     self.controller.try_set_node_size(self.net_index, node.index,
                                                       node.size.elem_mul(ratio))
+                    # TODO events
                 self.controller.try_end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 

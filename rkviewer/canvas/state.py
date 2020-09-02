@@ -12,6 +12,7 @@ class CanvasState:
                       items.
     """
     scale: float = 1
+    canvas = None
     
     @property
     def multi_select(self):

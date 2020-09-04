@@ -4,6 +4,8 @@ import wx
 import copy
 import math
 from itertools import chain
+import numpy as np
+from scipy.special import comb
 from typing import Callable, List, Optional, Tuple
 from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, segments_intersect
 from .state import cstate
@@ -109,31 +111,14 @@ class Node:
 ToScrolledFn = Callable[[Vec2], Vec2]
 
 
-def zeros2d(n_rows, n_cols) -> List[List[float]]:
-    """Return a 2D list of zeros with dimensions (n_rows, n_cols)."""
-    ret = [None] * n_rows
-    for i in range(n_rows):
-        ret[i] = [0] * n_cols
-
-    return ret
-
-
-# TODO OPTIMIZE. scipy has function that computes this but it seems like an overkill, since scipy
-# would probably double the size of the executable.
-# Also can solve this easily by upgrading to Python 3.8, which has a built-in comb method.
-def comb(n: int, i: int):
-    """Compute the bonimial coefficient/combinations C(n, i)"""
-    return math.factorial(n) / (math.factorial(i) * math.factorial(n-i))
-
-
 def compute_centroid(reactants: List[Node], products: List[Node]) -> Vec2:
     """Compute the centroid position of a list of reactant and product nodes."""
     total = sum((n.center_point for n in chain(reactants, products)), Vec2())
     return total / (len(reactants) + len(products))
 
 
-BezJ = zeros2d(MAXSEGS + 1, 5)  #: Precomputed Bezier curve data
-BezJPrime = zeros2d(MAXSEGS + 1, 5)  #: Precomputed bezier curve data
+BezJ = np.zeros((MAXSEGS + 1, 5))  #: Precomputed Bezier curve data
+BezJPrime = np.zeros((MAXSEGS + 1, 5))  #: Precomputed bezier curve data
 INITIALIZED = False  #: Flag for asserting that the above data is initialized
 CURVE_SLACK = 5  #: Distance allowed on either side of a curve for testing click hit.
 
@@ -146,13 +131,13 @@ def init_bezier():
         for ti in range(MAXSEGS+1):
             t = ti/MAXSEGS
             for i in range(4):  # i = 0, 1, 2, 3
-                BezJ[ti][i] = comb(3, i) * math.pow(t, i) * math.pow(1-t, 3-i)
+                BezJ[ti, i] = comb(3, i) * math.pow(t, i) * math.pow(1-t, 3-i)
             # At the moment hard-wired for n = 3
             tm = 1 - t
-            BezJPrime[ti][0] = -3*tm*tm
-            BezJPrime[ti][1] = 3*tm*tm - 6*t*tm
-            BezJPrime[ti][2] = 6*t*tm - 3*t*t
-            BezJPrime[ti][3] = 3*t*t
+            BezJPrime[ti, 0] = -3*tm*tm
+            BezJPrime[ti, 1] = 3*tm*tm - 6*t*tm
+            BezJPrime[ti, 2] = 6*t*tm - 3*t*t
+            BezJPrime[ti, 3] = 3*t*t
 
         INITIALIZED = True
 
@@ -339,7 +324,7 @@ class SpeciesBezier:
             tmp = Vec2()
             for j, point in enumerate((self.node_intersection, self.handle.position,
                                        self.centroid_handle.position, self.centroid)):
-                tmp += point * 1000 * BezJ[i][j]
+                tmp += point * 1000 * float(BezJ[i, j])
 
             # and scale back down again
             self.bezier_points[i] = tmp / 1000

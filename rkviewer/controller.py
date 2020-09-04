@@ -5,8 +5,8 @@ import wx
 from typing import Collection, List, Optional, Set
 import iodine as iod
 from .utils import rgba_to_wx_colour
+from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
 from .canvas.data import Node, Reaction
-from .canvas.events import DidCommitNodePositionsEvent, post_event
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView
@@ -45,9 +45,13 @@ class Controller(IController):
         self.group_depth = 0
 
     def try_start_group(self) -> bool:
+        self.group_depth += 1
+
+        # already in a group before; don't start startGroup()
+        if self.group_depth > 1:
+            return False
         try:
             iod.startGroup()
-            self.group_depth += 1
         except iod.Error as e:
             print('Error starting group:', str(e))
             return False
@@ -94,6 +98,7 @@ class Controller(IController):
             assert self.group_depth == 0
             iod.redo()
         except iod.StackEmptyError:
+            print('empty')
             return False
         except iod.Error as e:
             print('Error redoing:', str(e))
@@ -103,7 +108,7 @@ class Controller(IController):
         return True
 
     @try_setter
-    def try_add_node_g(self, neti: int, node: Node):
+    def try_add_node_g(self, neti: int, node: Node, programmatic: bool = False):
         '''
         Add node represented by the given Node variable.
 
@@ -119,10 +124,13 @@ class Controller(IController):
         iod.setNodeOutlineColorRGB(neti, nodei, node.border_color.Red(),
                                     node.border_color.Green(), node.border_color.Blue())
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
+
+        if not programmatic:
+            post_event(DidAddNodeEvent(node))
         self.try_end_group()
 
     @try_setter
-    def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic=False):
+    def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False):
         assert pos.x >= 0 and pos.y >= 0
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
         # dispatch event if the call was caused by user input
@@ -142,16 +150,16 @@ class Controller(IController):
         iod.setNodeFillColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
     @try_setter
-    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: float):
-        iod.setNodeFillColorAlpha(neti, nodei, alpha)
+    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: int):
+        iod.setNodeFillColorAlpha(neti, nodei, alpha / 255)
 
     @try_setter
     def try_set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour):
         iod.setNodeOutlineColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
     @try_setter
-    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: float):
-        iod.setNodeOutlineColorAlpha(neti, nodei, alpha)
+    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: int):
+        iod.setNodeOutlineColorAlpha(neti, nodei, alpha / 255)
 
     @try_setter
     def try_rename_reaction(self, neti: int, reai: int, new_id: str):
@@ -162,8 +170,8 @@ class Controller(IController):
         iod.setReactionFillColorRGB(neti, reai, color.Red(), color.Green(), color.Blue())
 
     @try_setter
-    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: float):
-        iod.setReactionFillColorAlpha(neti, reai, alpha)
+    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int):
+        iod.setReactionFillColorAlpha(neti, reai, alpha / 255)
 
     @try_setter
     def try_set_node_border_width(self, neti: int, nodei: int, width: float):
@@ -258,7 +266,7 @@ class Controller(IController):
     # get the updated list of nodes from model and update
     def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
-        self.stacklen += 1  # TODO remove
+        self.stacklen += 1  # TODO remove once fixed
         # TODO multiple net IDs
         neti = 0
         nodes = list()

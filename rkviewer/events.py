@@ -20,11 +20,11 @@ class SelectionDidUpdateEvent(CanvasEvent):
     """Called after the list of selected nodes and/or reactions has changed.
 
     Attributes:
-        node_idx (Set[int]): The indices of the list of selected nodes.
-        reaction_idx (Set[int]): The indices of the list of selected reactions.
+        node_indices (Set[int]): The indices of the list of selected nodes.
+        reaction_indices (Set[int]): The indices of the list of selected reactions.
     """
-    node_idx: Set[int]
-    reaction_idx: Set[int]
+    node_indices: Set[int]
+    reaction_indices: Set[int]
 
 
 @dataclass
@@ -90,6 +90,20 @@ class DidDragResizeNodesEvent(CanvasEvent):
     """
     nodes: List[Node]
     ratio: Vec2
+
+
+@dataclass
+class DidAddNodeEvent(CanvasEvent):
+    """Called after a node has been added.
+
+    Attributes:
+        node (Node): The node that was added.
+
+    Note:
+        This event triggers only if the user has performed a drag operation, and not, for example,
+        if the user moved a node in the edit panel.
+    """
+    node: Node
 
 
 EventCallback = Callable[[CanvasEvent], None]

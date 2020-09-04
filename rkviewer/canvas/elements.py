@@ -7,7 +7,7 @@ from abc import abstractmethod
 import bisect
 from typing import Any, Callable, Iterator, List, Optional, Set
 from .data import Node, BezierHandle, Reaction, ToScrolledFn
-from .events import DidDragResizeNodesEvent, NodesDidMoveEvent, bind_handler, post_event
+from ..events import DidDragResizeNodesEvent, NodesDidMoveEvent, bind_handler, post_event
 from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, within_rect
 from .state import cstate
 from .utils import draw_rect
@@ -206,9 +206,8 @@ class ReactionElement(CanvasElement):
                     bz.update_curve(self.reaction.bezier.centroid)
                     break
 
-        if self._moving_all:
-            self.reaction.bezier.src_c_handle.position += offset
-            self.reaction.bezier.src_handle_moved()
+        #self.reaction.bezier.src_c_handle.position += offset
+        #self.reaction.bezier.src_handle_moved()
 
     def commit_node_pos(self):
         """Handler for after the controller is told to move a node."""
@@ -317,6 +316,7 @@ class SelectBox(CanvasElement):
     bounding_rect: Rect
     _padding: float  #: padding for the bounding rectangle around the selected nodes
     _drag_rel: Vec2  #: relative position of the mouse to the bounding rect when dragging started
+    _did_move: bool  #: whether the node was drag-moved between left_down and left_up.
     _rel_positions: Optional[List[Vec2]]  #: relative positions of the nodes to the bounding rect
     _resize_handle: int  #: the node resize handle. See Canvas::_GetNodeResizeHandles for details.
     #: the minimum resize ratio for each axis, to avoid making the nodes too small
@@ -339,6 +339,7 @@ class SelectBox(CanvasElement):
         self._mode = SelectBox.Mode.IDLE
 
         self._drag_rel = Vec2()
+        self._did_move = False
         self._rel_positions = None
         self._orig_rect = None
         self._resize_handle = -1
@@ -477,12 +478,14 @@ class SelectBox(CanvasElement):
     def do_left_up(self, logical_pos: Vec2):
         assert len(self.nodes) != 0
         if self._mode == SelectBox.Mode.MOVING:
-            self.controller.try_start_group()
-            for node in self.nodes:
-                self.controller.try_move_node(self.net_index, node.index, node.position)
-            self.controller.try_end_group()
-        else:
-            assert self._mode == SelectBox.Mode.RESIZING
+            if self._did_move:
+                self._did_move = False
+                self.controller.try_start_group()
+                for node in self.nodes:
+                    self.controller.try_move_node(self.net_index, node.index, node.position)
+                self.controller.try_end_group()
+        elif self._mode == SelectBox.Mode.RESIZING:
+            assert not self._did_move
             self.controller.try_start_group()
             for node in self.nodes:
                 self.controller.try_move_node(self.net_index, node.index, node.position)
@@ -580,6 +583,7 @@ class SelectBox(CanvasElement):
     def _move(self, pos: Vec2):
         """Helper that performs resize on the bounding box, given the logical mouse position."""
         # campute tentative new positions. May need to clamp it.
+        self._did_move = True
         new_positions = [pos + rp for rp in self._rel_positions]
         min_x = min(p.x for p in new_positions)
         min_y = min(p.y for p in new_positions)

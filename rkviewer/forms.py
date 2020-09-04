@@ -8,11 +8,11 @@ import copy
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .config import theme, settings
+from .events import NodesDidMoveEvent, post_event
 from .mvc import IController
 from .utils import no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
 from .canvas.data import Reaction
-from .canvas.events import NodesDidMoveEvent, post_event
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx
 
@@ -533,11 +533,10 @@ class NodeForm(EditPanelForm):
             clamped = clamp_rect_pos(Rect(pos, node.size), bounds)
             if node.position != clamped or pos != clamped:
                 self._dirty = True
-                self.controller.try_start_group()
                 node.position = clamped
+                self.controller.try_start_group()
                 post_event(NodesDidMoveEvent(nodes, clamped - node.position, dragged=False))
                 self.controller.try_move_node(self.net_index, node.index, node.position)
-                # TODO  tell controller to update view
                 self.controller.try_end_group()
         else:
             clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
@@ -550,7 +549,6 @@ class NodeForm(EditPanelForm):
                 post_event(NodesDidMoveEvent(nodes, offset, dragged=False))
                 for node in nodes:
                     self.controller.try_move_node(self.net_index, node.index, node.position)
-                # TODO tell controller to update view
                 self.controller.try_end_group()
         self._SetValidationState(True, self.pos_ctrl.GetId())
 
@@ -604,7 +602,6 @@ class NodeForm(EditPanelForm):
                     self.controller.try_move_node(self.net_index, node.index, new_pos)
                     self.controller.try_set_node_size(self.net_index, node.index,
                                                       node.size.elem_mul(ratio))
-                    # TODO events
                 self.controller.try_end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
@@ -645,7 +642,7 @@ class NodeForm(EditPanelForm):
         self._dirty = True
         self.controller.try_start_group()
         for node in nodes:
-            self.controller.try_set_node_fill_alpha(self.net_index, node.index, alpha)
+            self.controller.try_set_node_fill_alpha(self.net_index, node.index, int(alpha * 255))
         self.controller.try_end_group()
 
     def _BorderAlphaCallback(self, alpha: float):
@@ -654,7 +651,7 @@ class NodeForm(EditPanelForm):
         self._dirty = True
         self.controller.try_start_group()
         for node in nodes:
-            self.controller.try_set_node_border_alpha(self.net_index, node.index, alpha)
+            self.controller.try_set_node_border_alpha(self.net_index, node.index, int(alpha * 255))
         self.controller.try_end_group()
 
     def _BorderWidthCallback(self, width: float):
@@ -800,7 +797,7 @@ class ReactionForm(EditPanelForm):
         self._dirty = True
         self.controller.try_start_group()
         for rxn in reactions:
-            self.controller.try_set_reaction_fill_alpha(self.net_index, rxn.index, alpha)
+            self.controller.try_set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
         self.controller.try_end_group()
 
     def _OnRateLawText(self, evt: wx.Event):

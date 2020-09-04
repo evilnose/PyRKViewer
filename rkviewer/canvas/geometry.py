@@ -29,6 +29,7 @@ class Vec2:
         If only one argument is specified, it should be an iterable of two elements,
         which will be unwrapped as x and y.
         """
+
         self._i = 0
         if x is None:
             if y is not None:
@@ -43,6 +44,11 @@ class Vec2:
         else:
             self.x = x
             self.y = y
+
+        for e in (self.x, self.y):
+            if not isinstance(e, int) and not isinstance(e, float):
+                raise ValueError('Vec2 should be initialized with int or float. Got {} \
+    instead'.format(type(e)))
 
     def __iter__(self) -> Vec2:
         self._i = 0

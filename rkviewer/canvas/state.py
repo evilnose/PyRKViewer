@@ -1,4 +1,5 @@
 # pylint: disable=maybe-no-member
+from typing import Any
 import wx
 from dataclasses import dataclass
 
@@ -12,7 +13,6 @@ class CanvasState:
                       items.
     """
     scale: float = 1
-    canvas = None
     
     @property
     def multi_select(self):

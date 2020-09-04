@@ -1,5 +1,8 @@
 from rkviewer.view import View
 from rkviewer.controller import Controller
+#import rkplugin.api
+#import rkplugin.base
+#import rkplugin.plugins
 
 
 if __name__ == '__main__':

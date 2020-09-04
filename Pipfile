@@ -8,6 +8,8 @@ pylint = "*"
 
 [packages]
 wxpython = "==4.1.0"
+numpy = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.7"

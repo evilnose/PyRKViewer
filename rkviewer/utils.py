@@ -36,7 +36,7 @@ def on_msw() -> bool:
     return os.name == 'nt'
 
 
-def resource_path(relative_path):
+def get_path(relative_path):
     """Get absolute path to resource, works for dev and PyInstaller."""
     if hasattr(sys, '_MEIPASS'):
         # PyInstaller creates a temp folder and stores path in _MEIPASS
@@ -44,7 +44,11 @@ def resource_path(relative_path):
     else:
         base_path = os.path.abspath(".")
 
-    return os.path.join(base_path, 'resources', relative_path)
+    return os.path.join(base_path, relative_path)
+
+
+def resource_path(relative_path):
+    return get_path(os.path.join('resources', relative_path))
 
 
 def pairwise(iterable: Iterable) -> Iterable:

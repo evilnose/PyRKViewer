@@ -48,12 +48,12 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_move_node(self, neti: int, nodei: int, pos: Vec2) -> bool:
+    def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def try_set_node_size(self, neti: int, nodei: int, size: Vec2) -> bool:
+    def try_set_node_size(self, neti: int, nodei: int, size: Vec2, programmatic: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
@@ -66,7 +66,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
+    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod
@@ -74,7 +74,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
+    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod
@@ -90,7 +90,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: float) -> bool:
+    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod

@@ -54,6 +54,7 @@ class CanvasOverlay(abc.ABC):
         pass
 
 
+# TODO refactor this as a CanvasElement and delete this file
 class Minimap(CanvasOverlay):
     """The minimap class that derives from CanvasOverlay.
     

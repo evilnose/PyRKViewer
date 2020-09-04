@@ -19,3 +19,10 @@ present **it will be overwritten**.
 Usually snake_case is used for function names. However, to retain some degree of backwards 
 compatibility for wxPython, subclasses of wxPython classes use PascalCase for their methods,
 e.g. `Canvas::RegisterAllChildren`.
+
+## TODOs
+* BUG: If one drag-selects a single node, the focus is brought to the node ID in the form
+* BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip those
+values.
+* Add option to change reaction line thickness
+* Add all font options for nodes

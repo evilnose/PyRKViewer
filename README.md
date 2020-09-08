@@ -24,6 +24,9 @@ e.g. `Canvas::RegisterAllChildren`.
 * BUG: If one drag-selects a single node, the focus is brought to the node ID in the form
 * BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip those
 values.
+* OPTIMIZE: When moving, use RefreshRect() instead of Refresh()
+* OPTIMIZE: Do not rebuild reaction forms. Instead, keep them all in a dict() and only make the
+currently used one visible.
 * Add option to change reaction line thickness
 * Add all font options for nodes
 * Add support for multiple net IDs. Currently all net IDs are set to 0 by default.

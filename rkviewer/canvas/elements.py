@@ -595,7 +595,7 @@ class SelectBox(CanvasElement):
 
         s_bounds = self._bounds * cstate.scale
         lim_topleft = s_bounds.position
-        lim_botright = s_bounds.position + self._bounds.size
+        lim_botright = s_bounds.position + s_bounds.size
 
         if min_x < lim_topleft.x:
             assert max_x <= lim_botright.x

@@ -6,6 +6,7 @@ import typing
 import copy
 from enum import Enum, unique
 from typing import Collection, FrozenSet, Optional, Any, Sequence, Set, Tuple, List, Dict, cast
+from threading import Thread
 from .elements import CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
 from .state import cstate
 from ..events import DidAddNodeEvent, DidMoveNodesEvent, DidCommitNodePositionsEvent, DidPaintCanvasEvent, \
@@ -75,6 +76,7 @@ class Canvas(wx.ScrolledWindow):
     drag_selected_idx: Set[int]
     hovered_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
+    timer: wx.Timer
 
     #: Current network index. Right now this is always 0 since there is only one tab.
     _net_index: int
@@ -123,6 +125,8 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
+        self.Bind(wx.EVT_WINDOW_DESTROY, self.OnWindowDestroy)
+        self.Bind(wx.EVT_TIMER, self.OnTimer)
 
         bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
         bind_handler(DidCommitNodePositionsEvent, self.OnDidCommitNodePositions)
@@ -178,7 +182,20 @@ class Canvas(wx.ScrolledWindow):
 
         wx.CallAfter(lambda: self.SetZoomLevel(0, Vec2(0, 0)))
 
+        self.timer = wx.Timer(self)
+        self.timer.Start(100)
+        self._cursor_logical_pos = None
+
         self.SetOverlayPositions()
+
+    def OnWindowDestroy(self, evt):
+        print('timer stopped')
+        self.timer.Stop()
+        evt.Skip()
+
+    def OnTimer(self, evt):
+        status_text = repr(self._cursor_logical_pos)
+        self._SetStatusText('cursor', status_text)
 
     @property
     def nodes(self):
@@ -484,13 +501,11 @@ class Canvas(wx.ScrolledWindow):
                     border_color=theme['node_border'],
                     border_width=theme['node_border_width'],
                 )
-                node.s_position = clamp_rect_pos(node.s_rect, Rect(Vec2(), self.realsize *
-                                                                   cstate.scale), BOUNDS_EPS)
+                node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])
 
                 self.controller.try_start_group()
                 self.controller.try_add_node_g(self._net_index, node)
-                # TODO issue event, and make end_group CallAfter
                 self.controller.try_end_group()
 
                 index = self.controller.get_node_index(self._net_index, node.id_)
@@ -563,8 +578,7 @@ class Canvas(wx.ScrolledWindow):
         try:
             device_pos = Vec2(evt.GetPosition())
             logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
-            status_text = repr(logical_pos)
-            self._SetStatusText('cursor', status_text)
+            self._cursor_logical_pos = logical_pos
 
             # dragging takes priority here
             if self.input_mode == InputMode.SELECT:

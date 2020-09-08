@@ -11,15 +11,20 @@ def convert_position(fn):
     """Decorator that converts the event position to one that is relative to the receiver."""
 
     def ret(self, evt):
-        client_pos = evt.GetPosition()  # get raw position
-        screen_pos = evt.EventObject.ClientToScreen(client_pos)  # convert to screen position
-        relative_pos = self.ScreenToClient(screen_pos)  # convert to receiver position
-        # call function
-        copy = evt.Clone()
-        copy.SetPosition(relative_pos)
-        copy.foreign = not (self is evt.EventObject)
-        fn(self, copy)
-        evt.Skip()
+        if self is not evt.EventObject:
+            client_pos = evt.GetPosition()  # get raw position
+            screen_pos = evt.EventObject.ClientToScreen(client_pos)  # convert to screen position
+            relative_pos = self.ScreenToClient(screen_pos)  # convert to receiver position
+            # call function
+            copy = evt.Clone()
+            copy.SetPosition(relative_pos)
+            copy.foreign = True
+            fn(self, copy)
+            evt.Skip()
+        else:
+            copy = evt
+            copy.foreign = False
+            fn(self, copy)
 
     return ret
 

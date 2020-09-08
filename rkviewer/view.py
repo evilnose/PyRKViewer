@@ -77,8 +77,8 @@ class EditPanel(fnb.FlatNotebook):
         self.node_form.UpdateNodeSelection(evt.node_indices)
         if should_show_nodes:
             if node_index == -1:
-                self.node_form.Show()
                 self.InsertPage(0, self.node_form, 'Nodes')
+                #self.node_form.Show()
         elif node_index != -1:
             # find and remove existing page
             self.RemovePage(node_index)
@@ -93,13 +93,13 @@ class EditPanel(fnb.FlatNotebook):
         self.reaction_form.UpdateReactionSelection(evt.reaction_indices)
         if should_show_reactions:
             if reaction_index == -1:
-                self.reaction_form.Show()
                 self.AddPage(self.reaction_form, 'Reactions')
+                #self.reaction_form.Show()
         elif reaction_index != -1:
             self.RemovePage(reaction_index)
             self.reaction_form.Hide()
 
-        # set the active tab to the same as before
+        # set the active tab to the same as before. Note: only works with two tabs for now
         if cur_page != self.GetCurrentPage():
             self.AdvanceSelection()
             self.Refresh()

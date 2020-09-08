@@ -123,7 +123,9 @@ class EditPanelForm(ScrolledPanel):
         sizer.Add(MORE_RIGHT_PADDING, 0, wx.GBPosition(0, 4), wx.GBSpan(1, 1))
 
         # Ensure the input field takes up some percentage of width
-        width = self.GetSize()[0] # TODO account for scrollbar
+        # Note that we might want to adjust this when scrollbars are displayed, but only in case
+        # there is not enough width to display everything
+        width = self.GetSize()[0]
         right_width = (width - VGAP * 3 - MORE_LEFT_PADDING - MORE_RIGHT_PADDING -
                        self._info_length) * 0.7
         sizer.Add(right_width, 0, wx.GBPosition(0, 2), wx.GBSpan(1, 1))
@@ -149,9 +151,9 @@ class EditPanelForm(ScrolledPanel):
         sizer.Add(0, self._info_length, wx.GBPosition(rows, 4), wx.GBSpan(1, 1))
 
         info_badge = wx.StaticBitmap(self, bitmap=self._info_bitmap)
+        info_badge.Show(False)
         sizer.Add(info_badge, wx.GBPosition(rows, 3), wx.GBSpan(1, 1),
                   flag=wx.ALIGN_CENTER)
-        info_badge.Show(False)
         self.labels[ctrl.GetId()] = label
         self.badges[ctrl.GetId()] = info_badge
 
@@ -352,8 +354,6 @@ class EditPanelForm(ScrolledPanel):
 
         See _GetMultiColor for more detail.
         """
-        # TODO should precision be considered as far as uniqueness goes? i.e. should 1.234 be the
-        # same as 1.23 when the precision if 2?
         return no_rzeros(next(iter(values)), precision) if len(values) == 1 else '?'
 
     @classmethod
@@ -521,7 +521,7 @@ class NodeForm(EditPanelForm):
             self._SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
             return
 
-        pos = Vec2(xy)
+        pos = Vec2(*xy)
         if pos.x < 0 or pos.y < 0:
             self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
             return

@@ -175,7 +175,7 @@ class Controller(IController):
 
     @try_setter
     def try_set_node_border_width(self, neti: int, nodei: int, width: float):
-        print('warning: TODO decide if node width is int or float')
+        iod.setNodeOutlineThickness(neti, nodei, width)
 
     @try_setter
     def try_delete_node(self, neti: int, nodei: int):
@@ -267,11 +267,9 @@ class Controller(IController):
     def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
         self.stacklen += 1  # TODO remove once fixed
-        # TODO multiple net IDs
         neti = 0
         nodes = list()
         reactions = list()
-        # TODO try except
         for id_ in iod.getListOfNodeIDs(neti):
             nodei = iod.getNodeIndex(neti, id_)
             x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)

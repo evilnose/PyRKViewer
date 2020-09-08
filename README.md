@@ -26,3 +26,4 @@ e.g. `Canvas::RegisterAllChildren`.
 values.
 * Add option to change reaction line thickness
 * Add all font options for nodes
+* Add support for multiple net IDs. Currently all net IDs are set to 0 by default.

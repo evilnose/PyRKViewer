@@ -7,7 +7,7 @@ from itertools import chain
 import numpy as np
 from scipy.special import comb
 from typing import Callable, List, Optional, Tuple
-from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, segments_intersect
+from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, segments_intersect, within_rect
 from .state import cstate
 from ..config import settings, theme
 from ..utils import pairwise
@@ -213,10 +213,7 @@ def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: boo
     gc.SetPen(pen)
 
     # Draw handle lines
-    path = gc.CreatePath()
-    path.MoveToPoint(*base)
-    path.AddLineToPoint(*handle)
-    gc.StrokePath(path)
+    gc.StrokeLine(*base, *handle)
 
     # Draw handle circles
     gc.SetBrush(brush)
@@ -287,6 +284,7 @@ class SpeciesBezier:
         self._dirty = True
         self.update_curve(centroid)
         self.arrow_adjusted_coords = list()
+        self.bounding_box = None
 
     def update_curve(self, centroid: Vec2):
         """Called after either the node, the centroid, or at least one of their handles changed.
@@ -329,6 +327,9 @@ class SpeciesBezier:
             # and scale back down again
             self.bezier_points[i] = tmp / 1000
 
+        # TODO optimize?
+        self.bounding_box = get_bounding_rect([Rect(p, Vec2()) for p in self.bezier_points])
+
         if not self.is_source:
             self._recompute_arrow_tip(self.node_intersection,
                                       self.node_intersection - extended_handle)
@@ -363,6 +364,9 @@ class SpeciesBezier:
             self._recompute_curve()
             self._dirty = False
 
+        if not within_rect(pos, self.bounding_box * cstate.scale):
+            return False
+
         return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK)
                    for p1, p2 in pairwise(self.bezier_points))
 
@@ -377,13 +381,9 @@ class SpeciesBezier:
             pen = wx.Pen(theme['selected_reaction_fill'], 2)
         else:
             pen = wx.Pen(fill, 2)
-        gc.SetPen(pen)
-        path = gc.CreatePath()
 
-        path.MoveToPoint(*to_scrolled_fn(self.bezier_points[0] * cstate.scale))
-        for i in range(1, MAXSEGS+1):
-            path.AddLineToPoint(*to_scrolled_fn(self.bezier_points[i] * cstate.scale))
-        gc.StrokePath(path)
+        gc.SetPen(pen)
+        gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
 
         # Draw arrow tip
         if not self.is_source:

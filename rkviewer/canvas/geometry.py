@@ -25,19 +25,16 @@ class Vec2:
 
         If two arguments are specified, they are considered the x and y coordinate
         of the Vec2.
-
-        If only one argument is specified, it should be an iterable of two elements,
-        which will be unwrapped as x and y.
+        Otherwise, neither argument should be set, and in that case the Vec2 is initialized to
+        (0, 0)
         """
 
         self._i = 0
         if x is None:
-            if y is not None:
-                raise ValueError('x cannot be None when y is not None. Use one of three '
-                                 'constructors: Vec2(x, y), Vec2(Other(x, y)), or Vec2()')
-            else:
-                self.x = 0
-                self.y = 0
+            assert y is None, 'y cannot be set when x is None. See constructor for more ' + \
+                                  'details'
+            self.x = 0
+            self.y = 0
 
         elif y is None:
             self.x, self.y = x
@@ -45,10 +42,12 @@ class Vec2:
             self.x = x
             self.y = y
 
+        '''
         for e in (self.x, self.y):
             if not isinstance(e, int) and not isinstance(e, float):
                 raise ValueError('Vec2 should be initialized with int or float. Got {} \
     instead'.format(type(e)))
+        '''
 
     def __iter__(self) -> Vec2:
         self._i = 0

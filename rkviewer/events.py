@@ -45,14 +45,11 @@ class CanvasDidUpdateEvent(CanvasEvent):
 
 @dataclass
 class DidMoveNodesEvent(CanvasEvent):
-    """Called after the position of a node changes in any situation.
+    """Called after the position of a node changes but has not been committed to the model.
 
-    TODO implement this manually for move by form and move by dragging. Also provide a list of
-    indices. After that, update elements.py so that if all nodes in a reaction are moved at once,
-    move the centroid handle of the bezier as well.
-
-    If multiple nodes are moved at once (e.g. by dragging), then this event is issued multiple
-    times, once for each node.
+    This event may be called many times, continuously as the user drags a group of nodes. Note that
+    only after the drag operation has ended, is model notified of the move for undo purposes. See
+    DidCommitNodePositionsEvent.
 
     Attributes:
         nodes: The nodes that were moved.

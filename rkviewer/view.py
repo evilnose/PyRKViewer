@@ -7,7 +7,7 @@ import wx
 import wx.lib.agw.flatnotebook as fnb
 import wx.lib.agw.shortcuteditor as sedit
 from typing import Callable, List, Dict, Any, Optional, Set, Tuple
-from .events import DidDragResizeNodesEvent, NodesDidMoveEvent, bind_handler, CanvasDidUpdateEvent, \
+from .events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
     SelectionDidUpdateEvent
 from .canvas.canvas import Canvas, InputMode
 from .canvas.data import Node, Reaction
@@ -54,7 +54,7 @@ class EditPanel(fnb.FlatNotebook):
 
         bind_handler(CanvasDidUpdateEvent, self.OnCanvasDidUpdate)
         bind_handler(SelectionDidUpdateEvent, self.OnSelectionDidUpdate)
-        bind_handler(NodesDidMoveEvent, self.OnNodesDidMove)
+        bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
         bind_handler(DidDragResizeNodesEvent, self.OnDidDragResizeNodes)
 
     def OnCanvasDidUpdate(self, evt):
@@ -448,10 +448,10 @@ class View(IView):
         app = wx.App()
         self.manager = PluginManager(self.controller)
         self.manager.load_from('plugins')
-        frm = MainFrame(self.controller, self.manager, title='RK Network Viewer')
-        self.canvas_panel = frm.main_panel.canvas
-        self.canvas_panel.RegisterAllChildren(frm)
-        frm.Show()
+        self.frame = MainFrame(self.controller, self.manager, title='RK Network Viewer')
+        self.canvas_panel = self.frame.main_panel.canvas
+        self.canvas_panel.RegisterAllChildren(self.frame)
+        self.frame.Show()
 
         app.MainLoop()
 

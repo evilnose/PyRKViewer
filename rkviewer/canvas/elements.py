@@ -7,7 +7,7 @@ from abc import abstractmethod
 import bisect
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 from .data import Node, BezierHandle, Reaction, SpeciesBezier, ToScrolledFn
-from ..events import DidDragResizeNodesEvent, NodesDidMoveEvent, bind_handler, post_event
+from ..events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, post_event
 from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, within_rect
 from .state import cstate
 from .utils import draw_rect
@@ -613,4 +613,4 @@ class SelectBox(CanvasElement):
         pos_offset = (new_positions[0] + offset) / cstate.scale - self.nodes[0].position
         for node, np in zip(self.nodes, new_positions):
             node.position = (np + offset) / cstate.scale
-        post_event(NodesDidMoveEvent(self.nodes, pos_offset, dragged=True))
+        post_event(DidMoveNodesEvent(self.nodes, pos_offset, dragged=True))

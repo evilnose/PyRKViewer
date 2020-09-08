@@ -12,7 +12,7 @@ Node = data.Node
 Reaction = data.Reaction
 Vec2 = data.Vec2
 
-# TODO allow modification of theme and setting
+# TODO allow modification of theme and setting in the GUI
 
 _canvas: Optional[Canvas] = None
 _controller: Optional[IController] = None
@@ -44,7 +44,6 @@ def all_reactions() -> List[Reaction]:
 
 
 def selected_nodes() -> List[Node]:
-    # TODO copy?
     return _canvas.GetSelectedNodes()
 
 

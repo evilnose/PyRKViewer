@@ -8,7 +8,7 @@ from enum import Enum, unique
 from typing import Collection, FrozenSet, Optional, Any, Sequence, Set, Tuple, List, Dict, cast
 from .elements import CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
 from .state import cstate
-from ..events import DidAddNodeEvent, NodesDidMoveEvent, DidCommitNodePositionsEvent, \
+from ..events import DidAddNodeEvent, DidMoveNodesEvent, DidCommitNodePositionsEvent, DidPaintCanvasEvent, \
     SelectionDidUpdateEvent, CanvasDidUpdateEvent, bind_handler, post_event
 from .geometry import Vec2, Rect, padded_rect, rects_overlap, within_rect, clamp_rect_pos
 from .data import Node, init_bezier, Reaction
@@ -124,7 +124,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
 
-        bind_handler(NodesDidMoveEvent, self.OnNodesDidMove)
+        bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
         bind_handler(DidCommitNodePositionsEvent, self.OnDidCommitNodePositions)
 
         # state variables
@@ -678,6 +678,7 @@ class Canvas(wx.ScrolledWindow):
 
             # Draw minimap
             self._minimap.DoPaint(gc)
+            post_event(DidPaintCanvasEvent(gc))
 
     def _ToScrolledRect(self, rect: Rect) -> Rect:
         """Helper that converts rectangle to scrolled (device) position."""

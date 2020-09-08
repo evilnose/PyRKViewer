@@ -8,7 +8,7 @@ import copy
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .config import theme, settings
-from .events import NodesDidMoveEvent, post_event
+from .events import DidMoveNodesEvent, post_event
 from .mvc import IController
 from .utils import no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
@@ -535,7 +535,7 @@ class NodeForm(EditPanelForm):
                 self._dirty = True
                 node.position = clamped
                 self.controller.try_start_group()
-                post_event(NodesDidMoveEvent(nodes, clamped - node.position, dragged=False))
+                post_event(DidMoveNodesEvent(nodes, clamped - node.position, dragged=False))
                 self.controller.try_move_node(self.net_index, node.index, node.position)
                 self.controller.try_end_group()
         else:
@@ -546,7 +546,7 @@ class NodeForm(EditPanelForm):
                 self.controller.try_start_group()
                 for node in nodes:
                     node.position += offset
-                post_event(NodesDidMoveEvent(nodes, offset, dragged=False))
+                post_event(DidMoveNodesEvent(nodes, offset, dragged=False))
                 for node in nodes:
                     self.controller.try_move_node(self.net_index, node.index, node.position)
                 self.controller.try_end_group()

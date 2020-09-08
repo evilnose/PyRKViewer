@@ -1,15 +1,15 @@
 """Classes for managing plugins."""
-from dataclasses import astuple, is_dataclass
-from rkviewer.mvc import IController
 # pylint: disable=maybe-no-member
 import wx
 # pylint: disable=no-name-in-module
 from wx.html import HtmlWindow
+import sys
 import os
 import importlib.abc
 import importlib.util
 import inspect
-from rkviewer.events import DidAddNodeEvent, SelectionDidUpdateEvent, bind_handler
+from rkviewer.events import CanvasEvent, DidAddNodeEvent, DidCommitNodePositionsEvent, DidMoveNodesEvent, DidPaintCanvasEvent, SelectionDidUpdateEvent, bind_handler
+from rkviewer.mvc import IController
 from typing import Any, Callable, List, cast
 from rkplugin.plugins import CommandPlugin, Plugin, PluginType, WindowedPlugin
 
@@ -21,7 +21,10 @@ class PluginManager:
         self.plugins = list()
         self.controller = controller
         bind_handler(DidAddNodeEvent, self.make_notify('on_did_add_node'))
+        bind_handler(DidMoveNodesEvent, self.make_notify('on_did_move_nodes'))
+        bind_handler(DidCommitNodePositionsEvent, self.make_notify('on_did_commit_node_positions'))
         bind_handler(SelectionDidUpdateEvent, self.make_notify('on_selection_did_change'))
+        bind_handler(DidPaintCanvasEvent, self.make_notify('on_did_paint_canvas'))
 
     def load_from(self, dir_path: str):
         plugin_classes = list()
@@ -42,19 +45,19 @@ class PluginManager:
                     raise ValueError("In file {}, {} is an abstract class", f)
             plugin_classes += cur_classes
 
-        # TODO catch error
         self.plugins = [cls() for cls in plugin_classes]
 
     def make_notify(self, handler_name: str):
         assert callable(getattr(Plugin, handler_name, None)), "{} is not a method defined by \
 Plugin!".format(handler_name)
 
-        def ret(evt):
+        def ret(evt: CanvasEvent):
             # TODO error handling
-            assert is_dataclass(evt), "Handler created by make_notify() must be given a \
-dataclass argument."
+            #assert is_dataclass(evt), "Handler created by make_notify() must be given a \
+#dataclass argument."
+            args = evt.to_tuple()
             for plugin in self.plugins:
-                getattr(plugin, handler_name)(*astuple(evt))
+                getattr(plugin, handler_name)(*args)
 
         return ret
 

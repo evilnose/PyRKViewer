@@ -3,8 +3,9 @@
 These events may later be used within a plugin system, where plugins are allowed to bind their own
 handlers to these events.
 """
-
-from dataclasses import dataclass
+# pylint: disable=maybe-no-member
+import wx
+from dataclasses import dataclass, is_dataclass, fields
 from rkviewer.canvas.geometry import Vec2
 from rkviewer.canvas.data import Node, Reaction
 from collections import defaultdict
@@ -12,7 +13,10 @@ from typing import Callable, DefaultDict, Dict, List, Set, Type, TypeVar
 
 
 class CanvasEvent:
-    pass
+    def to_tuple(self):
+        assert is_dataclass(self), "as_tuple requires the CanvasEvent instance to be a dataclass!"
+
+        return tuple(getattr(self, f.name) for f in fields(self))
 
 
 @dataclass
@@ -20,8 +24,8 @@ class SelectionDidUpdateEvent(CanvasEvent):
     """Called after the list of selected nodes and/or reactions has changed.
 
     Attributes:
-        node_indices (Set[int]): The indices of the list of selected nodes.
-        reaction_indices (Set[int]): The indices of the list of selected reactions.
+        node_indices: The indices of the list of selected nodes.
+        reaction_indices: The indices of the list of selected reactions.
     """
     node_indices: Set[int]
     reaction_indices: Set[int]
@@ -32,15 +36,15 @@ class CanvasDidUpdateEvent(CanvasEvent):
     """Called after the canvas has been updated by the controller.
 
     Attributes:
-        nodes (list[Node]): The list of nodes.
-        reaction (list[Reaction]): The list of reactions.
+        nodes: The list of nodes.
+        reaction: The list of reactions.
     """
     nodes: List[Node]
     reactions: List[Reaction]
 
 
 @dataclass
-class NodesDidMoveEvent(CanvasEvent):
+class DidMoveNodesEvent(CanvasEvent):
     """Called after the position of a node changes in any situation.
 
     TODO implement this manually for move by form and move by dragging. Also provide a list of
@@ -61,18 +65,11 @@ class NodesDidMoveEvent(CanvasEvent):
 
 @dataclass
 class DidCommitNodePositionsEvent(CanvasEvent):
-    """Called after the position of a node changes in any situation.
+    """Called after the node positions are commited to the controller.
 
-    TODO implement this manually for move by form and move by dragging. Also provide a list of
-    indices. After that, update elements.py so that if all nodes in a reaction are moved at once,
-    move the centroid handle of the bezier as well.
-
-    If multiple nodes are moved at once (e.g. by dragging), then this event is issued multiple
-    times, once for each node.
-
-    Attributes:
-        nodes: The nodes that were moved.
-        offset: The position offset.
+    This even is emitted only after a node move action has been regsitered with the controller.
+    E.g., when a user drag-moves a ndoe, only after they release the left mouse button is the action
+    recorded in the undo stack.
     """
 
 
@@ -81,8 +78,8 @@ class DidDragResizeNodesEvent(CanvasEvent):
     """Called after the list of selected nodes has been moved by dragging.
 
     Attributes:
-        nodes (List[Node]): The list of resized nodes.
-        ratio: (Vec2): The resize ratio.
+        nodes: The list of resized nodes.
+        ratio: The resize ratio.
 
     Note:
         This event triggers only if the user has performed a drag operation, and not, for example,
@@ -97,13 +94,23 @@ class DidAddNodeEvent(CanvasEvent):
     """Called after a node has been added.
 
     Attributes:
-        node (Node): The node that was added.
+        node: The node that was added.
 
     Note:
         This event triggers only if the user has performed a drag operation, and not, for example,
         if the user moved a node in the edit panel.
     """
     node: Node
+
+
+@dataclass
+class DidPaintCanvasEvent(CanvasEvent):
+    """Called after the canvas has been painted.
+
+    Attributes:
+        gc: The graphics context of the canvas.
+    """
+    gc: wx.GraphicsContext
 
 
 EventCallback = Callable[[CanvasEvent], None]

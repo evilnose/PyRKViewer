@@ -1,11 +1,12 @@
 # pylint: disable=maybe-no-member
 from inspect import isabstract
+from rkviewer.canvas.geometry import Vec2
+from rkviewer.canvas.data import Node
 from typing import List
 import wx
 import abc
 from dataclasses import dataclass
 from enum import Enum
-from .api import Node
 
 
 @dataclass
@@ -34,16 +35,13 @@ class Plugin:
     def on_did_add_node(self, node: Node):
         pass
 
-    def on_moving_node(self, node: Node):
-        # TODO not implemented
+    def on_did_move_nodes(self, nodes: List[Node], offset: Vec2, dragged: bool):
         pass
 
-    def on_did_move_node(self, node: Node):
-        # TODO not implemented
+    def on_did_commit_node_positions(self):
         pass
 
-    def on_will_paint(self, gc: wx.GraphicsContext):
-        # TODO not implemented
+    def on_did_paint_canvas(self, gc: wx.GraphicsContext):
         pass
 
     def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int]):

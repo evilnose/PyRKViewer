@@ -4,7 +4,7 @@ import wx
 from itertools import tee
 import os
 import sys
-from typing import Any, Callable, Collection, Iterable, List
+from typing import Any, Callable, Iterable
 
 
 def convert_position(fn):

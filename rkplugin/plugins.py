@@ -64,7 +64,7 @@ class WindowedPlugin(Plugin, abc.ABC):
         super().__init__(metadata, PluginType.WINDOWED)
 
     @abc.abstractmethod
-    def create_window(self, parent: wx.Window) -> wx.Window:
+    def create_window(self, dialog: wx.Window) -> wx.Window:
         pass
 
     def on_will_close_window(self, evt):

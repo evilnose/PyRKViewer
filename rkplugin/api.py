@@ -10,6 +10,7 @@ from rkviewer.canvas.state import cstate
 
 Node = data.Node
 Reaction = data.Reaction
+Vec2 = data.Vec2
 
 # TODO allow modification of theme and setting
 

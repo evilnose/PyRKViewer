@@ -1,15 +1,12 @@
 # pylint: disable=maybe-no-member
-from rkplugin.api import group_action
-from typing import List
 import wx
-import random
-import rkplugin
+from typing import List
 from rkplugin.plugins import CommandPlugin, PluginMetadata, WindowedPlugin
 from rkplugin import api
 
 
 metadata = PluginMetadata(
-    name='Color selected',
+    name='ColorSelected',
     author='Gary Geng',
     version='0.0.1',
     short_desc='Pick a color, and set everything selected to that color.',
@@ -23,9 +20,9 @@ class ColorSelected(WindowedPlugin):
         self.num_selected = 0
         self.text = None
 
-    def create_window(self, parent):
+    def create_window(self, dialog):
         # Create top-level window
-        window = wx.Window(parent, size=(300, 400))
+        window = wx.Window(dialog, size=(300, 400))
 
         # Create info message
         self.text = wx.StaticText(window)
@@ -64,4 +61,3 @@ class ColorSelected(WindowedPlugin):
     def update_text(self):
         if self.text is not None:
             self.text.SetLabel('Number of items selected: {}'.format(self.num_selected))
-

@@ -5,8 +5,8 @@ from itertools import chain
 import wx
 from abc import abstractmethod
 import bisect
-from typing import Any, Callable, Iterator, List, Optional, Set
-from .data import Node, BezierHandle, Reaction, ToScrolledFn
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set
+from .data import Node, BezierHandle, Reaction, SpeciesBezier, ToScrolledFn
 from ..events import DidDragResizeNodesEvent, NodesDidMoveEvent, bind_handler, post_event
 from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, within_rect
 from .state import cstate
@@ -171,6 +171,7 @@ class ReactionElement(CanvasElement):
     corresponding update methods should be called.
     """
     reaction: Reaction
+    index_to_bz: Dict[int, SpeciesBezier]
     _hovered_handle: Optional[BezierHandle]
     _dragging: bool
     #: Set of indices of the nodes that have been moved, but not committed.
@@ -183,6 +184,7 @@ class ReactionElement(CanvasElement):
                  layer: int):
         super().__init__(to_scrolled_fn, layer)
         self.reaction = reaction
+        self.index_to_bz = {bz.node.index : bz for bz in chain(reaction.bezier.src_beziers, reaction.bezier.dest_beziers)}
         self.canvas = canvas
         self._hovered_handle = None
         self._dragging = False
@@ -200,14 +202,14 @@ class ReactionElement(CanvasElement):
         for node in nodes:
             # OPTIMIZE ONLY IF NECESSARY(Gary): have reverse map from node to its list of reactions.
             # and handle this event only once at someplace else
-            for bz in chain(self.reaction.bezier.src_beziers, self.reaction.bezier.dest_beziers):
-                if bz.node.index == node.index:
-                    bz.handle.position += offset
-                    bz.update_curve(self.reaction.bezier.centroid)
-                    break
+            if node.index in self.index_to_bz:
+                bz = self.index_to_bz[node.index]
+                bz.handle.position += offset
+                bz.update_curve(self.reaction.bezier.centroid)
 
-        #self.reaction.bezier.src_c_handle.position += offset
-        #self.reaction.bezier.src_handle_moved()
+        if self._moving_all:
+            self.reaction.bezier.src_c_handle.position += offset
+            self.reaction.bezier.src_handle_moved()
 
     def commit_node_pos(self):
         """Handler for after the controller is told to move a node."""

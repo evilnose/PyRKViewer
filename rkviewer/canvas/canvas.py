@@ -39,6 +39,7 @@ class InputMode(Enum):
         return str(self.value)
 
 
+# Don't use ScrolledPanel since Canvas does not scroll conventionally.
 class Canvas(wx.ScrolledWindow):
     """The main window onto which nodes, reactions, etc. will be drawn.
 

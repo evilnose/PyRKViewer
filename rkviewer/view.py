@@ -353,7 +353,7 @@ class MainFrame(wx.Frame):
                          key=(wx.ACCEL_CTRL, ord('R')))
 
         plugins_menu = wx.Menu()
-        self.AddMenuItem(plugins_menu, '&Manage...', 'Manage plugins', self.ManagePlugins, entries,
+        self.AddMenuItem(plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
                          key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
         plugins_menu.AppendSeparator()
         self.manager.register_menu(plugins_menu, self)

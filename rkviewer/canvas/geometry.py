@@ -167,6 +167,9 @@ class Vec2:
         """
         return Vec2(val, val)
 
+    def as_tuple(self) -> Tuple[TNum, TNum]:
+        return (self.x, self.y)
+
 
 class Rect:
     """Class that represents a rectangle by keeping a position and a size."""

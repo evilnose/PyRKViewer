@@ -1,8 +1,10 @@
 """Classes for managing plugins."""
-# pylint: disable=maybe-no-member
 from dataclasses import astuple, is_dataclass
 from rkviewer.mvc import IController
+# pylint: disable=maybe-no-member
 import wx
+# pylint: disable=no-name-in-module
+from wx.html import HtmlWindow
 import os
 import importlib.abc
 import importlib.util
@@ -63,6 +65,8 @@ dataclass argument."
             item = menu.Append(id_, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, self.make_command_callback(plugin), item)
 
+        menu.AppendSeparator()
+
         windowed = [cast(WindowedPlugin, p) for p in self.plugins if p.ptype == PluginType.WINDOWED]
         for plugin in windowed:
             id_ = wx.NewId()
@@ -108,9 +112,60 @@ dataclass argument."
         return windowed_cb
 
     def create_dialog(self, parent):
-        return PluginWindow(parent)
+        return PluginDialog(parent, self.plugins)
 
 
-class PluginWindow(wx.Dialog):
-    def __init__(self, parent):
-        super().__init__(parent, title='Manage Plugins')
+class PluginDialog(wx.Dialog):
+    def __init__(self, parent, plugins: List[Plugin]):
+        super().__init__(parent, title='Manage Plugins', size=(900, 550))
+        notebook = wx.Listbook(self, style=wx.LB_LEFT)
+        notebook.GetListView().SetFont(wx.Font(wx.FontInfo(10)))
+        notebook.GetListView().SetColumnWidth(0, 100)
+
+        sizer = wx.BoxSizer()
+        sizer.Add(notebook, proportion=1, flag=wx.EXPAND)
+
+        for plugin in plugins:
+            page = PluginPage(notebook, plugin)
+            notebook.AddPage(page, text=plugin.metadata.name)
+
+        self.SetSizer(sizer)
+
+
+# TODO make this accept HTML input for long_desc? i.e. inherit from HTMLWindow
+class PluginPage(HtmlWindow):
+    def __init__(self, parent: wx.Window, plugin: Plugin):
+        super().__init__(parent)
+
+        html = '''
+        <h3>{name}</h3>
+        <div>{author}｜v{version}</div>
+        <hr/>
+        <div>
+            {description}
+        </div>
+        '''.format(
+            name=plugin.metadata.name,
+            version=plugin.metadata.version,
+            author=plugin.metadata.author,
+            description=plugin.metadata.long_desc,
+        )
+
+        self.SetPage(html)
+        # inherit parent background color for better look
+        self.SetBackgroundColour(parent.GetBackgroundColour())
+
+        '''
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer_flags = wx.SizerFlags().Border(wx.TOP | wx.LEFT, 10)
+        title = wx.StaticText(self, label=plugin.metadata.name)
+        title.SetFont(wx.Font(wx.FontInfo(14).Bold()))
+        sizer.Add(title, sizer_flags)
+        author = wx.StaticText(self, label='{}, by {}'.format(plugin.metadata.version, plugin.metadata.author))
+        author.SetFont(wx.Font(wx.FontInfo(10).Italic()))
+        sizer.Add(author, sizer_flags)
+        desc = wx.StaticText(self, label=plugin.metadata.long_desc)
+        desc.SetFont(wx.Font(wx.FontInfo(10)))
+        sizer.Add(desc, sizer_flags)
+        self.SetSizer(sizer)
+        '''

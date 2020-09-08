@@ -166,6 +166,7 @@ class IController(abc.ABC):
     def try_add_reaction_g(self, neti: int,  reaction: Reaction) -> bool:
         pass
 
+
 class IView(abc.ABC):
     """The inteface class for a controller
 

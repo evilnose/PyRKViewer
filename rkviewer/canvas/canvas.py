@@ -131,7 +131,6 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnWindowDestroy)
-        self.Bind(wx.EVT_TIMER, self.OnTimer)
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)
 
@@ -205,18 +204,6 @@ class Canvas(wx.ScrolledWindow):
 
     def OnIdle(self, evt):
         self.LazyRefresh()
-
-    def OnTimer(self, evt):
-        return
-        now = time.time() * 1000
-        diff = now - self._last_fps_update
-        if diff >= 1000:
-            self._last_fps_update = int(now)
-            fps = int(self._accum_frames / diff * 1000)
-            self._SetStatusText('fps', 'fps {}'.format(int(fps)))
-            self._accum_frames = 0
-        status_text = repr(self._cursor_logical_pos)
-        self._SetStatusText('cursor', status_text)
 
     @property
     def nodes(self):
@@ -665,24 +652,10 @@ class Canvas(wx.ScrolledWindow):
         now = time.time() * 1000
         diff = now - self._last_refresh
         if diff < self.MILLIS_PER_REFRESH:
-            '''
-            if self._refresh_queued:
-                return
-            self._refresh_queued = True
-            def callback():
-                now = time.time() * 1000
-                self._refresh_queued = False
-                self._last_refresh = int(now)
-                self.LazyRefresh(eraseBackground=eraseBackground, rect=rect)
-            wx.CallLater(self.MILLIS_PER_REFRESH - diff, callback)
-            '''
             return
         else:
             self._last_refresh = int(now)
             self.Refresh()
-        # if diff >= self.MILLIS_PER_REFRESH:
-        #     self._last_refresh = int(now)
-        #     self.LazyRefresh(eraseBackground=eraseBackground, rect=rect)
 
     def OnPaint(self, evt):
         self._accum_frames += 1
@@ -691,13 +664,14 @@ class Canvas(wx.ScrolledWindow):
         if diff >= 1000:
             self._last_fps_update = int(now)
             fps = int(self._accum_frames / diff * 1000)
-            self._SetStatusText('fps', 'fps {}'.format(int(fps)))
+            self._SetStatusText('fps', 'refreshes/sec: {}'.format(int(fps)))
             self._accum_frames = 0
         status_text = repr(self._cursor_logical_pos)
         self._SetStatusText('cursor', status_text)
         self.SetOverlayPositions()
+
         dc = wx.PaintDC(self)
-        # Create graphics context from it
+        # Create graphics context since we need transparency
         gc = wx.GraphicsContext.Create(dc)
 
         if gc:

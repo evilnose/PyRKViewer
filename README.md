@@ -24,7 +24,11 @@ e.g. `Canvas::RegisterAllChildren`.
 * BUG: If one drag-selects a single node, the focus is brought to the node ID in the form
 * BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip those
 values.
-* OPTIMIZE: When moving, use LazyRefreshRect() instead of LazyRefresh()
+* OPTIMIZE: When moving/dragging, use RefreshRect() instead of Refresh(). This would involve 
+keeping track of "previous rects" and "new rects". Previous rects are rectangular regions where
+items are moved *from*, whereas new rects are rectangle regions where items are moved *to*. For
+example, if I moved a the SelectBox, I should only need to redraw its rect before it moved and
+its position after.
 * OPTIMIZE: Do not rebuild reaction forms. Instead, keep them all in a dict() and only make the
 currently used one visible.
 * Add option to change reaction line thickness

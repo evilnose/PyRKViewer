@@ -9,9 +9,9 @@ import wx.lib.agw.shortcuteditor as sedit
 from typing import Callable, List, Dict, Any, Optional, Set, Tuple
 from .events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
     SelectionDidUpdateEvent
-from .canvas.canvas import Canvas, InputMode
+from .canvas.canvas import Canvas
 from .canvas.data import Node, Reaction
-from .canvas.state import cstate
+from .canvas.state import cstate, InputMode
 from .config import settings, theme
 from .forms import NodeForm, ReactionForm
 from .mvc import IController, IView
@@ -224,8 +224,7 @@ class MainPanel(wx.Panel):
         # The bg of the available canvas will be drawn by canvas in OnPaint()
         self.canvas.SetBackgroundColour(theme['canvas_outside_bg'])
 
-        def set_input_mode(ident):
-            self.canvas.input_mode = ident
+        def set_input_mode(ident): cstate.input_mode = ident
 
         # create a panel in the frame
         self.mode_panel = ModePanel(self,
@@ -450,7 +449,7 @@ class View(IView):
         self.manager.load_from('plugins')
         self.frame = MainFrame(self.controller, self.manager, title='RK Network Viewer')
         self.canvas_panel = self.frame.main_panel.canvas
-        self.canvas_panel.RegisterAllChildren(self.frame)
+        #self.canvas_panel.RegisterAllChildren(self.frame)
         self.frame.Show()
 
         app.MainLoop()

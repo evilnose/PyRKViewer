@@ -851,24 +851,6 @@ class ReactionForm(EditPanelForm):
             self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
             self.UpdateAllFields()
 
-    '''
-    def _RemoveLastControl(self, ctrl: wx.Control):
-        sizer = self.GetSizer()
-
-        label = self.labels[ctrl.GetId()]
-        sizer.Detach(label)
-        label.Destroy()
-
-        badge = self.badges[ctrl.GetId()]
-        sizer.Detach(badge)
-        badge.Destroy()
-
-        sizer.Detach(ctrl)
-        ctrl.Destroy()
-
-        sizer.Remove(sizer.GetItemCount() - 1)  # remove the spacer
-    '''
-
     def _UpdateStoichFields(self, reai: int, reactants: List[StoichInfo], products: List[StoichInfo]):
         sizer = self.GetSizer()
 

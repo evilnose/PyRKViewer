@@ -13,7 +13,7 @@ from ..config import settings, theme
 from ..utils import pairwise
 
 
-MAXSEGS = 5  # Number of segments used to construct bezier
+MAXSEGS = 8  # Number of segments used to construct bezier
 HANDLE_RADIUS = 5  # Radius of the contro lhandle
 HANDLE_BUFFER = 2
 NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
@@ -385,8 +385,12 @@ class SpeciesBezier:
         gc.SetPen(pen)
         #gc.StrokeLines([wx.Point2D(*to_scrolled_fn(p * cstate.scale)) for p in self.bezier_points])
         path = gc.CreatePath()
-        path.MoveToPoint(*self.node_intersection)
-        path.AddCurveToPoint(*self.handle.position, *self.centroid_handle.position, *self.centroid)
+        points = [to_scrolled_fn(p * cstate.scale) for p in (self.node_intersection,
+                                                             self.handle.position,
+                                                             self.centroid_handle.position,
+                                                             self.centroid)]
+        path.MoveToPoint(*points[0])
+        path.AddCurveToPoint(*points[1], *points[2], *points[3])
         gc.StrokePath(path)
 
         # Draw arrow tip
@@ -511,7 +515,7 @@ class ReactionBezier:
 
     def nodes_updated(self):
         """Function called after reactant/product nodes have been updated.
-        
+
         It is assumed that the node referenced held by this instance has been changed
         automatically.
         """

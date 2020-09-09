@@ -53,6 +53,7 @@ class Controller(IController):
         try:
             iod.startGroup()
         except iod.Error as e:
+            # TODO replace all print statements with logging
             print('Error starting group:', str(e))
             return False
         return True
@@ -301,10 +302,10 @@ class Controller(IController):
 
             items = list()
             items.append(self.get_center_handle(neti, reai))
-            for nid in iod.getListOfReactionSrcNodes(neti, reai):
-                items.append(self.get_src_node_handle(neti, reai, nid))
-            for nid in iod.getListOfReactionDestNodes(neti, reai):
-                items.append(self.get_dest_node_handle(neti, reai, nid))
+            for node in sources:
+                items.append(self.get_src_node_handle(neti, reai, node.id_))
+            for node in targets:
+                items.append(self.get_dest_node_handle(neti, reai, node.id_))
 
             reaction = Reaction(id_,
                                 sources=sources,

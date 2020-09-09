@@ -184,6 +184,7 @@ class ReactionElement(CanvasElement):
                  layer: int):
         super().__init__(to_scrolled_fn, layer)
         self.reaction = reaction
+        # TODO accommodate possibly multiple bezier curves for each node
         self.index_to_bz = {bz.node.index : bz for bz in chain(reaction.bezier.src_beziers, reaction.bezier.dest_beziers)}
         self.canvas = canvas
         self._hovered_handle = None
@@ -200,8 +201,6 @@ class ReactionElement(CanvasElement):
             self._moving_all = my_indices <= self._dirty_indices
 
         for node in nodes:
-            # OPTIMIZE ONLY IF NECESSARY(Gary): have reverse map from node to its list of reactions.
-            # and handle this event only once at someplace else
             if node.index in self.index_to_bz:
                 bz = self.index_to_bz[node.index]
                 bz.handle.position += offset
@@ -216,14 +215,13 @@ class ReactionElement(CanvasElement):
         ctrl = self.canvas.controller
         neti = self.canvas.net_index
         reai = self.reaction.index
-        index = 0
-        for bz in chain(self.reaction.bezier.src_beziers, self.reaction.bezier.dest_beziers):
+        for bz in self.reaction.bezier.src_beziers:
             if bz.node.index in self._dirty_indices:
-                if index >= len(self.reaction.bezier.src_beziers):
-                    ctrl.try_set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.position)
-                else:
-                    ctrl.try_set_src_node_handle(neti, reai, bz.node.id_, bz.handle.position)
-            index += 1
+                ctrl.try_set_src_node_handle(neti, reai, bz.node.id_, bz.handle.position)
+
+        for bz in self.reaction.bezier.dest_beziers:
+            if bz.node.index in self._dirty_indices:
+                ctrl.try_set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.position)
 
         if self._moving_all:
             ctrl.try_set_center_handle(neti, reai, self.reaction.bezier.src_c_handle.position)
@@ -440,9 +438,10 @@ class SelectBox(CanvasElement):
                 self.set_cursor_fn(wx.Cursor(cursor))
                 pass
             elif self._hovered_part == -1:
-                self.set_cursor_fn(wx.Cursor(wx.CURSOR_ARROW))
+                # HACK re-set input_mode with the same value to make canvas update the cursor
+                cstate.input_mode = cstate.input_mode
             else:
-                self.set_cursor_fn(wx.Cursor(wx.CURSOR_ARROW))
+                cstate.input_mode = cstate.input_mode
 
     def do_left_down(self, logical_pos: Vec2):
         if len(self.nodes) == 0:

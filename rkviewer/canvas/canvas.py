@@ -4,11 +4,10 @@ import wx
 from itertools import chain
 import typing
 import copy
-from enum import Enum, unique
 from typing import Collection, Optional, Set, Tuple, List, Dict, cast
 from threading import Thread
 from .elements import CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
-from .state import cstate
+from .state import InputMode, cstate
 from ..events import DidAddNodeEvent, DidMoveNodesEvent, DidCommitNodePositionsEvent, DidPaintCanvasEvent, \
     SelectionDidUpdateEvent, CanvasDidUpdateEvent, bind_handler, post_event
 from .geometry import Vec2, Rect, padded_rect, rects_overlap, within_rect, clamp_rect_pos
@@ -28,17 +27,6 @@ issues.
 """
 BOUNDS_EPS_VEC = Vec2.repeat(BOUNDS_EPS)
 """2D bounds vector formed from BOUNDS_EPS"""
-
-
-@unique
-class InputMode(Enum):
-    """Enum for the current input mode of the canvas."""
-    SELECT = 'Select'
-    ADD = 'Add'
-    ZOOM = 'Zoom'
-
-    def __str__(self):
-        return str(self.value)
 
 
 # Don't use ScrolledPanel since Canvas does not scroll conventionally.
@@ -62,7 +50,6 @@ class Canvas(wx.ScrolledWindow):
                            to selected_idx only after the user has stopped drag-selecting.
         hovered_element: The element over which the mouse is hovering, or None.
         zoom_slider: The zoom slider widget.
-        input_mode: The current input mode.
     """
     MIN_ZOOM_LEVEL: int = -7
     MAX_ZOOM_LEVEL: int = 7
@@ -78,7 +65,6 @@ class Canvas(wx.ScrolledWindow):
     drag_selected_idx: Set[int]
     hovered_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
-    timer: wx.Timer
 
     #: Current network index. Right now this is always 0 since there is only one tab.
     _net_index: int
@@ -97,7 +83,6 @@ class Canvas(wx.ScrolledWindow):
     _drag_rect: Rect  #: The current drag-selection rectangle.
     _reverse_status: Dict[str, int]  #: Maps status string in .config.settings to its index.
     #: Flag for whether the mouse is currently outside of the root app window.
-    _mouse_outside_frame: bool
     _copied_nodes: List[Node]  #: Copy of nodes currently in clipboard
     _accum_frames: int
     _last_fps_update: int
@@ -138,7 +123,7 @@ class Canvas(wx.ScrolledWindow):
         bind_handler(DidCommitNodePositionsEvent, self.OnDidCommitNodePositions)
 
         # state variables
-        self._input_mode = InputMode.SELECT
+        cstate.input_mode = InputMode.SELECT
         # Set to (0, 0) since this won't be used before it's updated once first
         self._dragged_rel_window = wx.Point()
 
@@ -183,23 +168,19 @@ class Canvas(wx.ScrolledWindow):
         assert status_fields is not None
         self._reverse_status = {name: i for i, (name, _) in enumerate(status_fields)}
 
-        self._mouse_outside_frame = True
         self._copied_nodes = list()
 
         wx.CallAfter(lambda: self.SetZoomLevel(0, Vec2(0, 0)))
 
-        self.timer = wx.Timer(self)
-        self.timer.Start(50)
         self._accum_frames = 0
         self._cursor_logical_pos = None
         self._last_fps_update = 0
         self._last_refresh = 0
-        self._refresh_queued = False
+        cstate.input_mode_changed = self.InputModeChanged
 
         self.SetOverlayPositions()
 
     def OnWindowDestroy(self, evt):
-        self.timer.Stop()
         evt.Skip()
 
     def OnIdle(self, evt):
@@ -213,13 +194,7 @@ class Canvas(wx.ScrolledWindow):
     def reactions(self):
         return self._reactions
 
-    @property
-    def input_mode(self):
-        return self._input_mode
-
-    @input_mode.setter
-    def input_mode(self, val: InputMode):
-        self._input_mode = val
+    def InputModeChanged(self, val: InputMode):
         if val == InputMode.ADD:
             self.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
         else:
@@ -420,7 +395,6 @@ class Canvas(wx.ScrolledWindow):
                 # loop finished normally; done
                 return cur_id
 
-    @convert_position
     def OnLeftDown(self, evt):
         try:
             device_pos = evt.GetPosition()
@@ -437,7 +411,7 @@ class Canvas(wx.ScrolledWindow):
 
             logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
 
-            if self.input_mode == InputMode.SELECT:
+            if cstate.input_mode == InputMode.SELECT:
                 for el in self._elements.top_down():
                     if el.pos_inside(logical_pos) and el.do_left_down(logical_pos):
                         self.dragged_element = el
@@ -495,7 +469,7 @@ class Canvas(wx.ScrolledWindow):
                     self._drag_rect = Rect(self._drag_select_start, Vec2())
                     self.drag_selected_idx = set()
 
-            elif self.input_mode == InputMode.ADD:
+            elif cstate.input_mode == InputMode.ADD:
                 size = Vec2(theme['node_width'], theme['node_height'])
 
                 unscaled_pos = logical_pos / cstate.scale
@@ -519,26 +493,24 @@ class Canvas(wx.ScrolledWindow):
                 index = self.controller.get_node_index(self._net_index, node.id_)
                 self.selected_idx.set_item({index})
                 self.sel_reactions_idx.set_item(set())
-            elif self.input_mode == InputMode.ZOOM:
+            elif cstate.input_mode == InputMode.ZOOM:
                 zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
                 self.IncrementZoom(zooming_in, Vec2(device_pos))
 
         finally:
             self.LazyRefresh()
             evt.Skip()
-            if not evt.foreign:
-                wx.CallAfter(self.SetFocus)
+            wx.CallAfter(self.SetFocus)
 
-    @convert_position
     def OnLeftUp(self, evt):
         try:
-            self._EndDrag(evt, False)
+            self._EndDrag(evt)
         finally:
             self.LazyRefresh()
             evt.Skip()
 
     # TODO improve this. we might want a special mouseLeftWindow event
-    def _EndDrag(self, evt: wx.Event, keep_dragging: bool):
+    def _EndDrag(self, evt: wx.Event):
         """Send the updated node positions and sizes to the controller.
 
         This is called after a dragging/resizing operation has completed, i.e. in OnLeftUp and
@@ -549,13 +521,15 @@ class Canvas(wx.ScrolledWindow):
         overlay = self._InWhichOverlay(device_pos)
 
         if self._minimap.dragging:
-            if not keep_dragging:
-                self._minimap.OnLeftUp(evt)
+            self._minimap.OnLeftUp(evt)
+            # HACK once we integrate overlays (e.g. minimap) as CanvasElements, we can simply call
+            # do_mouse_leave or something
+            self._minimap.hovering = False
         elif self._drag_selecting:
             self._drag_selecting = False
             self.selected_idx.set_item(self.selected_idx.item_copy() | self.drag_selected_idx)
             self.drag_selected_idx = set()
-        elif self.input_mode == InputMode.SELECT:
+        elif cstate.input_mode == InputMode.SELECT:
             # perform left_up on dragged_element if it exists, or just find the node under the
             # cursor
             logical_pos = self.CalcScrolledPositionFloat(device_pos)
@@ -578,7 +552,6 @@ class Canvas(wx.ScrolledWindow):
         """
         return Vec2(self.CalcScrolledPosition(wx.Point(0, 0))) + pos
 
-    @convert_position
     def OnMotion(self, evt):
         assert isinstance(evt, wx.MouseEvent)
         redraw = False
@@ -588,7 +561,7 @@ class Canvas(wx.ScrolledWindow):
             self._cursor_logical_pos = logical_pos
 
             # dragging takes priority here
-            if self.input_mode == InputMode.SELECT:
+            if cstate.input_mode == InputMode.SELECT:
                 if evt.leftIsDown:  # dragging
                     if self._drag_selecting:
                         topleft = Vec2(min(logical_pos.x, self._drag_select_start.x),
@@ -671,6 +644,8 @@ class Canvas(wx.ScrolledWindow):
         self.SetOverlayPositions()
 
         dc = wx.PaintDC(self)
+        # TODO refactor to DoPrepareDC
+        #self.DoPrepareDC(dc)
         # Create graphics context since we need transparency
         gc = wx.GraphicsContext.Create(dc)
 
@@ -769,8 +744,8 @@ class Canvas(wx.ScrolledWindow):
     def OnScroll(self, evt):
         # Need to use wx.CallAfter() to ensure the scroll event is finished before we update the
         # position of the dragged node
-        wx.CallAfter(self.LazyRefresh)
         evt.Skip()
+        self.LazyRefresh()
 
     def OnMouseWheel(self, evt):
         rot = evt.GetWheelRotation()
@@ -793,14 +768,11 @@ class Canvas(wx.ScrolledWindow):
         self.SetZoomLevel(level, Vec2(self.GetSize()) / 2)
 
     def OnLeaveWindow(self, evt):
-        screen_pos = evt.EventObject.ClientToScreen(evt.GetPosition())
-        root_frame = self.GetTopLevelParent()
-        fw, fh = root_frame.GetClientSize()
-        frame_pos = root_frame.ScreenToClient(screen_pos)
-        # if mouse is leave frame (i.e. the root application window), issue OnLeftUp event.
-        if frame_pos.x < 0 or frame_pos.y < 0 or frame_pos.x >= fw or frame_pos.y >= fh:
-            self._mouse_outside_frame = True
-            self._EndDrag(evt, True)
+        try:
+            self._EndDrag(evt)
+        finally:
+            evt.Skip()
+
 
     def OnNodesDidMove(self, evt):
         for elt in self._reaction_elements:

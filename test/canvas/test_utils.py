@@ -1,6 +1,6 @@
 import unittest
 import copy
-from rkviewer.canvas.utils import Rect, Vec2, within_rect, clamp_rect_pos, clamp_point, \
+from rkviewer.canvas.geometry import Rect, Vec2, within_rect, clamp_rect_pos, clamp_point, \
     rects_overlap, get_bounding_rect
 
 
@@ -39,7 +39,7 @@ class TestRectUtils(unittest.TestCase):
             ((-154, -13.311), (166, 51)),
             ((33.2, 43), (17.24, 0.1)),
         ]
-        rects = [Rect(Vec2(*p), Vec2(*s)) for p, s in data]
+        rects = [Rect(Vec2(p), Vec2(s)) for p, s in data]
         bound = get_bounding_rect(rects)
         self.assertEqual(bound.position, Vec2(-154, -15))
         self.assertEqual(bound.size, Vec2(204.44, 95))

@@ -521,7 +521,7 @@ class NodeForm(EditPanelForm):
             self._SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
             return
 
-        pos = Vec2(*xy)
+        pos = Vec2(xy)
         if pos.x < 0 or pos.y < 0:
             self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
             return
@@ -852,6 +852,7 @@ class ReactionForm(EditPanelForm):
     def _UpdateStoichFields(self, reai: int, reactants: List[StoichInfo], products: List[StoichInfo]):
         sizer = self.GetSizer()
 
+        self.Freeze()
         if self._reactant_subtitle is not None:
             start_row = sizer.GetItemPosition(self._reactant_subtitle).GetRow() - 2
 
@@ -898,6 +899,7 @@ class ReactionForm(EditPanelForm):
                 stoich_ctrl.Bind(wx.EVT_TEXT, callback)
 
         sizer.Layout()
+        self.Thaw()
 
     def _MakeSetSrcStoichFunction(self, reai: int, node_id: str):
         def ret(val: float):

@@ -44,13 +44,13 @@ DEFAULT_THEME = {
     'selected_reaction_fill': wx.Colour(0, 140, 255),
 }
 
-
 DEFAULT_SETTINGS = {
     'init_zoom': 1,
     'status_fields': [
         ('mode', 100),
         ('cursor', 100),
         ('zoom', 100),
+        ('fps', 100),
     ],  # first element: status field identifier; second element: field width
     'decimal_precision': 2,
     'reaction_radius': 6,

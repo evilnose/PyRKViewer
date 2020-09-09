@@ -39,33 +39,32 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
         border_width: The width of the borders. Defaults to 1. This cannot be 0 when border
             is specified.
     """
-    if fill is None and border is None:
-        raise ValueError("Both 'fill' and 'border' are None, but at least one of them should be "
-                         "provided")
+    assert not(fill is None and border is None), \
+        "Both 'fill' and 'border' are None, but at least one of them should be provided"
 
-    if border is not None and border_width == 0:
-        raise ValueError("'border_width' cannot be 0 when 'border' is specified")
+    assert not (border is not None and border_width == 0), \
+        "'border_width' cannot be 0 when 'border' is specified"
 
     x, y = rect.position
     width, height = rect.size
 
+    pen: wx.Pen
+    brush: wx.Brush
     # set up brush and pen if applicable
     if fill is not None:
         brush = wx.Brush(fill, fill_style)
-        gc.SetBrush(brush)
+    else:
+        brush = wx.TRANSPARENT_BRUSH
     if border is not None:
         pen = gc.CreatePen(wx.GraphicsPenInfo(border).Width(border_width).Style(border_style))
-        gc.SetPen(pen)
+    else:
+        pen = wx.TRANSPARENT_PEN
+
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
 
     # draw rect
-    path = gc.CreatePath()
-    path.AddRectangle(x, y, width, height)
-
-    # finish drawing if applicable
-    if fill is not None:
-        gc.FillPath(path)
-    if border is not None:
-        gc.StrokePath(path)
+    gc.DrawRectangle(x, y, width, height)
 
 
 """Classes for the observer-Subject interface. See https://en.wikipedia.org/wiki/Observer_pattern

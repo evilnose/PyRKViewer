@@ -4,10 +4,10 @@ import wx
 import copy
 from enum import Enum
 import math
-from typing import Any, Callable, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 
-TNum = TypeVar('TNum', float, int)  #: A custom number type, either float or int.
+TNum = Union[float, int]
 
 
 class Vec2:
@@ -24,18 +24,15 @@ class Vec2:
         """Initialize a 2D vector.
 
         If two arguments are specified, they are considered the x and y coordinate
-        of the Vec2.
-        Otherwise, neither argument should be set, and in that case the Vec2 is initialized to
-        (0, 0)
+        of the Vec2. If only the first argument is given, then it is unpacked as a two-element
+        sequence (x, y). Otherweise, if no arguments are given at all, a (0, 0) Vec2 is created.
         """
 
         self._i = 0
         if x is None:
-            assert y is None, 'y cannot be set when x is None. See constructor for more ' + \
-                                  'details'
+            assert y is None, 'y cannot be set when x is None'
             self.x = 0
             self.y = 0
-
         elif y is None:
             self.x, self.y = x
         else:
@@ -140,6 +137,9 @@ class Vec2:
         """Map the given operation across the two elements of the vector."""
         return Vec2(op(self.x), op(self.y))
 
+    def reduce(self, op: Callable[[TNum, TNum], Any], other: Vec2) -> Vec2:
+        return Vec2(op(self.x, other.x), op(self.y, other.y))
+
     @property
     def norm(self) -> TNum:
         return math.sqrt(self.norm_sq)
@@ -215,6 +215,16 @@ class Rect:
             yield (self.nth_vertex(i), self.nth_vertex(i + 1))
         yield (self.nth_vertex(3), self.nth_vertex(0))
 
+    def to_wx_rect(self):
+        return wx.Rect(int(self.position.x), int(self.position.y), int(self.size.x),
+                       int(self.size.y))
+
+    def union(self, other: Rect) -> Rect:
+        """Return a Rect that contains both self and other"""
+        pos = self.position.reduce(min, other.position)
+        botright = (self.position + self.size).reduce(max, other.position + other.size)
+        return Rect(pos, botright - pos)
+
     def __repr__(self):
         return 'Rect({}, {})'.format(self.position, self.size)
 
@@ -224,7 +234,7 @@ class Direction(Enum):
     TOP = 1
     RIGHT = 2
     BOTTOM = 3
-    
+
 
 def clamp_rect_pos(rect: Rect, bounds: Rect, padding=0) -> Vec2:
     """Clamp the position of rect, so that it is entirely within the bounds rectangle.
@@ -281,7 +291,7 @@ def clamp_point(pos: Vec2, bounds: Rect, padding=0) -> Vec2:
 
 def clamp_point_outside(pos: Vec2, bounds: Rect) -> Vec2:
     """Clamp the point so that it is outside the given bounds rectangle.
-    
+
     The point is clamped so that its new position differs minimally from the old position.
     """
     botright = bounds.position + bounds.size
@@ -292,7 +302,7 @@ def clamp_point_outside(pos: Vec2, bounds: Rect) -> Vec2:
     bottom = (botright.y - pos.y, 3, Direction.BOTTOM)
 
     minimum = min(left, right, top, bottom)
-    
+
     dist, _, direct = minimum
     if dist <= 0:
         return pos

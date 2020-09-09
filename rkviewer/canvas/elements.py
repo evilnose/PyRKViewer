@@ -434,6 +434,7 @@ class SelectBox(CanvasElement):
                 rpos = Vec2(self.to_scrolled_fn(rpos))
                 draw_rect(gc, Rect(rpos, rsize), fill=theme['select_box_color'])
 
+            # TODO set only if input mode is SELECT
             if self._hovered_part >= 0:
                 cursor = SelectBox.CURSOR_TYPES[self._hovered_part]
                 self.set_cursor_fn(wx.Cursor(cursor))

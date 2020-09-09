@@ -13,7 +13,7 @@ from ..config import settings, theme
 from ..utils import pairwise
 
 
-MAXSEGS = 29  # Number of segments used to construct bezier
+MAXSEGS = 5  # Number of segments used to construct bezier
 HANDLE_RADIUS = 5  # Radius of the contro lhandle
 HANDLE_BUFFER = 2
 NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
@@ -322,10 +322,10 @@ class SpeciesBezier:
             tmp = Vec2()
             for j, point in enumerate((self.node_intersection, self.handle.position,
                                        self.centroid_handle.position, self.centroid)):
-                tmp += point * 1000 * float(BezJ[i, j])
+                tmp += point * float(BezJ[i, j])
 
             # and scale back down again
-            self.bezier_points[i] = tmp / 1000
+            self.bezier_points[i] = tmp
 
         # TODO optimize?
         self.bounding_box = get_bounding_rect([Rect(p, Vec2()) for p in self.bezier_points])
@@ -383,7 +383,11 @@ class SpeciesBezier:
             pen = wx.Pen(fill, 2)
 
         gc.SetPen(pen)
-        gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
+        #gc.StrokeLines([wx.Point2D(*to_scrolled_fn(p * cstate.scale)) for p in self.bezier_points])
+        path = gc.CreatePath()
+        path.MoveToPoint(*self.node_intersection)
+        path.AddCurveToPoint(*self.handle.position, *self.centroid_handle.position, *self.centroid)
+        gc.StrokePath(path)
 
         # Draw arrow tip
         if not self.is_source:

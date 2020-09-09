@@ -5,7 +5,7 @@ from itertools import chain
 import typing
 import copy
 from enum import Enum, unique
-from typing import Collection, FrozenSet, Optional, Any, Sequence, Set, Tuple, List, Dict, cast
+from typing import Collection, Optional, Set, Tuple, List, Dict, cast
 from threading import Thread
 from .elements import CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
 from .state import cstate
@@ -19,6 +19,7 @@ from .overlays import CanvasOverlay, Minimap
 from ..mvc import IController
 from ..utils import convert_position
 from ..config import theme, settings
+import time
 
 
 BOUNDS_EPS = 0
@@ -68,6 +69,7 @@ class Canvas(wx.ScrolledWindow):
     NODE_LAYER = 1
     REACTION_LAYER = 2
     SELECT_BOX_LAYER = 10
+    MILLIS_PER_REFRESH = 16  # serves as framerate cap
 
     controller: IController
     realsize: Vec2
@@ -97,6 +99,9 @@ class Canvas(wx.ScrolledWindow):
     #: Flag for whether the mouse is currently outside of the root app window.
     _mouse_outside_frame: bool
     _copied_nodes: List[Node]  #: Copy of nodes currently in clipboard
+    _accum_frames: int
+    _last_fps_update: int
+    _last_refresh: int
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
         # ensure the parent's __init__ is called
@@ -127,6 +132,8 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnWindowDestroy)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
+        self.Bind(wx.EVT_IDLE, self.OnIdle)
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)
 
         bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
         bind_handler(DidCommitNodePositionsEvent, self.OnDidCommitNodePositions)
@@ -183,17 +190,31 @@ class Canvas(wx.ScrolledWindow):
         wx.CallAfter(lambda: self.SetZoomLevel(0, Vec2(0, 0)))
 
         self.timer = wx.Timer(self)
-        self.timer.Start(100)
+        self.timer.Start(50)
+        self._accum_frames = 0
         self._cursor_logical_pos = None
+        self._last_fps_update = 0
+        self._last_refresh = 0
+        self._refresh_queued = False
 
         self.SetOverlayPositions()
 
     def OnWindowDestroy(self, evt):
-        print('timer stopped')
         self.timer.Stop()
         evt.Skip()
 
+    def OnIdle(self, evt):
+        self.LazyRefresh()
+
     def OnTimer(self, evt):
+        return
+        now = time.time() * 1000
+        diff = now - self._last_fps_update
+        if diff >= 1000:
+            self._last_fps_update = int(now)
+            fps = int(self._accum_frames / diff * 1000)
+            self._SetStatusText('fps', 'fps {}'.format(int(fps)))
+            self._accum_frames = 0
         status_text = repr(self._cursor_logical_pos)
         self._SetStatusText('cursor', status_text)
 
@@ -373,7 +394,7 @@ class Canvas(wx.ScrolledWindow):
 
         self._SetStatusText('zoom', '{:.2f}x'.format(cstate.scale))
 
-        self.Refresh()
+        self.LazyRefresh()
 
     def ZoomCenter(self, zooming_in: bool):
         """Zoom in on the center of the visible window."""
@@ -511,13 +532,12 @@ class Canvas(wx.ScrolledWindow):
                 index = self.controller.get_node_index(self._net_index, node.id_)
                 self.selected_idx.set_item({index})
                 self.sel_reactions_idx.set_item(set())
-                self.Refresh()
             elif self.input_mode == InputMode.ZOOM:
                 zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
                 self.IncrementZoom(zooming_in, Vec2(device_pos))
 
         finally:
-            self.Refresh()
+            self.LazyRefresh()
             evt.Skip()
             if not evt.foreign:
                 wx.CallAfter(self.SetFocus)
@@ -527,7 +547,7 @@ class Canvas(wx.ScrolledWindow):
         try:
             self._EndDrag(evt, False)
         finally:
-            self.Refresh()
+            self.LazyRefresh()
             evt.Skip()
 
     # TODO improve this. we might want a special mouseLeftWindow event
@@ -593,6 +613,7 @@ class Canvas(wx.ScrolledWindow):
                                                                                   self._drag_rect)]
                         self.drag_selected_idx = set(n.index for n in selected_nodes)
                         redraw = True
+                        # redraw_rect = padded_rect(old_rect.union(self._drag_rect), padding=5).to_wx_rect()
                         return
 
                     if self.dragged_element is not None:
@@ -637,10 +658,43 @@ class Canvas(wx.ScrolledWindow):
                             redraw = True
         finally:
             if redraw:
-                self.Refresh()
+                self.LazyRefresh()
             evt.Skip()
 
+    def LazyRefresh(self):
+        now = time.time() * 1000
+        diff = now - self._last_refresh
+        if diff < self.MILLIS_PER_REFRESH:
+            '''
+            if self._refresh_queued:
+                return
+            self._refresh_queued = True
+            def callback():
+                now = time.time() * 1000
+                self._refresh_queued = False
+                self._last_refresh = int(now)
+                self.LazyRefresh(eraseBackground=eraseBackground, rect=rect)
+            wx.CallLater(self.MILLIS_PER_REFRESH - diff, callback)
+            '''
+            return
+        else:
+            self._last_refresh = int(now)
+            self.Refresh()
+        # if diff >= self.MILLIS_PER_REFRESH:
+        #     self._last_refresh = int(now)
+        #     self.LazyRefresh(eraseBackground=eraseBackground, rect=rect)
+
     def OnPaint(self, evt):
+        self._accum_frames += 1
+        now = time.time() * 1000
+        diff = now - self._last_fps_update
+        if diff >= 1000:
+            self._last_fps_update = int(now)
+            fps = int(self._accum_frames / diff * 1000)
+            self._SetStatusText('fps', 'fps {}'.format(int(fps)))
+            self._accum_frames = 0
+        status_text = repr(self._cursor_logical_pos)
+        self._SetStatusText('cursor', status_text)
         self.SetOverlayPositions()
         dc = wx.PaintDC(self)
         # Create graphics context from it
@@ -741,7 +795,7 @@ class Canvas(wx.ScrolledWindow):
     def OnScroll(self, evt):
         # Need to use wx.CallAfter() to ensure the scroll event is finished before we update the
         # position of the dragged node
-        wx.CallAfter(self.Refresh)
+        wx.CallAfter(self.LazyRefresh)
         evt.Skip()
 
     def OnMouseWheel(self, evt):
@@ -801,24 +855,24 @@ class Canvas(wx.ScrolledWindow):
     def SelectAll(self):
         self.selected_idx.set_item({n.index for n in self._nodes})
         self.sel_reactions_idx.set_item({r.index for r in self._reactions})
-        self.Refresh()
+        self.LazyRefresh()
 
     def ClearSelection(self):
         self.selected_idx.set_item(set())
         self.sel_reactions_idx.set_item(set())
-        self.Refresh()
+        self.LazyRefresh()
 
     def MarkSelectedAsReactants(self):
         self._reactant_idx = self.selected_idx.item_copy()
         # TODO not make product/reactant state mutually exclusive, and change outline marking for
         # visibility in case a node is both
         self._product_idx -= self._reactant_idx
-        self.Refresh()
+        self.LazyRefresh()
 
     def MarkSelectedAsProducts(self):
         self._product_idx = self.selected_idx.item_copy()
         self._reactant_idx -= self._product_idx
-        self.Refresh()
+        self.LazyRefresh()
 
     def CreateReactionFromMarked(self, id_='r'):
         if len(self._reactant_idx) == 0 or len(self._product_idx) == 0:
@@ -838,7 +892,7 @@ class Canvas(wx.ScrolledWindow):
         self._product_idx.clear()
         self.selected_idx.set_item(set())
         self.sel_reactions_idx.set_item({self.controller.get_reaction_index(self._net_index, id_)})
-        self.Refresh()
+        self.LazyRefresh()
 
     def CopySelected(self):
         self._copied_nodes = copy.deepcopy(self.GetSelectedNodes())

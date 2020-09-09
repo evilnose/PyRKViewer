@@ -102,7 +102,7 @@ class EditPanel(fnb.FlatNotebook):
         # set the active tab to the same as before. Note: only works with two tabs for now
         if cur_page != self.GetCurrentPage():
             self.AdvanceSelection()
-            self.Refresh()
+            #self.LazyRefresh()
 
         # need to reset focus to canvas, since for some reason FlatNotebook sets focus to the first
         # field in a notebook page after it is added.

@@ -14,6 +14,9 @@ class CanvasOverlay(abc.ABC):
     
     Attributes:
         hovering: Used to set whether the mouse is current hovering over the overlay.
+
+    Note:
+        Overlays use device positions since it makes the most sense for these static items.
     """
     hovering: bool
     _size: Vec2  #: Private attribute for the 'size' property.
@@ -39,17 +42,17 @@ class CanvasOverlay(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def OnLeftDown(self, evt: wx.MouseEvent):
+    def OnLeftDown(self, device_pos: Vec2):
         """Trigger a mouse left button down event on the overlay."""
         pass
 
     @abc.abstractmethod
-    def OnLeftUp(self, evt: wx.MouseEvent):
+    def OnLeftUp(self, device_pos: Vec2):
         """Trigger a mouse left button up event on the overlay."""
         pass
 
     @abc.abstractmethod
-    def OnMotion(self, evt: wx.MouseEvent):
+    def OnMotion(self, device_pos: Vec2, is_down: bool):
         """Trigger a mouse motion event on the overlay."""
         pass
 
@@ -138,7 +141,6 @@ class Minimap(CanvasOverlay):
 
         scale = self._size.x / self._realsize.x
 
-        # draw total rect
         draw_rect(gc, Rect(self.position, self._size), fill=background)
         my_botright = self.position + self._size
 
@@ -160,10 +162,10 @@ class Minimap(CanvasOverlay):
             color = wx.Colour(fc.Red(), fc.Green(), fc.Blue(), 100)
             draw_rect(gc, Rect(n_pos, n_size), fill=color)
 
-    def OnLeftDown(self, evt: wx.Event):
+    def OnLeftDown(self, device_pos: Vec2):
         if not self._dragging:
             scale = self._size.x / self._realsize.x
-            pos = Vec2(evt.GetPosition()) - self.position
+            pos = device_pos - self.position
             if within_rect(pos, Rect(self.window_pos * scale, self.window_size * scale)):
                 self._dragging = True
                 self._drag_rel = pos - self.window_pos * scale
@@ -171,14 +173,14 @@ class Minimap(CanvasOverlay):
                 topleft = pos - self.window_size * scale / 2
                 self._callback(topleft / scale)
 
-    def OnLeftUp(self, evt: wx.Event):
+    def OnLeftUp(self, _: Vec2):
         self._dragging = False
 
-    def OnMotion(self, evt: wx.MouseEvent):
+    def OnMotion(self, device_pos: Vec2, is_down: bool):
         scale = self._size.x / self._realsize.x
-        pos = Vec2(evt.GetPosition()) - self.position
+        pos = device_pos - self.position
         pos = clamp_point(pos, Rect(Vec2(), self.size))
-        if evt.LeftIsDown():
+        if is_down:
             if not self._dragging:
                 topleft = pos - self.window_size * scale / 2
                 self._callback(topleft / scale)

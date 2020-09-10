@@ -206,7 +206,7 @@ class Reaction:
 
 def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: bool):
     """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
-    c = wx.Colour(255, 112, 0) if hovering else wx.Colour(0, 102, 204)
+    c = wx.Colour(255, 112, 0) if hovering else theme['select_box_color']
     brush = wx.Brush(c)
     pen = wx.Pen(c)
 
@@ -269,7 +269,9 @@ class SpeciesBezier:
     centroid_handle: BezierHandle
     is_source: bool
     bezier_points: List[Vec2]
-    _dirty: bool  #: Whether the Bezier curve needs to be recomputed.
+    _extended_handle: Vec2
+    _collision_dirty: bool  #: Whether the Bezier curve needs to be recomputed.
+    _paint_dirty: bool
 
     def __init__(self, node: Node, handle: BezierHandle, centroid: Vec2,
                  centroid_handle: BezierHandle, is_source: bool):
@@ -281,7 +283,8 @@ class SpeciesBezier:
         self.centroid_handle = centroid_handle
         self.is_source = is_source
         self.bezier_points = [Vec2() for _ in range(MAXSEGS + 1)]
-        self._dirty = True
+        self._collision_dirty = True
+        self._paint_dirty = True
         self.update_curve(centroid)
         self.arrow_adjusted_coords = list()
         self.bounding_box = None
@@ -290,49 +293,64 @@ class SpeciesBezier:
         """Called after either the node, the centroid, or at least one of their handles changed.
         """
         self.centroid = centroid
-        self._dirty = True
+        self._collision_dirty = True
+        self._paint_dirty = True
 
-    def _recompute_curve(self):
-        """Recompute the curve points and arrow points."""
-        node_center = self.node.position + self.node.size / 2
+    def _recompute(self, for_collision):
+        """Recompute everything that could have changed, but only recompute the curve if calc_curve.
+        """
 
-        # add a padding to node, so that the Bezier curve starts outside the node. The portion
-        # of the handle within this is not drawn
-        outer_rect = padded_rect(self.node.rect, NODE_EDGE_GAP_DISTANCE)
+        if self._collision_dirty or self._paint_dirty:
+            # STEP 1, get intersection between handle and node outer padding
+            node_center = self.node.position + self.node.size / 2
 
-        self.node_intersection = None
-        # extend handle to make sure that an intersection is found between the handle and the
-        # node rectangle sides. We're essentially making the handle a ray.
-        longer_side = max(outer_rect.size.x, outer_rect.size.y)
-        long_dist = (longer_side + NODE_EDGE_GAP_DISTANCE) * 10
-        extended_handle = node_center + (self.handle.position - node_center).normalized(long_dist)
-        handle_segment = (node_center, extended_handle)
-        # check for intersection on the side
-        sides = outer_rect.sides()
-        for side in sides:
-            x = segments_intersect(side, handle_segment)
-            if x is not None:
-                self.node_intersection = x
-                break
+            # add a padding to node, so that the Bezier curve starts outside the node. The portion
+            # of the handle within this is not drawn
+            outer_rect = padded_rect(self.node.rect, NODE_EDGE_GAP_DISTANCE)
 
-        assert self.node_intersection is not None
+            self.node_intersection = None
+            # extend handle to make sure that an intersection is found between the handle and the
+            # node rectangle sides. We're essentially making the handle a ray.
+            longer_side = max(outer_rect.size.x, outer_rect.size.y)
+            long_dist = (longer_side + NODE_EDGE_GAP_DISTANCE) * 10
+            handle_diff = self.handle.position - node_center
+            if handle_diff.norm_sq <= 1e-6:
+                handle_diff = Vec2(0, 1)
+            self._extended_handle = node_center + handle_diff.normalized(long_dist)
+            handle_segment = (node_center, self._extended_handle)
+            # check for intersection on the side
+            sides = outer_rect.sides()
+            for side in sides:
+                x = segments_intersect(side, handle_segment)
+                if x is not None:
+                    self.node_intersection = x
+                    break
 
-        # Scale up dimensions (mult by 1000) to get a smooth curve
-        for i in range(MAXSEGS+1):
-            tmp = Vec2()
-            for j, point in enumerate((self.node_intersection, self.handle.position,
-                                       self.centroid_handle.position, self.centroid)):
-                tmp += point * float(BezJ[i, j])
+            assert self.node_intersection is not None
 
-            # and scale back down again
-            self.bezier_points[i] = tmp
+        if for_collision:
+            # STEP 2, recompute Bezier curve
+            # Scale up dimensions (mult by 1000) to get a smooth curve
+            if self._collision_dirty:
+                for i in range(MAXSEGS+1):
+                    tmp = Vec2()
+                    for j, point in enumerate((self.node_intersection, self.handle.position,
+                                               self.centroid_handle.position, self.centroid)):
+                        tmp += point * float(BezJ[i, j])
 
-        # TODO optimize?
-        self.bounding_box = get_bounding_rect([Rect(p, Vec2()) for p in self.bezier_points])
+                    # and scale back down again
+                    self.bezier_points[i] = tmp
 
-        if not self.is_source:
-            self._recompute_arrow_tip(self.node_intersection,
-                                      self.node_intersection - extended_handle)
+                self._collision_dirty = False
+                # TODO does this actually help with performance?
+                # self.bounding_box
+        else:
+            # STEP 3, recompute arrow tip
+            if self._paint_dirty:
+                self._paint_dirty = False
+                if not self.is_source:
+                    self._recompute_arrow_tip(self.node_intersection,
+                                              self.node_intersection - self._extended_handle)
 
     def _recompute_arrow_tip(self, tip, slope):
         """Helper that recomputes the vertex coordinates of the arrow, given the tip pos and slope.
@@ -360,54 +378,49 @@ class SpeciesBezier:
 
     def is_on_curve(self, pos: Vec2) -> bool:
         """Check if position is on curve; pos is scaled logical position."""
-        if self._dirty:
-            self._recompute_curve()
-            self._dirty = False
+        self._recompute(for_collision=True)
 
-        if not within_rect(pos, self.bounding_box * cstate.scale):
-            return False
+        # if not within_rect(pos, self.bounding_box * cstate.scale):
+        #     return False
 
         return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK)
                    for p1, p2 in pairwise(self.bezier_points))
 
-    def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, to_scrolled_fn: ToScrolledFn,
-                 selected: bool):
-        if self._dirty:
-            self._recompute_curve()
-            self._dirty = False
+    def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
+        self._recompute(for_collision=False)
         # Draw bezier curve
         if selected:
-            #pen = wx.Pen(theme['selected_reaction_fill'], 2, style=wx.PENSTYLE_LONG_DASH)
             pen = wx.Pen(theme['selected_reaction_fill'], 2)
         else:
             pen = wx.Pen(fill, 2)
 
         gc.SetPen(pen)
-        #gc.StrokeLines([wx.Point2D(*to_scrolled_fn(p * cstate.scale)) for p in self.bezier_points])
+        #gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
         path = gc.CreatePath()
-        points = [to_scrolled_fn(p * cstate.scale) for p in (self.node_intersection,
-                                                             self.handle.position,
-                                                             self.centroid_handle.position,
-                                                             self.centroid)]
+        points = [p * cstate.scale for p in (self.node_intersection,
+                                             self.handle.position,
+                                             self.centroid_handle.position,
+                                             self.centroid)]
         path.MoveToPoint(*points[0])
         path.AddCurveToPoint(*points[1], *points[2], *points[3])
         gc.StrokePath(path)
 
+        if selected:
+            node_intersect = Vec2(self.node_intersection * cstate.scale)
+            node_handle = Vec2(self.handle.position * cstate.scale)
+            paint_handle(gc, node_intersect, node_handle, self.handle.mouse_hovering)
+
         # Draw arrow tip
         if not self.is_source:
             color = theme['select_box_color'] if selected else fill
-            self.paint_arrow_tip(gc, color, to_scrolled_fn)
+            self.paint_arrow_tip(gc, color)
 
-        if selected:
-            node_intersect = Vec2(to_scrolled_fn(self.node_intersection * cstate.scale))
-            node_handle = Vec2(to_scrolled_fn(self.handle.position * cstate.scale))
-            paint_handle(gc, node_intersect, node_handle, self.handle.mouse_hovering)
-
-    def paint_arrow_tip(self, gc: wx.Colour, fill: wx.Colour, to_scrolled_fn: ToScrolledFn):
-        assert len(self.arrow_adjusted_coords) == 4
+    def paint_arrow_tip(self, gc: wx.Colour, fill: wx.Colour):
+        assert len(self.arrow_adjusted_coords) == 4, \
+            "Arrow adjusted coords is not of length 4: {}".format(self.arrow_adjusted_coords)
         gc.SetPen(wx.Pen(fill))
         gc.SetBrush(wx.Brush(fill))
-        gc.DrawLines([wx.Point2D(*to_scrolled_fn(coord * cstate.scale))
+        gc.DrawLines([wx.Point2D(*(coord * cstate.scale))
                       for coord in self.arrow_adjusted_coords])
 
 
@@ -513,31 +526,19 @@ class ReactionBezier:
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
-    def nodes_updated(self):
-        """Function called after reactant/product nodes have been updated.
-
-        It is assumed that the node referenced held by this instance has been changed
-        automatically.
-        """
-        for sp_bz in self.src_beziers:
-            sp_bz.update_curve(self.centroid)
-        for sp_bz in self.dest_beziers:
-            sp_bz.update_curve(self.centroid)
-
-    def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, to_scrolled_fn: ToScrolledFn,
-                 selected: bool):
+    def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
         new_centroid = compute_centroid(self.reactants, self.products)
         if new_centroid != self.centroid:
             self.centroid = new_centroid
             self.src_handle_moved()
 
         for bz in chain(self.src_beziers, self.dest_beziers):
-            bz.do_paint(gc, fill, to_scrolled_fn, selected)
+            bz.do_paint(gc, fill, selected)
 
         if selected:
-            centroid = Vec2(to_scrolled_fn(self.centroid * cstate.scale))
+            centroid = Vec2(self.centroid * cstate.scale)
             center_handles = [self.src_c_handle, self.dest_c_handle]
             hovering = any(h.mouse_hovering for h in center_handles)
             for handle in center_handles:
-                handle_pos = Vec2(to_scrolled_fn(handle.position * cstate.scale))
+                handle_pos = Vec2(handle.position * cstate.scale)
                 paint_handle(gc, centroid, handle_pos, hovering)

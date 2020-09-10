@@ -1,12 +1,12 @@
 """The main View class and associated widgets.
 """
-# pylint: disable=maybe-no-member
 from rkplugin.api import init_api
 from rkviewer.plugin_manage import PluginManager
+# pylint: disable=maybe-no-member
 import wx
 import wx.lib.agw.flatnotebook as fnb
 import wx.lib.agw.shortcuteditor as sedit
-from typing import Callable, List, Dict, Any, Optional, Set, Tuple
+from typing import Callable, List, Dict, Any, Tuple
 from .events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
     SelectionDidUpdateEvent
 from .canvas.canvas import Canvas
@@ -460,4 +460,4 @@ class View(IView):
         Note that View takes ownership of the list of nodes and may modify it.
         """
         self.canvas_panel.Reset(nodes, reactions)
-        self.canvas_panel.Refresh()
+        self.canvas_panel.LazyRefresh()

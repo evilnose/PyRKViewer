@@ -9,8 +9,6 @@ from rkviewer.controller import Controller
 
 
 class ExceptionDialog(wx.MessageDialog):
-    """"""
-    #----------------------------------------------------------------------
     def __init__(self, msg):
         """Constructor"""
         super().__init__(None, msg, "Unknown Exception", wx.OK|wx.ICON_ERROR)  
@@ -28,9 +26,9 @@ def create_excepthook(old_excepthook):
         if dlg is None:
             dlg = ExceptionDialog(err_msg)
             dlg.ShowModal()
+            wx.GetApp().GetTopWindow().Destroy()
             dlg.Destroy() 
             dlg = None
-            wx.GetApp().GetTopWindow().Destroy()
 
     return custom_excepthook
 

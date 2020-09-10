@@ -26,6 +26,9 @@ class PluginManager:
         bind_handler(SelectionDidUpdateEvent, self.make_notify('on_selection_did_change'))
         bind_handler(DidPaintCanvasEvent, self.make_notify('on_did_paint_canvas'))
 
+    # TODO don't crash if the 'plugins' folder doesn't exist.
+    # Also TODO might want a more sophisticated file system structure, including data storage and
+    # temp folder
     def load_from(self, dir_path: str):
         plugin_classes = list()
         for f in os.listdir(dir_path):

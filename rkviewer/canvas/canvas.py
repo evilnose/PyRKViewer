@@ -136,7 +136,7 @@ class Canvas(wx.ScrolledWindow):
 
         bounds = Rect(BOUNDS_EPS_VEC, self.realsize * cstate.scale - BOUNDS_EPS_VEC)
         self._select_box = SelectBox([], bounds, self.controller, self._net_index,
-                                     self.CalcScrolledPositionFloat, self.SetCursor,
+                                     self.SetCursor,
                                      Canvas.SELECT_BOX_LAYER)
         self.selected_idx = SetSubject()
         self.sel_reactions_idx = SetSubject()
@@ -262,8 +262,7 @@ class Canvas(wx.ScrolledWindow):
         _, slider_height = self.zoom_slider.GetSize()
         minimap_pos.y -= slider_height + 10
         self._minimap.position = minimap_pos
-
-        self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(wx.Point(0, 0))) / cstate.scale
+        self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(0, 0)) / cstate.scale
         # TODO for windows, need to subtract scroll offset from window size. Need to test if this
         # is true for Mac and Linux, however. -Gary
         self._minimap.window_size = Vec2(self.GetSize()) / cstate.scale - self._scroll_off
@@ -271,10 +270,10 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.nodes = self._nodes
 
     def CreateNodeElement(self, node: Node) -> NodeElement:
-        return NodeElement(node, self, self.CalcScrolledPositionFloat, Canvas.NODE_LAYER)
+        return NodeElement(node, self, Canvas.NODE_LAYER)
 
     def CreateReactionElement(self, rxn: Reaction) -> ReactionElement:
-        return ReactionElement(rxn, self, self.CalcScrolledPositionFloat, Canvas.REACTION_LAYER)
+        return ReactionElement(rxn, self, Canvas.REACTION_LAYER)
 
     def Reset(self, nodes: List[Node], reactions: List[Reaction]):
         """Update the list of nodes and apply the current scale."""
@@ -318,7 +317,7 @@ class Canvas(wx.ScrolledWindow):
         pos = pos.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
         # need to mult by scale here since self.VirtualPosition is artificially increased, per
         # scale * self.realsize
-        self.Scroll(pos.x, pos.y)
+        self.Scroll(*pos)
 
     def SetZoomLevel(self, zoom: int, anchor: Vec2):
         """Zoom in/out with the given anchor.
@@ -349,7 +348,6 @@ class Canvas(wx.ScrolledWindow):
 
         # Important: set virtual size first, then scroll
         self.Scroll(new_scroll.x, new_scroll.y)
-        self.SetOverlayPositions()
 
         self.zoom_slider.SetValue(self._zoom_level)
         self.zoom_slider.SetPageSize(2)
@@ -397,19 +395,19 @@ class Canvas(wx.ScrolledWindow):
 
     def OnLeftDown(self, evt):
         try:
-            device_pos = evt.GetPosition()
+            device_pos = Vec2(evt.GetPosition())
+            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+
             # Check if clicked on overlay using device_pos
             overlay = self._InWhichOverlay(device_pos)
             if overlay is not None:
                 overlay.hovering = True
-                overlay.OnLeftDown(evt)
+                overlay.OnLeftDown(device_pos)
                 return
 
             for ol in self._overlays:
                 if ol is not overlay and ol.hovering:
                     ol.hovering = False
-
-            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
 
             if cstate.input_mode == InputMode.SELECT:
                 for el in self._elements.top_down():
@@ -521,7 +519,7 @@ class Canvas(wx.ScrolledWindow):
         overlay = self._InWhichOverlay(device_pos)
 
         if self._minimap.dragging:
-            self._minimap.OnLeftUp(evt)
+            self._minimap.OnLeftUp(device_pos)
             # HACK once we integrate overlays (e.g. minimap) as CanvasElements, we can simply call
             # do_mouse_leave or something
             self._minimap.hovering = False
@@ -552,6 +550,9 @@ class Canvas(wx.ScrolledWindow):
         """
         return Vec2(self.CalcScrolledPosition(wx.Point(0, 0))) + pos
 
+    def CalcUnscrolledPositionFloat(self, pos: Vec2) -> Vec2:
+        return Vec2(self.CalcUnscrolledPosition(wx.Point(0, 0))) + pos
+
     def OnMotion(self, evt):
         assert isinstance(evt, wx.MouseEvent)
         redraw = False
@@ -564,10 +565,10 @@ class Canvas(wx.ScrolledWindow):
             if cstate.input_mode == InputMode.SELECT:
                 if evt.leftIsDown:  # dragging
                     if self._drag_selecting:
-                        topleft = Vec2(min(logical_pos.x, self._drag_select_start.x),
-                                       min(logical_pos.y, self._drag_select_start.y))
-                        botright = Vec2(max(logical_pos.x, self._drag_select_start.x),
-                                        max(logical_pos.y, self._drag_select_start.y))
+                        topleft = Vec2(min(device_pos.x, self._drag_select_start.x),
+                                       min(device_pos.y, self._drag_select_start.y))
+                        botright = Vec2(max(device_pos.x, self._drag_select_start.x),
+                                        max(device_pos.y, self._drag_select_start.y))
                         self._drag_rect = Rect(topleft, botright - topleft)
                         selected_nodes = [n for n in self._nodes if rects_overlap(n.s_rect,
                                                                                   self._drag_rect)]
@@ -581,14 +582,13 @@ class Canvas(wx.ScrolledWindow):
                         if self.dragged_element.do_mouse_drag(logical_pos, rel_pos):
                             redraw = True
                         self._last_drag_pos = rel_pos
-
                     elif self._minimap.dragging:
-                        self._minimap.OnMotion(evt)
+                        self._minimap.OnMotion(device_pos, evt.LeftIsDown())
                         redraw = True
                 else:
                     overlay = self._InWhichOverlay(device_pos)
                     if overlay is not None:
-                        overlay.OnMotion(evt)
+                        overlay.OnMotion(device_pos, evt.LeftIsDown())
                         overlay.hovering = True
                         redraw = True
                     else:
@@ -641,20 +641,18 @@ class Canvas(wx.ScrolledWindow):
             self._accum_frames = 0
         status_text = repr(self._cursor_logical_pos)
         self._SetStatusText('cursor', status_text)
-        self.SetOverlayPositions()
+        self.SetOverlayPositions()  # have to do this here to prevent jitters
 
         dc = wx.PaintDC(self)
-        # TODO refactor to DoPrepareDC
-        #self.DoPrepareDC(dc)
+        self.DoPrepareDC(dc)
         # Create graphics context since we need transparency
         gc = wx.GraphicsContext.Create(dc)
 
         if gc:
             # Draw background
-            origin = Vec2(self.CalcScrolledPosition(wx.Point(0, 0)))
             draw_rect(
                 gc,
-                Rect(origin, self.realsize * cstate.scale),
+                Rect(Vec2(), self.realsize * cstate.scale),
                 fill=theme['canvas_bg'],
             )
 
@@ -667,8 +665,7 @@ class Canvas(wx.ScrolledWindow):
             def draw_reaction_outline(color: wx.Colour):
                 draw_rect(
                     gc,
-                    padded_rect(self._ToScrolledRect(node.s_rect),
-                                theme['react_node_padding'] * cstate.scale),
+                    padded_rect(node.s_rect, theme['react_node_padding'] * cstate.scale),
                     fill=None,
                     border=color,
                     border_width=theme['react_node_border_width'],
@@ -687,20 +684,19 @@ class Canvas(wx.ScrolledWindow):
             if self._drag_selecting:
                 draw_rect(
                     gc,
-                    self._ToScrolledRect(self._drag_rect),
+                    self._drag_rect,
                     fill=theme['drag_fill'],
                     border=theme['drag_border'],
                     border_width=theme['drag_border_width'],
                 )
 
+            # Re-create PaintDC to undo the effects of DoPrepareDC(), i.e. we need to draw without
+            # position calculations for overlays
+            dc = wx.PaintDC(self)
+            gc = wx.GraphicsContext.Create(dc)
             # Draw minimap
             self._minimap.DoPaint(gc)
             post_event(DidPaintCanvasEvent(gc))
-
-    def _ToScrolledRect(self, rect: Rect) -> Rect:
-        """Helper that converts rectangle to scrolled (device) position."""
-        adj_pos = Vec2(self.CalcScrolledPosition(rect.position.to_wx_point()))
-        return Rect(adj_pos, rect.size)
 
     def _DrawRectOutline(self, gc: wx.GraphicsContext, rect: Rect):
         """Draw the outline around a selected node, given its scaled rect.
@@ -709,7 +705,6 @@ class Canvas(wx.ScrolledWindow):
         """
 
         # change position to device coordinates for drawing
-        rect = self._ToScrolledRect(rect)
         rect = padded_rect(rect, theme['select_outline_padding'] * cstate.scale)
 
         # draw rect
@@ -745,6 +740,7 @@ class Canvas(wx.ScrolledWindow):
         # Need to use wx.CallAfter() to ensure the scroll event is finished before we update the
         # position of the dragged node
         evt.Skip()
+        self.SetOverlayPositions()
         self.LazyRefresh()
 
     def OnMouseWheel(self, evt):

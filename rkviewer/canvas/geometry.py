@@ -150,6 +150,7 @@ class Vec2:
 
     def normalized(self, norm: TNum = 1) -> Vec2:
         old_norm = self.norm
+        assert old_norm != 0, "Cannot normalize a zero vector!"
         return self * (norm / old_norm)
 
     def dot(self, other: Vec2) -> TNum:

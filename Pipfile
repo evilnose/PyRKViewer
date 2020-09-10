@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "*"
+tuna = "*"
 
 [packages]
 wxpython = "==4.1.0"

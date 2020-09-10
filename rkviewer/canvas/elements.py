@@ -24,15 +24,11 @@ class CanvasElement:
 
     Attributes:
         layer: The layer number of this element.
-        to_scrolled_fn: Function for converting logical to scrolled (device) position.
-                        TODO move this out as a module-level function.
     """
     layer: int
-    to_scrolled_fn: ToScrolledFn
 
-    def __init__(self, to_scrolled_fn: ToScrolledFn, layer: int):
+    def __init__(self, layer: int):
         self.layer = layer
-        self.to_scrolled_fn = to_scrolled_fn
 
     @abstractmethod
     def pos_inside(self, logical_pos: Vec2) -> bool:
@@ -67,11 +63,6 @@ class CanvasElement:
     def do_left_up(self, logical_pos: Vec2) -> bool:
         """Handler for when the mouse left button is springs up inside the shape."""
         return False
-
-    def to_scrolled_rect(self, rect: Rect):
-        """Helper that converts rectangle to scrolled (device) position."""
-        adj_pos = Vec2(self.to_scrolled_fn(rect.position))
-        return Rect(adj_pos, rect.size)
 
 
 # TODO add option to change layer of element
@@ -118,42 +109,44 @@ class NodeElement(CanvasElement):
     canvas: Any
 
     # HACK no type for canvas since otherwise there would be circular dependency
-    def __init__(self, node: Node, canvas, to_scrolled_fn: ToScrolledFn, layer: int):
-        super().__init__(to_scrolled_fn, layer)
+    def __init__(self, node: Node, canvas, layer: int):
+        super().__init__(layer)
         self.node = node
         self.canvas = canvas
+        self.gfont = None  # In the future
+        self.font_scale = 1
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return within_rect(logical_pos, self.node.s_rect)
 
     def do_paint(self, gc: wx.GraphicsContext):
-        font = wx.Font(wx.FontInfo(10 * cstate.scale))
-        gfont = gc.CreateFont(font, wx.BLACK)
-        gc.SetFont(gfont)
+        if self.gfont is None or self.font_scale != cstate.scale:
+            self.font_scale = cstate.scale
+            font = wx.Font(wx.FontInfo(10 * cstate.scale))
+            self.gfont = gc.CreateFont(font, wx.BLACK)
+        gc.SetFont(self.gfont)
 
-        scrolled_pos = self.to_scrolled_fn(self.node.s_position)
         width, height = self.node.s_size
         border_width = self.node.border_width * cstate.scale
 
         draw_rect(
             gc,
-            Rect(scrolled_pos, self.node.s_size),
+            Rect(self.node.s_position, self.node.s_size),
             fill=self.node.fill_color,
             border=self.node.border_color,
             border_width=border_width,
         )
 
         # draw text
-        tw, th, _, _ = gc.GetFullTextExtent(self.node.id_)
+        tw, th, _, _ = gc.GetFullTextExtent(self.node.id_) # optimize by caching?
         tx = (width - tw) / 2
         ty = (height - th) / 2
-        gc.DrawText(self.node.id_, tx + scrolled_pos.x, ty + scrolled_pos.y)
+        gc.DrawText(self.node.id_, self.node.s_position.x + tx, self.node.s_position.y + ty)
 
         selected_idx = self.canvas.selected_idx.item_copy()
         if (self.node.index in selected_idx and len(selected_idx) > 1) or (
                 self.node.index in self.canvas.drag_selected_idx):
-            rect = self.to_scrolled_rect(self.node.s_rect)
-            rect = padded_rect(rect, theme['select_outline_padding'] * cstate.scale)
+            rect = padded_rect(self.node.s_rect, theme['select_outline_padding'] * cstate.scale)
 
             # draw rect
             draw_rect(gc, rect, border=theme['select_box_color'],
@@ -180,9 +173,8 @@ class ReactionElement(CanvasElement):
     _moving_all: bool
 
     # HACK no type for canvas since otherwise there is circular dependency
-    def __init__(self, reaction: Reaction, canvas, to_scrolled_fn: ToScrolledFn,
-                 layer: int):
-        super().__init__(to_scrolled_fn, layer)
+    def __init__(self, reaction: Reaction, canvas, layer: int):
+        super().__init__(layer)
         self.reaction = reaction
         # TODO accommodate possibly multiple bezier curves for each node
         self.index_to_bz = {bz.node.index : bz for bz in chain(reaction.bezier.src_beziers, reaction.bezier.dest_beziers)}
@@ -280,7 +272,7 @@ class ReactionElement(CanvasElement):
     def do_paint(self, gc: wx.GraphicsContext):
         selected = self.reaction.index in self.canvas.sel_reactions_idx.item_copy()
 
-        self.reaction.bezier.do_paint(gc, self.reaction.fill_color, self.to_scrolled_fn, selected)
+        self.reaction.bezier.do_paint(gc, self.reaction.fill_color, selected)
 
         # draw centroid
         color = theme['select_box_color'] if selected else self.reaction.fill_color
@@ -289,8 +281,7 @@ class ReactionElement(CanvasElement):
         gc.SetPen(pen)
         gc.SetBrush(brush)
         radius = settings['reaction_radius'] * cstate.scale
-        center = self.to_scrolled_fn(self.reaction.bezier.centroid * cstate.scale -
-                                     Vec2.repeat(radius))
+        center = self.reaction.bezier.centroid * cstate.scale - Vec2.repeat(radius)
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
 
 
@@ -330,8 +321,8 @@ class SelectBox(CanvasElement):
         RESIZING = 2
 
     def __init__(self, nodes: List[Node], bounds: Rect, controller: IController, net_index: int,
-                 to_scrolled_fn: ToScrolledFn, set_cursor_fn: SetCursorFn, layer: int):
-        super().__init__(to_scrolled_fn, layer)
+                 set_cursor_fn: SetCursorFn, layer: int):
+        super().__init__(layer)
         self.update_nodes(nodes)
         self.set_cursor_fn = set_cursor_fn
         self.controller = controller
@@ -420,17 +411,14 @@ class SelectBox(CanvasElement):
             outline_width = theme['select_outline_width'] if len(self.nodes) == 1 else \
                 theme['select_outline_width']
             pos, size = self.outline_rect().as_tuple()
-            adj_pos = Vec2(self.to_scrolled_fn(pos))
 
             # draw main outline
-            draw_rect(gc, Rect(adj_pos, size), border=theme['select_box_color'],
+            draw_rect(gc, Rect(pos, size), border=theme['select_box_color'],
                       border_width=outline_width)
 
             for handle_rect in self._resize_handle_rects():
                 # convert to device position for drawing
-                rpos, rsize = handle_rect.as_tuple()
-                rpos = Vec2(self.to_scrolled_fn(rpos))
-                draw_rect(gc, Rect(rpos, rsize), fill=theme['select_box_color'])
+                draw_rect(gc, handle_rect, fill=theme['select_box_color'])
 
             # TODO set only if input mode is SELECT
             if self._hovered_part >= 0:

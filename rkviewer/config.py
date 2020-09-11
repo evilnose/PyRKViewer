@@ -45,6 +45,7 @@ DEFAULT_THEME = {
     'product_border': wx.Colour(0, 214, 125),
     'reaction_center_size': 10,
     'reaction_fill': wx.BLACK,
+    'reaction_line_thickness': 2,
     'selected_reaction_fill': wx.Colour(0, 140, 255),
 }
 

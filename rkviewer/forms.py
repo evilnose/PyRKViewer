@@ -421,6 +421,10 @@ class NodeForm(EditPanelForm):
         self.SetSizer(sizer)
         self.SetupScrolling()
 
+    @property
+    def selected_idx(self):
+        return self._selected_idx
+
     def UpdateNodes(self, nodes: List[Node]):
         """Function called after the list of nodes have been updated."""
         self._nodes = nodes
@@ -755,6 +759,10 @@ class ReactionForm(EditPanelForm):
         self.CreateControls(sizer)
         self.SetSizer(sizer)
         self.SetupScrolling()
+
+    @property
+    def selected_idx(self):
+        return self._selected_idx
 
     def CreateControls(self, sizer: wx.Sizer):
         # TODO create field for stroke thickness

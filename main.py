@@ -64,7 +64,7 @@ def setup_logging():
             },
         },
         'loggers': {  # TODO add more loggers here
-            'foo': {
+            'controller': {
                 'handlers': ['debug', 'errors']
             }
         },

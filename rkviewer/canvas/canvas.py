@@ -1,10 +1,11 @@
 """The interface of canvas for wxPython."""
 # pylint: disable=maybe-no-member
+from collections import defaultdict
 import wx
 from itertools import chain
 import typing
 import copy
-from typing import Collection, Optional, Set, Tuple, List, Dict, cast
+from typing import Collection, DefaultDict, Optional, Set, Tuple, List, Dict, cast
 from threading import Thread
 from .elements import CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
 from .state import InputMode, cstate
@@ -50,6 +51,7 @@ class Canvas(wx.ScrolledWindow):
                            to selected_idx only after the user has stopped drag-selecting.
         hovered_element: The element over which the mouse is hovering, or None.
         zoom_slider: The zoom slider widget.
+        reaction_map: Maps node index to the set of reaction (indices) that it is in.
     """
     MIN_ZOOM_LEVEL: int = -7
     MAX_ZOOM_LEVEL: int = 7
@@ -65,6 +67,7 @@ class Canvas(wx.ScrolledWindow):
     drag_selected_idx: Set[int]
     hovered_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
+    reaction_map: DefaultDict[int, Set[int]]
 
     #: Current network index. Right now this is always 0 since there is only one tab.
     _net_index: int
@@ -103,6 +106,7 @@ class Canvas(wx.ScrolledWindow):
         self._elements = LayeredElements()
         self.hovered_element = None
         self.dragged_element = None
+        self.reaction_map = defaultdict(set)
 
         # prevent flickering
         self.SetDoubleBuffered(True)
@@ -291,8 +295,16 @@ class Canvas(wx.ScrolledWindow):
         self._reactant_idx &= node_idx
         self._product_idx &= node_idx
 
+        self.reaction_map = defaultdict(set)
+        for rxn in reactions:
+            for node in chain(rxn.sources, rxn.targets):
+                self.reaction_map[rxn.index].add(node.index)
+
         self._nodes = nodes
         self._reactions = reactions
+        self.hovered_element = None
+        self.dragged_element = None
+        self.InputModeChanged(cstate.input_mode)
         self._node_elements = [self.CreateNodeElement(n) for n in nodes]
         self._reaction_elements = [self.CreateReactionElement(r) for r in reactions]
         select_elements = cast(List[CanvasElement], self._node_elements) + cast(
@@ -791,14 +803,26 @@ class Canvas(wx.ScrolledWindow):
         self._select_box.update_nodes([n for n in self._nodes if n.index in node_idx])
         post_event(SelectionDidUpdateEvent(node_indices=node_idx, reaction_indices=rxn_idx))
 
-    def DeleteSelectedNodes(self):
+    def DeleteSelectedItems(self):
         # TODO if node is not free (from iodine), show the error somehow
         # TODO allow deletion of reactions
-        if len(self.selected_idx.item_copy()) != 0:
-            self.controller.try_start_group()
-            for index in self.selected_idx.item_copy():
-                self.controller.try_delete_node(self._net_index, index)
-            self.controller.try_end_group()
+        # First, get the list of reaction indices IF the currently selected reactions were deleted.
+        sel_reactions_idx = self.sel_reactions_idx.item_copy()
+        selected_idx = self.selected_idx.item_copy()
+        rem_rxn = {r.index for r in self.reactions} - sel_reactions_idx
+        
+        # Second, confirm the selected nodes are free (i.e. not part of a reaction)
+        for node_idx in selected_idx:
+            if len(self.reaction_map[node_idx] & rem_rxn) != 0:
+                print("Can't delete")
+                return
+
+        self.controller.try_start_group()
+        for index in sel_reactions_idx:
+            self.controller.try_delete_reaction(self._net_index, index)
+        for index in selected_idx:
+            self.controller.try_delete_node(self._net_index, index)
+        self.controller.try_end_group()
 
     def SelectAll(self):
         self.selected_idx.set_item({n.index for n in self._nodes})
@@ -833,6 +857,7 @@ class Canvas(wx.ScrolledWindow):
             sources=get_nodes_by_idx(self._nodes, self._reactant_idx),
             targets=get_nodes_by_idx(self._nodes, self._product_idx),
             fill_color=theme['reaction_fill'],
+            line_thickness=theme['reaction_line_thickness'],
             rate_law='',
         )
         self.controller.try_add_reaction_g(self._net_index, reaction)
@@ -847,7 +872,7 @@ class Canvas(wx.ScrolledWindow):
 
     def CutSelected(self):
         self.CopySelected()
-        self.DeleteSelectedNodes()
+        self.DeleteSelectedItems()
 
     def Paste(self):
         pasted_ids = set()

@@ -71,23 +71,25 @@ def get_node_by_index(index: int) -> Node:
 # performed inside such groups are not recorded. programmatic groups nested within group operations
 # should be ignored.
 def set_node_fill(net_idx: int, node_idx: int, color: wx.Colour):
-    _controller.try_start_group()
-    _controller.try_set_node_fill_rgb(net_idx, node_idx, color)
-    _controller.try_set_node_fill_alpha(net_idx, node_idx, color.Alpha())
-    _controller.try_end_group()
+    with group_action():
+        _controller.try_set_node_fill_rgb(net_idx, node_idx, color)
+        _controller.try_set_node_fill_alpha(net_idx, node_idx, color.Alpha())
 
 
 def set_node_border(net_idx: int, node_idx: int, color: wx.Colour):
     _controller.try_start_group()
-    _controller.try_set_node_border_rgb(net_idx, node_idx, color)
-    _controller.try_set_node_border_alpha(net_idx, node_idx, color.Alpha())
-    _controller.try_end_group()
+    with group_action():
+        _controller.try_set_node_border_rgb(net_idx, node_idx, color)
+        _controller.try_set_node_border_alpha(net_idx, node_idx, color.Alpha())
 
-def set_reaction_fill(net_idx: int, rxn_idx: int, color: wx.Colour):
-    _controller.try_start_group()
-    _controller.try_set_reaction_fill_rgb(net_idx, rxn_idx, color)
-    _controller.try_set_reaction_fill_alpha(net_idx, rxn_idx, color.Alpha())
-    _controller.try_end_group()
+def set_reaction_color(net_idx: int, rxn_idx: int, color: wx.Colour):
+    with group_action():
+        _controller.try_set_reaction_fill_rgb(net_idx, rxn_idx, color)
+        _controller.try_set_reaction_fill_alpha(net_idx, rxn_idx, color.Alpha())
+
+def set_reaction_line_thickness(net_idx, rxn_idx: int, thickness: float):
+    with group_action():
+        _controller.try_set_reaction_line_thickness(net_idx, rxn_idx, thickness)
 
 def get_arrow_tip() -> ArrowTip:
     return cstate.arrow_tip.clone()

@@ -147,6 +147,7 @@ class Reaction:
         id_: reaction ID.
         index: reaction index.
         fill_color: reaction fill color.
+        line_thickness: Bezier curve thickness.
         rate_law: reaction rate law.
         bezier: Instance that keeps track of the Bezier curve data associated to this reaction.
         position: The centroid position.
@@ -156,7 +157,8 @@ class Reaction:
     """
 
     def __init__(self, id_: str, *, sources: List[Node], targets: List[Node],
-                 handle_pos: List[Vec2] = None, fill_color: wx.Colour, rate_law: str,
+                 handle_pos: List[Vec2] = None, fill_color: wx.Colour, line_thickness: float,
+                 rate_law: str,
                  index: int = -1):
         """Constructor for a reaction.
 

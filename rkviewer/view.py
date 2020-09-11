@@ -75,7 +75,8 @@ class EditPanel(fnb.FlatNotebook):
 
         cur_page = self.GetCurrentPage()
 
-        self.node_form.UpdateNodeSelection(evt.node_indices)
+        if self.node_form.selected_idx != evt.node_indices:
+            self.node_form.UpdateNodeSelection(evt.node_indices)
         if should_show_nodes:
             if node_index == -1:
                 self.InsertPage(0, self.node_form, 'Nodes')
@@ -91,7 +92,8 @@ class EditPanel(fnb.FlatNotebook):
                 reaction_index = i
                 break
 
-        self.reaction_form.UpdateReactionSelection(evt.reaction_indices)
+        if self.reaction_form.selected_idx != evt.reaction_indices:
+            self.reaction_form.UpdateReactionSelection(evt.reaction_indices)
         if should_show_reactions:
             if reaction_index == -1:
                 self.AddPage(self.reaction_form, 'Reactions')
@@ -288,18 +290,18 @@ class AboutDialog(wx.Dialog):
         self.left_width = 150
         self.right_width = 180
         self.row_height = 50
-        self.leftflags = wx.SizerFlags().Border(wx.TOP, 20)
-        self.rightflags = wx.SizerFlags().Border(wx.TOP, 20)
-        self.leftfont = wx.Font(wx.FontInfo())
-        self.rightfont = wx.Font(wx.FontInfo().Bold())
+        self.leftflags = wx.SizerFlags().Border(wx.TOP, 10)
+        self.rightflags = wx.SizerFlags().Border(wx.TOP, 10)
+        self.leftfont = wx.Font(wx.FontInfo(10).Bold())
+        self.rightfont = wx.Font(wx.FontInfo(10))
         self.AppendRow('version', rkviewer.__version__, sizer)
         self.SetSizerAndFit(sizer)
 
     def AppendRow(self, left_text: str, right_text: str, sizer: wx.FlexGridSizer):
-        left = wx.StaticText(self, label=left_text, size=(self.left_width, 50),
+        left = wx.StaticText(self, label=left_text, size=(self.left_width, 30),
                              style=wx.ALIGN_RIGHT)
         left.SetFont(self.leftfont)
-        right = wx.StaticText(self, label=right_text, size=(self.right_width, 50),
+        right = wx.StaticText(self, label=right_text, size=(self.right_width, 30),
                               style=wx.ALIGN_LEFT)
         right.SetFont(self.rightfont)
         sizer.Add(left, self.leftflags)
@@ -345,7 +347,7 @@ class MainFrame(wx.Frame):
                          lambda _: canvas.CutSelected(), entries, key=(wx.ACCEL_CTRL, ord('X')))
         edit_menu.AppendSeparator()
         self.AddMenuItem(edit_menu, '&Delete selected', 'Deleted selected',
-                         lambda _: canvas.DeleteSelectedNodes(), entries,
+                         lambda _: canvas.DeleteSelectedItems(), entries,
                          key=(wx.ACCEL_NORMAL, wx.WXK_DELETE))
 
         select_menu = wx.Menu()

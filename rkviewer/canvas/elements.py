@@ -446,6 +446,7 @@ class SelectBox(CanvasElement):
                 pass
             elif self._hovered_part == -1:
                 # HACK re-set input_mode with the same value to make canvas update the cursor
+                # See issue #9 for details
                 cstate.input_mode = cstate.input_mode
             else:
                 cstate.input_mode = cstate.input_mode

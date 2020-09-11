@@ -86,6 +86,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def try_set_reaction_line_thickness(self, neti: int, reai: int, thickness: float) -> bool:
+        pass
+
+    @abc.abstractmethod
     def try_set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour) -> bool:
         pass
 
@@ -99,6 +103,10 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def try_delete_node(self, neti: int, nodei: int) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def try_delete_reaction(self, neti: int, reai: int) -> bool:
         pass
 
     @abc.abstractmethod

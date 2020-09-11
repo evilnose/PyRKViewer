@@ -2,8 +2,10 @@
 """
 # pylint: disable=maybe-no-member
 import wx
+import traceback
 from typing import Collection, List, Optional, Set
 import iodine as iod
+import logging
 from .utils import rgba_to_wx_colour
 from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
 from .canvas.data import Node, Reaction
@@ -18,8 +20,10 @@ def try_setter(fn):
     def ret(self, *args):
         try:
             fn(self, *args)
-        except iod.Error as e:
-            print("Function '{}' failed, reason: {}.".format(fn.__name__, str(e)))
+        except iod.Error:
+            logger = logging.getLogger('controller')
+            logger.error('Caught error when trying to set something in controller:')
+            logger.error(traceback.format_exc())
             return False
 
         if self.group_depth == 0:
@@ -85,6 +89,7 @@ class Controller(IController):
             assert self.group_depth == 0
             iod.undo()
         except iod.StackEmptyError:
+            logging.getLogger('controller').info('Undo stack is empty')
             return False
         except iod.Error as e:
             print('Error undoing:', str(e))
@@ -99,7 +104,7 @@ class Controller(IController):
             assert self.group_depth == 0
             iod.redo()
         except iod.StackEmptyError:
-            print('empty')
+            logging.getLogger('controller').info('Redo stack is empty')
             return False
         except iod.Error as e:
             print('Error redoing:', str(e))
@@ -167,6 +172,10 @@ class Controller(IController):
         iod.setReactionID(neti, reai, new_id)
 
     @try_setter
+    def try_set_reaction_line_thickness(self, neti: int, reai: int, thickness: float):
+        iod.setReactionLineThickness(neti, reai, thickness)
+
+    @try_setter
     def try_set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour):
         iod.setReactionFillColorRGB(neti, reai, color.Red(), color.Green(), color.Blue())
 
@@ -181,6 +190,10 @@ class Controller(IController):
     @try_setter
     def try_delete_node(self, neti: int, nodei: int):
         iod.deleteNode(neti, nodei)
+
+    @try_setter
+    def try_delete_reaction(self, neti: int, reai: int):
+        iod.deleteReaction(neti, reai)
 
     @try_setter
     def try_add_reaction_g(self, neti: int, reaction: Reaction):
@@ -311,6 +324,7 @@ class Controller(IController):
                                 sources=sources,
                                 targets=targets,
                                 fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
+                                line_thickness=iod.getReactionLineThickness(neti, reai),
                                 index=reai,
                                 rate_law=iod.getReactionRateLaw(neti, reai),
                                 handle_pos=items

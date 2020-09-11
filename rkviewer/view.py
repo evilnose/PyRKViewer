@@ -1,5 +1,6 @@
 """The main View class and associated widgets.
 """
+import rkviewer
 from rkplugin.api import init_api
 from rkviewer.plugin_manage import PluginManager
 # pylint: disable=maybe-no-member
@@ -78,7 +79,7 @@ class EditPanel(fnb.FlatNotebook):
         if should_show_nodes:
             if node_index == -1:
                 self.InsertPage(0, self.node_form, 'Nodes')
-                #self.node_form.Show()
+                # self.node_form.Show()
         elif node_index != -1:
             # find and remove existing page
             self.RemovePage(node_index)
@@ -94,7 +95,7 @@ class EditPanel(fnb.FlatNotebook):
         if should_show_reactions:
             if reaction_index == -1:
                 self.AddPage(self.reaction_form, 'Reactions')
-                #self.reaction_form.Show()
+                # self.reaction_form.Show()
         elif reaction_index != -1:
             self.RemovePage(reaction_index)
             self.reaction_form.Hide()
@@ -102,7 +103,7 @@ class EditPanel(fnb.FlatNotebook):
         # set the active tab to the same as before. Note: only works with two tabs for now
         if cur_page != self.GetCurrentPage():
             self.AdvanceSelection()
-            #self.LazyRefresh()
+            # self.LazyRefresh()
 
         # need to reset focus to canvas, since for some reason FlatNotebook sets focus to the first
         # field in a notebook page after it is added.
@@ -280,6 +281,31 @@ class MainPanel(wx.Panel):
         self.Layout()
 
 
+class AboutDialog(wx.Dialog):
+    def __init__(self, parent: wx.Window):
+        super().__init__(parent, title='About RKViewer')
+        sizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
+        self.left_width = 150
+        self.right_width = 180
+        self.row_height = 50
+        self.leftflags = wx.SizerFlags().Border(wx.TOP, 20)
+        self.rightflags = wx.SizerFlags().Border(wx.TOP, 20)
+        self.leftfont = wx.Font(wx.FontInfo())
+        self.rightfont = wx.Font(wx.FontInfo().Bold())
+        self.AppendRow('version', rkviewer.__version__, sizer)
+        self.SetSizerAndFit(sizer)
+
+    def AppendRow(self, left_text: str, right_text: str, sizer: wx.FlexGridSizer):
+        left = wx.StaticText(self, label=left_text, size=(self.left_width, 50),
+                             style=wx.ALIGN_RIGHT)
+        left.SetFont(self.leftfont)
+        right = wx.StaticText(self, label=right_text, size=(self.right_width, 50),
+                              style=wx.ALIGN_LEFT)
+        right.SetFont(self.rightfont)
+        sizer.Add(left, self.leftflags)
+        sizer.Add(right, self.rightflags)
+
+
 class MainFrame(wx.Frame):
     """The main frame."""
 
@@ -356,12 +382,17 @@ class MainFrame(wx.Frame):
                          key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
         plugins_menu.AppendSeparator()
         self.manager.register_menu(plugins_menu, self)
+
+        help_menu = wx.Menu()
+        self.AddMenuItem(help_menu, '&About...', 'Show about dialog', self.ShowAbout, entries)
+
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')
         menu_bar.Append(select_menu, '&Select')
         menu_bar.Append(view_menu, '&View')
         menu_bar.Append(reaction_menu, '&Reaction')
         menu_bar.Append(plugins_menu, '&Plugins')
+        menu_bar.Append(help_menu, '&Help')
 
         atable = wx.AcceleratorTable(entries)
 
@@ -390,13 +421,18 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, callback, item)
         self.menu_events.append((callback, item))
 
-    def ManagePlugins(self, _):
+    def ManagePlugins(self, evt):
         with self.manager.create_dialog(self) as dlg:
             dlg.Centre()
             if dlg.ShowModal() == wx.ID_OK:
                 pass  # exited normally
             else:
                 pass  # exited by clicking some button
+
+    def ShowAbout(self, evt):
+        with AboutDialog(self) as dlg:
+            dlg.Centre()
+            dlg.ShowModal()
 
     def OverrideAccelTable(self, widget):
         """Set up functions to disable accelerator shortcuts for certain descendants of widgets.
@@ -449,7 +485,7 @@ class View(IView):
         self.manager.load_from('plugins')
         self.frame = MainFrame(self.controller, self.manager, title='RK Network Viewer')
         self.canvas_panel = self.frame.main_panel.canvas
-        #self.canvas_panel.RegisterAllChildren(self.frame)
+        # self.canvas_panel.RegisterAllChildren(self.frame)
         self.frame.Show()
 
         app.MainLoop()

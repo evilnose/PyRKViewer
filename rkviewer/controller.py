@@ -4,12 +4,17 @@
 import wx
 from typing import Collection, List, Optional, Set
 import iodine as iod
-from .utils import Vec2, Node, get_nodes_by_ident, get_nodes_by_idx, rgba_to_wx_colour
-from .canvas.reactions import Reaction
+from .utils import rgba_to_wx_colour
+from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
+from .canvas.data import Node, Reaction
+from .canvas.geometry import Vec2
+from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView
 
 
 def try_setter(fn):
+    """Decorator for controller setter methods that catches Errors and auto updates views."""
+    # If programmatic is True, then do not trigger a C-Event
     def ret(self, *args):
         try:
             fn(self, *args)
@@ -40,11 +45,15 @@ class Controller(IController):
         self.group_depth = 0
 
     def try_start_group(self) -> bool:
-        # TODO record group depth
+        self.group_depth += 1
+
+        # already in a group before; don't start startGroup()
+        if self.group_depth > 1:
+            return False
         try:
             iod.startGroup()
-            self.group_depth += 1
         except iod.Error as e:
+            # TODO replace all print statements with logging
             print('Error starting group:', str(e))
             return False
         return True
@@ -65,6 +74,9 @@ class Controller(IController):
 
         self._update_view()
         return True
+
+    def in_group(self) -> bool:
+        return self.group_depth > 0
 
     def try_undo(self) -> bool:
         if self.stacklen == 0:
@@ -87,6 +99,7 @@ class Controller(IController):
             assert self.group_depth == 0
             iod.redo()
         except iod.StackEmptyError:
+            print('empty')
             return False
         except iod.Error as e:
             print('Error redoing:', str(e))
@@ -96,7 +109,7 @@ class Controller(IController):
         return True
 
     @try_setter
-    def try_add_node_g(self, neti: int, node: Node):
+    def try_add_node_g(self, neti: int, node: Node, programmatic: bool = False):
         '''
         Add node represented by the given Node variable.
 
@@ -112,12 +125,18 @@ class Controller(IController):
         iod.setNodeOutlineColorRGB(neti, nodei, node.border_color.Red(),
                                     node.border_color.Green(), node.border_color.Blue())
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
+
+        if not programmatic:
+            post_event(DidAddNodeEvent(node))
         self.try_end_group()
 
     @try_setter
-    def try_move_node(self, neti: int, nodei: int, pos: Vec2):
+    def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False):
         assert pos.x >= 0 and pos.y >= 0
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
+        # dispatch event if the call was caused by user input
+        if not programmatic:
+            post_event(DidCommitNodePositionsEvent())
 
     @try_setter
     def try_set_node_size(self, neti: int, nodei: int, size: Vec2):
@@ -132,16 +151,16 @@ class Controller(IController):
         iod.setNodeFillColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
     @try_setter
-    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: float):
-        iod.setNodeFillColorAlpha(neti, nodei, alpha)
+    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: int):
+        iod.setNodeFillColorAlpha(neti, nodei, alpha / 255)
 
     @try_setter
     def try_set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour):
         iod.setNodeOutlineColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
     @try_setter
-    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: float):
-        iod.setNodeOutlineColorAlpha(neti, nodei, alpha)
+    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: int):
+        iod.setNodeOutlineColorAlpha(neti, nodei, alpha / 255)
 
     @try_setter
     def try_rename_reaction(self, neti: int, reai: int, new_id: str):
@@ -152,12 +171,12 @@ class Controller(IController):
         iod.setReactionFillColorRGB(neti, reai, color.Red(), color.Green(), color.Blue())
 
     @try_setter
-    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: float):
-        iod.setReactionFillColorAlpha(neti, reai, alpha)
+    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int):
+        iod.setReactionFillColorAlpha(neti, reai, alpha / 255)
 
     @try_setter
     def try_set_node_border_width(self, neti: int, nodei: int, width: float):
-        print('warning: TODO decide if node width is int or float')
+        iod.setNodeOutlineThickness(neti, nodei, width)
 
     @try_setter
     def try_delete_node(self, neti: int, nodei: int):
@@ -180,6 +199,15 @@ class Controller(IController):
                                     reaction.fill_color.Red(),
                                     reaction.fill_color.Green(),
                                     reaction.fill_color.Blue())
+        for bez, node in zip(reaction.bezier.src_beziers, reaction.sources):
+            pos = bez.handle.position
+            iod.setReactionSrcNodeHandlePosition(neti, reai, node.id_, pos.x, pos.y)
+        for bez, node in zip(reaction.bezier.dest_beziers, reaction.targets):
+            pos = bez.handle.position
+            iod.setReactionDestNodeHandlePosition(neti, reai, node.id_, pos.x, pos.y)
+
+        cpos = reaction.bezier.src_c_handle.position
+        iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
         self.try_end_group()
 
     @try_setter
@@ -193,6 +221,27 @@ class Controller(IController):
     @try_setter
     def try_set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
         iod.setReactionDestNodeStoich(neti, reai, node_id, stoich)
+
+    @try_setter
+    def try_set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+        iod.setReactionSrcNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
+
+    @try_setter
+    def try_set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+        iod.setReactionDestNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
+
+    @try_setter
+    def try_set_center_handle(self, neti: int, reai: int, pos: Vec2):
+        iod.setReactionCenterHandlePosition(neti, reai, pos.x, pos.y)
+
+    def get_src_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+        return Vec2(iod.getReactionSrcNodeHandlePosition(neti, reai, node_id))
+
+    def get_dest_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+        return Vec2(iod.getReactionDestNodeHandlePosition(neti, reai, node_id))
+
+    def get_center_handle(self, neti: int, reai: int) -> Vec2:
+        return Vec2(iod.getReactionCenterHandlePosition(neti, reai))
 
     def get_src_node_stoich(self, neti: int, reai: int, node_id: str):
         return iod.getReactionSrcNodeStoich(neti, reai, node_id)
@@ -218,12 +267,10 @@ class Controller(IController):
     # get the updated list of nodes from model and update
     def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
-        self.stacklen += 1  # TODO remove
-        # TODO multiple net IDs
+        self.stacklen += 1  # TODO remove once fixed
         neti = 0
         nodes = list()
         reactions = list()
-        # TODO try except
         for id_ in iod.getListOfNodeIDs(neti):
             nodei = iod.getNodeIndex(neti, id_)
             x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)
@@ -252,12 +299,21 @@ class Controller(IController):
             targets = get_nodes_by_ident(nodes, tids)
             fill_rgb = iod.getReactionFillColorRGB(neti, reai)
             fill_alpha = iod.getReactionFillColorAlpha(neti, reai)
+
+            items = list()
+            items.append(self.get_center_handle(neti, reai))
+            for node in sources:
+                items.append(self.get_src_node_handle(neti, reai, node.id_))
+            for node in targets:
+                items.append(self.get_dest_node_handle(neti, reai, node.id_))
+
             reaction = Reaction(id_,
                                 sources=sources,
                                 targets=targets,
                                 fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
                                 index=reai,
-                                rate_law=iod.getReactionRateLaw(neti, reai)
+                                rate_law=iod.getReactionRateLaw(neti, reai),
+                                handle_pos=items
                                 )
             reactions.append(reaction)
 

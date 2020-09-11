@@ -2,8 +2,8 @@
 import wx
 import abc
 from typing import List, Optional
-from .utils import Vec2, Node
-from .canvas.reactions import Reaction
+from .canvas.geometry import Vec2
+from .canvas.data import Node, Reaction
 
 
 class IController(abc.ABC):
@@ -28,6 +28,11 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def in_group(self) -> bool:
+        """Returns whether the controller is in the middle of a group operation."""
+        pass
+
+    @abc.abstractmethod
     def try_undo(self) -> bool:
         """Try to undo last operation"""
         pass
@@ -43,12 +48,12 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_move_node(self, neti: int, nodei: int, pos: Vec2) -> bool:
+    def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def try_set_node_size(self, neti: int, nodei: int, size: Vec2) -> bool:
+    def try_set_node_size(self, neti: int, nodei: int, size: Vec2, programmatic: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
@@ -61,7 +66,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
+    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod
@@ -69,7 +74,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: float) -> bool:
+    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod
@@ -85,7 +90,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: float) -> bool:
+    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod
@@ -106,6 +111,30 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def get_src_node_stoich(self, neti: int, reai: int, node_id: str) -> float:
+        pass
+
+    @abc.abstractmethod
+    def try_set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+        pass
+
+    @abc.abstractmethod
+    def try_set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+        pass
+
+    @abc.abstractmethod
+    def try_set_center_handle(self, neti: int, reai: int, pos: Vec2):
+        pass
+
+    @abc.abstractmethod
+    def get_src_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+        pass
+
+    @abc.abstractmethod
+    def get_dest_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+        pass
+
+    @abc.abstractmethod
+    def get_center_handle(self, neti: int, reai: int) -> Vec2:
         pass
 
     @abc.abstractmethod
@@ -136,6 +165,7 @@ class IController(abc.ABC):
     @abc.abstractmethod
     def try_add_reaction_g(self, neti: int,  reaction: Reaction) -> bool:
         pass
+
 
 class IView(abc.ABC):
     """The inteface class for a controller

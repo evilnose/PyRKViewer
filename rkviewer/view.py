@@ -1,19 +1,21 @@
 """The main View class and associated widgets.
 """
+from rkplugin.api import init_api
+from rkviewer.plugin_manage import PluginManager
 # pylint: disable=maybe-no-member
 import wx
 import wx.lib.agw.flatnotebook as fnb
-import copy
-from typing import Callable, List, Dict, Any, Optional, Set, Tuple
-from .canvas.events import EVT_DID_DRAG_MOVE_NODES, EVT_DID_DRAG_RESIZE_NODES, \
-    EVT_DID_UPDATE_SELECTION, EVT_DID_UPDATE_CANVAS
-from .canvas.canvas import Canvas, InputMode
-from .canvas.reactions import Reaction
+import wx.lib.agw.shortcuteditor as sedit
+from typing import Callable, List, Dict, Any, Tuple
+from .events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
+    SelectionDidUpdateEvent
+from .canvas.canvas import Canvas
+from .canvas.data import Node, Reaction
+from .canvas.state import cstate, InputMode
 from .config import settings, theme
 from .forms import NodeForm, ReactionForm
 from .mvc import IController, IView
-from .utils import Node
-from .widgets import ButtonGroup
+from .utils import ButtonGroup, get_path
 
 
 class EditPanel(fnb.FlatNotebook):
@@ -50,18 +52,19 @@ class EditPanel(fnb.FlatNotebook):
         #sizer.Add(null_message, proportion=1, flag=wx.ALIGN_CENTER_VERTICAL)
         # self.SetSizer(sizer)
 
-        canvas.Bind(EVT_DID_UPDATE_CANVAS, self.OnDidUpdateCanvas)
-        canvas.Bind(EVT_DID_UPDATE_SELECTION, self.OnDidUpdateSelection)
-        canvas.Bind(EVT_DID_DRAG_MOVE_NODES, self.OnDidDragMoveNodes)
-        canvas.Bind(EVT_DID_DRAG_RESIZE_NODES, self.OnDidDragResizeNodes)
+        bind_handler(CanvasDidUpdateEvent, self.OnCanvasDidUpdate)
+        bind_handler(SelectionDidUpdateEvent, self.OnSelectionDidUpdate)
+        bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
+        bind_handler(DidDragResizeNodesEvent, self.OnDidDragResizeNodes)
 
-    def OnDidUpdateCanvas(self, evt):
+    def OnCanvasDidUpdate(self, evt):
         self.node_form.UpdateNodes(evt.nodes)
         self.reaction_form.UpdateReactions(evt.reactions)
 
-    def OnDidUpdateSelection(self, evt):
-        should_show_nodes = len(evt.node_idx) != 0
-        should_show_reactions = len(evt.reaction_idx) != 0
+    def OnSelectionDidUpdate(self, evt):
+        focused = self.GetTopLevelParent().FindFocus()
+        should_show_nodes = len(evt.node_indices) != 0
+        should_show_reactions = len(evt.reaction_indices) != 0
 
         node_index = -1
         for i in range(self.GetPageCount()):
@@ -71,11 +74,11 @@ class EditPanel(fnb.FlatNotebook):
 
         cur_page = self.GetCurrentPage()
 
+        self.node_form.UpdateNodeSelection(evt.node_indices)
         if should_show_nodes:
-            self.node_form.UpdateNodeSelection(evt.node_idx)
             if node_index == -1:
                 self.InsertPage(0, self.node_form, 'Nodes')
-                self.node_form.Show()
+                #self.node_form.Show()
         elif node_index != -1:
             # find and remove existing page
             self.RemovePage(node_index)
@@ -87,30 +90,34 @@ class EditPanel(fnb.FlatNotebook):
                 reaction_index = i
                 break
 
+        self.reaction_form.UpdateReactionSelection(evt.reaction_indices)
         if should_show_reactions:
-            self.reaction_form.UpdateReactionSelection(evt.reaction_idx)
             if reaction_index == -1:
                 self.AddPage(self.reaction_form, 'Reactions')
-                self.reaction_form.Show()
+                #self.reaction_form.Show()
         elif reaction_index != -1:
             self.RemovePage(reaction_index)
             self.reaction_form.Hide()
 
-        # set the active tab to the same as before
-        for i in range(self.GetPageCount()):
-            if self.GetPage(i) == cur_page:
-                self.SetSelection(i)
-                break
+        # set the active tab to the same as before. Note: only works with two tabs for now
+        if cur_page != self.GetCurrentPage():
+            self.AdvanceSelection()
+            #self.LazyRefresh()
+
         # need to reset focus to canvas, since for some reason FlatNotebook sets focus to the first
         # field in a notebook page after it is added.
         self.GetSizer().Layout()
+
+        # restore focus, since otherwise for some reason the newly added page gets the focus
+        focused.SetFocus()
 
         # need to manually show this for some reason
         if not should_show_nodes and not should_show_reactions:
             self.null_message.Show()
 
-    def OnDidDragMoveNodes(self, evt):
-        self.node_form.UpdateDidDragMoveNodes()
+    def OnNodesDidMove(self, evt):
+        if evt.dragged:
+            self.node_form.UpdateDidDragMoveNodes()
 
     def OnDidDragResizeNodes(self, evt):
         self.node_form.UpdateDidDragResizeNodes()
@@ -211,13 +218,13 @@ class MainPanel(wx.Panel):
                              size=(theme['canvas_width'], theme['canvas_height']),
                              realsize=(4 * theme['canvas_width'], 4 * theme['canvas_height']),
                              )
+        init_api(self.canvas, controller)
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()
         self.canvas.SetBackgroundColour(theme['canvas_outside_bg'])
 
-        def set_input_mode(ident):
-            self.canvas.input_mode = ident
+        def set_input_mode(ident): cstate.input_mode = ident
 
         # create a panel in the frame
         self.mode_panel = ModePanel(self,
@@ -273,12 +280,13 @@ class MainPanel(wx.Panel):
         self.Layout()
 
 
-class MyFrame(wx.Frame):
+class MainFrame(wx.Frame):
     """The main frame."""
 
-    def __init__(self, controller: IController, **kw):
+    def __init__(self, controller: IController, manager: PluginManager, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE | wx.WS_EX_PROCESS_UI_UPDATES, **kw)
 
+        self.manager = manager
         status_fields = settings['status_fields']
         assert status_fields is not None
         self.CreateStatusBar(len(settings['status_fields']))
@@ -343,11 +351,17 @@ class MyFrame(wx.Frame):
                          lambda _: canvas.CreateReactionFromMarked(), entries,
                          key=(wx.ACCEL_CTRL, ord('R')))
 
+        plugins_menu = wx.Menu()
+        self.AddMenuItem(plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
+                         key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
+        plugins_menu.AppendSeparator()
+        self.manager.register_menu(plugins_menu, self)
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')
         menu_bar.Append(select_menu, '&Select')
         menu_bar.Append(view_menu, '&View')
         menu_bar.Append(reaction_menu, '&Reaction')
+        menu_bar.Append(plugins_menu, '&Plugins')
 
         atable = wx.AcceleratorTable(entries)
 
@@ -376,8 +390,24 @@ class MyFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, callback, item)
         self.menu_events.append((callback, item))
 
+    def ManagePlugins(self, _):
+        with self.manager.create_dialog(self) as dlg:
+            dlg.Centre()
+            if dlg.ShowModal() == wx.ID_OK:
+                pass  # exited normally
+            else:
+                pass  # exited by clicking some button
+
     def OverrideAccelTable(self, widget):
-        # TODO document
+        """Set up functions to disable accelerator shortcuts for certain descendants of widgets.
+
+        This is to prevent accelerator shortcuts to be applied in unexpected situations, when
+        something other than the canvas is in foucs. For example, if the user is editing the name
+        of a node, they may use ctrl+Z to undo some text operation. However, since ctrl+Z is bound
+        to the "undo last operation" action on canvas, it will be caught by the canvas instead.
+        This prevents that by attaching a temporary, "null" accelerator table when a TextCtrl
+        widget goes into focus.
+        """
         if isinstance(widget, wx.TextCtrl):
             def OnFocus(evt):
                 for cb, item in self.menu_events:
@@ -407,6 +437,7 @@ class View(IView):
 
     def __init__(self):
         self.controller = None
+        self.manager = None
 
     def bind_controller(self, controller: IController):
         self.controller = controller
@@ -414,10 +445,13 @@ class View(IView):
     def main_loop(self):
         assert self.controller is not None
         app = wx.App()
-        frm = MyFrame(self.controller, title='RK Network Viewer')
-        self.canvas_panel = frm.main_panel.canvas
-        self.canvas_panel.RegisterAllChildren(frm)
-        frm.Show()
+        self.manager = PluginManager(self.controller)
+        self.manager.load_from('plugins')
+        self.frame = MainFrame(self.controller, self.manager, title='RK Network Viewer')
+        self.canvas_panel = self.frame.main_panel.canvas
+        #self.canvas_panel.RegisterAllChildren(self.frame)
+        self.frame.Show()
+
         app.MainLoop()
 
     def update_all(self, nodes: List[Node], reactions: List[Reaction]):
@@ -426,4 +460,4 @@ class View(IView):
         Note that View takes ownership of the list of nodes and may modify it.
         """
         self.canvas_panel.Reset(nodes, reactions)
-        self.canvas_panel.Refresh()
+        self.canvas_panel.LazyRefresh()

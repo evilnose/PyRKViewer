@@ -1,6 +1,6 @@
 import unittest
 import copy
-from rkviewer.canvas.utils import Rect, Vec2, within_rect, clamp_rect_pos, clamp_point, \
+from rkviewer.canvas.geometry import Rect, Vec2, within_rect, clamp_rect_pos, clamp_point, \
     rects_overlap, get_bounding_rect
 
 

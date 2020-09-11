@@ -14,4 +14,9 @@ __pycache__
 # IDE
 .vscode
 
+# Temp
 temp
+
+# Logs and profiling output
+*.log
+*.stat

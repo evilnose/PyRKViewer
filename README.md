@@ -19,3 +19,15 @@ present **it will be overwritten**.
 Usually snake_case is used for function names. However, to retain some degree of backwards 
 compatibility for wxPython, subclasses of wxPython classes use PascalCase for their methods,
 e.g. `Canvas::RegisterAllChildren`.
+
+## TODOs
+* BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip those
+values.
+* OPTIMIZE: Do not rebuild reaction forms. Instead, keep them all in a dict() and only make the
+currently used one visible.
+* REFACTOR: Refactor Minimap so that it's a CanvasElement. We also need CanvasElement functions to
+accept both a logical_pos and a device_pos as arguments.
+* ENHANCEMENT: Add support for multiple net IDs. Currently all net IDs are set to 0 by default.
+
+## Profiling
+`python -m cProfile -o rkviewer.stat main.py`

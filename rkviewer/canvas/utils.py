@@ -4,25 +4,33 @@ This includes drawing helpers and 2D geometry functions.
 """
 # pylint: disable=maybe-no-member
 import wx
-from typing import Optional, List
-from ..utils import Vec2, Rect
+import abc
+from typing import Collection, Generic, List, Optional, Set, TypeVar, Callable
+from .geometry import Rect
+from .data import Node
 
 
-def within_rect(pos: Vec2, rect: Rect) -> bool:
-    """Returns whether the given position is within the rectangle, inclusive.
-    """
-    end = rect.position + rect.size
-    return pos.x >= rect.position.x and pos.y >= rect.position.y and pos.x <= end.x and \
-        pos.y <= end.y
+def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
+    """Simple helper that maps the given list of indices to their corresponding nodes."""
+    ret = [n for n in nodes if n.index in indices]
+    assert len(ret) == len(indices)
+    return ret
+
+
+def get_nodes_by_ident(nodes: List[Node], ids: Collection[str]):
+    """Simple helper that maps the given list of IDs to their corresponding nodes."""
+    ret = [n for n in nodes if n.id_ in ids]
+    assert len(ret) == len(ids)
+    return ret
 
 
 def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] = None,
-             border: Optional[wx.Colour] = None, border_width: float = 1,
-             fill_style = wx.BRUSHSTYLE_SOLID, border_style = wx.PENSTYLE_SOLID):
+              border: Optional[wx.Colour] = None, border_width: float = 1,
+              fill_style=wx.BRUSHSTYLE_SOLID, border_style=wx.PENSTYLE_SOLID):
     """Draw a rectangle with the given graphics context.
 
     Either fill or border must be specified to avoid drawing an entirely transparent rectangle.
-    
+
     Args:
         gc: The graphics context.
         rect: The rectangle to draw.
@@ -31,71 +39,98 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
         border_width: The width of the borders. Defaults to 1. This cannot be 0 when border
             is specified.
     """
-    if fill is None and border is None:
-        raise ValueError("Both 'fill' and 'border' are None, but at least one of them should be "
-                         "provided")
+    assert not(fill is None and border is None), \
+        "Both 'fill' and 'border' are None, but at least one of them should be provided"
 
-    if border is not None and border_width == 0:
-        raise ValueError("'border_width' cannot be 0 when 'border' is specified")
+    assert not (border is not None and border_width == 0), \
+        "'border_width' cannot be 0 when 'border' is specified"
 
     x, y = rect.position
     width, height = rect.size
 
+    pen: wx.Pen
+    brush: wx.Brush
     # set up brush and pen if applicable
     if fill is not None:
         brush = wx.Brush(fill, fill_style)
-        gc.SetBrush(brush)
+    else:
+        brush = wx.TRANSPARENT_BRUSH
     if border is not None:
         pen = gc.CreatePen(wx.GraphicsPenInfo(border).Width(border_width).Style(border_style))
-        gc.SetPen(pen)
+    else:
+        pen = wx.TRANSPARENT_PEN
+
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
 
     # draw rect
-    path = gc.CreatePath()
-    path.AddRectangle(x, y, width, height)
-
-    # finish drawing if applicable
-    if fill is not None:
-        gc.FillPath(path)
-    if border is not None:
-        gc.StrokePath(path)
+    gc.DrawRectangle(x, y, width, height)
 
 
-def get_bounding_rect(rects: List[Rect], padding: float = 0) -> Rect:
-    """Compute the bounding rectangle of a given list of rects.
-
-    This computes the smallest possible rectangle needed to cover each of the rects (inclusive), as
-    well as its position. Additionally a padding may be specified to provide some space.
-
-    Args:
-        rets: The list of rectangles.
-        padding: The padding of the bounding rectangle. If positive, there will be x pixels of 
-            padding for each side of the rectangle.
-
-    Returns:
-        The bounding rectangle.
-    """
-    min_x = min(r.position.x for r in rects)
-    min_y = min(r.position.y for r in rects)
-    max_x = max(r.position.x + r.size.x for r in rects)
-    max_y = max(r.position.y + r.size.y for r in rects)
-    size_x = max_x - min_x + padding * 2
-    size_y = max_y - min_y + padding * 2
-    return Rect(Vec2(min_x - padding, min_y - padding), Vec2(size_x, size_y))
+"""Classes for the observer-Subject interface. See https://en.wikipedia.org/wiki/Observer_pattern
+"""
+T = TypeVar('T')
 
 
-def padded_rect(rect: Rect, padding: float) -> Rect:
-    return Rect(rect.position - Vec2.repeat(padding), rect.size + Vec2.repeat(padding) * 2)
+class Observer(abc.ABC, Generic[T]):
+    """Observer abstract base class; encapsulates object of type T."""
+
+    def __init__(self, update_callback: Callable[[T], None]):
+        self.update = update_callback
 
 
-def rects_overlap(r1: Rect, r2: Rect) -> bool:
-    """Returns whether the two given rectangles overlap, counting if they are touching."""
-    botright1 = r1.position + r1.size
-    botright2 = r2.position + r2.size
+class Subject(Generic[T]):
+    """Subject abstract base class; encapsulates object of type T."""
+    _observers: List[Observer]
+    _item: T
 
-    # The two rects do not overlap if and only if the two rects do not overlap along at least one
-    # of the axes.
-    for axis in [0, 1]:
-        if botright1[axis] < r2.position[axis] or botright2[axis] < r1.position[axis]:
-            return False
+    def __init__(self, item):
+        self._observers = list()
+        self._item = item
 
-    return True
+    def attach(self, observer: Observer):
+        """Attach an observer."""
+        self._observers.append(observer)
+
+    def detach(self, observer: Observer):
+        """Detach an observer."""
+        self._observers.remove(observer)
+
+    def notify(self) -> None:
+        """Trigger an update in each Subject."""
+
+        for observer in self._observers:
+            observer.update(self._item)
+
+
+class SetSubject(Subject[Set[T]]):
+    """Subject class that encapsulates a set."""
+
+    def __init__(self, *args):
+        super().__init__(set(*args))
+
+    def item_copy(self) -> Set:
+        """Return a copy of the encapsulated set."""
+        return set(self._item)
+
+    def set_item(self, item: Set):
+        """Update the value of the item, notifying observers if the new value differs from the old.
+        """
+        equal = self._item == item
+        self._item = item
+        if not equal:
+            self.notify()
+
+    def remove(self, el: T):
+        """Remove an element from the set, notifying observers if the set changed."""
+        equal = el not in self._item
+        self._item.remove(el)
+        if not equal:
+            self.notify()
+
+    def add(self, el: T):
+        """Add an element from the set, notifying observers if the set changed."""
+        equal = el in self._item
+        self._item.add(el)
+        if not equal:
+            self.notify()

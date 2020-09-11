@@ -104,7 +104,7 @@ class Vec2:
         return 2
 
     def __eq__(self, other: Vec2) -> bool:
-        return self.x == other.x and self.y == other.y
+        return abs(self.x - other.x) < 1e-6 and abs(self.y - other.y) < 1e-6
 
     def to_wx_point(self) -> wx.Point:
         """Convert this to wx.Point; return the result."""
@@ -272,7 +272,7 @@ def clamp_rect_size(rect: Rect, botright: Vec2, padding: int = 0) -> Vec2:
     return Vec2(min(limit.x, rect.size.x), min(limit.y, rect.size.y))
 
 
-def clamp_point(pos: Vec2, bounds: Rect, padding=0) -> Vec2:
+def clamp_point(pos: Vec2, bounds: Rect, padding: int = 0) -> Vec2:
     """Clamp the given point (pos) so that it is entirely within the bounds rectangle. 
 
     This is the same as calling clamp_rect_pos() with a clamped rectangle of size 1x1.
@@ -280,8 +280,11 @@ def clamp_point(pos: Vec2, bounds: Rect, padding=0) -> Vec2:
     Returns:
         The clamp position.
     """
-    topleft = bounds.position + Vec2.repeat(padding)
-    botright = bounds.position + bounds.size - Vec2.repeat(padding)
+    pad = Vec2.repeat(padding)
+    diff = bounds.size + pad
+    assert diff.x >= 0 and diff.y >= 0
+    topleft = bounds.position + pad
+    botright = bounds.position + bounds.size - pad
     ret = pos
     ret = Vec2(max(ret.x, topleft.x), ret.y)
     ret = Vec2(min(ret.x, botright.x), ret.y)

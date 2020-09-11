@@ -129,6 +129,7 @@ class Canvas(wx.ScrolledWindow):
 
         self._zoom_level = 0
         self.realsize = Vec2(realsize)
+        cstate.bounds = Rect(Vec2(), self.realsize)
         scroll_width = wx.SystemSettings.GetMetric(wx.SYS_VSCROLL_X)
         scroll_height = wx.SystemSettings.GetMetric(wx.SYS_HSCROLL_Y)
         self._scroll_off = Vec2(scroll_width, scroll_height)
@@ -205,6 +206,11 @@ class Canvas(wx.ScrolledWindow):
     @property
     def net_index(self):
         return self._net_index
+
+    def ArrowTipChanged(self):
+        for rxn in self.reactions:
+            for bz in rxn.bezier.dest_beziers:
+                bz.arrow_tip_changed()
 
     def RegisterAllChildren(self, widget):
         """Connect all descendants of this widget to relevant events.
@@ -708,7 +714,7 @@ class Canvas(wx.ScrolledWindow):
         rect = padded_rect(rect, theme['select_outline_padding'] * cstate.scale)
 
         # draw rect
-        draw_rect(gc, rect, border=theme['select_box_color'],
+        draw_rect(gc, rect, border=theme['handle_color'],
                   border_width=theme['select_outline_width'])
 
     def GetSelectedNodes(self) -> List[Node]:

@@ -1,6 +1,7 @@
 """Configuration parameters.
 """
 # pylint: disable=maybe-no-member
+from rkviewer.canvas.geometry import Vec2
 import wx
 import copy
 
@@ -26,7 +27,10 @@ DEFAULT_THEME = {
     'node_font_color': wx.Colour(255, 0, 0, 100),
     'select_outline_width': 1.6,  # Width of the outline around each selected node
     'select_outline_padding': 2,  # Padding of the outline around each selected node
-    'select_box_color': wx.Colour(0, 140, 255),
+     # Color of control handles, e.g. resize handles, Bezier handles
+    'handle_color': wx.Colour(0, 140, 255),  
+     # Color of control handles when they are highlighted, if applicable
+    'highlighted_handle_color': wx.Colour(255, 112, 0),
     'select_box_padding': 5,  # Padding of the select box, relative to the mininum possible bbox
     'select_handle_length': 8,  # Length of the squares one uses to drag resize nodes
     'min_node_width': 20,
@@ -43,6 +47,8 @@ DEFAULT_THEME = {
     'reaction_fill': wx.BLACK,
     'selected_reaction_fill': wx.Colour(0, 140, 255),
 }
+
+DEFAULT_ARROW_TIP = [Vec2(1, 15), Vec2(4, 8), Vec2(1, 1), Vec2(21, 8)]
 
 DEFAULT_SETTINGS = {
     'init_zoom': 1,

@@ -1,8 +1,11 @@
 # pylint: disable=maybe-no-member
 import wx
+from rkviewer.config import DEFAULT_ARROW_TIP
+from rkviewer.canvas.geometry import Rect, Vec2
+import copy
 from dataclasses import dataclass
 from enum import Enum, unique
-from typing import Any, Callable
+from typing import Any, Callable, List, Tuple
 
 
 @unique
@@ -16,6 +19,18 @@ class InputMode(Enum):
         return str(self.value)
 
 
+class ArrowTip:
+    points: List[Vec2]
+
+    def __init__(self, points: List[Vec2]):
+        if len(points) != 4:
+            raise ValueError('Arrow tip must consist of 4 points!')
+        self.points = points
+
+    def clone(self):
+        return ArrowTip(copy.copy(self.points))
+
+
 @dataclass
 class CanvasState:
     """The current global state of the canvas.
@@ -26,8 +41,10 @@ class CanvasState:
                       items.
     """
     scale: float = 1
+    bounds: Rect = Rect(Vec2(), Vec2())
     input_mode_changed: Callable[[InputMode], None] = lambda _: None
     _input_mode: InputMode = InputMode.SELECT
+    arrow_tip: ArrowTip = ArrowTip(copy.copy(DEFAULT_ARROW_TIP))
 
     @property
     def input_mode(self):

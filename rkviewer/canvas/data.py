@@ -7,7 +7,7 @@ from itertools import chain
 import numpy as np
 from scipy.special import comb
 from typing import Callable, List, Optional, Tuple
-from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, segments_intersect, within_rect
+from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, segments_intersect
 from .state import cstate
 from ..config import settings, theme
 from ..utils import pairwise
@@ -18,8 +18,6 @@ HANDLE_RADIUS = 5  # Radius of the contro lhandle
 HANDLE_BUFFER = 2
 NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
 TIP_DISPLACEMENT = 4
-DEFAULT_ARROW_TIP = [Vec2(0, 14), Vec2(3, 7), Vec2(0, 0), Vec2(20, 7)]
-arrowTipPoints = DEFAULT_ARROW_TIP
 
 
 class Node:
@@ -206,7 +204,7 @@ class Reaction:
 
 def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: bool):
     """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
-    c = wx.Colour(255, 112, 0) if hovering else theme['select_box_color']
+    c = theme['highlighted_handle_color'] if hovering else theme['handle_color']
     brush = wx.Brush(c)
     pen = wx.Pen(c)
 
@@ -352,6 +350,9 @@ class SpeciesBezier:
                     self._recompute_arrow_tip(self.node_intersection,
                                               self.node_intersection - self._extended_handle)
 
+    def arrow_tip_changed(self):
+        self._paint_dirty = True
+
     def _recompute_arrow_tip(self, tip, slope):
         """Helper that recomputes the vertex coordinates of the arrow, given the tip pos and slope.
         """
@@ -364,9 +365,10 @@ class SpeciesBezier:
 
         # Rotate the arrow into the correct orientation
         self.arrow_adjusted_coords = list()
+        points = cstate.arrow_tip.points
         for i in range(4):
-            coord = Vec2(arrowTipPoints[i].x * cosine + arrowTipPoints[i].y * sine,
-                         -arrowTipPoints[i].x * sine + arrowTipPoints[i].y * cosine)
+            coord = Vec2(points[i].x * cosine + points[i].y * sine,
+                         -points[i].x * sine + points[i].y * cosine)
             self.arrow_adjusted_coords.append(coord)
 
         # Compute the distance of the tip of the arrow to the end point on the line
@@ -412,7 +414,7 @@ class SpeciesBezier:
 
         # Draw arrow tip
         if not self.is_source:
-            color = theme['select_box_color'] if selected else fill
+            color = theme['handle_color'] if selected else fill
             self.paint_arrow_tip(gc, color)
 
     def paint_arrow_tip(self, gc: wx.Colour, fill: wx.Colour):
@@ -489,7 +491,6 @@ class ReactionBezier:
             sb = SpeciesBezier(node, node_handle, self.centroid, centroid_handle, not in_products)
             to_append = self.dest_beziers if in_products else self.src_beziers
             to_append.append(sb)
-            #node_handle.on_moved = lambda _: sb.update_curve(self.centroid)
             node_handle.on_moved = self.make_handle_moved_func(sb)
             self.handles.append(node_handle)
             index += 1

@@ -1,16 +1,21 @@
 # pylint: disable=maybe-no-member
+from rkviewer.config import DEFAULT_ARROW_TIP
 import wx
+import copy
 from contextlib import contextmanager
 from rkviewer.mvc import IController
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 from rkviewer.controller import Controller
 from rkviewer.canvas.canvas import Canvas
 from rkviewer.canvas import data
-from rkviewer.canvas.state import cstate
+from rkviewer.canvas.state import cstate, ArrowTip
+from rkviewer import config
 
 Node = data.Node
 Reaction = data.Reaction
 Vec2 = data.Vec2
+theme = config.theme
+settings = config.settings
 
 # TODO allow modification of theme and setting in the GUI
 
@@ -83,3 +88,14 @@ def set_reaction_fill(net_idx: int, rxn_idx: int, color: wx.Colour):
     _controller.try_set_reaction_fill_rgb(net_idx, rxn_idx, color)
     _controller.try_set_reaction_fill_alpha(net_idx, rxn_idx, color.Alpha())
     _controller.try_end_group()
+
+def get_arrow_tip() -> ArrowTip:
+    return cstate.arrow_tip.clone()
+
+def get_default_arrow_tip() -> ArrowTip:
+    return ArrowTip(copy.copy(DEFAULT_ARROW_TIP))
+
+def set_arrow_tip(value: ArrowTip):
+    cstate.arrow_tip = value.clone()
+    _canvas.ArrowTipChanged()
+    # TODO notify controller

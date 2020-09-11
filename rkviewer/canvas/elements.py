@@ -138,7 +138,7 @@ class NodeElement(CanvasElement):
         )
 
         # draw text
-        tw, th, _, _ = gc.GetFullTextExtent(self.node.id_) # optimize by caching?
+        tw, th, _, _ = gc.GetFullTextExtent(self.node.id_)  # optimize by caching?
         tx = (width - tw) / 2
         ty = (height - th) / 2
         gc.DrawText(self.node.id_, self.node.s_position.x + tx, self.node.s_position.y + ty)
@@ -149,7 +149,7 @@ class NodeElement(CanvasElement):
             rect = padded_rect(self.node.s_rect, theme['select_outline_padding'] * cstate.scale)
 
             # draw rect
-            draw_rect(gc, rect, border=theme['select_box_color'],
+            draw_rect(gc, rect, border=theme['handle_color'],
                       border_width=theme['select_outline_width'])
 
     def do_left_down(self, _: Vec2):
@@ -159,8 +159,8 @@ class NodeElement(CanvasElement):
 class ReactionElement(CanvasElement):
     """CanvasElement for reactions.
 
-    Note that if new nodes are constructed, all ReactionBezier instances that use these nodes should be
-    re-constructed with the new nodes. On the other hand, if the nodes are merely modified, the
+    Note that if new nodes are constructed, all ReactionBezier instances that use these nodes should
+    be re-constructed with the new nodes. On the other hand, if the nodes are merely modified, the
     corresponding update methods should be called.
     """
     reaction: Reaction
@@ -177,7 +177,8 @@ class ReactionElement(CanvasElement):
         super().__init__(layer)
         self.reaction = reaction
         # TODO accommodate possibly multiple bezier curves for each node
-        self.index_to_bz = {bz.node.index : bz for bz in chain(reaction.bezier.src_beziers, reaction.bezier.dest_beziers)}
+        self.index_to_bz = {bz.node.index: bz for bz in chain(reaction.bezier.src_beziers,
+                                                              reaction.bezier.dest_beziers)}
         self.canvas = canvas
         self._hovered_handle = None
         self._dragging = False
@@ -196,11 +197,29 @@ class ReactionElement(CanvasElement):
             if node.index in self.index_to_bz:
                 bz = self.index_to_bz[node.index]
                 bz.handle.position += offset
+                bz.handle.position = clamp_point(bz.handle.position, cstate.bounds, padding = -1)
                 bz.update_curve(self.reaction.bezier.centroid)
 
         if self._moving_all:
-            self.reaction.bezier.src_c_handle.position += offset
-            self.reaction.bezier.src_handle_moved()
+            # TODO if we allow handles to go out of bounds, change this to modify it.
+            s_pos = self.reaction.bezier.src_c_handle.position + offset
+            d_pos = self.reaction.bezier.dest_c_handle.position + offset
+            bounds = padded_rect(cstate.bounds, -1)
+
+            new_s_pos = clamp_point(s_pos, bounds)
+            new_d_pos = clamp_point(d_pos, bounds)
+            s_clamped = s_pos != new_s_pos
+            d_clamped = d_pos != new_d_pos
+
+            assert not (s_clamped and d_clamped), "Both src and dest center " +\
+                "handles are out of bounds at the same time."
+
+            if d_clamped:
+                self.reaction.bezier.dest_c_handle.position = new_d_pos
+                self.reaction.bezier.dest_handle_moved()
+            else:
+                self.reaction.bezier.src_c_handle.position = new_s_pos
+                self.reaction.bezier.src_handle_moved()
 
     def commit_node_pos(self):
         """Handler for after the controller is told to move a node."""
@@ -275,7 +294,7 @@ class ReactionElement(CanvasElement):
         self.reaction.bezier.do_paint(gc, self.reaction.fill_color, selected)
 
         # draw centroid
-        color = theme['select_box_color'] if selected else self.reaction.fill_color
+        color = theme['handle_color'] if selected else self.reaction.fill_color
         pen = wx.Pen(color)
         brush = wx.Brush(color)
         gc.SetPen(pen)
@@ -413,12 +432,12 @@ class SelectBox(CanvasElement):
             pos, size = self.outline_rect().as_tuple()
 
             # draw main outline
-            draw_rect(gc, Rect(pos, size), border=theme['select_box_color'],
+            draw_rect(gc, Rect(pos, size), border=theme['handle_color'],
                       border_width=outline_width)
 
             for handle_rect in self._resize_handle_rects():
                 # convert to device position for drawing
-                draw_rect(gc, handle_rect, fill=theme['select_box_color'])
+                draw_rect(gc, handle_rect, fill=theme['handle_color'])
 
             # TODO set only if input mode is SELECT
             if self._hovered_part >= 0:
@@ -566,7 +585,7 @@ class SelectBox(CanvasElement):
         # STEP 5 apply new bounding_rect position and size
         self.bounding_rect.position = br_pos / cstate.scale + pad_off
         self.bounding_rect.size = target_size / cstate.scale
-        
+
         # STEP 6 post event
         post_event(DidDragResizeNodesEvent(nodes=self.nodes, ratio=inc_ratio))
 

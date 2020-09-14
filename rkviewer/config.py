@@ -25,8 +25,8 @@ DEFAULT_THEME = {
     'node_border_width': 2,
     'node_font_size': 10,
     'node_font_color': wx.Colour(255, 0, 0, 100),
-    'select_outline_width': 1.6,  # Width of the outline around each selected node
-    'select_outline_padding': 2,  # Padding of the outline around each selected node
+    'select_outline_width': 2,  # Width of the outline around each selected node
+    'select_outline_padding': 3,  # Padding of the outline around each selected node
      # Color of control handles, e.g. resize handles, Bezier handles
     'handle_color': wx.Colour(0, 140, 255),  
      # Color of control handles when they are highlighted, if applicable

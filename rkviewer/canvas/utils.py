@@ -52,7 +52,7 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
     brush: wx.Brush
     # set up brush and pen if applicable
     if fill is not None:
-        brush = wx.Brush(fill, fill_style)
+        brush = gc.CreateBrush(wx.Brush(fill, fill_style))
     else:
         brush = wx.TRANSPARENT_BRUSH
     if border is not None:

@@ -52,7 +52,7 @@ class ColorSelected(WindowedPlugin):
 
             # color selected reactions
             for index in api.selected_reaction_indices():
-                api.set_reaction_fill(api.cur_net_index(), index, color)
+                api.set_reaction_color(api.cur_net_index(), index, color)
 
     def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int]):
         self.num_selected = len(node_indices) + len(reaction_indices)

@@ -131,3 +131,10 @@ class ButtonGroup:
                 # don't allow de-select
                 button.SetValue(True)
         return ret
+
+def int_round(n: float) -> int:
+    return int(round(n))
+
+def even_round(n: float) -> int:
+    """Round to the nearest even integer"""
+    return int(round(n / 2)) * 2

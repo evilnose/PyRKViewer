@@ -1,7 +1,7 @@
 """The interface of canvas for wxPython."""
 # pylint: disable=maybe-no-member
-from collections import defaultdict
 import wx
+from collections import defaultdict
 from itertools import chain
 import typing
 import copy
@@ -716,43 +716,12 @@ class Canvas(wx.ScrolledWindow):
             self._minimap.DoPaint(gc)
             post_event(DidPaintCanvasEvent(gc))
 
-    def _DrawRectOutline(self, gc: wx.GraphicsContext, rect: Rect):
-        """Draw the outline around a selected node, given its scaled rect.
-
-        Note: the given rect will be modified.
-        """
-
-        # change position to device coordinates for drawing
-        rect = padded_rect(rect, theme['select_outline_padding'] * cstate.scale)
-
-        # draw rect
-        draw_rect(gc, rect, border=theme['handle_color'],
-                  border_width=theme['select_outline_width'])
+            #draw_rect(gc, Rect(Vec2(200, 200), Vec2(100, 100)), border_width=50, border=wx.RED)
 
     def GetSelectedNodes(self) -> List[Node]:
         """Get the list of selected nodes using self.selected_idx."""
         return get_nodes_by_idx(self._nodes, self.selected_idx.item_copy())
 
-    def _GetNodeResizeHandleRects(self, outline_rect: Rect) -> List[Rect]:
-        """Helper that computes the scaled positions and sizes of the resize handles.
-
-        Args:
-            pos (Vec2): The position of the top-left corner of the node outline.
-            size (Vec2): The size of the node outline.
-
-        Returns:
-            List[Tuple[Vec2, Vec2]]: A list of (pos, size) tuples representing the resize handle
-            rectangles. They are ordered such that the top-left handle is the first element, and
-            all other handles follow in clockwise fashion.
-        """
-        pos, size = outline_rect.as_tuple()
-        centers = [pos, pos + Vec2(size.x / 2, 0),
-                   pos + Vec2(size.x, 0), pos + Vec2(size.x, size.y / 2),
-                   pos + size, pos + Vec2(size.x / 2, size.y),
-                   pos + Vec2(0, size.y), pos + Vec2(0, size.y / 2)]
-        side = theme['select_handle_length']
-
-        return [Rect(c - Vec2.repeat(side/2), Vec2.repeat(side)) for c in centers]
 
     def OnScroll(self, evt):
         # Need to use wx.CallAfter() to ensure the scroll event is finished before we update the

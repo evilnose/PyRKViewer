@@ -2,9 +2,11 @@ from __future__ import annotations  # For referencing self in a class
 # pylint: disable=maybe-no-member
 import enum
 from itertools import chain
+from rkviewer.utils import even_round, int_round
 import wx
 from abc import abstractmethod
 import bisect
+from functools import partial
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
 from .data import Node, BezierHandle, Reaction, SpeciesBezier, ToScrolledFn
 from ..events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, post_event
@@ -126,15 +128,25 @@ class NodeElement(CanvasElement):
             self.gfont = gc.CreateFont(font, wx.BLACK)
         gc.SetFont(self.gfont)
 
-        width, height = self.node.s_size
-        border_width = self.node.border_width * cstate.scale
-
+        # NOTE: *Align* the rectangle position, size, and border width. Why? We need to draw nested
+        # rectangles here, which need to be aligned to look good. However, this is problematic when
+        # these rectangles have floating-point positions and sizes, due to how thin lines are drawn;
+        # see: https://www.cairographics.org/FAQ/#sharp_lines. In short, drawing thin lines
+        # sometimes results in misalignment or smearing. To address this, the rectangle positions
+        # and sizes are rounded to the nearest integer for drawing, and the width is rounded to the
+        # nearest even integer, so that the lines stay aligned and sharp.
+        aligned_pos = self.node.position.map(int_round)
+        # Make sure the size is at least 1
+        aligned_size = self.node.size.map(int_round).map(partial(max, 1))
+        s_aligned_rect = Rect(aligned_pos, aligned_size) * cstate.scale
+        aligned_border_width = max(even_round(self.node.border_width * cstate.scale), 2)
+        width, height = s_aligned_rect.size
         draw_rect(
             gc,
-            Rect(self.node.s_position, self.node.s_size),
+            s_aligned_rect,
             fill=self.node.fill_color,
             border=self.node.border_color,
-            border_width=border_width,
+            border_width=aligned_border_width,
         )
 
         # draw text
@@ -146,7 +158,7 @@ class NodeElement(CanvasElement):
         selected_idx = self.canvas.selected_idx.item_copy()
         if (self.node.index in selected_idx and len(selected_idx) > 1) or (
                 self.node.index in self.canvas.drag_selected_idx):
-            rect = padded_rect(self.node.s_rect, theme['select_outline_padding'] * cstate.scale)
+            rect = padded_rect(s_aligned_rect, theme['select_outline_padding'] * cstate.scale)
 
             # draw rect
             draw_rect(gc, rect, border=theme['handle_color'],
@@ -328,7 +340,7 @@ class SelectBox(CanvasElement):
     _drag_rel: Vec2  #: relative position of the mouse to the bounding rect when dragging started
     _did_move: bool  #: whether the node was drag-moved between left_down and left_up.
     _rel_positions: Optional[List[Vec2]]  #: relative positions of the nodes to the bounding rect
-    _resize_handle: int  #: the node resize handle. See Canvas::_GetNodeResizeHandles for details.
+    _resize_handle: int  #: the node resize handle.
     #: the minimum resize ratio for each axis, to avoid making the nodes too small
     _min_resize_ratio: Vec2
     _orig_rect: Optional[Rect]  #: the bounding rect when dragging/resizing started
@@ -365,9 +377,19 @@ class SelectBox(CanvasElement):
     def update_nodes(self, nodes: List[Node]):
         self.nodes = nodes
         if len(nodes) > 0:
-            self._padding = theme['select_box_padding'] if len(nodes) > 1 else \
-                theme['select_outline_padding']
-            rects = [n.rect for n in nodes]
+            rects: List[Rect]
+            if len(nodes) == 1:
+                # Align bounding box if only one node is selected, see NodeElement::do_paint for
+                # explanations
+                self._padding = theme['select_outline_padding']
+                [node] = nodes
+                aligned_pos = node.position.map(int_round)
+                # Make sure the size is at least 1
+                aligned_size = node.size.map(int_round).map(partial(max, 1))
+                rects = [Rect(aligned_pos, aligned_size)]
+            else:
+                self._padding = theme['select_box_padding']
+                rects = [n.rect for n in nodes]
             self.bounding_rect = get_bounding_rect(rects)
 
     def outline_rect(self) -> Rect:

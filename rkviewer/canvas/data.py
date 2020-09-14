@@ -208,7 +208,7 @@ def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: boo
     """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
     c = theme['highlighted_handle_color'] if hovering else theme['handle_color']
     brush = wx.Brush(c)
-    pen = wx.Pen(c)
+    pen = gc.CreatePen(wx.GraphicsPenInfo(c))
 
     gc.SetPen(pen)
 
@@ -392,11 +392,14 @@ class SpeciesBezier:
 
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
         self._recompute(for_collision=False)
+        rxn_color: wx.Colour
         # Draw bezier curve
         if selected:
-            pen = wx.Pen(theme['selected_reaction_fill'], 2)
+            rxn_color = theme['selected_reaction_fill']
         else:
-            pen = wx.Pen(fill, 2)
+            rxn_color = fill
+
+        pen = gc.CreatePen(wx.GraphicsPenInfo(rxn_color).Width(2))
 
         gc.SetPen(pen)
         #gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
@@ -422,7 +425,7 @@ class SpeciesBezier:
     def paint_arrow_tip(self, gc: wx.Colour, fill: wx.Colour):
         assert len(self.arrow_adjusted_coords) == 4, \
             "Arrow adjusted coords is not of length 4: {}".format(self.arrow_adjusted_coords)
-        gc.SetPen(wx.Pen(fill))
+        gc.SetPen(gc.CreatePen(wx.GraphicsPenInfo(fill)))
         gc.SetBrush(wx.Brush(fill))
         gc.DrawLines([wx.Point2D(*(coord * cstate.scale))
                       for coord in self.arrow_adjusted_coords])

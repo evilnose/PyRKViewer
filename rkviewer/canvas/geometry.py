@@ -1,4 +1,6 @@
 from __future__ import annotations
+from functools import partial
+from rkviewer.utils import int_round
 # pylint: disable=maybe-no-member
 import wx
 import copy
@@ -225,6 +227,17 @@ class Rect:
         pos = self.position.reduce(min, other.position)
         botright = (self.position + self.size).reduce(max, other.position + other.size)
         return Rect(pos, botright - pos)
+
+    def aligned(self) -> Rect:
+        """Return rectangle aligned to the pixel coordinate system.
+
+        Note:
+            See https://github.com/evilnose/PyRKViewer/issues/12 for why this is necessary.
+        """
+        aligned_pos = self.position.map(int_round)
+        # Make sure the size is at least 1
+        aligned_size = self.size.map(int_round).map(partial(max, 1))
+        return Rect(aligned_pos, aligned_size)
 
     def __repr__(self):
         return 'Rect({}, {})'.format(self.position, self.size)

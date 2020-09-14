@@ -17,7 +17,7 @@ from .utils import Observer, SetSubject
 from .utils import get_nodes_by_idx, draw_rect
 from .overlays import CanvasOverlay, Minimap
 from ..mvc import IController
-from ..utils import convert_position
+from ..utils import convert_position, even_round, int_round
 from ..config import theme, settings
 import time
 
@@ -182,6 +182,7 @@ class Canvas(wx.ScrolledWindow):
         self._last_fps_update = 0
         self._last_refresh = 0
         cstate.input_mode_changed = self.InputModeChanged
+        self.blah = False
 
         self.SetOverlayPositions()
 
@@ -189,7 +190,9 @@ class Canvas(wx.ScrolledWindow):
         evt.Skip()
 
     def OnIdle(self, evt):
-        self.LazyRefresh()
+        if not self.LazyRefresh():
+            # Not processed; request more
+            evt.RequestMore()
 
     @property
     def nodes(self):
@@ -639,14 +642,15 @@ class Canvas(wx.ScrolledWindow):
                 self.LazyRefresh()
             evt.Skip()
 
-    def LazyRefresh(self):
+    def LazyRefresh(self) -> bool:
         now = time.time() * 1000
         diff = now - self._last_refresh
         if diff < self.MILLIS_PER_REFRESH:
-            return
+            return False
         else:
             self._last_refresh = int(now)
             self.Refresh()
+            return True
 
     def OnPaint(self, evt):
         self._accum_frames += 1
@@ -683,10 +687,10 @@ class Canvas(wx.ScrolledWindow):
             def draw_reaction_outline(color: wx.Colour):
                 draw_rect(
                     gc,
-                    padded_rect(node.s_rect, theme['react_node_padding'] * cstate.scale),
+                    padded_rect(node.s_rect.aligned(), theme['react_node_padding']),
                     fill=None,
                     border=color,
-                    border_width=theme['react_node_border_width'],
+                    border_width=max(even_round(theme['react_node_border_width']), 2),
                     border_style=wx.PENSTYLE_LONG_DASH,
                 )
 
@@ -784,6 +788,7 @@ class Canvas(wx.ScrolledWindow):
         for node_idx in selected_idx:
             if len(self.reaction_map[node_idx] & rem_rxn) != 0:
                 print("Can't delete")
+                # TODO log and show dialog instead
                 return
 
         self.controller.try_start_group()

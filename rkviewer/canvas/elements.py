@@ -128,17 +128,7 @@ class NodeElement(CanvasElement):
             self.gfont = gc.CreateFont(font, wx.BLACK)
         gc.SetFont(self.gfont)
 
-        # NOTE: *Align* the rectangle position, size, and border width. Why? We need to draw nested
-        # rectangles here, which need to be aligned to look good. However, this is problematic when
-        # these rectangles have floating-point positions and sizes, due to how thin lines are drawn;
-        # see: https://www.cairographics.org/FAQ/#sharp_lines. In short, drawing thin lines
-        # sometimes results in misalignment or smearing. To address this, the rectangle positions
-        # and sizes are rounded to the nearest integer for drawing, and the width is rounded to the
-        # nearest even integer, so that the lines stay aligned and sharp.
-        aligned_pos = self.node.position.map(int_round)
-        # Make sure the size is at least 1
-        aligned_size = self.node.size.map(int_round).map(partial(max, 1))
-        s_aligned_rect = Rect(aligned_pos, aligned_size) * cstate.scale
+        s_aligned_rect = self.node.s_rect.aligned()
         aligned_border_width = max(even_round(self.node.border_width * cstate.scale), 2)
         width, height = s_aligned_rect.size
         draw_rect(
@@ -158,7 +148,7 @@ class NodeElement(CanvasElement):
         selected_idx = self.canvas.selected_idx.item_copy()
         if (self.node.index in selected_idx and len(selected_idx) > 1) or (
                 self.node.index in self.canvas.drag_selected_idx):
-            rect = padded_rect(s_aligned_rect, theme['select_outline_padding'] * cstate.scale)
+            rect = padded_rect(s_aligned_rect, theme['select_outline_padding'])
 
             # draw rect
             draw_rect(gc, rect, border=theme['handle_color'],
@@ -209,29 +199,11 @@ class ReactionElement(CanvasElement):
             if node.index in self.index_to_bz:
                 bz = self.index_to_bz[node.index]
                 bz.handle.position += offset
-                bz.handle.position = clamp_point(bz.handle.position, cstate.bounds, padding = -1)
                 bz.update_curve(self.reaction.bezier.centroid)
 
         if self._moving_all:
-            # TODO if we allow handles to go out of bounds, change this to modify it.
-            s_pos = self.reaction.bezier.src_c_handle.position + offset
-            d_pos = self.reaction.bezier.dest_c_handle.position + offset
-            bounds = padded_rect(cstate.bounds, -1)
-
-            new_s_pos = clamp_point(s_pos, bounds)
-            new_d_pos = clamp_point(d_pos, bounds)
-            s_clamped = s_pos != new_s_pos
-            d_clamped = d_pos != new_d_pos
-
-            assert not (s_clamped and d_clamped), "Both src and dest center " +\
-                "handles are out of bounds at the same time."
-
-            if d_clamped:
-                self.reaction.bezier.dest_c_handle.position = new_d_pos
-                self.reaction.bezier.dest_handle_moved()
-            else:
-                self.reaction.bezier.src_c_handle.position = new_s_pos
-                self.reaction.bezier.src_handle_moved()
+            self.reaction.bezier.src_c_handle.position += offset
+            self.reaction.bezier.src_handle_moved()
 
     def commit_node_pos(self):
         """Handler for after the controller is told to move a node."""
@@ -332,6 +304,7 @@ class SelectBox(CanvasElement):
     """
     CURSOR_TYPES = [wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE,
                     wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE]
+    HANDLE_MULT = [Vec2(), Vec2(1/2, 0), Vec2(1, 0), Vec2(1, 1/2), Vec2(1, 1), Vec2(1/2, 1), Vec2(0, 1), Vec2(0, 1/2)]
 
     nodes: List[Node]
     related_elts: List[CanvasElement]
@@ -377,24 +350,17 @@ class SelectBox(CanvasElement):
     def update_nodes(self, nodes: List[Node]):
         self.nodes = nodes
         if len(nodes) > 0:
-            rects: List[Rect]
             if len(nodes) == 1:
                 # Align bounding box if only one node is selected, see NodeElement::do_paint for
-                # explanations
+                # explanations. Note that self._padding should be an integer
                 self._padding = theme['select_outline_padding']
-                [node] = nodes
-                aligned_pos = node.position.map(int_round)
-                # Make sure the size is at least 1
-                aligned_size = node.size.map(int_round).map(partial(max, 1))
-                rects = [Rect(aligned_pos, aligned_size)]
             else:
                 self._padding = theme['select_box_padding']
-                rects = [n.rect for n in nodes]
-            self.bounding_rect = get_bounding_rect(rects)
+            self.bounding_rect = get_bounding_rect([n.rect for n in nodes])
 
     def outline_rect(self) -> Rect:
         """Helper that returns the scaled, padded bounding rectangle."""
-        return padded_rect(self.bounding_rect * cstate.scale, self._padding)
+        return padded_rect((self.bounding_rect * cstate.scale).aligned(), self._padding)
 
     def _resize_handle_rects(self):
         """Helper that computes the scaled positions and sizes of the resize handles.
@@ -410,8 +376,14 @@ class SelectBox(CanvasElement):
                    pos + Vec2(size.x, 0), pos + Vec2(size.x, size.y / 2),
                    pos + size, pos + Vec2(size.x / 2, size.y),
                    pos + Vec2(0, size.y), pos + Vec2(0, size.y / 2)]
+        centers = [pos + size.elem_mul(m) for m in SelectBox.HANDLE_MULT]
         side = theme['select_handle_length']
         return [Rect(c - Vec2.repeat(side/2), Vec2.repeat(side)) for c in centers]
+    
+    def _resize_handle_pos(self, n: int):
+        pos, size = self.outline_rect().as_tuple()
+        assert n >= 0 and n < 8
+        return pos + size.elem_mul(SelectBox.HANDLE_MULT[n])
 
     def _pos_inside_part(self, logical_pos: Vec2) -> int:
         """Helper for determining if logical_pos is within which, if any, part of this widget.
@@ -449,8 +421,7 @@ class SelectBox(CanvasElement):
 
     def do_paint(self, gc: wx.GraphicsContext):
         if len(self.nodes) > 0:
-            outline_width = theme['select_outline_width'] if len(self.nodes) == 1 else \
-                theme['select_outline_width']
+            outline_width = max(even_round(theme['select_outline_width']), 2)
             pos, size = self.outline_rect().as_tuple()
 
             # draw main outline
@@ -498,6 +469,7 @@ class SelectBox(CanvasElement):
             self._orig_positions = [n.s_position - self._orig_rect.position - Vec2.repeat(self._padding)
                                     for n in self.nodes]
             self._orig_sizes = [n.s_size for n in self.nodes]
+            self._resize_handle_offset = self._resize_handle_pos(handle) - logical_pos
             return True
         elif handle == -1:
             self._mode = SelectBox.Mode.MOVING
@@ -544,7 +516,7 @@ class SelectBox(CanvasElement):
         cur_dragged_point = self.outline_rect().nth_vertex(dragged_idx)
         fixed_point = self._orig_rect.nth_vertex(fixed_idx)
 
-        target_point = pos
+        target_point = pos + self._resize_handle_offset
 
         # if a side-handle, then only resize one axis
         if self._resize_handle % 2 == 1:
@@ -604,6 +576,7 @@ class SelectBox(CanvasElement):
             assert orig_pos.x >= -1e-6 and orig_pos.y >= -1e-6
             node.position = (br_pos + orig_pos.elem_mul(size_ratio)) / cstate.scale + pad_off
             node.size = orig_size.elem_mul(size_ratio) / cstate.scale
+            assert node.size == node.s_size and node.size == node.rect.size
 
         # STEP 5 apply new bounding_rect position and size
         self.bounding_rect.position = br_pos / cstate.scale + pad_off

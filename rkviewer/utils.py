@@ -133,7 +133,7 @@ class ButtonGroup:
         return ret
 
 def int_round(n: float) -> int:
-    return int(round(n))
+    return int(round(round(n, 2)))
 
 def even_round(n: float) -> int:
     """Round to the nearest even integer"""

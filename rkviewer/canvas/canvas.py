@@ -57,6 +57,7 @@ class Canvas(wx.ScrolledWindow):
     MAX_ZOOM_LEVEL: int = 7
     NODE_LAYER = 1
     REACTION_LAYER = 2
+    HANDLE_LAYER = 9
     SELECT_BOX_LAYER = 10
     MILLIS_PER_REFRESH = 16  # serves as framerate cap
 
@@ -286,7 +287,7 @@ class Canvas(wx.ScrolledWindow):
         return NodeElement(node, self, Canvas.NODE_LAYER)
 
     def CreateReactionElement(self, rxn: Reaction) -> ReactionElement:
-        return ReactionElement(rxn, self, Canvas.REACTION_LAYER)
+        return ReactionElement(rxn, self, Canvas.REACTION_LAYER, Canvas.HANDLE_LAYER)
 
     def Reset(self, nodes: List[Node], reactions: List[Reaction]):
         """Update the list of nodes and apply the current scale."""
@@ -312,6 +313,8 @@ class Canvas(wx.ScrolledWindow):
         self._reaction_elements = [self.CreateReactionElement(r) for r in reactions]
         select_elements = cast(List[CanvasElement], self._node_elements) + cast(
             List[CanvasElement], self._reaction_elements)
+        for rxn_el in self._reaction_elements:
+            select_elements += rxn_el.beziers
         self._elements = LayeredElements(select_elements)
         self._select_box.update_nodes(self.GetSelectedNodes())
         self._select_box.related_elts = select_elements
@@ -432,6 +435,8 @@ class Canvas(wx.ScrolledWindow):
 
             if cstate.input_mode == InputMode.SELECT:
                 for el in self._elements.top_down():
+                    if not el.enabled:
+                        continue
                     if el.pos_inside(logical_pos) and el.do_left_down(logical_pos):
                         self.dragged_element = el
                         self._last_drag_pos = logical_pos
@@ -557,6 +562,8 @@ class Canvas(wx.ScrolledWindow):
                 self.dragged_element = None
             else:
                 for el in self._elements.top_down():
+                    if not el.enabled:
+                        continue
                     if el.pos_inside(logical_pos) and el.do_left_up(logical_pos):
                         return
 
@@ -602,7 +609,7 @@ class Canvas(wx.ScrolledWindow):
                         rel_pos = logical_pos - self._last_drag_pos
                         if self.dragged_element.do_mouse_drag(logical_pos, rel_pos):
                             redraw = True
-                        self._last_drag_pos = rel_pos
+                        self._last_drag_pos = logical_pos
                     elif self._minimap.dragging:
                         self._minimap.OnMotion(device_pos, evt.LeftIsDown())
                         redraw = True
@@ -615,6 +622,8 @@ class Canvas(wx.ScrolledWindow):
                     else:
                         hovered: Optional[CanvasElement] = None
                         for el in self._elements.top_down():
+                            if not el.enabled:
+                                continue
                             if el.pos_inside(logical_pos):
                                 hovered = el
                                 break
@@ -681,13 +690,15 @@ class Canvas(wx.ScrolledWindow):
             # Draw nodes
             # create font for nodes
             for el in self._elements.bottom_up():
+                if not el.enabled:
+                    continue
                 el.do_paint(gc)
 
             # Draw reactant and product marker outlines
-            def draw_reaction_outline(color: wx.Colour):
+            def draw_reaction_outline(color: wx.Colour, padding: int):
                 draw_rect(
                     gc,
-                    padded_rect(node.s_rect.aligned(), theme['react_node_padding']),
+                    padded_rect(node.s_rect.aligned(), padding),
                     fill=None,
                     border=color,
                     border_width=max(even_round(theme['react_node_border_width']), 2),
@@ -696,11 +707,13 @@ class Canvas(wx.ScrolledWindow):
 
             reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
             for node in reactants:
-                draw_reaction_outline(theme['reactant_border'])
+                draw_reaction_outline(theme['reactant_border'], theme['react_node_padding'])
 
             products = get_nodes_by_idx(self._nodes, self._product_idx)
             for node in products:
-                draw_reaction_outline(theme['product_border'])
+                pad = theme['react_node_border_width'] + \
+                    3 if node.index in self._reactant_idx else 0
+                draw_reaction_outline(theme['product_border'], pad + theme['react_node_padding'])
 
             # Draw drag-selection rect
             if self._drag_selecting:
@@ -725,7 +738,6 @@ class Canvas(wx.ScrolledWindow):
     def GetSelectedNodes(self) -> List[Node]:
         """Get the list of selected nodes using self.selected_idx."""
         return get_nodes_by_idx(self._nodes, self.selected_idx.item_copy())
-
 
     def OnScroll(self, evt):
         # Need to use wx.CallAfter() to ensure the scroll event is finished before we update the
@@ -760,7 +772,6 @@ class Canvas(wx.ScrolledWindow):
         finally:
             evt.Skip()
 
-
     def OnNodesDidMove(self, evt):
         for elt in self._reaction_elements:
             elt.nodes_moved(evt.nodes, evt.offset)
@@ -774,6 +785,8 @@ class Canvas(wx.ScrolledWindow):
         node_idx = self.selected_idx.item_copy()
         rxn_idx = self.sel_reactions_idx.item_copy()
         self._select_box.update_nodes([n for n in self._nodes if n.index in node_idx])
+        for rel in self._reaction_elements:
+            rel.selected = self.sel_reactions_idx.contains(rel.reaction.index)
         post_event(SelectionDidUpdateEvent(node_indices=node_idx, reaction_indices=rxn_idx))
 
     def DeleteSelectedItems(self):
@@ -783,7 +796,7 @@ class Canvas(wx.ScrolledWindow):
         sel_reactions_idx = self.sel_reactions_idx.item_copy()
         selected_idx = self.selected_idx.item_copy()
         rem_rxn = {r.index for r in self.reactions} - sel_reactions_idx
-        
+
         # Second, confirm the selected nodes are free (i.e. not part of a reaction)
         for node_idx in selected_idx:
             if len(self.reaction_map[node_idx] & rem_rxn) != 0:
@@ -812,17 +825,23 @@ class Canvas(wx.ScrolledWindow):
         self._reactant_idx = self.selected_idx.item_copy()
         # TODO not make product/reactant state mutually exclusive, and change outline marking for
         # visibility in case a node is both
-        self._product_idx -= self._reactant_idx
         self.LazyRefresh()
 
     def MarkSelectedAsProducts(self):
         self._product_idx = self.selected_idx.item_copy()
-        self._reactant_idx -= self._product_idx
         self.LazyRefresh()
 
     def CreateReactionFromMarked(self, id_='r'):
-        if len(self._reactant_idx) == 0 or len(self._product_idx) == 0:
-            print('TODO show error if no reactants or products')
+        if len(self._reactant_idx) == 0:
+            self.ShowWarningDialog('Could not create reaction: no reactants selected!')
+            return
+        if len(self._product_idx) == 0:
+            self.ShowWarningDialog('Could not create reaction: no products selected!')
+            return
+
+        if self._reactant_idx == self._product_idx:
+            self.ShowWarningDialog('Could not create reaction: reactants and products are '
+                                   'identical.')
             return
 
         id_ = self._GetUniqueName(id_, [r.id_ for r in self._reactions])
@@ -866,3 +885,6 @@ class Canvas(wx.ScrolledWindow):
         self.selected_idx.set_item({self.controller.get_node_index(self._net_index, id_)
                                     for id_ in pasted_ids})
         self.controller.try_end_group()  # calls UpdateMultiSelect in a moment
+
+    def ShowWarningDialog(self, msg: str):
+        wx.MessageBox(msg, 'Warning', wx.OK | wx.ICON_WARNING)

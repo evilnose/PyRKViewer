@@ -113,6 +113,9 @@ class SetSubject(Subject[Set[T]]):
         """Return a copy of the encapsulated set."""
         return set(self._item)
 
+    def contains(self, val: T) -> bool:
+        return val in self._item
+
     def set_item(self, item: Set):
         """Update the value of the item, notifying observers if the new value differs from the old.
         """

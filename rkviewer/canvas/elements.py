@@ -8,9 +8,9 @@ from abc import abstractmethod
 import bisect
 from functools import partial
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set
-from .data import Node, BezierHandle, Reaction, SpeciesBezier, ToScrolledFn
-from ..events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, post_event
-from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, within_rect
+from .data import HandleData, INITIALIZED, MAXSEGS, NODE_EDGE_GAP_DISTANCE, Node, Reaction, SpeciesBezier, ToScrolledFn
+from ..events import CanvasEvent, DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, post_event
+from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, pt_in_circle, within_rect
 from .state import cstate
 from .utils import draw_rect
 from ..config import settings, theme
@@ -28,9 +28,11 @@ class CanvasElement:
         layer: The layer number of this element.
     """
     layer: int
+    enabled: bool
 
     def __init__(self, layer: int):
         self.layer = layer
+        self.enabled = True
 
     @abstractmethod
     def pos_inside(self, logical_pos: Vec2) -> bool:
@@ -158,6 +160,74 @@ class NodeElement(CanvasElement):
         return True
 
 
+class BezierHandle(CanvasElement):
+    """Class that keeps track of a Bezier control handle (tip).
+
+    Attributes:
+        position: Position of the tip of the handle.
+        mouse_hovering: Whether the mouse is currently hovering over the handle. This should be
+                        updated outside manually.
+        on_moved: The callback for when the handle is moved.
+
+    TODO: modify Canvas OnleftDown accordingly/
+    """
+    data: HandleData
+    on_moved: Optional[Callable[[Vec2], None]]
+    hovering: bool
+    base_radius: float  # Cutoff by circle of this radius at the base, for centroid handles.
+    HANDLE_RADIUS = 5  # Radius of the control handle
+
+    def __init__(self, data: HandleData, layer: int, base_radius: float,
+                 on_moved: Callable[[Vec2], None] = None):
+        super().__init__(layer)
+        self.data = data
+        self.on_moved = on_moved
+        self.hovering = False
+        self.base_radius = base_radius
+        self.enabled = False
+
+    def pos_inside(self, logical_pos: Vec2):
+        return pt_in_circle(logical_pos, BezierHandle.HANDLE_RADIUS, self.data.tip * cstate.scale)
+
+    def do_paint(self, gc: wx.GraphicsContext):
+        """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
+        assert self.data.base is not None
+        c = theme['highlighted_handle_color'] if self.hovering else theme['handle_color']
+        brush = wx.Brush(c)
+        pen = gc.CreatePen(wx.GraphicsPenInfo(c))
+
+        gc.SetPen(pen)
+
+        # TODO cutoff with base_radius
+        # Draw handle lines
+        gc.StrokeLine(*self.data.base, *self.data.tip)
+
+        # Draw handle circles
+        gc.SetBrush(brush)
+        gc.DrawEllipse(self.data.tip.x - BezierHandle.HANDLE_RADIUS,
+                       self.data.tip.y - BezierHandle.HANDLE_RADIUS,
+                       2 * BezierHandle.HANDLE_RADIUS, 2 * BezierHandle.HANDLE_RADIUS)
+
+    def do_mouse_enter(self, logical_pos: Vec2) -> bool:
+        self.hovering = True
+        return True
+
+    def do_mouse_leave(self, logical_pos: Vec2) -> bool:
+        self.hovering = False
+        return True
+
+    def do_left_down(self, logical_pos: Vec2) -> bool:
+        return True
+
+    def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
+        self.data.tip += rel_pos / cstate.scale
+        if self.on_moved:
+            self.on_moved(self.data.tip)
+            return True
+
+        return False
+
+
 class ReactionElement(CanvasElement):
     """CanvasElement for reactions.
 
@@ -167,15 +237,15 @@ class ReactionElement(CanvasElement):
     """
     reaction: Reaction
     index_to_bz: Dict[int, SpeciesBezier]
-    _hovered_handle: Optional[BezierHandle]
     _dragging: bool
     #: Set of indices of the nodes that have been moved, but not committed.
     _dirty_indices: Set[int]
     #: Works in tandem with _dirty_indices. True if all nodes of the reaction are being moved.
     _moving_all: bool
+    _selected: bool
 
     # HACK no type for canvas since otherwise there is circular dependency
-    def __init__(self, reaction: Reaction, canvas, layer: int):
+    def __init__(self, reaction: Reaction, canvas, layer: int, handle_layer: int):
         super().__init__(layer)
         self.reaction = reaction
         # TODO accommodate possibly multiple bezier curves for each node
@@ -186,6 +256,28 @@ class ReactionElement(CanvasElement):
         self._dragging = False
         self._dirty_indices = set()
         self._moving_all = False
+        self.beziers = list()
+        self._selected = False
+
+        # create elements for species
+        for sb in chain(reaction.bezier.src_beziers, reaction.bezier.dest_beziers):
+            el = BezierHandle(sb.handle, handle_layer, 0, reaction.bezier.make_handle_moved_func(sb))
+            self.beziers.append(el)
+
+        self.beziers.append(BezierHandle(reaction.bezier.src_c_handle, handle_layer, settings['reaction_radius'],
+                                         lambda _: reaction.bezier.src_handle_moved()))
+        self.beziers.append(BezierHandle(reaction.bezier.dest_c_handle, handle_layer, settings['reaction_radius'],
+                                         lambda _: reaction.bezier.dest_handle_moved()))
+
+    @property
+    def selected(self) -> bool:
+        return self._selected
+
+    @selected.setter
+    def selected(self, val: bool):
+        self._selected = val
+        for bz in self.beziers:
+            bz.enabled = val
 
     def nodes_moved(self, nodes: List[Node], offset: Vec2):
         """Handler for after a node has moved."""
@@ -198,11 +290,11 @@ class ReactionElement(CanvasElement):
         for node in nodes:
             if node.index in self.index_to_bz:
                 bz = self.index_to_bz[node.index]
-                bz.handle.position += offset
+                bz.handle.tip += offset
                 bz.update_curve(self.reaction.bezier.centroid)
 
         if self._moving_all:
-            self.reaction.bezier.src_c_handle.position += offset
+            self.reaction.bezier.src_c_handle.tip += offset
             self.reaction.bezier.src_handle_moved()
 
     def commit_node_pos(self):
@@ -212,38 +304,21 @@ class ReactionElement(CanvasElement):
         reai = self.reaction.index
         for bz in self.reaction.bezier.src_beziers:
             if bz.node.index in self._dirty_indices:
-                ctrl.try_set_src_node_handle(neti, reai, bz.node.id_, bz.handle.position)
+                ctrl.try_set_src_node_handle(neti, reai, bz.node.id_, bz.handle.tip)
 
         for bz in self.reaction.bezier.dest_beziers:
             if bz.node.index in self._dirty_indices:
-                ctrl.try_set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.position)
+                ctrl.try_set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.tip)
 
         if self._moving_all:
-            ctrl.try_set_center_handle(neti, reai, self.reaction.bezier.src_c_handle.position)
+            ctrl.try_set_center_handle(neti, reai, self.reaction.bezier.src_c_handle.tip)
         self._dirty_indices = set()
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return self.reaction.bezier.is_mouse_on(logical_pos) or \
-            self.reaction.bezier.in_which_handle(logical_pos) is not None
+        return self.reaction.bezier.is_mouse_on(logical_pos)
 
     def do_mouse_enter(self, logical_pos: Vec2):
         self.do_mouse_move(logical_pos)
-
-    def do_mouse_move(self, logical_pos: Vec2):
-        if self._hovered_handle is not None:
-            self._hovered_handle.mouse_hovering = False
-
-        self._hovered_handle = self.reaction.bezier.in_which_handle(logical_pos)
-
-        if self._hovered_handle is not None:
-            self._hovered_handle.mouse_hovering = True
-        return True
-
-    def do_mouse_leave(self, logical_pos: Vec2):
-        if self._hovered_handle is not None:
-            self._hovered_handle.mouse_hovering = False
-            self._hovered_handle = None
-        return True
 
     def do_left_down(self, logical_pos: Vec2):
         return True
@@ -258,27 +333,19 @@ class ReactionElement(CanvasElement):
             neti = self.canvas.net_index
             reai = self.reaction.index
             ctrl.try_start_group()
-            ctrl.try_set_center_handle(neti, reai, bez.src_c_handle.position)
+            ctrl.try_set_center_handle(neti, reai, bez.src_c_handle.tip)
 
             for species in bez.src_beziers:
-                ctrl.try_set_src_node_handle(neti, reai, species.node.id_, species.handle.position)
+                ctrl.try_set_src_node_handle(neti, reai, species.node.id_, species.handle.tip)
             for species in bez.dest_beziers:
-                ctrl.try_set_dest_node_handle(neti, reai, species.node.id_, species.handle.position)
+                ctrl.try_set_dest_node_handle(neti, reai, species.node.id_, species.handle.tip)
             ctrl.try_end_group()
 
-    def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2):
-        self._dragging = True
-        if self._hovered_handle is not None:
-            self._hovered_handle.do_drag(logical_pos)
-            return True
-
     def do_paint(self, gc: wx.GraphicsContext):
-        selected = self.reaction.index in self.canvas.sel_reactions_idx.item_copy()
-
-        self.reaction.bezier.do_paint(gc, self.reaction.fill_color, selected)
+        self.reaction.bezier.do_paint(gc, self.reaction.fill_color, self.selected)
 
         # draw centroid
-        color = theme['handle_color'] if selected else self.reaction.fill_color
+        color = theme['handle_color'] if self.selected else self.reaction.fill_color
         pen = wx.Pen(color)
         brush = wx.Brush(color)
         gc.SetPen(pen)
@@ -304,7 +371,8 @@ class SelectBox(CanvasElement):
     """
     CURSOR_TYPES = [wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE,
                     wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE]
-    HANDLE_MULT = [Vec2(), Vec2(1/2, 0), Vec2(1, 0), Vec2(1, 1/2), Vec2(1, 1), Vec2(1/2, 1), Vec2(0, 1), Vec2(0, 1/2)]
+    HANDLE_MULT = [Vec2(), Vec2(1/2, 0), Vec2(1, 0), Vec2(1, 1/2),
+                   Vec2(1, 1), Vec2(1/2, 1), Vec2(0, 1), Vec2(0, 1/2)]
 
     nodes: List[Node]
     related_elts: List[CanvasElement]
@@ -379,7 +447,7 @@ class SelectBox(CanvasElement):
         centers = [pos + size.elem_mul(m) for m in SelectBox.HANDLE_MULT]
         side = theme['select_handle_length']
         return [Rect(c - Vec2.repeat(side/2), Vec2.repeat(side)) for c in centers]
-    
+
     def _resize_handle_pos(self, n: int):
         pos, size = self.outline_rect().as_tuple()
         assert n >= 0 and n < 8

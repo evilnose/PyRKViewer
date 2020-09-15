@@ -213,13 +213,13 @@ class Controller(IController):
                                     reaction.fill_color.Green(),
                                     reaction.fill_color.Blue())
         for bez, node in zip(reaction.bezier.src_beziers, reaction.sources):
-            pos = bez.handle.position
+            pos = bez.handle.tip
             iod.setReactionSrcNodeHandlePosition(neti, reai, node.id_, pos.x, pos.y)
         for bez, node in zip(reaction.bezier.dest_beziers, reaction.targets):
-            pos = bez.handle.position
+            pos = bez.handle.tip
             iod.setReactionDestNodeHandlePosition(neti, reai, node.id_, pos.x, pos.y)
 
-        cpos = reaction.bezier.src_c_handle.position
+        cpos = reaction.bezier.src_c_handle.tip
         iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
         self.try_end_group()
 

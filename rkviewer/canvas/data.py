@@ -1,5 +1,6 @@
 """Classes for storing and managing data for graph elements."""
 # pylint: disable=maybe-no-member
+from dataclasses import dataclass
 import wx
 import copy
 import math
@@ -158,8 +159,7 @@ class Reaction:
 
     def __init__(self, id_: str, *, sources: List[Node], targets: List[Node],
                  handle_pos: List[Vec2] = None, fill_color: wx.Colour, line_thickness: float,
-                 rate_law: str,
-                 index: int = -1):
+                 rate_law: str, index: int = -1):
         """Constructor for a reaction.
 
         Args:
@@ -178,7 +178,8 @@ class Reaction:
         self.rate_law = rate_law
         self._sources = sources
         self._targets = targets
-        self.bezier = ReactionBezier(sources, targets, handle_pos)
+        self.bezier = ReactionBezier(sources, targets, line_thickness, handle_pos)
+        self._thickness = line_thickness
 
         self.update_nodes(sources, targets)
 
@@ -221,33 +222,24 @@ def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: boo
                    2 * HANDLE_RADIUS, 2 * HANDLE_RADIUS)
 
 
-class BezierHandle:
-    """Class that keeps track of a Bezier control handle (tip).
+class HandleData:
+    """Struct for keeping handle data in-sync between the BezierHandle element and the Reaction.
 
     Attributes:
-        position: Position of the tip of the handle.
-        mouse_hovering: Whether the mouse is currently hovering over the handle. This should be
-                        updated outside manually.
-        on_moved: The callback for when the handle is moved.
+        tip: The position of the tip of the handle. May be modified by BezierHandle when user drags
+             the handle element.
+        base: The position of the base of the handle. May be modified by ReactionBezier, etc. as
+              a response to movement of nodes, handles, etc. HACK this is only updated in the 
+              do_paint method of ReactionElement, and since the BezierHandles are drawn after
+              the ReactionElements, the position of the base *happens* to be updated each time, but
+              if it were drawn before, it would be one step behind.
     """
-    position: Vec2
-    _mouse_offset: Vec2  #: Convenient field that stores (center - mouse_pos) on mouse down.
-    mouse_hovering: bool
-    on_moved: Optional[Callable[[Vec2], None]]
+    tip: Vec2
+    base: Optional[Vec2]
 
-    def __init__(self, position: Vec2, on_moved: Callable[[Vec2], None] = None):
-        self.position = position
-        self._mouse_offset = Vec2()
-        self.on_moved = on_moved
-        self.mouse_hovering = False
-
-    def do_drag(self, pos: Vec2):
-        self.position = (pos + self._mouse_offset) / cstate.scale
-        if self.on_moved:
-            self.on_moved(self.position)
-
-    def do_left_down(self, pos: Vec2):
-        self._mouse_offset = self.position - pos
+    def __init__(self, tip: Vec2, base: Vec2 = None):
+        self.tip = tip
+        self.base = base
 
 
 class SpeciesBezier:
@@ -265,16 +257,16 @@ class SpeciesBezier:
     """
     node: Node
     node_intersection: Optional[Vec2]
-    handle: BezierHandle
-    centroid_handle: BezierHandle
+    handle: HandleData
+    centroid_handle: HandleData
     is_source: bool
     bezier_points: List[Vec2]
     _extended_handle: Vec2
     _collision_dirty: bool  #: Whether the Bezier curve needs to be recomputed.
     _paint_dirty: bool
 
-    def __init__(self, node: Node, handle: BezierHandle, centroid: Vec2,
-                 centroid_handle: BezierHandle, is_source: bool):
+    def __init__(self, node: Node, handle: HandleData, centroid: Vec2,
+                 centroid_handle: HandleData, is_source: bool, thickness: float):
         assert INITIALIZED, 'Bezier matrices not initialized! Call init_bezier()'
 
         self.node = node
@@ -288,6 +280,7 @@ class SpeciesBezier:
         self.update_curve(centroid)
         self.arrow_adjusted_coords = list()
         self.bounding_box = None
+        self.thickness = thickness
 
     def update_curve(self, centroid: Vec2):
         """Called after either the node, the centroid, or at least one of their handles changed.
@@ -313,7 +306,7 @@ class SpeciesBezier:
             # node rectangle sides. We're essentially making the handle a ray.
             longer_side = max(outer_rect.size.x, outer_rect.size.y)
             long_dist = (longer_side + NODE_EDGE_GAP_DISTANCE) * 10
-            handle_diff = self.handle.position - node_center
+            handle_diff = self.handle.tip - node_center
             if handle_diff.norm_sq <= 1e-6:
                 handle_diff = Vec2(0, 1)
             self._extended_handle = node_center + handle_diff.normalized(long_dist)
@@ -334,8 +327,8 @@ class SpeciesBezier:
             if self._collision_dirty:
                 for i in range(MAXSEGS+1):
                     tmp = Vec2()
-                    for j, point in enumerate((self.node_intersection, self.handle.position,
-                                               self.centroid_handle.position, self.centroid)):
+                    for j, point in enumerate((self.node_intersection, self.handle.tip,
+                                               self.centroid_handle.tip, self.centroid)):
                         tmp += point * float(BezJ[i, j])
 
                     # and scale back down again
@@ -387,7 +380,7 @@ class SpeciesBezier:
         # if not within_rect(pos, self.bounding_box * cstate.scale):
         #     return False
 
-        return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK)
+        return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK + self.thickness / 2)
                    for p1, p2 in pairwise(self.bezier_points))
 
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
@@ -399,23 +392,22 @@ class SpeciesBezier:
         else:
             rxn_color = fill
 
-        pen = gc.CreatePen(wx.GraphicsPenInfo(rxn_color).Width(2))
+        pen = gc.CreatePen(wx.GraphicsPenInfo(rxn_color).Width(self.thickness))
 
         gc.SetPen(pen)
         #gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
         path = gc.CreatePath()
         points = [p * cstate.scale for p in (self.node_intersection,
-                                             self.handle.position,
-                                             self.centroid_handle.position,
+                                             self.handle.tip,
+                                             self.centroid_handle.tip,
                                              self.centroid)]
         path.MoveToPoint(*points[0])
         path.AddCurveToPoint(*points[1], *points[2], *points[3])
         gc.StrokePath(path)
 
         if selected:
-            node_intersect = Vec2(self.node_intersection * cstate.scale)
-            node_handle = Vec2(self.handle.position * cstate.scale)
-            paint_handle(gc, node_intersect, node_handle, self.handle.mouse_hovering)
+            assert self.node_intersection is not None
+            self.handle.base = self.node_intersection
 
         # Draw arrow tip
         if not self.is_source:
@@ -443,11 +435,11 @@ class ReactionBezier:
     """
     src_beziers: List[SpeciesBezier]
     dest_beziers: List[SpeciesBezier]
-    src_c_handle: BezierHandle
-    dest_c_handle: BezierHandle
-    handles: List[BezierHandle]
+    src_c_handle: HandleData
+    dest_c_handle: HandleData
+    handles: List[HandleData]
 
-    def __init__(self, reactants: List[Node], products: List[Node],
+    def __init__(self, reactants: List[Node], products: List[Node], thickness: float,
                  handle_positions: List[Vec2] = None):
         """Constructor.
 
@@ -466,6 +458,7 @@ class ReactionBezier:
         self.centroid = compute_centroid(reactants, products)
         self.src_beziers = list()
         self.dest_beziers = list()
+        self.thickness = thickness
 
         src_handle_pos: Vec2
         handle_pos: List[Vec2]
@@ -474,12 +467,15 @@ class ReactionBezier:
             src_handle_pos = handle_positions[0]
             handle_pos = handle_positions[1:]
         else:
-            src_handle_pos = (self.reactants[0].center_point + self.centroid) / 2
+            # the higher the value, the closer the src handle is to the centroid. 1/2 for halfway
+            # in-between
+            center_ratio = 2/3
+            src_handle_pos = self.reactants[0].center_point * (1 - center_ratio) + \
+                self.centroid * center_ratio
             handle_pos = [(n.center_point + self.centroid) / 2 for n in chain(reactants, products)]
 
-        self.src_c_handle = BezierHandle(src_handle_pos, lambda _: self.src_handle_moved())
-        self.dest_c_handle = BezierHandle(2 * self.centroid - src_handle_pos,
-                                          lambda _: self.dest_handle_moved())
+        self.src_c_handle = HandleData(src_handle_pos, self.centroid)
+        self.dest_c_handle = HandleData(2 * self.centroid - src_handle_pos, self.centroid)
 
         self.handles = [self.src_c_handle, self.dest_c_handle]
 
@@ -491,12 +487,12 @@ class ReactionBezier:
                 in_products = True
                 continue
 
-            node_handle = BezierHandle(handle_pos[index])
+            node_handle = HandleData(handle_pos[index])
             centroid_handle = self.dest_c_handle if in_products else self.src_c_handle
-            sb = SpeciesBezier(node, node_handle, self.centroid, centroid_handle, not in_products)
+            sb = SpeciesBezier(node, node_handle, self.centroid, centroid_handle, not in_products,
+                               thickness)
             to_append = self.dest_beziers if in_products else self.src_beziers
             to_append.append(sb)
-            node_handle.on_moved = self.make_handle_moved_func(sb)
             self.handles.append(node_handle)
             index += 1
 
@@ -513,38 +509,27 @@ class ReactionBezier:
             return True
         return any(bz.is_on_curve(pos) for bz in chain(self.src_beziers, self.dest_beziers))
 
-    def in_which_handle(self, pos: Vec2) -> Optional[BezierHandle]:
-        """Return the handle that pos is inside, or None if it's not in any."""
-        for handle in self.handles:
-            if pt_in_circle(pos, HANDLE_RADIUS, handle.position * cstate.scale):
-                return handle
-        return None
-
     def src_handle_moved(self):
         """Special callback for when the source centroid handle is moved."""
-        self.dest_c_handle.position = 2 * self.centroid - self.src_c_handle.position
+        self.dest_c_handle.tip = 2 * self.centroid - self.src_c_handle.tip
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
     def dest_handle_moved(self):
         """Special callback for when the dest centroid handle is moved."""
-        self.src_c_handle.position = 2 * self.centroid - self.dest_c_handle.position
+        self.src_c_handle.tip = 2 * self.centroid - self.dest_c_handle.tip
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
+        # TODO HACK this recomputes the centroid to detect changes. Instead use a dirty flag that
+        # is set to True whenever nodes are moved. Pending https://github.com/evilnose/PyRKViewer/issues/15
         new_centroid = compute_centroid(self.reactants, self.products)
         if new_centroid != self.centroid:
             self.centroid = new_centroid
+            self.src_c_handle.base = new_centroid
+            self.dest_c_handle.base = new_centroid
             self.src_handle_moved()
 
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.do_paint(gc, fill, selected)
-
-        if selected:
-            centroid = Vec2(self.centroid * cstate.scale)
-            center_handles = [self.src_c_handle, self.dest_c_handle]
-            hovering = any(h.mouse_hovering for h in center_handles)
-            for handle in center_handles:
-                handle_pos = Vec2(handle.position * cstate.scale)
-                paint_handle(gc, centroid, handle_pos, hovering)

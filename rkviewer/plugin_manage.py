@@ -26,10 +26,14 @@ class PluginManager:
         bind_handler(SelectionDidUpdateEvent, self.make_notify('on_selection_did_change'))
         bind_handler(DidPaintCanvasEvent, self.make_notify('on_did_paint_canvas'))
 
-    # TODO don't crash if the 'plugins' folder doesn't exist.
     # Also TODO might want a more sophisticated file system structure, including data storage and
     # temp folder
-    def load_from(self, dir_path: str):
+    def load_from(self, dir_path: str) -> bool:
+        """Load plugins from the given directory. Returns False if the dir does not exist.
+        """
+        if not os.path.exists(dir_path):
+            return False
+
         plugin_classes = list()
         for f in os.listdir(dir_path):
             if not f.endswith('.py'):
@@ -49,15 +53,13 @@ class PluginManager:
             plugin_classes += cur_classes
 
         self.plugins = [cls() for cls in plugin_classes]
+        return True
 
     def make_notify(self, handler_name: str):
         assert callable(getattr(Plugin, handler_name, None)), "{} is not a method defined by \
 Plugin!".format(handler_name)
 
         def ret(evt: CanvasEvent):
-            # TODO error handling
-            #assert is_dataclass(evt), "Handler created by make_notify() must be given a \
-#dataclass argument."
             args = evt.to_tuple()
             for plugin in self.plugins:
                 getattr(plugin, handler_name)(*args)
@@ -66,14 +68,19 @@ Plugin!".format(handler_name)
 
     def register_menu(self, menu: wx.Menu, parent: wx.Window):
         commands = [cast(CommandPlugin, p) for p in self.plugins if p.ptype == PluginType.COMMAND]
+        windowed = [cast(WindowedPlugin, p) for p in self.plugins if p.ptype == PluginType.WINDOWED]
+
+        if len(self.plugins) != 0:
+            menu.AppendSeparator()
+
         for plugin in commands:
             id_ = wx.NewId()
             item = menu.Append(id_, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, self.make_command_callback(plugin), item)
 
-        menu.AppendSeparator()
+        if len(commands) != 0 and len(windowed) != 0:
+            menu.AppendSeparator()
 
-        windowed = [cast(WindowedPlugin, p) for p in self.plugins if p.ptype == PluginType.WINDOWED]
         for plugin in windowed:
             id_ = wx.NewId()
             item = menu.Append(id_, plugin.metadata.name)
@@ -138,7 +145,6 @@ class PluginDialog(wx.Dialog):
         self.SetSizer(sizer)
 
 
-# TODO make this accept HTML input for long_desc? i.e. inherit from HTMLWindow
 class PluginPage(HtmlWindow):
     def __init__(self, parent: wx.Window, plugin: Plugin):
         super().__init__(parent)

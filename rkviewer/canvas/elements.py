@@ -112,7 +112,7 @@ class NodeElement(CanvasElement):
     node: Node
     canvas: Any
 
-    # HACK no type for canvas since otherwise there would be circular dependency
+    # HACK no type specified for canvas since otherwise there would be circular dependency
     def __init__(self, node: Node, canvas, layer: int):
         super().__init__(layer)
         self.node = node
@@ -161,19 +161,21 @@ class NodeElement(CanvasElement):
 
 
 class BezierHandle(CanvasElement):
-    """Class that keeps track of a Bezier control handle (tip).
+    """Class that keeps track of a Bezier control handle tip.
 
     Attributes:
-        position: Position of the tip of the handle.
-        on_moved: The callback for when the handle is moved.
-
-    TODO:documentation
+        HANDLE_RADIUS: radius of the control handle.
+        data: The associated HandleData>
+        on_moved: The function called when the handle is moved.
+        on_dropped: The function called when the handle is dropped (i.e. mouse up).
+        reaction: The associated Reaction.
     """
+    HANDLE_RADIUS = 5  # Radius of the control handle
+
     data: HandleData
     on_moved: Callable[[Vec2], None]
     on_dropped: Callable[[Vec2], None]
     reaction: Reaction
-    HANDLE_RADIUS = 5  # Radius of the control handle
 
     def __init__(self, data: HandleData, layer: int,
                  on_moved: Callable[[Vec2], None],
@@ -506,7 +508,6 @@ class SelectBox(CanvasElement):
                 # convert to device position for drawing
                 draw_rect(gc, handle_rect, fill=theme['handle_color'])
 
-            # TODO set only if input mode is SELECT
             if self._hovered_part >= 0:
                 cursor = SelectBox.CURSOR_TYPES[self._hovered_part]
                 self.set_cursor_fn(wx.Cursor(cursor))

@@ -100,4 +100,4 @@ def get_default_arrow_tip() -> ArrowTip:
 def set_arrow_tip(value: ArrowTip):
     cstate.arrow_tip = value.clone()
     _canvas.ArrowTipChanged()
-    # TODO notify controller
+    # TODO save to settings; pending https://github.com/evilnose/PyRKViewer/issues/16

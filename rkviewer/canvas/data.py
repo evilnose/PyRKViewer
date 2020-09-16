@@ -323,7 +323,6 @@ class SpeciesBezier:
 
         if for_collision:
             # STEP 2, recompute Bezier curve
-            # Scale up dimensions (mult by 1000) to get a smooth curve
             if self._collision_dirty:
                 for i in range(MAXSEGS+1):
                     tmp = Vec2()
@@ -335,8 +334,6 @@ class SpeciesBezier:
                     self.bezier_points[i] = tmp
 
                 self._collision_dirty = False
-                # TODO does this actually help with performance?
-                # self.bounding_box
         else:
             # STEP 3, recompute arrow tip
             if self._paint_dirty:

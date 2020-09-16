@@ -34,13 +34,12 @@ def create_excepthook(old_excepthook):
 
 
 def setup_logging():
-    # TODO change level based on whether the app has been packaged
     d = {
         'version': 1,
         'formatters': {
             'detailed': {
                 'class': 'logging.Formatter',
-                'format': '%(asctime)s %(name)-15s %(levelname)-8s %(processName)-10s %(message)s'
+                'format': '%(asctime)s %(name)-15s %(levelname)-8s %(message)s'
             }
         },
         'handlers': {
@@ -63,10 +62,13 @@ def setup_logging():
                 'formatter': 'detailed',
             },
         },
-        'loggers': {  # TODO add more loggers here
+        'loggers': {
             'controller': {
                 'handlers': ['debug', 'errors']
-            }
+            },
+            'canvas': {
+                'handlers': ['debug', 'errors']
+            },
         },
         'root': {
             'level': 'DEBUG',

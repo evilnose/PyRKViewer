@@ -135,19 +135,20 @@ class Toolbar(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         zoom_in_btn = wx.Button(self, label="Zoom In")
         # TODO make this a method
+        sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
         undo_button = wx.Button(self, label="Undo")
-        sizer.Add(undo_button, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        sizer.Add(undo_button, sizerflags)
         undo_button.Bind(wx.EVT_BUTTON, lambda _: controller.try_undo())
 
         redo_button = wx.Button(self, label="Redo")
-        sizer.Add(redo_button, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        sizer.Add(redo_button, sizerflags)
         redo_button.Bind(wx.EVT_BUTTON, lambda _: controller.try_redo())
 
-        sizer.Add(zoom_in_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        sizer.Add(zoom_in_btn, sizerflags)
         zoom_in_btn.Bind(wx.EVT_BUTTON, lambda _: zoom_callback(True))
 
         zoom_out_btn = wx.Button(self, label="Zoom Out")
-        sizer.Add(zoom_out_btn, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10))
+        sizer.Add(zoom_out_btn, sizerflags)
         zoom_out_btn.Bind(wx.EVT_BUTTON, lambda _: zoom_callback(False))
 
         # Note: Right align after this
@@ -353,9 +354,9 @@ class MainFrame(wx.Frame):
         select_menu = wx.Menu()
         self.AddMenuItem(select_menu, 'Select &All', 'Select all',
                          lambda _: canvas.SelectAll(), entries, key=(wx.ACCEL_CTRL, ord('A')))
-        self.AddMenuItem(select_menu, 'Clear Selections', 'Clear selections',
-                         lambda _: canvas.ClearSelection(), entries,
-                         key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('A')))
+        self.AddMenuItem(select_menu, 'Clear Selection', 'Clear the current selection',
+                         lambda _: canvas.ClearCurrentSelection(), entries,
+                         key=(wx.ACCEL_NORMAL, wx.WXK_ESCAPE))
 
         view_menu = wx.Menu()
         self.AddMenuItem(view_menu, 'Zoom &In', 'Zoom in canvas', lambda _: canvas.ZoomCenter(True),
@@ -382,7 +383,6 @@ class MainFrame(wx.Frame):
         plugins_menu = wx.Menu()
         self.AddMenuItem(plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
                          key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
-        plugins_menu.AppendSeparator()
         self.manager.register_menu(plugins_menu, self)
 
         help_menu = wx.Menu()
@@ -424,6 +424,7 @@ class MainFrame(wx.Frame):
         self.menu_events.append((callback, item))
 
     def ManagePlugins(self, evt):
+        # TODO create special empty page that says "No plugins loaded"
         with self.manager.create_dialog(self) as dlg:
             dlg.Centre()
             if dlg.ShowModal() == wx.ID_OK:

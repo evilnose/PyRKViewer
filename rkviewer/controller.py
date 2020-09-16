@@ -57,12 +57,7 @@ class Controller(IController):
         # already in a group before; don't start startGroup()
         if self.group_depth > 1:
             return False
-        try:
-            iod.startGroup()
-        except iod.Error as e:
-            # TODO replace all print statements with logging
-            print('Error starting group:', str(e))
-            return False
+        iod.startGroup()
         return True
 
     def try_end_group(self) -> bool:
@@ -73,12 +68,7 @@ class Controller(IController):
         if self.group_depth > 0:
             return False
 
-        try:
-            iod.endGroup()
-        except iod.Error as e:
-            print('Error ending group:', str(e))
-            return False
-
+        iod.endGroup()
         self._update_view()
         return True
 

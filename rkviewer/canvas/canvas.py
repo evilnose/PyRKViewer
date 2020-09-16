@@ -1,25 +1,51 @@
 """The interface of canvas for wxPython."""
 # pylint: disable=maybe-no-member
-import wx
 from collections import defaultdict
-from itertools import chain
-import typing
 import copy
-from typing import Collection, DefaultDict, Optional, Set, Tuple, List, Dict, cast
+from itertools import chain
+import logging
+from logging import Logger
 from threading import Thread
-from .elements import BezierHandle, CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
-from .state import InputMode, cstate
-from ..events import DidAddNodeEvent, DidMoveNodesEvent, DidCommitNodePositionsEvent, DidPaintCanvasEvent, \
-    SelectionDidUpdateEvent, CanvasDidUpdateEvent, bind_handler, post_event
-from .geometry import Vec2, Rect, padded_rect, rects_overlap, within_rect, clamp_rect_pos
-from .data import Node, init_bezier, Reaction
-from .utils import Observer, SetSubject
-from .utils import get_nodes_by_idx, draw_rect
-from .overlays import CanvasOverlay, Minimap
+import time
+import typing
+from typing import Collection, DefaultDict, Dict, List, Optional, Set, Tuple, cast
+
+import wx
+
+from ..config import settings, theme
+from ..events import (
+    CanvasDidUpdateEvent,
+    DidAddNodeEvent,
+    DidCommitNodePositionsEvent,
+    DidMoveNodesEvent,
+    DidPaintCanvasEvent,
+    SelectionDidUpdateEvent,
+    bind_handler,
+    post_event,
+)
 from ..mvc import IController
 from ..utils import convert_position, even_round, int_round
-from ..config import theme, settings
-import time
+from .data import Node, Reaction, init_bezier
+from .elements import (
+    BezierHandle,
+    CanvasElement,
+    LayeredElements,
+    NodeElement,
+    ReactionElement,
+    SelectBox,
+)
+from .geometry import (
+    Rect,
+    Vec2,
+    clamp_rect_pos,
+    padded_rect,
+    rects_overlap,
+    within_rect,
+)
+from .overlays import CanvasOverlay, Minimap
+from .state import InputMode, cstate
+from .utils import Observer, SetSubject
+from .utils import draw_rect, get_nodes_by_idx
 
 
 BOUNDS_EPS = 0
@@ -69,6 +95,7 @@ class Canvas(wx.ScrolledWindow):
     hovered_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
     reaction_map: DefaultDict[int, Set[int]]
+    logger: Logger
 
     #: Current network index. Right now this is always 0 since there is only one tab.
     _net_index: int
@@ -108,6 +135,7 @@ class Canvas(wx.ScrolledWindow):
         self.hovered_element = None
         self.dragged_element = None
         self.reaction_map = defaultdict(set)
+        self.logger = logging.getLogger('canvas')
 
         # prevent flickering
         self.SetDoubleBuffered(True)
@@ -547,9 +575,7 @@ class Canvas(wx.ScrolledWindow):
     def _EndDrag(self, evt: wx.Event):
         """Send the updated node positions and sizes to the controller.
 
-        This is called after a dragging/resizing operation has completed, i.e. in OnLeftUp and
-        OnLeaveWindow. Set keep_dragging to True if want to keep dragging later, as long as mouse
-        is held down.
+        This is called after a dragging operation has completed in OnLeftUp or OnLeaveWindow.
         """
         device_pos = Vec2(evt.GetPosition())
         overlay = self._InWhichOverlay(device_pos)
@@ -800,7 +826,6 @@ class Canvas(wx.ScrolledWindow):
         post_event(SelectionDidUpdateEvent(node_indices=node_idx, reaction_indices=rxn_idx))
 
     def DeleteSelectedItems(self):
-        # TODO if node is not free (from iodine), show the error somehow
         # TODO allow deletion of reactions
         # First, get the list of reaction indices IF the currently selected reactions were deleted.
         sel_reactions_idx = self.sel_reactions_idx.item_copy()
@@ -810,8 +835,16 @@ class Canvas(wx.ScrolledWindow):
         # Second, confirm the selected nodes are free (i.e. not part of a reaction)
         for node_idx in selected_idx:
             if len(self.reaction_map[node_idx] & rem_rxn) != 0:
-                print("Can't delete")
-                # TODO log and show dialog instead
+                bound_node = None
+                for node in self.nodes:
+                    if node.index == node_idx:
+                        bound_node = node
+
+                assert bound_node is not None
+                self.ShowWarningDialog("Could not delete node '{}', as one or more reactions \
+depend on it.".format(bound_node.id_))
+                self.logger.warning("Tried and failed to delete bound node '{}' with index '{}'"
+                                    .format(bound_node.id_, node_idx))
                 return
 
         self.controller.try_start_group()
@@ -826,15 +859,23 @@ class Canvas(wx.ScrolledWindow):
         self.sel_reactions_idx.set_item({r.index for r in self._reactions})
         self.LazyRefresh()
 
-    def ClearSelection(self):
-        self.selected_idx.set_item(set())
-        self.sel_reactions_idx.set_item(set())
-        self.LazyRefresh()
+    def ClearCurrentSelection(self):
+        """Clear the current highest level of selection.
+
+        If there are reactants or products marked, clear those. OTherwise clear selected nodes and
+        reactions.
+        """
+        if len(self._reactant_idx) + len(self._product_idx) != 0:
+            self._reactant_idx = set()
+            self._product_idx = set()
+            self.LazyRefresh()
+        else:
+            self.selected_idx.set_item(set())
+            self.sel_reactions_idx.set_item(set())
+            self.LazyRefresh()
 
     def MarkSelectedAsReactants(self):
         self._reactant_idx = self.selected_idx.item_copy()
-        # TODO not make product/reactant state mutually exclusive, and change outline marking for
-        # visibility in case a node is both
         self.LazyRefresh()
 
     def MarkSelectedAsProducts(self):

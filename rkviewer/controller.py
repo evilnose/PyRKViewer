@@ -14,17 +14,20 @@ from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView
 
 
-def try_setter(fn):
+def try_setter(controller_setter):
     """Decorator for controller setter methods that catches Errors and auto updates views."""
     # If programmatic is True, then do not trigger a C-Event
     def ret(self, *args):
+        controller_setter(self, *args)
+        '''
         try:
-            fn(self, *args)
+            controller_setter(self, *args)
         except iod.Error:
             logger = logging.getLogger('controller')
             logger.error('Caught error when trying to set something in controller:')
             logger.error(traceback.format_exc())
             return False
+        '''
 
         if self.group_depth == 0:
             self._update_view()

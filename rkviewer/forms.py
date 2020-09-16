@@ -428,6 +428,7 @@ class NodeForm(EditPanelForm):
     def UpdateNodes(self, nodes: List[Node]):
         """Function called after the list of nodes have been updated."""
         self._nodes = nodes
+        print(nodes)
         if len(self._selected_idx) != 0 and not self._self_changes:
             self.UpdateAllFields()
 

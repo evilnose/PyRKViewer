@@ -4,7 +4,7 @@ import wx
 from itertools import tee
 import os
 import sys
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Tuple, TypeVar
 
 
 def convert_position(fn):
@@ -132,9 +132,21 @@ class ButtonGroup:
                 button.SetValue(True)
         return ret
 
+
 def int_round(n: float) -> int:
     return int(round(round(n, 2)))
+
 
 def even_round(n: float) -> int:
     """Round to the nearest even integer"""
     return int(round(n / 2)) * 2
+
+
+T = TypeVar('T')
+def gchain(*iterables: Iterable[T]) -> Iterable[Tuple[T, int]]:
+    # chain('ABC', 'DEF') --> (A,0) (B, ) (C,0) (D,1) (E,1) (F,1)
+    i = 0
+    for it in iterables:
+        for element in it:
+            yield (element, i)
+        i += 1

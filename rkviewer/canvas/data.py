@@ -8,10 +8,10 @@ from itertools import chain
 import numpy as np
 from scipy.special import comb
 from typing import Callable, List, Optional, Tuple
-from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, segments_intersect
+from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segments_intersect
 from .state import cstate
 from ..config import settings, theme
-from ..utils import pairwise
+from ..utils import gchain, pairwise
 
 
 MAXSEGS = 8  # Number of segments used to construct bezier
@@ -229,7 +229,7 @@ class HandleData:
         tip: The position of the tip of the handle. May be modified by BezierHandle when user drags
              the handle element.
         base: The position of the base of the handle. May be modified by ReactionBezier, etc. as
-              a response to movement of nodes, handles, etc. HACK this is only updated in the 
+              a response to movement of nodes, handles, etc. HACK this is only updated in the
               do_paint method of ReactionElement, and since the BezierHandles are drawn after
               the ReactionElements, the position of the base *happens* to be updated each time, but
               if it were drawn before, it would be one step behind.
@@ -395,7 +395,7 @@ class SpeciesBezier:
         pen = gc.CreatePen(wx.GraphicsPenInfo(rxn_color).Width(self.thickness))
 
         gc.SetPen(pen)
-        #gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
+        # gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
         path = gc.CreatePath()
         points = [p * cstate.scale for p in (self.node_intersection,
                                              self.handle.tip,
@@ -427,12 +427,25 @@ class ReactionBezier:
     """Class that keeps track of all Bezier curve data for a reaction.
 
     Attributes:
+        CENTER_RATIO: The ratio of source centroid handle length to the distance between the zeroth
+                      node and the centroid (center handle is aligned with the zeroth node)
+        DUPLICATE_RATIO: Valid for a Bezier whose node is both a product and a reactant. The ratio
+                         of length of the product Bezier handle to the distance between the node
+                         and the centroid.
+        DUPLICATE_ROT: Rotation (radians) applied to the product Bezier handle, for nodes that are
+                       both reactant and product. The handle is rotated so as to not align perfectly
+                       with the source Bezier handle (otherwise the reactant and product curves
+                       would completely overlap).
         src_beziers: List of SpeciesBezier instances for reactants.
         dest_beziers: List of SpeciesBezier instances for products.
         src_c_handle: Centroid bezier handle that controls the reactant curves.
         dest_c_handle: Centroid bezier handle that controls the product curves.
         handles: List of all the BezierHandle instances, stored for convenience.
     """
+    CENTER_RATIO = 2/3
+    DUPLICATE_RATIO = 3/4
+    DUPLICATE_ROT = -math.pi/3
+
     src_beziers: List[SpeciesBezier]
     dest_beziers: List[SpeciesBezier]
     src_c_handle: HandleData
@@ -469,10 +482,19 @@ class ReactionBezier:
         else:
             # the higher the value, the closer the src handle is to the centroid. 1/2 for halfway
             # in-between
-            center_ratio = 2/3
-            src_handle_pos = self.reactants[0].center_point * (1 - center_ratio) + \
-                self.centroid * center_ratio
-            handle_pos = [(n.center_point + self.centroid) / 2 for n in chain(reactants, products)]
+            src_handle_pos = self.reactants[0].center_point * (1 - ReactionBezier.CENTER_RATIO) + \
+                self.centroid * ReactionBezier.CENTER_RATIO
+            handle_pos = [(n.center_point + self.centroid) / 2 for n in reactants]
+            reactant_indices = [n.index for n in reactants]
+            for n in products:
+                if n.index in reactant_indices:
+                    # If also a reactant, shift the handle to not have the curves completely overlap
+                    diff = self.centroid - n.center_point
+                    length = diff.norm * ReactionBezier.DUPLICATE_RATIO
+                    new_dir = rotate_unit(diff, ReactionBezier.DUPLICATE_ROT)
+                    handle_pos.append(n.center_point + new_dir * length)
+                else:
+                    handle_pos.append((n.center_point + self.centroid) / 2)
 
         self.src_c_handle = HandleData(src_handle_pos, self.centroid)
         self.dest_c_handle = HandleData(2 * self.centroid - src_handle_pos, self.centroid)
@@ -480,12 +502,8 @@ class ReactionBezier:
         self.handles = [self.src_c_handle, self.dest_c_handle]
 
         # create handles for species
-        in_products = False  # whether the loop has reached the products part
-        index = 0
-        for node in chain(self.reactants, [None], self.products):
-            if node is None:
-                in_products = True
-                continue
+        for index, (node, gi) in enumerate(gchain(self.reactants, self.products)):
+            in_products = bool(gi)
 
             node_handle = HandleData(handle_pos[index])
             centroid_handle = self.dest_c_handle if in_products else self.src_c_handle

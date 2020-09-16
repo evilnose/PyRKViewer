@@ -7,7 +7,7 @@ import typing
 import copy
 from typing import Collection, DefaultDict, Optional, Set, Tuple, List, Dict, cast
 from threading import Thread
-from .elements import CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
+from .elements import BezierHandle, CanvasElement, LayeredElements, NodeElement, ReactionElement, SelectBox
 from .state import InputMode, cstate
 from ..events import DidAddNodeEvent, DidMoveNodesEvent, DidCommitNodePositionsEvent, DidPaintCanvasEvent, \
     SelectionDidUpdateEvent, CanvasDidUpdateEvent, bind_handler, post_event
@@ -294,8 +294,11 @@ class Canvas(wx.ScrolledWindow):
         # cull removed indices
         node_idx = {n.index for n in nodes}
         rxn_idx = {r.index for r in reactions}
+
         self.selected_idx.set_item(self.selected_idx.item_copy() & node_idx)
-        self.sel_reactions_idx.set_item(self.sel_reactions_idx.item_copy() & rxn_idx)
+        new_sel_reactions = self.sel_reactions_idx.item_copy() & rxn_idx
+        self.sel_reactions_idx.set_item(new_sel_reactions)
+
         self._reactant_idx &= node_idx
         self._product_idx &= node_idx
 
@@ -315,6 +318,8 @@ class Canvas(wx.ScrolledWindow):
             List[CanvasElement], self._reaction_elements)
         for rxn_el in self._reaction_elements:
             select_elements += rxn_el.beziers
+            # Update reactions on whether they are selected
+            rxn_el.selected = rxn_el.reaction.index in new_sel_reactions
         self._elements = LayeredElements(select_elements)
         self._select_box.update_nodes(self.GetSelectedNodes())
         self._select_box.related_elts = select_elements
@@ -452,6 +457,11 @@ class Canvas(wx.ScrolledWindow):
                 elif isinstance(self.dragged_element, ReactionElement):
                     r_elem = typing.cast(ReactionElement, self.dragged_element)
                     rxn = r_elem.reaction
+                '''
+                elif isinstance(self.dragged_element, BezierHandle):
+                    b_elem = typing.cast(BezierHandle, self.dragged_element)
+                    rxn = b_elem.reaction
+                '''
 
                 # not resizing or dragging
                 if cstate.multi_select:

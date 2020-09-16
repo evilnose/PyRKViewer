@@ -2,12 +2,12 @@ from __future__ import annotations  # For referencing self in a class
 # pylint: disable=maybe-no-member
 import enum
 from itertools import chain
-from rkviewer.utils import even_round, int_round
+from rkviewer.utils import even_round, gchain, int_round
 import wx
 from abc import abstractmethod
 import bisect
 from functools import partial
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 from .data import HandleData, INITIALIZED, MAXSEGS, NODE_EDGE_GAP_DISTANCE, Node, Reaction, SpeciesBezier, ToScrolledFn
 from ..events import CanvasEvent, DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, post_event
 from .geometry import Rect, Vec2, clamp_point, get_bounding_rect, padded_rect, pt_in_circle, within_rect
@@ -165,25 +165,25 @@ class BezierHandle(CanvasElement):
 
     Attributes:
         position: Position of the tip of the handle.
-        mouse_hovering: Whether the mouse is currently hovering over the handle. This should be
-                        updated outside manually.
         on_moved: The callback for when the handle is moved.
 
-    TODO: modify Canvas OnleftDown accordingly/
+    TODO:documentation
     """
     data: HandleData
-    on_moved: Optional[Callable[[Vec2], None]]
-    hovering: bool
-    base_radius: float  # Cutoff by circle of this radius at the base, for centroid handles.
+    on_moved: Callable[[Vec2], None]
+    on_dropped: Callable[[Vec2], None]
+    reaction: Reaction
     HANDLE_RADIUS = 5  # Radius of the control handle
 
-    def __init__(self, data: HandleData, layer: int, base_radius: float,
-                 on_moved: Callable[[Vec2], None] = None):
+    def __init__(self, data: HandleData, layer: int,
+                 on_moved: Callable[[Vec2], None],
+                 on_dropped: Callable[[Vec2], None], reaction: Reaction):
         super().__init__(layer)
         self.data = data
         self.on_moved = on_moved
+        self.on_dropped = on_dropped
+        self.reaction = reaction
         self.hovering = False
-        self.base_radius = base_radius
         self.enabled = False
 
     def pos_inside(self, logical_pos: Vec2):
@@ -198,7 +198,6 @@ class BezierHandle(CanvasElement):
 
         gc.SetPen(pen)
 
-        # TODO cutoff with base_radius
         # Draw handle lines
         gc.StrokeLine(*self.data.base, *self.data.tip)
 
@@ -221,11 +220,16 @@ class BezierHandle(CanvasElement):
 
     def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
         self.data.tip += rel_pos / cstate.scale
-        if self.on_moved:
-            self.on_moved(self.data.tip)
-            return True
+        self.on_moved(self.data.tip)
+        return True
 
-        return False
+    def do_left_up(self, logical_pos: Vec2):
+        self.on_dropped(self.data.tip)
+        return True
+
+
+# Uniquely identifies nodes in a reaction: (regular node index; whether the node is a reactant)
+RIndex = Tuple[int, bool]
 
 
 class ReactionElement(CanvasElement):
@@ -236,10 +240,9 @@ class ReactionElement(CanvasElement):
     corresponding update methods should be called.
     """
     reaction: Reaction
-    index_to_bz: Dict[int, SpeciesBezier]
-    _dragging: bool
+    index_to_bz: Dict[RIndex, SpeciesBezier]
     #: Set of indices of the nodes that have been moved, but not committed.
-    _dirty_indices: Set[int]
+    _dirty_node_indices: Set[int]
     #: Works in tandem with _dirty_indices. True if all nodes of the reaction are being moved.
     _moving_all: bool
     _selected: bool
@@ -248,26 +251,45 @@ class ReactionElement(CanvasElement):
     def __init__(self, reaction: Reaction, canvas, layer: int, handle_layer: int):
         super().__init__(layer)
         self.reaction = reaction
-        # TODO accommodate possibly multiple bezier curves for each node
-        self.index_to_bz = {bz.node.index: bz for bz in chain(reaction.bezier.src_beziers,
-                                                              reaction.bezier.dest_beziers)}
+        # i is 0 for source Beziers, but 1 for dest Beziers. "not" it to get the correct bool.
+        self.index_to_bz = {(bz.node.index, not gi): bz
+                            for bz, gi in gchain(reaction.bezier.src_beziers,
+                                                 reaction.bezier.dest_beziers)}
         self.canvas = canvas
         self._hovered_handle = None
-        self._dragging = False
         self._dirty_indices = set()
         self._moving_all = False
         self.beziers = list()
         self._selected = False
 
+        neti = canvas.net_index
+        reai = reaction.index
+        ctrl = canvas.controller
         # create elements for species
-        for sb in chain(reaction.bezier.src_beziers, reaction.bezier.dest_beziers):
-            el = BezierHandle(sb.handle, handle_layer, 0, reaction.bezier.make_handle_moved_func(sb))
+        for sb, gi in gchain(reaction.bezier.src_beziers, reaction.bezier.dest_beziers):
+            dropped_func = self.make_drop_handle_func(ctrl, neti, reai, sb.node.id_, not gi)
+            el = BezierHandle(sb.handle, handle_layer,
+                              reaction.bezier.make_handle_moved_func(sb), dropped_func, reaction)
             self.beziers.append(el)
 
-        self.beziers.append(BezierHandle(reaction.bezier.src_c_handle, handle_layer, settings['reaction_radius'],
-                                         lambda _: reaction.bezier.src_handle_moved()))
-        self.beziers.append(BezierHandle(reaction.bezier.dest_c_handle, handle_layer, settings['reaction_radius'],
-                                         lambda _: reaction.bezier.dest_handle_moved()))
+        def centroid_handle_dropped(p: Vec2):
+            ctrl.try_start_group()
+            ctrl.try_set_center_handle(neti, reai, reaction.bezier.src_c_handle.tip)
+            ctrl.try_end_group()
+
+        self.beziers.append(BezierHandle(reaction.bezier.src_c_handle, handle_layer,
+                                         lambda _: reaction.bezier.src_handle_moved(),
+                                         centroid_handle_dropped, reaction))
+        self.beziers.append(BezierHandle(reaction.bezier.dest_c_handle, handle_layer,
+                                         lambda _: reaction.bezier.dest_handle_moved(),
+                                         centroid_handle_dropped, reaction))
+
+    def make_drop_handle_func(self, ctrl: IController, neti: int, reai: int, nid: str,
+                             is_source: bool):
+        if is_source:
+            return lambda p: ctrl.try_set_src_node_handle(neti, reai, nid, p)
+        else:
+            return lambda p: ctrl.try_set_dest_node_handle(neti, reai, nid, p)
 
     @property
     def selected(self) -> bool:
@@ -275,6 +297,7 @@ class ReactionElement(CanvasElement):
 
     @selected.setter
     def selected(self, val: bool):
+        # Enable/disable Handles based on whether the curve is selected
         self._selected = val
         for bz in self.beziers:
             bz.enabled = val
@@ -288,10 +311,11 @@ class ReactionElement(CanvasElement):
             self._moving_all = my_indices <= self._dirty_indices
 
         for node in nodes:
-            if node.index in self.index_to_bz:
-                bz = self.index_to_bz[node.index]
-                bz.handle.tip += offset
-                bz.update_curve(self.reaction.bezier.centroid)
+            for in_src in [True, False]:
+                if (node.index, in_src) in self.index_to_bz:
+                    bz = self.index_to_bz[(node.index, in_src)]
+                    bz.handle.tip += offset
+                    bz.update_curve(self.reaction.bezier.centroid)
 
         if self._moving_all:
             self.reaction.bezier.src_c_handle.tip += offset
@@ -320,26 +344,8 @@ class ReactionElement(CanvasElement):
     def do_mouse_enter(self, logical_pos: Vec2):
         self.do_mouse_move(logical_pos)
 
-    def do_left_down(self, logical_pos: Vec2):
-        return True
-
-    def do_left_up(self, logical_pos: Vec2):
-        if self._dragging:
-            self._dragging = False
-            # update every handle for convenience, even though not all might have moved
-
-            bez = self.reaction.bezier
-            ctrl = self.canvas.controller
-            neti = self.canvas.net_index
-            reai = self.reaction.index
-            ctrl.try_start_group()
-            ctrl.try_set_center_handle(neti, reai, bez.src_c_handle.tip)
-
-            for species in bez.src_beziers:
-                ctrl.try_set_src_node_handle(neti, reai, species.node.id_, species.handle.tip)
-            for species in bez.dest_beziers:
-                ctrl.try_set_dest_node_handle(neti, reai, species.node.id_, species.handle.tip)
-            ctrl.try_end_group()
+    def do_left_down(self, logical_pos: Vec2) -> bool:
+        return True  # Return True so that this can be selected
 
     def do_paint(self, gc: wx.GraphicsContext):
         self.reaction.bezier.do_paint(gc, self.reaction.fill_color, self.selected)

@@ -26,9 +26,11 @@ class SelectionDidUpdateEvent(CanvasEvent):
     Attributes:
         node_indices: The indices of the list of selected nodes.
         reaction_indices: The indices of the list of selected reactions.
+        compartment_indices: The indices of the list of selected compartments.
     """
     node_indices: Set[int]
     reaction_indices: Set[int]
+    compartment_indices: Set[int]
 
 
 @dataclass

@@ -100,14 +100,11 @@ class Node:
     def rect(self):
         """The same as s_rect, but the rectangle is unscaled.
         """
-        return Rect(copy.copy(self.position), copy.copy(self.size))
+        return Rect(self.position, self.size)
 
     @property
     def center_point(self) -> Vec2:
         return self.position + self.size / 2
-
-
-ToScrolledFn = Callable[[Vec2], Vec2]
 
 
 def compute_centroid(reactants: List[Node], products: List[Node]) -> Vec2:
@@ -548,3 +545,23 @@ class ReactionBezier:
 
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.do_paint(gc, fill, selected)
+
+
+@dataclass
+class Compartment:
+    id_: str
+    nodes: List[Node]
+    virtual_size: float  #: Size (i.e. length/area/volume/...) of the container
+    position: Vec2
+    size: Vec2  #: Size for drawing on the GUI
+    fill: wx.Colour
+    border: wx.Colour
+    border_width: float
+    index: int = -1
+    #dimensions: int
+
+    @property
+    def rect(self):
+        """The same as s_rect, but the rectangle is unscaled.
+        """
+        return Rect(self.position, self.size)

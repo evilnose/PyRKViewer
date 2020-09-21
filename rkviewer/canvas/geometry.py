@@ -6,7 +6,7 @@ import wx
 import copy
 from enum import Enum
 import math
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, Union
 
 
 TNum = Union[float, int]
@@ -242,6 +242,13 @@ class Rect:
     def __repr__(self):
         return 'Rect({}, {})'.format(self.position, self.size)
 
+    def contains(self, other: Rect) -> bool:
+        """Returns whether self contains the other rectangle entirely."""
+        botright = self.position + self.size
+        other_botright = other.position + other.size
+        return (self.position.x >= other.position.x) and (self.position.y >= other.position.y) and \
+            (botright.x <= other_botright.x) and (botright.y <= other_botright.y)
+
 
 class Direction(Enum):
     LEFT = 0
@@ -342,7 +349,7 @@ def within_rect(pos: Vec2, rect: Rect) -> bool:
         pos.y <= end.y
 
 
-def get_bounding_rect(rects: List[Rect], padding: float = 0) -> Rect:
+def get_bounding_rect(rects: Sequence[Rect], padding: float = 0) -> Rect:
     """Compute the bounding rectangle of a given list of rects.
 
     This computes the smallest possible rectangle needed to cover each of the rects (inclusive), as

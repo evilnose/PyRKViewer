@@ -44,7 +44,8 @@ class Plugin:
     def on_did_paint_canvas(self, gc: wx.GraphicsContext):
         pass
 
-    def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int]):
+    def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int],
+                                compartment_indices: List[int]):
         pass
 
     

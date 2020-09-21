@@ -18,7 +18,7 @@ DEFAULT_THEME = {
     'mode_panel_width': 100,
     'toolbar_height': 40,
     'edit_panel_width': 260,
-    'node_fill': wx.Colour(0, 255, 0, 50),
+    'node_fill': wx.Colour(150, 255, 150, 200),
     'node_border': wx.Colour(19, 173, 2),
     'node_width': 50,
     'node_height': 30,
@@ -33,8 +33,6 @@ DEFAULT_THEME = {
     'highlighted_handle_color': wx.Colour(255, 112, 0),
     'select_box_padding': 5,  # Padding of the select box, relative to the mininum possible bbox
     'select_handle_length': 8,  # Length of the squares one uses to drag resize nodes
-    'min_node_width': 20,
-    'min_node_height': 15,
     'zoom_slider_bg': wx.Colour(150, 150, 150),
     'drag_fill': wx.Colour(0, 140, 255, 20),
     'drag_border': wx.Colour(0, 140, 255),
@@ -47,6 +45,9 @@ DEFAULT_THEME = {
     'reaction_fill': wx.BLACK,
     'reaction_line_thickness': 2,
     'selected_reaction_fill': wx.Colour(0, 140, 255),
+    'comp_fill': wx.Colour(158, 169, 255, 200),
+    'comp_border': wx.Colour(0, 29, 255),
+    'comp_border_width': 2,
 }
 
 DEFAULT_ARROW_TIP = [Vec2(1, 15), Vec2(4, 8), Vec2(1, 1), Vec2(21, 8)]
@@ -61,6 +62,10 @@ DEFAULT_SETTINGS = {
     ],  # first element: status field identifier; second element: field width
     'decimal_precision': 2,
     'reaction_radius': 6,
+    'min_node_width': 20,
+    'min_node_height': 15,
+    'min_comp_width': 150,
+    'min_comp_height': 100,
 }
 
 

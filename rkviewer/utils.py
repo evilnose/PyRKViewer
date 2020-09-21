@@ -76,6 +76,10 @@ def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
     return wx.Colour(r, g, b, int(alpha * 255))
 
 
+def opacity_mul(color: wx.Colour, fraction: float) -> wx.Colour:
+    return wx.Colour(color.Red(), color.Green(), color.Blue(), color.Alpha() * fraction)
+
+
 class ButtonGroup:
     """Class for keeping track of a group of buttons, where exactly one of them can be selected.
 

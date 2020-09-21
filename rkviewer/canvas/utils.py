@@ -72,6 +72,8 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
 T = TypeVar('T')
 
 
+# TODO add SetObserver, which allows delaying callback and combining multiple notify calls.
+# e.g. with start_group() and end_group()
 class Observer(abc.ABC, Generic[T]):
     """Observer abstract base class; encapsulates object of type T."""
 
@@ -137,3 +139,9 @@ class SetSubject(Subject[Set[T]]):
         self._item.add(el)
         if not equal:
             self.notify()
+
+    def __len__(self):
+        return len(self._item)
+
+    def __contains__(self, val: T):
+        return val in self._item

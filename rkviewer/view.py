@@ -138,11 +138,11 @@ class Toolbar(wx.Panel):
         sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
         undo_button = wx.Button(self, label="Undo")
         sizer.Add(undo_button, sizerflags)
-        undo_button.Bind(wx.EVT_BUTTON, lambda _: controller.try_undo())
+        undo_button.Bind(wx.EVT_BUTTON, lambda _: controller.undo())
 
         redo_button = wx.Button(self, label="Redo")
         sizer.Add(redo_button, sizerflags)
-        redo_button.Bind(wx.EVT_BUTTON, lambda _: controller.try_redo())
+        redo_button.Bind(wx.EVT_BUTTON, lambda _: controller.redo())
 
         sizer.Add(zoom_in_btn, sizerflags)
         zoom_in_btn.Bind(wx.EVT_BUTTON, lambda _: zoom_callback(True))
@@ -336,9 +336,9 @@ class MainFrame(wx.Frame):
                          id_=wx.ID_EXIT)
 
         edit_menu = wx.Menu()
-        self.AddMenuItem(edit_menu, '&Undo', 'Undo action', lambda _: controller.try_undo(),
+        self.AddMenuItem(edit_menu, '&Undo', 'Undo action', lambda _: controller.undo(),
                          entries, key=(wx.ACCEL_CTRL, ord('Z')))
-        self.AddMenuItem(edit_menu, '&Redo', 'Redo action', lambda _: controller.try_redo(),
+        self.AddMenuItem(edit_menu, '&Redo', 'Redo action', lambda _: controller.redo(),
                          entries, key=(wx.ACCEL_CTRL, ord('Y')))
         edit_menu.AppendSeparator()
         self.AddMenuItem(edit_menu, '&Copy', 'Copy selected nodes', lambda _: canvas.CopySelected(),

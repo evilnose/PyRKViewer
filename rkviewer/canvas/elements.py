@@ -5,15 +5,15 @@ import bisect
 import enum
 from functools import partial
 from itertools import chain
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
 
 import wx
 
 from ..config import settings, theme
 from ..events import (
-    DidDragResizeNodesEvent,
-    DidMoveNodesEvent,
-    post_event,
+    CanvasEvent, DidDragResizeNodesEvent,
+    DidMoveNodesEvent, bind_handler,
+    post_event, unbind_handler,
 )
 from ..mvc import IController
 from ..utils import even_round, gchain, int_round
@@ -42,16 +42,22 @@ class CanvasElement:
     """
     layers: List[int]
     enabled: bool
+    destroyed: bool
 
     def __init__(self, layers: Union[int, List[int]]):
         if isinstance(layers, int):
             layers = [layers]
         self.layers = layers
         self.enabled = True
+        self.destroyed = False
 
     def set_layers(self, layers: Union[int, List[int]]):
         if isinstance(layers, int):
             self.layers = [layers]
+
+    def destroy(self):
+        """Destroy this element; override this for specific implementations."""
+        self.destroyed = True
 
     @abstractmethod
     def pos_inside(self, logical_pos: Vec2) -> bool:
@@ -215,6 +221,7 @@ class ReactionElement(CanvasElement):
     """
     reaction: Reaction
     index_to_bz: Dict[RIndex, SpeciesBezier]
+    moved_handler_id: int
     #: Set of indices of the nodes that have been moved, but not committed.
     _dirty_node_indices: Set[int]
     #: Works in tandem with _dirty_indices. True if all nodes of the reaction are being moved.
@@ -225,6 +232,7 @@ class ReactionElement(CanvasElement):
     def __init__(self, reaction: Reaction, canvas, layer: int, handle_layer: int):
         super().__init__(layer)
         self.reaction = reaction
+        self.moved_handler_id = bind_handler(DidMoveNodesEvent, self.nodes_moved)
         # i is 0 for source Beziers, but 1 for dest Beziers. "not" it to get the correct bool.
         self.index_to_bz = {(bz.node.index, not gi): bz
                             for bz, gi in gchain(reaction.bezier.src_beziers,
@@ -247,9 +255,9 @@ class ReactionElement(CanvasElement):
             self.beziers.append(el)
 
         def centroid_handle_dropped(p: Vec2):
-            ctrl.try_start_group()
-            ctrl.try_set_center_handle(neti, reai, reaction.bezier.src_c_handle.tip)
-            ctrl.try_end_group()
+            ctrl.start_group()
+            ctrl.set_center_handle(neti, reai, reaction.bezier.src_c_handle.tip)
+            ctrl.end_group()
 
         self.beziers.append(BezierHandle(reaction.bezier.src_c_handle, handle_layer,
                                          lambda _: reaction.bezier.src_handle_moved(),
@@ -261,9 +269,9 @@ class ReactionElement(CanvasElement):
     def make_drop_handle_func(self, ctrl: IController, neti: int, reai: int, nid: str,
                               is_source: bool):
         if is_source:
-            return lambda p: ctrl.try_set_src_node_handle(neti, reai, nid, p)
+            return lambda p: ctrl.set_src_node_handle(neti, reai, nid, p)
         else:
-            return lambda p: ctrl.try_set_dest_node_handle(neti, reai, nid, p)
+            return lambda p: ctrl.set_dest_node_handle(neti, reai, nid, p)
 
     @property
     def selected(self) -> bool:
@@ -276,9 +284,12 @@ class ReactionElement(CanvasElement):
         for bz in self.beziers:
             bz.enabled = val
 
-    def nodes_moved(self, nodes: List[Node], offset: Vec2):
+    def nodes_moved(self, evt: CanvasEvent):
         """Handler for after a node has moved."""
         # If already moving (i.e. self._dirty_indices is not empty), then skip forward
+        c_evt = cast(DidMoveNodesEvent, evt)
+        nodes = c_evt.nodes
+        offset = c_evt.offset
         if len(self._dirty_indices) == 0:
             self._dirty_indices = {n.index for n in nodes}
             my_indices = {n.index for n in chain(self.reaction.sources, self.reaction.targets)}
@@ -302,15 +313,19 @@ class ReactionElement(CanvasElement):
         reai = self.reaction.index
         for bz in self.reaction.bezier.src_beziers:
             if bz.node.index in self._dirty_indices:
-                ctrl.try_set_src_node_handle(neti, reai, bz.node.id_, bz.handle.tip)
+                ctrl.set_src_node_handle(neti, reai, bz.node.id_, bz.handle.tip)
 
         for bz in self.reaction.bezier.dest_beziers:
             if bz.node.index in self._dirty_indices:
-                ctrl.try_set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.tip)
+                ctrl.set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.tip)
 
         if self._moving_all:
-            ctrl.try_set_center_handle(neti, reai, self.reaction.bezier.src_c_handle.tip)
+            ctrl.set_center_handle(neti, reai, self.reaction.bezier.src_c_handle.tip)
         self._dirty_indices = set()
+
+    def destroy(self):
+        unbind_handler(self.moved_handler_id)
+        super().destroy()
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return self.reaction.bezier.is_mouse_on(logical_pos)
@@ -557,24 +572,24 @@ class SelectBox(CanvasElement):
         if self._mode == SelectBox.Mode.MOVING:
             if self._did_move:
                 self._did_move = False
-                self.controller.try_start_group()
+                self.controller.start_group()
 
                 # TODO write out logic for moving/resizing multiple selected nodes/compartments
                 for node in self.nodes:
-                    self.controller.try_move_node(self.net_index, node.index, node.position)
+                    self.controller.move_node(self.net_index, node.index, node.position)
                     # TODO change this to controller code once possible
                 bounding_rect = get_bounding_rect([n.rect for n in self.nodes])
                 for comp in reversed(self.compartments):
                     if comp.rect.contains(bounding_rect):
                         pass  # TODO Here
-                self.controller.try_end_group()
+                self.controller.end_group()
         elif self._mode == SelectBox.Mode.RESIZING:
             assert not self._did_move
-            self.controller.try_start_group()
+            self.controller.start_group()
             for node in self.nodes:
-                self.controller.try_move_node(self.net_index, node.index, node.position)
-                self.controller.try_set_node_size(self.net_index, node.index, node.size)
-            self.controller.try_end_group()
+                self.controller.move_node(self.net_index, node.index, node.position)
+                self.controller.set_node_size(self.net_index, node.index, node.size)
+            self.controller.end_group()
         self._mode = SelectBox.Mode.IDLE
 
     def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:

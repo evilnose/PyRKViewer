@@ -550,7 +550,7 @@ class ReactionBezier:
 @dataclass
 class Compartment:
     id_: str
-    nodes: List[Node]
+    nodes: List[int]
     virtual_size: float  #: Size (i.e. length/area/volume/...) of the container
     position: Vec2
     size: Vec2  #: Size for drawing on the GUI

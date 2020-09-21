@@ -326,6 +326,10 @@ class Canvas(wx.ScrolledWindow):
     def Reset(self, nodes: List[Node], reactions: List[Reaction]):
         """Update the list of nodes and apply the current scale."""
         # TODO create elements from compartments
+        # destroy old elements
+        for elt in self._elements:
+            elt.destroy()
+
         # cull removed indices
         node_idx = {n.index for n in nodes}
         rxn_idx = {r.index for r in reactions}
@@ -569,9 +573,9 @@ class Canvas(wx.ScrolledWindow):
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])
 
-                self.controller.try_start_group()
-                self.controller.try_add_node_g(self._net_index, node)
-                self.controller.try_end_group()
+                self.controller.start_group()
+                self.controller.add_node_g(self._net_index, node)
+                self.controller.end_group()
 
                 index = self.controller.get_node_index(self._net_index, node.id_)
                 self.sel_nodes_idx.set_item({index})
@@ -917,10 +921,6 @@ class Canvas(wx.ScrolledWindow):
         finally:
             evt.Skip()
 
-    def OnNodesDidMove(self, evt):
-        for elt in self._reaction_elements:
-            elt.nodes_moved(evt.nodes, evt.offset)
-
     def OnDidCommitNodePositions(self, _):
         for elt in self._reaction_elements:
             elt.commit_node_pos()
@@ -960,12 +960,12 @@ depend on it.".format(bound_node.id_))
                                     .format(bound_node.id_, node_idx))
                 return
 
-        self.controller.try_start_group()
+        self.controller.start_group()
         for index in sel_reactions_idx:
-            self.controller.try_delete_reaction(self._net_index, index)
+            self.controller.delete_reaction(self._net_index, index)
         for index in sel_nodes_idx:
-            self.controller.try_delete_node(self._net_index, index)
-        self.controller.try_end_group()
+            self.controller.delete_node(self._net_index, index)
+        self.controller.end_group()
 
     def SelectAll(self):
         self.sel_nodes_idx.set_item({n.index for n in self._nodes})
@@ -1017,7 +1017,7 @@ depend on it.".format(bound_node.id_))
             line_thickness=theme['reaction_line_thickness'],
             rate_law='',
         )
-        self.controller.try_add_reaction_g(self._net_index, reaction)
+        self.controller.add_reaction_g(self._net_index, reaction)
         self._reactant_idx.clear()
         self._product_idx.clear()
         self.sel_nodes_idx.set_item(set())
@@ -1035,20 +1035,20 @@ depend on it.".format(bound_node.id_))
         pasted_ids = set()
         all_ids = {n.id_ for n in self._nodes}
 
-        self.controller.try_start_group()
+        self.controller.start_group()
         # get unique IDs
         for node in self._copied_nodes:
             node.id_ = self._GetUniqueName(node.id_, pasted_ids, all_ids)
             node.position += Vec2.repeat(20)
             pasted_ids.add(node.id_)
             self._nodes.append(node)  # add this for the event handlers to see
-            self.controller.try_start_group()
-            self.controller.try_add_node_g(self._net_index, node)
-            self.controller.try_end_group()
+            self.controller.start_group()
+            self.controller.add_node_g(self._net_index, node)
+            self.controller.end_group()
 
         self.sel_nodes_idx.set_item({self.controller.get_node_index(self._net_index, id_)
                                      for id_ in pasted_ids})
-        self.controller.try_end_group()  # calls UpdateMultiSelect in a moment
+        self.controller.end_group()  # calls UpdateMultiSelect in a moment
 
     def ShowWarningDialog(self, msg: str):
         wx.MessageBox(msg, 'Warning', wx.OK | wx.ICON_WARNING)

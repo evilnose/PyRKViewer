@@ -3,13 +3,17 @@
 These events may later be used within a plugin system, where plugins are allowed to bind their own
 handlers to these events.
 """
+from __future__ import annotations
 # pylint: disable=maybe-no-member
+from itertools import chain
+from rkplugin.api import cur_net_index
 import wx
 from dataclasses import dataclass, is_dataclass, fields
 from rkviewer.canvas.geometry import Vec2
 from rkviewer.canvas.data import Node, Reaction
+from rkviewer.canvas.elements import CanvasElement
 from collections import defaultdict
-from typing import Callable, DefaultDict, Dict, List, Set, Type, TypeVar
+from typing import Callable, DefaultDict, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 
 class CanvasEvent:
@@ -112,14 +116,84 @@ class DidPaintCanvasEvent(CanvasEvent):
     gc: wx.GraphicsContext
 
 
+class HandlerNode:
+    next_: Optional[HandlerNode]
+    prev: Optional[HandlerNode]
+    handler: EventCallback
+
+    def __init__(self, handler: EventCallback):
+        self.handler = handler
+        self.next_ = None
+
+
 EventCallback = Callable[[CanvasEvent], None]
-event_map: DefaultDict[Type[CanvasEvent], List[EventCallback]] = defaultdict(list)
+# Maps CanvasElement to a dict that maps events to handler nodes
+handler_map: Dict[int, Tuple[HandlerChain, HandlerNode]]
+# Maps event to a chain of handlers
+event_chains: DefaultDict[Type[CanvasEvent], HandlerChain] = defaultdict(lambda: HandlerChain())
+
+handler_id = 0
 
 
-def bind_handler(cls: Type[CanvasEvent], callback: EventCallback):
-    event_map[cls].append(callback)
+class HandlerChain:
+    head: Optional[HandlerNode]
+    tail: Optional[HandlerNode]
+
+    def __init__(self):
+        self.head = None
+        self.tail = None
+        self.it_cur = None
+
+    def remove(self, node: HandlerNode):
+        node.prev.next_ = node.next_
+        node.next_.prev = node.prev
+
+        if node.prev is None:
+            self.head = node.next_
+        if node.next_ is None:
+            self.tail = node.prev
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        it_cur = self.head
+        while it_cur is not None:
+            yield it_cur.handler
+            it_cur = it_cur.next_
+
+        raise StopIteration
+
+
+    def append(self, handler: EventCallback) -> HandlerNode:
+        node = HandlerNode(handler)
+        if self.head is None:
+            assert self.tail is None
+            self.head = self.tail = node
+        else:
+            assert self.head is None
+            node.prev = self.tail
+            self.tail = node
+
+        return node
+
+
+def bind_handler(evt_cls: Type[CanvasEvent], callback: EventCallback) -> int:
+    global handler_id
+    ret = handler_id
+    chain = event_chains[evt_cls]
+    hnode = chain.append(callback)
+    handler_map[ret] = (chain, hnode)
+    handler_id += 1
+    return ret
+
+
+def unbind_handler(handler_id: int):
+    chain, hnode = handler_map[handler_id]
+    chain.remove(hnode)
+    del handler_map[handler_id]
 
 
 def post_event(evt: CanvasEvent):
-    for callback in event_map[type(evt)]:
+    for callback in iter(event_chains[type(evt)]):
         callback(evt)

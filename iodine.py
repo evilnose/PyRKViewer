@@ -327,7 +327,7 @@ def newNetwork(netID:str):
         networkSet.append(newNetwork)
 
 
-def getNetworkIndex(netID: str):
+def getNetworkIndex(netID: str) -> int:
     """
     getNetworkIndex 
     return: -2: net id can't find

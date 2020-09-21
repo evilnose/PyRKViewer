@@ -47,8 +47,7 @@ class ColorSelected(WindowedPlugin):
         with api.group_action():
             # color selected nodes
             for index in api.selected_node_indices():
-                api.set_node_fill(api.cur_net_index(), index, color)
-                api.set_node_border(api.cur_net_index(), index, color)
+                api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
 
             # color selected reactions
             for index in api.selected_reaction_indices():

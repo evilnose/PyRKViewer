@@ -531,7 +531,7 @@ class NodeForm(EditPanelForm):
             else:
                 # loop terminated fine. There is no duplicate ID
                 self._self_changes = True
-                if not self.controller.try_rename_node(self.net_index, nodei, new_id):
+                if not self.controller.rename_node(self.net_index, nodei, new_id):
                     # this should not happen!
                     assert False
         self._SetValidationState(True, self.id_ctrl.GetId())
@@ -558,22 +558,22 @@ class NodeForm(EditPanelForm):
             if node.position != clamped or pos != clamped:
                 self._self_changes = True
                 node.position = clamped
-                self.controller.try_start_group()
+                self.controller.start_group()
                 post_event(DidMoveNodesEvent(nodes, clamped - node.position, dragged=False))
-                self.controller.try_move_node(self.net_index, node.index, node.position)
-                self.controller.try_end_group()
+                self.controller.move_node(self.net_index, node.index, node.position)
+                self.controller.end_group()
         else:
             clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
             if self._bounding_rect.position != pos or pos != clamped:
                 offset = clamped - self._bounding_rect.position
                 self._self_changes = True
-                self.controller.try_start_group()
+                self.controller.start_group()
                 for node in nodes:
                     node.position += offset
                 post_event(DidMoveNodesEvent(nodes, offset, dragged=False))
                 for node in nodes:
-                    self.controller.try_move_node(self.net_index, node.index, node.position)
-                self.controller.try_end_group()
+                    self.controller.move_node(self.net_index, node.index, node.position)
+                self.controller.end_group()
         self._SetValidationState(True, self.pos_ctrl.GetId())
 
     def _OnSizeText(self, evt):
@@ -600,7 +600,7 @@ class NodeForm(EditPanelForm):
             clamped = clamp_rect_size(Rect(node.position, size), self.canvas.realsize)
             if node.size != clamped or size != clamped:
                 self._self_changes = True
-                self.controller.try_set_node_size(self.net_index, node.index,
+                self.controller.set_node_size(self.net_index, node.index,
                                                   Vec2(clamped.x, clamped.y))
         else:
             min_nw = min(n.size.x for n in nodes)
@@ -619,14 +619,14 @@ class NodeForm(EditPanelForm):
             if self._bounding_rect.size != clamped or size != clamped:
                 ratio = clamped.elem_div(self._bounding_rect.size)
                 self._self_changes = True
-                self.controller.try_start_group()
+                self.controller.start_group()
                 for node in nodes:
                     rel_pos = node.position - self._bounding_rect.position
                     new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
-                    self.controller.try_move_node(self.net_index, node.index, new_pos)
-                    self.controller.try_set_node_size(self.net_index, node.index,
+                    self.controller.move_node(self.net_index, node.index, new_pos)
+                    self.controller.set_node_size(self.net_index, node.index,
                                                       node.size.elem_mul(ratio))
-                self.controller.try_end_group()
+                self.controller.end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
     def _OnFillColorChanged(self, evt: wx.Event):
@@ -634,58 +634,58 @@ class NodeForm(EditPanelForm):
         fill = evt.GetColour()
         nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
             if on_msw():
-                self.controller.try_set_node_fill_rgb(self.net_index, node.index, fill)
+                self.controller.set_node_fill_rgb(self.net_index, node.index, fill)
             else:
                 # we can set both the RGB and the alpha at the same time
-                self.controller.try_set_node_fill_rgb(self.net_index, node.index, fill)
-                self.controller.try_set_node_fill_alpha(self.net_index, node.index, fill.Alpha())
-        self.controller.try_end_group()
+                self.controller.set_node_fill_rgb(self.net_index, node.index, fill)
+                self.controller.set_node_fill_alpha(self.net_index, node.index, fill.Alpha())
+        self.controller.end_group()
 
     def _OnBorderColorChanged(self, evt: wx.Event):
         """Callback for the border color control."""
         border = evt.GetColour()
         nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
             if on_msw():
-                self.controller.try_set_node_border_rgb(self.net_index, node.index, border)
+                self.controller.set_node_border_rgb(self.net_index, node.index, border)
             else:
                 # we can set both the RGB and the alpha at the same time
-                self.controller.try_set_node_border_rgb(self.net_idnex, node.index, border)
-                self.controller.try_set_node_border_alpha(
+                self.controller.set_node_border_rgb(self.net_idnex, node.index, border)
+                self.controller.set_node_border_alpha(
                     self.net_index, node.index, border.Alpha())
-        self.controller.try_end_group()
+        self.controller.end_group()
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
         nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
-            self.controller.try_set_node_fill_alpha(self.net_index, node.index, int(alpha * 255))
-        self.controller.try_end_group()
+            self.controller.set_node_fill_alpha(self.net_index, node.index, int(alpha * 255))
+        self.controller.end_group()
 
     def _BorderAlphaCallback(self, alpha: float):
         """Callback for when the border alpha changes."""
         nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
-            self.controller.try_set_node_border_alpha(self.net_index, node.index, int(alpha * 255))
-        self.controller.try_end_group()
+            self.controller.set_node_border_alpha(self.net_index, node.index, int(alpha * 255))
+        self.controller.end_group()
 
     def _BorderWidthCallback(self, width: float):
         """Callback for when the border width changes."""
         nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
-            self.controller.try_set_node_border_width(self.net_index, node.index, width)
-        self.controller.try_end_group()
+            self.controller.set_node_border_width(self.net_index, node.index, width)
+        self.controller.end_group()
 
     def UpdateAllFields(self):
         """Update the form field values based on current data."""
@@ -801,7 +801,7 @@ class ReactionForm(EditPanelForm):
 
             # loop terminated fine. There is no duplicate ID
             self._self_changes = True
-            self.controller.try_rename_reaction(self.net_index, reai, new_id)
+            self.controller.rename_reaction(self.net_index, reai, new_id)
             self._SetValidationState(True, ctrl_id)
 
     def _OnFillColorChanged(self, evt: wx.Event):
@@ -809,24 +809,24 @@ class ReactionForm(EditPanelForm):
         fill = evt.GetColour()
         reactions = [r for r in self._reactions if r.index in self._sel_nodes_idx]
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for rxn in reactions:
             if on_msw():
-                self.controller.try_set_reaction_fill_rgb(self.net_index, rxn.index, fill)
+                self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
             else:
                 # we can set both the RGB and the alpha at the same time
-                self.controller.try_set_reaction_fill_rgb(self.net_index, rxn.index, fill)
-                self.controller.try_set_reaction_fill_alpha(self.net_index, rxn.index, fill.Alpha())
-        self.controller.try_end_group()
+                self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
+                self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, fill.Alpha())
+        self.controller.end_group()
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
         reactions = (r for r in self._reactions if r.index in self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for rxn in reactions:
-            self.controller.try_set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
-        self.controller.try_end_group()
+            self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
+        self.controller.end_group()
 
     def _OnRateLawText(self, evt: wx.Event):
         ratelaw = evt.GetString()
@@ -834,7 +834,7 @@ class ReactionForm(EditPanelForm):
             'multiple are selected'
         [reai] = self._sel_nodes_idx
         self._self_changes = True
-        self.controller.try_set_reaction_ratelaw(self.net_index, reai, ratelaw)
+        self.controller.set_reaction_ratelaw(self.net_index, reai, ratelaw)
 
     def UpdateReactions(self, reactions: List[Reaction]):
         """Function called after the list of nodes have been updated."""
@@ -914,14 +914,14 @@ class ReactionForm(EditPanelForm):
     def _MakeSetSrcStoichFunction(self, reai: int, node_id: str):
         def ret(val: float):
             self._self_changes = True
-            self.controller.try_set_src_node_stoich(self.net_index, reai, node_id, val)
+            self.controller.set_src_node_stoich(self.net_index, reai, node_id, val)
 
         return ret
 
     def _MakeSetDestStoichFunction(self, reai: int, node_id: str):
         def ret(val: float):
             self._self_changes = True
-            self.controller.try_set_dest_node_stoich(self.net_index, reai, node_id, val)
+            self.controller.set_dest_node_stoich(self.net_index, reai, node_id, val)
 
         return ret
 

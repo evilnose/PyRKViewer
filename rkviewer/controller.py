@@ -14,7 +14,7 @@ from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView
 
 
-def try_setter(controller_setter):
+def setter(controller_setter):
     """Decorator for controller setter methods that catches Errors and auto updates views."""
     # If programmatic is True, then do not trigger a C-Event
     def ret(self, *args):
@@ -51,7 +51,7 @@ class Controller(IController):
         self.stacklen = 0  # TODO temporary hack to not undo the first newNetwork() operation.
         self.group_depth = 0
 
-    def try_start_group(self) -> bool:
+    def start_group(self) -> bool:
         self.group_depth += 1
 
         # already in a group before; don't start startGroup()
@@ -60,7 +60,7 @@ class Controller(IController):
         iod.startGroup()
         return True
 
-    def try_end_group(self) -> bool:
+    def end_group(self) -> bool:
         assert self.group_depth > 0
         self.group_depth -= 1
 
@@ -75,7 +75,7 @@ class Controller(IController):
     def in_group(self) -> bool:
         return self.group_depth > 0
 
-    def try_undo(self) -> bool:
+    def undo(self) -> bool:
         if self.stacklen == 0:
             return False
         try:
@@ -92,7 +92,7 @@ class Controller(IController):
         self._update_view()
         return True
 
-    def try_redo(self) -> bool:
+    def redo(self) -> bool:
         try:
             assert self.group_depth == 0
             iod.redo()
@@ -106,14 +106,14 @@ class Controller(IController):
         self._update_view()
         return True
 
-    @try_setter
-    def try_add_node_g(self, neti: int, node: Node, programmatic: bool = False):
+    @setter
+    def add_node_g(self, neti: int, node: Node, programmatic: bool = False):
         '''
         Add node represented by the given Node variable.
 
         The 'g' suffix indicates that this operation creates its own group
         '''
-        self.try_start_group()
+        self.start_group()
         iod.addNode(neti, node.id_, node.position.x, node.position.y, node.size.x, node.size.y)
         nodei = iod.getNodeIndex(neti, node.id_)
         iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
@@ -126,72 +126,72 @@ class Controller(IController):
 
         if not programmatic:
             post_event(DidAddNodeEvent(node))
-        self.try_end_group()
+        self.end_group()
 
-    @try_setter
-    def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False):
+    @setter
+    def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False):
         assert pos.x >= 0 and pos.y >= 0
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
         # dispatch event if the call was caused by user input
         if not programmatic:
             post_event(DidCommitNodePositionsEvent())
 
-    @try_setter
-    def try_set_node_size(self, neti: int, nodei: int, size: Vec2):
+    @setter
+    def set_node_size(self, neti: int, nodei: int, size: Vec2):
         iod.setNodeSize(neti, nodei, size.x, size.y)
 
-    @try_setter
-    def try_rename_node(self, neti: int, nodei: int, new_id: str):
+    @setter
+    def rename_node(self, neti: int, nodei: int, new_id: str):
         iod.setNodeID(neti, nodei, new_id)
 
-    @try_setter
-    def try_set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour):
+    @setter
+    def set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour):
         iod.setNodeFillColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
-    @try_setter
-    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: int):
+    @setter
+    def set_node_fill_alpha(self, neti: int, nodei: int, alpha: int):
         iod.setNodeFillColorAlpha(neti, nodei, alpha / 255)
 
-    @try_setter
-    def try_set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour):
+    @setter
+    def set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour):
         iod.setNodeOutlineColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
-    @try_setter
-    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: int):
+    @setter
+    def set_node_border_alpha(self, neti: int, nodei: int, alpha: int):
         iod.setNodeOutlineColorAlpha(neti, nodei, alpha / 255)
 
-    @try_setter
-    def try_rename_reaction(self, neti: int, reai: int, new_id: str):
+    @setter
+    def rename_reaction(self, neti: int, reai: int, new_id: str):
         iod.setReactionID(neti, reai, new_id)
 
-    @try_setter
-    def try_set_reaction_line_thickness(self, neti: int, reai: int, thickness: float):
+    @setter
+    def set_reaction_line_thickness(self, neti: int, reai: int, thickness: float):
         iod.setReactionLineThickness(neti, reai, thickness)
 
-    @try_setter
-    def try_set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour):
+    @setter
+    def set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour):
         iod.setReactionFillColorRGB(neti, reai, color.Red(), color.Green(), color.Blue())
 
-    @try_setter
-    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int):
+    @setter
+    def set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int):
         iod.setReactionFillColorAlpha(neti, reai, alpha / 255)
 
-    @try_setter
-    def try_set_node_border_width(self, neti: int, nodei: int, width: float):
+    @setter
+    def set_node_border_width(self, neti: int, nodei: int, width: float):
         iod.setNodeOutlineThickness(neti, nodei, width)
 
-    @try_setter
-    def try_delete_node(self, neti: int, nodei: int):
+    @setter
+    def delete_node(self, neti: int, nodei: int):
         iod.deleteNode(neti, nodei)
 
-    @try_setter
-    def try_delete_reaction(self, neti: int, reai: int):
+    @setter
+    def delete_reaction(self, neti: int, reai: int):
         iod.deleteReaction(neti, reai)
 
-    @try_setter
-    def try_add_reaction_g(self, neti: int, reaction: Reaction):
+    @setter
+    def add_reaction_g(self, neti: int, reaction: Reaction):
         """Try create a reaction."""
-        self.try_start_group()
+        self.start_group()
         iod.createReaction(neti, reaction.id_)
         reai = iod.getReactionIndex(neti, reaction.id_)
 
@@ -214,30 +214,30 @@ class Controller(IController):
 
         cpos = reaction.bezier.src_c_handle.tip
         iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
-        self.try_end_group()
+        self.end_group()
 
-    @try_setter
-    def try_set_reaction_ratelaw(self, neti: int, reai: int, ratelaw: str):
+    @setter
+    def set_reaction_ratelaw(self, neti: int, reai: int, ratelaw: str):
         iod.setRateLaw(neti, reai, ratelaw)
 
-    @try_setter
-    def try_set_src_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
+    @setter
+    def set_src_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
         iod.setReactionSrcNodeStoich(neti, reai, node_id, stoich)
 
-    @try_setter
-    def try_set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
+    @setter
+    def set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
         iod.setReactionDestNodeStoich(neti, reai, node_id, stoich)
 
-    @try_setter
-    def try_set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+    @setter
+    def set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
         iod.setReactionSrcNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
 
-    @try_setter
-    def try_set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+    @setter
+    def set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
         iod.setReactionDestNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
 
-    @try_setter
-    def try_set_center_handle(self, neti: int, reai: int, pos: Vec2):
+    @setter
+    def set_center_handle(self, neti: int, reai: int, pos: Vec2):
         iod.setReactionCenterHandlePosition(neti, reai, pos.x, pos.y)
 
     def get_src_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
@@ -270,6 +270,51 @@ class Controller(IController):
     def get_reaction_index(self, neti: int, rxn_id: str) -> int:
         return iod.getReactionIndex(neti, rxn_id)
 
+    def get_node_by_index(self, neti: int, nodei: int) -> Node:
+        id_ = iod.getNodeID(neti, nodei)
+        x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)
+        fill_alpha = iod.getNodeFillColorAlpha(neti, nodei)
+        fill_rgb = iod.getNodeFillColorRGB(neti, nodei)
+        fill_color = rgba_to_wx_colour(fill_rgb, fill_alpha)
+        border_alpha = iod.getNodeOutlineColorAlpha(neti, nodei)
+        border_rgb = iod.getNodeOutlineColorRGB(neti, nodei)
+        border_color = rgba_to_wx_colour(border_rgb, border_alpha)
+        return Node(
+            id_,
+            index=nodei,
+            pos=Vec2(x, y),
+            size=Vec2(w, h),
+            fill_color=fill_color,
+            border_color=border_color,
+            border_width=iod.getNodeOutlineThickness(neti, nodei),
+        )
+
+    def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:
+        id_ = iod.getReactionID(neti, reai)
+        sids = iod.getListOfReactionSrcNodes(neti, reai)
+        sources = get_nodes_by_ident(nodes, sids)
+        tids = iod.getListOfReactionDestNodes(neti, reai)
+        targets = get_nodes_by_ident(nodes, tids)
+        fill_rgb = iod.getReactionFillColorRGB(neti, reai)
+        fill_alpha = iod.getReactionFillColorAlpha(neti, reai)
+
+        items = list()
+        items.append(self.get_center_handle(neti, reai))
+        for node in sources:
+            items.append(self.get_src_node_handle(neti, reai, node.id_))
+        for node in targets:
+            items.append(self.get_dest_node_handle(neti, reai, node.id_))
+
+        reaction = Reaction(id_,
+                            sources=sources,
+                            targets=targets,
+                            fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
+                            line_thickness=iod.getReactionLineThickness(neti, reai),
+                            index=reai,
+                            rate_law=iod.getReactionRateLaw(neti, reai),
+                            handle_pos=items
+                            )
+
     # get the updated list of nodes from model and update
     def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
@@ -279,49 +324,10 @@ class Controller(IController):
         reactions = list()
         for id_ in iod.getListOfNodeIDs(neti):
             nodei = iod.getNodeIndex(neti, id_)
-            x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)
-            fill_alpha = iod.getNodeFillColorAlpha(neti, nodei)
-            fill_rgb = iod.getNodeFillColorRGB(neti, nodei)
-            fill_color = rgba_to_wx_colour(fill_rgb, fill_alpha)
-            border_alpha = iod.getNodeOutlineColorAlpha(neti, nodei)
-            border_rgb = iod.getNodeOutlineColorRGB(neti, nodei)
-            border_color = rgba_to_wx_colour(border_rgb, border_alpha)
-            node = Node(
-                id_,
-                index=nodei,
-                pos=Vec2(x, y),
-                size=Vec2(w, h),
-                fill_color=fill_color,
-                border_color=border_color,
-                border_width=iod.getNodeOutlineThickness(neti, nodei),
-            )
-            nodes.append(node)
+            nodes.append(self.get_node_by_index(neti, nodei))
 
         for id_ in iod.getListOfReactionIDs(neti):
             reai = iod.getReactionIndex(neti, id_)
-            sids = iod.getListOfReactionSrcNodes(neti, reai)
-            sources = get_nodes_by_ident(nodes, sids)
-            tids = iod.getListOfReactionDestNodes(neti, reai)
-            targets = get_nodes_by_ident(nodes, tids)
-            fill_rgb = iod.getReactionFillColorRGB(neti, reai)
-            fill_alpha = iod.getReactionFillColorAlpha(neti, reai)
-
-            items = list()
-            items.append(self.get_center_handle(neti, reai))
-            for node in sources:
-                items.append(self.get_src_node_handle(neti, reai, node.id_))
-            for node in targets:
-                items.append(self.get_dest_node_handle(neti, reai, node.id_))
-
-            reaction = Reaction(id_,
-                                sources=sources,
-                                targets=targets,
-                                fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
-                                line_thickness=iod.getReactionLineThickness(neti, reai),
-                                index=reai,
-                                rate_law=iod.getReactionRateLaw(neti, reai),
-                                handle_pos=items
-                                )
             reactions.append(reaction)
 
         self.view.update_all(nodes, reactions)

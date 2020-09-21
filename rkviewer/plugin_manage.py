@@ -88,9 +88,9 @@ Plugin!".format(handler_name)
 
     def make_command_callback(self, command: CommandPlugin) -> Callable[[Any], None]:
         def command_cb(_):
-            self.controller.try_start_group()
+            self.controller.start_group()
             command.run()
-            self.controller.try_end_group()
+            self.controller.end_group()
 
         return command_cb
 

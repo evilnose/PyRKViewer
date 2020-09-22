@@ -37,17 +37,21 @@ def cur_net_index() -> int:
 
 @contextmanager
 def group_action():
+    """Context manager for doing a group operation in the controller, for undo/redo purposes.
+
+    TODO more documentation on this
+    """
     _controller.start_group()
     yield
     _controller.end_group()
 
 
 def all_nodes() -> List[Node]:
-    return _canvas.nodes
+    return _controller.get_list_of_nodes(cur_net_index())
 
 
 def all_reactions() -> List[Reaction]:
-    return _canvas.reactions
+    return _controller.get_list_of_reactions(cur_net_index())
 
 
 def selected_nodes() -> List[Node]:
@@ -63,12 +67,19 @@ def selected_reaction_indices() -> Set[int]:
 
 
 def get_node_by_index(net_index: int, node_index: int) -> Node:
-    pass #TODO
+    return _controller.get_node_by_index(net_index, node_index)
 
 
 def get_reaction_by_index(net_index: int, reaction_index: int) -> Node:
-    reactions = [n for n in _canvas.nodes]
-    return nodes[0]
+    return _controller.get_reaction_by_index(net_index, reaction_index)
+
+
+def add_node(net_index: int, node: Node):
+    _controller.add_node_g(net_index, node)
+
+
+def add_reaction(net_index: int, reaction: Reaction):
+    _controller.add_reaction_g(net_index, reaction)
 
 
 # TODO add "cosmetic" versions of these functions, where changes made to controller are not added
@@ -78,6 +89,22 @@ def get_reaction_by_index(net_index: int, reaction_index: int) -> Node:
 def update_node(net_index: int, node_index: int, id_: str = None, fill_color: wx.Colour = None,
                 border_color: wx.Colour = None, border_width: float = None, position: Vec2 = None,
                 size: Vec2 = None):
+    """Update one or multiple properties of a node.
+
+    Args:
+        net_index: The network index.
+        node_index: The node index of the node to modify.
+        id_: If specified, the new ID of the node.
+        fill_color: If specified, the new fill color of the node.
+        border_color: If specified, the new border color of the node.
+        border_width: If specified, the new border width of the node.
+        position: If specified, the new position of the node.
+        size: If specified, the new size of the node.
+
+    Raises:
+        ValueError: If ID is empty or if at least one of border_width, position, and size is out of
+                    range.
+    """
     # Make sure this node exists
     old_node = get_node_by_index(net_index, node_index)
     # Validate
@@ -90,11 +117,11 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: wx
         raise ValueError("border_width must be at least 0")
 
     # Check position at least 0
-    if position.x < 0 or position.y < 0:
+    if position is not None and (position.x < 0 or position.y < 0):
         raise ValueError("position cannot have negative coordinates, but got '{}'".format(position))
 
     # Check size at least 0
-    if size.x < 0 or size.y < 0:
+    if size is not None and (size.x < 0 or size.y < 0):
         raise ValueError("size cannot have negative coordinates, but got '{}'".format(size))
 
     # Check within bounds
@@ -149,8 +176,12 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
             _controller.set_reaction_ratelaw(net_index, reaction_index, ratelaw)
 
 
-def update_source_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
-    pass
+def update_reactant_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
+    _controller.set_src_node_stoich(net_index, reaction_index, node_index, stoich)
+
+
+def update_product_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
+    _controller.set_dest_node_stoich(net_index, reaction_index, node_index, stoich)
 
 
 def get_arrow_tip() -> ArrowTip:

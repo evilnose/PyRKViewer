@@ -48,6 +48,7 @@ class Controller(IController):
 
     def __init__(self, view: IView):
         self.view = view
+        iod.reset()
         iod.newNetwork('the one')
         self.stacklen = 0  # TODO temporary hack to not undo the first newNetwork() operation.
         self.group_depth = 0
@@ -223,11 +224,13 @@ class Controller(IController):
         iod.setRateLaw(neti, reai, ratelaw)
 
     @setter
-    def set_src_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
+    def set_src_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float):
+        node_id = iod.getNodeID(neti, nodei)
         iod.setReactionSrcNodeStoich(neti, reai, node_id, stoich)
 
     @setter
-    def set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float):
+    def set_dest_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float):
+        node_id = iod.getNodeID(neti, nodei)
         iod.setReactionDestNodeStoich(neti, reai, node_id, stoich)
 
     @setter
@@ -253,10 +256,12 @@ class Controller(IController):
     def get_center_handle(self, neti: int, reai: int) -> Vec2:
         return Vec2(iod.getReactionCenterHandlePosition(neti, reai))
 
-    def get_src_node_stoich(self, neti: int, reai: int, node_id: str):
+    def get_src_node_stoich(self, neti: int, reai: int, nodei: int):
+        node_id = iod.getNodeID(neti, nodei)
         return iod.getReactionSrcNodeStoich(neti, reai, node_id)
 
-    def get_dest_node_stoich(self, neti: int, reai: int, node_id: str):
+    def get_dest_node_stoich(self, neti: int, reai: int, nodei: int):
+        node_id = iod.getNodeID(neti, nodei)
         return iod.getReactionDestNodeStoich(neti, reai, node_id)
 
     def get_list_of_src_ids(self, neti: int, reai: int):
@@ -267,6 +272,22 @@ class Controller(IController):
 
     def get_list_of_node_ids(self, neti: int) -> List[str]:
         return iod.getListOfNodeIDs(neti)
+
+    def get_list_of_nodes(self, neti: int) -> List[Node]:
+        nodes = list()
+        for id_ in iod.getListOfNodeIDs(neti):
+            nodei = iod.getNodeIndex(neti, id_)
+            nodes.append(self.get_node_by_index(neti, nodei))
+
+        return nodes
+
+    def get_list_of_reactions(self, neti: int) -> List[Reaction]:
+        reactions = list()
+        for id_ in iod.getListOfReactionIDs(neti):
+            reai = iod.getReactionIndex(neti, id_)
+            reactions.append(self.get_reaction_by_index(neti, reai))
+
+        return reactions
 
     def get_node_index(self, neti: int, node_id: str) -> int:
         return iod.getNodeIndex(neti, node_id)
@@ -322,14 +343,4 @@ class Controller(IController):
         """tell the view to update by re-populating its list of nodes."""
         self.stacklen += 1  # TODO remove once fixed
         neti = 0
-        nodes = list()
-        reactions = list()
-        for id_ in iod.getListOfNodeIDs(neti):
-            nodei = iod.getNodeIndex(neti, id_)
-            nodes.append(self.get_node_by_index(neti, nodei))
-
-        for id_ in iod.getListOfReactionIDs(neti):
-            reai = iod.getReactionIndex(neti, id_)
-            reactions.append(self.get_reaction_by_index(neti, reai))
-
-        self.view.update_all(nodes, reactions)
+        self.view.update_all(self.get_list_of_nodes(neti), self.get_list_of_reactions(neti))

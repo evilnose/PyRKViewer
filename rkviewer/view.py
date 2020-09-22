@@ -412,7 +412,7 @@ class MainFrame(wx.Frame):
     def AddMenuItem(self, menu: wx.Menu, text: str, help_text: str, callback: Callable,
                     entries: List, key: Tuple[Any, wx.KeyCode] = None, id_: str = None):
         if id_ is None:
-            id_ = wx.NewId()
+            id_ = wx.NewIdRef(count=1)
 
         shortcut = ''
         if key is not None:
@@ -478,21 +478,23 @@ class View(IView):
     def __init__(self):
         self.controller = None
         self.manager = None
+        self.app = None
 
     def bind_controller(self, controller: IController):
         self.controller = controller
 
-    def main_loop(self):
+    def init(self):
         assert self.controller is not None
-        app = wx.App()
+        self.app = wx.App()
         self.manager = PluginManager(self.controller)
         self.manager.load_from('plugins')
         self.frame = MainFrame(self.controller, self.manager, title='RK Network Viewer')
         self.canvas_panel = self.frame.main_panel.canvas
-        # self.canvas_panel.RegisterAllChildren(self.frame)
-        self.frame.Show()
 
-        app.MainLoop()
+    def main_loop(self):
+        assert self.app is not None
+        self.frame.Show()
+        self.app.MainLoop()
 
     def update_all(self, nodes: List[Node], reactions: List[Reaction]):
         """Update the list of nodes.

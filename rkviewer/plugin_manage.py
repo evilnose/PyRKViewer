@@ -74,7 +74,7 @@ Plugin!".format(handler_name)
             menu.AppendSeparator()
 
         for plugin in commands:
-            id_ = wx.NewId()
+            id_ = wx.NewIdRef(count=1)
             item = menu.Append(id_, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, self.make_command_callback(plugin), item)
 
@@ -82,7 +82,7 @@ Plugin!".format(handler_name)
             menu.AppendSeparator()
 
         for plugin in windowed:
-            id_ = wx.NewId()
+            id_ = wx.NewIdRef(count=1)
             item = menu.Append(id_, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, self.make_windowed_callback(plugin, parent), item)
 

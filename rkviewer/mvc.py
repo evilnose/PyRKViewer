@@ -110,11 +110,15 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def set_src_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float) -> bool:
+    def set_src_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float) -> bool:
         pass
 
     @abc.abstractmethod
-    def set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float) -> bool:
+    def get_dest_node_stoich(self, neti: int, reai: int, nodei: int) -> float:
+        pass
+
+    @abc.abstractmethod
+    def set_dest_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float) -> bool:
         pass
 
     @abc.abstractmethod
@@ -146,10 +150,6 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_dest_node_stoich(self, neti: int, reai: int, node_id: str) -> float:
-        pass
-
-    @abc.abstractmethod
     def get_list_of_src_ids(self, neti: int, reai: int) -> List[str]:
         pass
 
@@ -160,6 +160,14 @@ class IController(abc.ABC):
     @abc.abstractmethod
     def get_list_of_node_ids(self, neti: int) -> List[str]:
         """Try getting the list of node IDs"""
+        pass
+
+    @abc.abstractmethod
+    def get_list_of_nodes(self, neti: int) -> List[Node]:
+        pass
+
+    @abc.abstractmethod
+    def get_list_of_reactions(self, neti: int) -> List[Reaction]:
         pass
 
     @abc.abstractmethod

@@ -94,4 +94,5 @@ if __name__ == '__main__':
     view = View()
     controller = Controller(view)
     view.bind_controller(controller)
+    view.init()
     view.main_loop()

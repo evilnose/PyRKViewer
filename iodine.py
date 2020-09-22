@@ -2326,52 +2326,13 @@ def setReactionCenterHandlePosition(neti: int, reai: int,  centerHandleX: float,
         networkSet[neti].reactions[reai].centerHandleY = centerHandleY
 
 
-def createUniUni(neti: int, reaID:str, rateLaw:str, srci: int, desti: int, srcStoich:float, destStoich:float):
-    startGroup()
-    createReaction(neti, reaID)
-    reai = getReactionIndex(neti, reaID)
-
-    addSrcNode(neti, reai, srci, srcStoich)
-    addDestNode(neti, reai, desti, destStoich)
-    setRateLaw(neti, reai, rateLaw)
-    endGroup()
-
-
-def CreateUniBi(neti: int, reaID: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich:float, dest2Stoich:float):
-    startGroup()
-    createReaction(neti, reaID)
-    reai = getReactionIndex(neti, reaID)
-
-    addSrcNode(neti, reai, srci, srcStoich)
-    addDestNode(neti, reai, dest1i, dest1Stoich)
-    addDestNode(neti, reai, dest2i, dest2Stoich)
-    setRateLaw(neti, reai, rateLaw)
-    endGroup()
-
-
-def CreateBiUni(neti: int, reaID: str, rateLaw: str, src1i: int, src2i: int, desti: int, src1Stoich: float, src2Stoich: float, destStoich: float):
-    startGroup()
-    createReaction(neti, reaID)
-    reai = getReactionIndex(neti, reaID)
-
-    addSrcNode(neti, reai, src1i, src1Stoich)
-    addSrcNode(neti, reai, src2i, src2Stoich)
-    addDestNode(neti, reai, desti, destStoich)
-    setRateLaw(neti, reai, rateLaw)
-    endGroup()
-
-
-def CreateBiBi(neti:int, reaID:str, rateLaw:str, src1i:int, src2i:int, dest1i:int, dest2i:int, src1Stoich:float, src2Stoich:float, dest1Stoich:float, dest2Stoich:float):
-    startGroup()
-    createReaction(neti, reaID)
-    reai = getReactionIndex(neti, reaID)
-
-    addSrcNode(neti, reai, src1i, src1Stoich)
-    addSrcNode(neti, reai, src2i, src2Stoich)
-    addDestNode(neti, reai, dest1i, dest1Stoich)
-    addDestNode(neti, reai, dest2i, dest2Stoich)
-    setRateLaw(neti, reai, rateLaw)
-    endGroup()
+def reset():
+    global stackFlag, errCode, networkSet, netSetStack, redoStack
+    stackFlag = True
+    errCode = 0
+    networkSet = TNetworkSet()
+    netSetStack = TStack()
+    redoStack = TStack()
 
 
 # newNetwork("net1")

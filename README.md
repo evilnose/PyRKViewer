@@ -29,5 +29,9 @@ currently used one visible.
 accept both a logical_pos and a device_pos as arguments.
 * ENHANCEMENT: Add support for multiple net IDs. Currently all net IDs are set to 0 by default.
 
+## Testing
+To run all tests, go to project root and run `python -m unittest`.
+To run a particular test, run e.g. `python -m unittest test.rkplugin.test_nodes`.
+
 ## Profiling
 `python -m cProfile -o rkviewer.stat main.py`

@@ -1,5 +1,6 @@
 """Classes for storing and managing data for graph elements."""
 # pylint: disable=maybe-no-member
+from __future__ import annotations
 from dataclasses import dataclass
 import wx
 import copy
@@ -102,6 +103,15 @@ class Node:
         """
         return Rect(self.position, self.size)
 
+    def __repr__(self):
+        return 'Node(index={}, id="{}")'.format(self.index, self.id_)
+
+    def props_equal(self, other: Node):
+        return self.id_ == other.id_ and self.position == other.position and \
+            self.size == other.size and self.border_width == other.border_width and \
+            self.border_color.GetRGB() == other.border_color.GetRGB() and \
+            self.fill_color.GetRGB() == other.fill_color.GetRGB()
+
 
 def compute_centroid(rects: Sequence[Rect]) -> Vec2:
     """Compute the centroid position of a list of reactant and product nodes."""
@@ -134,6 +144,7 @@ def init_bezier():
         INITIALIZED = True
 
 
+@dataclass
 class Reaction:
     """Class that keeps track of data for a reaction as well as its Bezier curve.
 

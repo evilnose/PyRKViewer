@@ -147,10 +147,10 @@ def even_round(n: float) -> int:
 
 
 T = TypeVar('T')
-def gchain(*iterables: Iterable[T]) -> Iterable[Tuple[T, int]]:
-    # chain('ABC', 'DEF') --> (A,0) (B, ) (C,0) (D,1) (E,1) (F,1)
+def gchain(*iterables: Iterable[T]) -> Iterable[Tuple[int, T]]:
+    # chain('ABC', 'DEF') --> (0,A) (0,B) (0,C) (1,D) (1,E) (1,F)
     i = 0
     for it in iterables:
         for element in it:
-            yield (element, i)
+            yield (i, element)
         i += 1

@@ -17,8 +17,13 @@ class ExceptionDialog(wx.MessageDialog):
 # for monkey-patching exceptions
 def create_excepthook(old_excepthook):
     dlg = None
+    # whether we've already displayed the dialog once, since wx might take some time to die
+    over = False
     def custom_excepthook(etype, value, tb):
-        nonlocal dlg
+        nonlocal over, dlg
+        if over:
+            return
+        over = True
         err_msg = ''.join(traceback.format_exception(etype, value, tb))
         logging.error(err_msg)
         old_excepthook(etype, value, traceback)

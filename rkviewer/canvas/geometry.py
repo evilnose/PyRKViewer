@@ -181,6 +181,10 @@ class Rect:
         self.position = pos
         self.size = size
 
+    @property
+    def center_point(self) -> Vec2:
+        return self.position + self.size / 2
+
     def __eq__(self, other: Rect) -> bool:
         return self.position == other.position and self.size == other.size
 

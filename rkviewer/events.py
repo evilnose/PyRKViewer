@@ -6,12 +6,10 @@ handlers to these events.
 from __future__ import annotations
 # pylint: disable=maybe-no-member
 from itertools import chain
-from rkplugin.api import cur_net_index
 import wx
 from dataclasses import dataclass, is_dataclass, fields
 from rkviewer.canvas.geometry import Vec2
 from rkviewer.canvas.data import Node, Reaction
-from rkviewer.canvas.elements import CanvasElement
 from collections import defaultdict
 from typing import Callable, DefaultDict, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
@@ -128,7 +126,7 @@ class HandlerNode:
 
 EventCallback = Callable[[CanvasEvent], None]
 # Maps CanvasElement to a dict that maps events to handler nodes
-handler_map: Dict[int, Tuple[HandlerChain, HandlerNode]]
+handler_map: Dict[int, Tuple[HandlerChain, HandlerNode]] = dict()
 # Maps event to a chain of handlers
 event_chains: DefaultDict[Type[CanvasEvent], HandlerChain] = defaultdict(lambda: HandlerChain())
 
@@ -145,25 +143,27 @@ class HandlerChain:
         self.it_cur = None
 
     def remove(self, node: HandlerNode):
-        node.prev.next_ = node.next_
-        node.next_.prev = node.prev
-
-        if node.prev is None:
+        if node.prev is not None:
+            node.prev.next_ = node.next_
+        else:
             self.head = node.next_
-        if node.next_ is None:
+
+        if node.next_ is not None:
+            node.next_.prev = node.prev
+        else:
             self.tail = node.prev
 
     def __iter__(self):
+        self.it_cur = self.head
         return self
 
     def __next__(self):
-        it_cur = self.head
-        while it_cur is not None:
-            yield it_cur.handler
-            it_cur = it_cur.next_
+        if self.it_cur is None:
+            raise StopIteration()
 
-        raise StopIteration
-
+        ret = self.it_cur.handler
+        self.it_cur = self.it_cur.next_
+        return ret
 
     def append(self, handler: EventCallback) -> HandlerNode:
         node = HandlerNode(handler)
@@ -171,8 +171,9 @@ class HandlerChain:
             assert self.tail is None
             self.head = self.tail = node
         else:
-            assert self.head is None
+            assert self.tail is not None
             node.prev = self.tail
+            self.tail.next_ = node
             self.tail = node
 
         return node

@@ -6,7 +6,7 @@ import traceback
 from typing import Collection, List, Optional, Set
 import iodine as iod
 import logging
-from .utils import rgba_to_wx_colour
+from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
 from .canvas.data import Node, Reaction
 from .canvas.geometry import Vec2
@@ -17,6 +17,7 @@ from .mvc import IController, IView
 def setter(controller_setter):
     """Decorator for controller setter methods that catches Errors and auto updates views."""
     # If programmatic is True, then do not trigger a C-Event
+
     def ret(self, *args):
         controller_setter(self, *args)
         '''
@@ -121,7 +122,7 @@ class Controller(IController):
                                 node.fill_color.Green(), node.fill_color.Blue())
         iod.setNodeOutlineColorAlpha(neti, nodei, node.border_color.Alpha() / 255)
         iod.setNodeOutlineColorRGB(neti, nodei, node.border_color.Red(),
-                                    node.border_color.Green(), node.border_color.Blue())
+                                   node.border_color.Green(), node.border_color.Blue())
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
 
         if not programmatic:
@@ -195,24 +196,25 @@ class Controller(IController):
         iod.createReaction(neti, reaction.id_)
         reai = iod.getReactionIndex(neti, reaction.id_)
 
-        for src in reaction.sources:
-            iod.addSrcNode(neti, reai, src.index, 1.0)
+        for sidx in reaction.sources:
+            iod.addSrcNode(neti, reai, sidx, 1.0)
 
-        for tar in reaction.targets:
-            iod.addDestNode(neti, reai, tar.index, 1.0)
+        for tidx in reaction.targets:
+            iod.addDestNode(neti, reai, tidx, 1.0)
 
         iod.setReactionFillColorRGB(neti, reai,
                                     reaction.fill_color.Red(),
                                     reaction.fill_color.Green(),
                                     reaction.fill_color.Blue())
-        for bez, node in zip(reaction.bezier.src_beziers, reaction.sources):
-            pos = bez.handle.tip
-            iod.setReactionSrcNodeHandlePosition(neti, reai, node.id_, pos.x, pos.y)
-        for bez, node in zip(reaction.bezier.dest_beziers, reaction.targets):
-            pos = bez.handle.tip
-            iod.setReactionDestNodeHandlePosition(neti, reai, node.id_, pos.x, pos.y)
+        for (gi, nodei), handle in zip(gchain(reaction.sources, reaction.targets), reaction.handles):
+            pos = handle.tip
+            id_ = iod.getNodeID(neti, nodei)
+            if gi == 0:
+                iod.setReactionSrcNodeHandlePosition(neti, reai, id_, pos.x, pos.y)
+            else:
+                iod.setReactionDestNodeHandlePosition(neti, reai, id_, pos.x, pos.y)
 
-        cpos = reaction.bezier.src_c_handle.tip
+        cpos = reaction.src_c_handle.tip
         iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
         self.end_group()
 
@@ -229,11 +231,13 @@ class Controller(IController):
         iod.setReactionDestNodeStoich(neti, reai, node_id, stoich)
 
     @setter
-    def set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+    def set_src_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
+        node_id = iod.getNodeID(neti, nodei)
         iod.setReactionSrcNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
 
     @setter
-    def set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+    def set_dest_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
+        node_id = iod.getNodeID(neti, nodei)
         iod.setReactionDestNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
 
     @setter
@@ -292,28 +296,26 @@ class Controller(IController):
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:
         id_ = iod.getReactionID(neti, reai)
         sids = iod.getListOfReactionSrcNodes(neti, reai)
-        sources = get_nodes_by_ident(nodes, sids)
+        sindices = [iod.getNodeIndex(neti, sid) for sid in sids]
         tids = iod.getListOfReactionDestNodes(neti, reai)
-        targets = get_nodes_by_ident(nodes, tids)
+        tindices = [iod.getNodeIndex(neti, tid) for tid in tids]
         fill_rgb = iod.getReactionFillColorRGB(neti, reai)
         fill_alpha = iod.getReactionFillColorAlpha(neti, reai)
 
         items = list()
         items.append(self.get_center_handle(neti, reai))
-        for node in sources:
-            items.append(self.get_src_node_handle(neti, reai, node.id_))
-        for node in targets:
-            items.append(self.get_dest_node_handle(neti, reai, node.id_))
+        items += [self.get_src_node_handle(neti, reai, id_) for id_ in sids]
+        items += [self.get_dest_node_handle(neti, reai, id_) for id_ in tids]
 
-        reaction = Reaction(id_,
-                            sources=sources,
-                            targets=targets,
-                            fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
-                            line_thickness=iod.getReactionLineThickness(neti, reai),
-                            index=reai,
-                            rate_law=iod.getReactionRateLaw(neti, reai),
-                            handle_pos=items
-                            )
+        return Reaction(id_,
+                        sources=sindices,
+                        targets=tindices,
+                        fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
+                        line_thickness=iod.getReactionLineThickness(neti, reai),
+                        index=reai,
+                        rate_law=iod.getReactionRateLaw(neti, reai),
+                        handle_positions=items
+                        )
 
     # get the updated list of nodes from model and update
     def _update_view(self):
@@ -328,6 +330,6 @@ class Controller(IController):
 
         for id_ in iod.getListOfReactionIDs(neti):
             reai = iod.getReactionIndex(neti, id_)
-            reactions.append(reaction)
+            reactions.append(self.get_reaction_by_index(neti, reai))
 
         self.view.update_all(nodes, reactions)

@@ -17,7 +17,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import even_round, gchain, int_round
-from .data import Compartment, HandleData, Node, Reaction, SpeciesBezier
+from .data import Compartment, HandleData, Node, Reaction, ReactionBezier, SpeciesBezier, compute_centroid
 from .geometry import (
     Rect,
     Vec2,
@@ -229,14 +229,15 @@ class ReactionElement(CanvasElement):
     _selected: bool
 
     # HACK no type for canvas since otherwise there is circular dependency
-    def __init__(self, reaction: Reaction, canvas, layer: int, handle_layer: int):
+    def __init__(self, reaction: Reaction, bezier: ReactionBezier, canvas, layer: int, handle_layer: int):
         super().__init__(layer)
         self.reaction = reaction
+        self.bezier = bezier
         self.moved_handler_id = bind_handler(DidMoveNodesEvent, self.nodes_moved)
         # i is 0 for source Beziers, but 1 for dest Beziers. "not" it to get the correct bool.
-        self.index_to_bz = {(bz.node.index, not gi): bz
-                            for bz, gi in gchain(reaction.bezier.src_beziers,
-                                                 reaction.bezier.dest_beziers)}
+        self.index_to_bz = {(bz.node_idx, not gi): bz
+                            for gi, bz in gchain(bezier.src_beziers,
+                                                 bezier.dest_beziers)}
         self.canvas = canvas
         self._hovered_handle = None
         self._dirty_indices = set()
@@ -248,30 +249,30 @@ class ReactionElement(CanvasElement):
         reai = reaction.index
         ctrl = canvas.controller
         # create elements for species
-        for sb, gi in gchain(reaction.bezier.src_beziers, reaction.bezier.dest_beziers):
-            dropped_func = self.make_drop_handle_func(ctrl, neti, reai, sb.node.id_, not gi)
+        for gi, sb in gchain(bezier.src_beziers, bezier.dest_beziers):
+            dropped_func = self.make_drop_handle_func(ctrl, neti, reai, sb.node_idx, not gi)
             el = BezierHandle(sb.handle, handle_layer,
-                              reaction.bezier.make_handle_moved_func(sb), dropped_func, reaction)
+                              bezier.make_handle_moved_func(sb), dropped_func, reaction)
             self.beziers.append(el)
 
         def centroid_handle_dropped(p: Vec2):
             ctrl.start_group()
-            ctrl.set_center_handle(neti, reai, reaction.bezier.src_c_handle.tip)
+            ctrl.set_center_handle(neti, reai, reaction.src_c_handle.tip)
             ctrl.end_group()
 
-        self.beziers.append(BezierHandle(reaction.bezier.src_c_handle, handle_layer,
-                                         lambda _: reaction.bezier.src_handle_moved(),
+        self.beziers.append(BezierHandle(reaction.src_c_handle, handle_layer,
+                                         lambda _: bezier.src_handle_moved(),
                                          centroid_handle_dropped, reaction))
-        self.beziers.append(BezierHandle(reaction.bezier.dest_c_handle, handle_layer,
-                                         lambda _: reaction.bezier.dest_handle_moved(),
+        self.beziers.append(BezierHandle(reaction.dest_c_handle, handle_layer,
+                                         lambda _: bezier.dest_handle_moved(),
                                          centroid_handle_dropped, reaction))
 
-    def make_drop_handle_func(self, ctrl: IController, neti: int, reai: int, nid: str,
+    def make_drop_handle_func(self, ctrl: IController, neti: int, reai: int, nodei: int,
                               is_source: bool):
         if is_source:
-            return lambda p: ctrl.set_src_node_handle(neti, reai, nid, p)
+            return lambda p: ctrl.set_src_node_handle(neti, reai, nodei, p)
         else:
-            return lambda p: ctrl.set_dest_node_handle(neti, reai, nid, p)
+            return lambda p: ctrl.set_dest_node_handle(neti, reai, nodei, p)
 
     @property
     def selected(self) -> bool:
@@ -290,9 +291,12 @@ class ReactionElement(CanvasElement):
         c_evt = cast(DidMoveNodesEvent, evt)
         nodes = c_evt.nodes
         offset = c_evt.offset
+        rects = [self.canvas.node_idx_map[idx].rect for idx in chain(
+            self.reaction.sources, self.reaction.targets)]
+        self.bezier.nodes_moved(rects)
         if len(self._dirty_indices) == 0:
             self._dirty_indices = {n.index for n in nodes}
-            my_indices = {n.index for n in chain(self.reaction.sources, self.reaction.targets)}
+            my_indices = {idx for idx in chain(self.reaction.sources, self.reaction.targets)}
             self._moving_all = my_indices <= self._dirty_indices
 
         for node in nodes:
@@ -300,27 +304,27 @@ class ReactionElement(CanvasElement):
                 if (node.index, in_src) in self.index_to_bz:
                     bz = self.index_to_bz[(node.index, in_src)]
                     bz.handle.tip += offset
-                    bz.update_curve(self.reaction.bezier.centroid)
+                    bz.update_curve(self.bezier.centroid)
 
         if self._moving_all:
-            self.reaction.bezier.src_c_handle.tip += offset
-            self.reaction.bezier.src_handle_moved()
+            self.reaction.src_c_handle.tip += offset
+            self.bezier.src_handle_moved()
 
     def commit_node_pos(self):
         """Handler for after the controller is told to move a node."""
         ctrl = self.canvas.controller
         neti = self.canvas.net_index
         reai = self.reaction.index
-        for bz in self.reaction.bezier.src_beziers:
-            if bz.node.index in self._dirty_indices:
-                ctrl.set_src_node_handle(neti, reai, bz.node.id_, bz.handle.tip)
+        for bz in self.bezier.src_beziers:
+            if bz.node_idx in self._dirty_indices:
+                ctrl.set_src_node_handle(neti, reai, bz.node_idx, bz.handle.tip)
 
-        for bz in self.reaction.bezier.dest_beziers:
-            if bz.node.index in self._dirty_indices:
-                ctrl.set_dest_node_handle(neti, reai, bz.node.id_, bz.handle.tip)
+        for bz in self.bezier.dest_beziers:
+            if bz.node_idx in self._dirty_indices:
+                ctrl.set_dest_node_handle(neti, reai, bz.node_idx, bz.handle.tip)
 
         if self._moving_all:
-            ctrl.set_center_handle(neti, reai, self.reaction.bezier.src_c_handle.tip)
+            ctrl.set_center_handle(neti, reai, self.reaction.src_c_handle.tip)
         self._dirty_indices = set()
 
     def destroy(self):
@@ -328,7 +332,7 @@ class ReactionElement(CanvasElement):
         super().destroy()
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return self.reaction.bezier.is_mouse_on(logical_pos)
+        return self.bezier.is_mouse_on(logical_pos)
 
     def do_mouse_enter(self, logical_pos: Vec2):
         self.do_mouse_move(logical_pos)
@@ -337,7 +341,7 @@ class ReactionElement(CanvasElement):
         return True  # Return True so that this can be selected
 
     def do_paint(self, gc: wx.GraphicsContext):
-        self.reaction.bezier.do_paint(gc, self.reaction.fill_color, self.selected)
+        self.bezier.do_paint(gc, self.reaction.fill_color, self.selected)
 
         # draw centroid
         color = theme['handle_color'] if self.selected else self.reaction.fill_color
@@ -346,7 +350,7 @@ class ReactionElement(CanvasElement):
         gc.SetPen(pen)
         gc.SetBrush(brush)
         radius = settings['reaction_radius'] * cstate.scale
-        center = self.reaction.bezier.centroid * cstate.scale - Vec2.repeat(radius)
+        center = self.bezier.centroid * cstate.scale - Vec2.repeat(radius)
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
 
 

@@ -25,7 +25,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import even_round, opacity_mul
-from .data import Compartment, Node, Reaction, init_bezier
+from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
 from .elements import CanvasElement, CompartmentElt, NodeElement, ReactionElement, SelectBox
 from .geometry import (
     Rect,
@@ -37,7 +37,7 @@ from .geometry import (
 )
 from .overlays import CanvasOverlay, Minimap
 from .state import InputMode, cstate
-from .utils import Observer, SetSubject
+from .utils import Observer, SetSubject, default_handle_positions
 from .utils import draw_rect, get_nodes_by_idx
 
 
@@ -95,7 +95,9 @@ class Canvas(wx.ScrolledWindow):
     #: Current network index. Right now this is always 0 since there is only one tab.
     _net_index: int
     _nodes: List[Node]  #: List of Node instances. This contains data needed to render them.
+    # TODO move this one to top docstring
     _reactions: List[Reaction]  #: List of ReactionBezier instances.
+    _rxn_beziers: List[ReactionBezier]
     _compartments: List[Compartment]  #: List of Compartment instances
     _elements: SortedKeyList
     _zoom_level: int  #: The current zoom level. See SetZoomLevel() for more detail.
@@ -115,6 +117,7 @@ class Canvas(wx.ScrolledWindow):
     _last_fps_update: int
     _last_refresh: int
     node2comp: DefaultDict[int, Optional[CanvasElement]]  #: Maps node index to the compartment index
+    node_idx_map: Dict[int, Node]  #: Maps node index to itself
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
         # ensure the parent's __init__ is called
@@ -126,6 +129,7 @@ class Canvas(wx.ScrolledWindow):
         self._net_index = 0
         self._nodes = list()
         self._reactions = list()
+        self._rxn_beziers = list()
         self._compartments = list()
         # TODO document below
         self._node_elements = list()
@@ -152,7 +156,6 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)
 
-        bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
         bind_handler(DidCommitNodePositionsEvent, self.OnDidCommitNodePositions)
 
         # state variables
@@ -215,6 +218,7 @@ class Canvas(wx.ScrolledWindow):
         cstate.input_mode_changed = self.InputModeChanged
         self.comp_index = 0  # Compartment of index; remove once controller implements compartments
         self.node2comp = defaultdict(lambda: None)
+        self.node_idx_map = dict()
 
         self.SetOverlayPositions()
 
@@ -247,8 +251,8 @@ class Canvas(wx.ScrolledWindow):
         return self._net_index
 
     def ArrowTipChanged(self):
-        for rxn in self.reactions:
-            for bz in rxn.bezier.dest_beziers:
+        for rb in self._rxn_beziers:
+            for bz in rb.dest_beziers:
                 bz.arrow_tip_changed()
 
     def RegisterAllChildren(self, widget):
@@ -318,7 +322,10 @@ class Canvas(wx.ScrolledWindow):
         return NodeElement(node, self, Canvas.NODE_LAYER)
 
     def CreateReactionElement(self, rxn: Reaction) -> ReactionElement:
-        return ReactionElement(rxn, self, Canvas.REACTION_LAYER, Canvas.HANDLE_LAYER)
+        snodes = [self.node_idx_map[id_] for id_ in rxn.sources]
+        tnodes = [self.node_idx_map[id_] for id_ in rxn.targets]
+        rb = ReactionBezier(rxn, snodes, tnodes)
+        return ReactionElement(rxn, rb, self, Canvas.REACTION_LAYER, Canvas.HANDLE_LAYER)
 
     def CreateCompartmentElement(self, comp: Compartment) -> CompartmentElt:
         return CompartmentElt(comp, Canvas.COMPARTMENT_LAYER, comp.index)
@@ -341,10 +348,16 @@ class Canvas(wx.ScrolledWindow):
         self._reactant_idx &= node_idx
         self._product_idx &= node_idx
 
+        # Update index map
+        self.node_idx_map = dict()
+        for node in nodes:
+            self.node_idx_map[node.index] = node
+
+        # Update reaction map
         self.reaction_map = defaultdict(set)
         for rxn in reactions:
-            for node in chain(rxn.sources, rxn.targets):
-                self.reaction_map[rxn.index].add(node.index)
+            for nodei in chain(rxn.sources, rxn.targets):
+                self.reaction_map[rxn.index].add(nodei)
 
         self._nodes = nodes
         self._reactions = reactions
@@ -1009,13 +1022,17 @@ depend on it.".format(bound_node.id_))
             return
 
         id_ = self._GetUniqueName(id_, [r.id_ for r in self._reactions])
+        sources = get_nodes_by_idx(self._nodes, self._reactant_idx)
+        targets = get_nodes_by_idx(self._nodes, self._product_idx)
+        centroid = compute_centroid([n.rect for n in chain(sources, targets)])
         reaction = Reaction(
             id_,
-            sources=get_nodes_by_idx(self._nodes, self._reactant_idx),
-            targets=get_nodes_by_idx(self._nodes, self._product_idx),
+            sources=list(self._reactant_idx),
+            targets=list(self._product_idx),
             fill_color=theme['reaction_fill'],
             line_thickness=theme['reaction_line_thickness'],
             rate_law='',
+            handle_positions=default_handle_positions(centroid, sources, targets)
         )
         self.controller.add_reaction_g(self._net_index, reaction)
         self._reactant_idx.clear()

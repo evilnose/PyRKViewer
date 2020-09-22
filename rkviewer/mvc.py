@@ -122,11 +122,11 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+    def set_src_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
         pass
 
     @abc.abstractmethod
-    def set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+    def set_dest_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
         pass
 
     @abc.abstractmethod

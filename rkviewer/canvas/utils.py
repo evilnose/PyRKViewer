@@ -5,8 +5,9 @@ This includes drawing helpers and 2D geometry functions.
 # pylint: disable=maybe-no-member
 import wx
 import abc
+import math
 from typing import Collection, Generic, List, Optional, Set, TypeVar, Callable
-from .geometry import Rect
+from .geometry import Rect, Vec2, rotate_unit
 from .data import Node
 
 
@@ -145,3 +146,27 @@ class SetSubject(Subject[Set[T]]):
 
     def __contains__(self, val: T):
         return val in self._item
+
+
+# the higher the value, the closer the src handle is to the centroid. 1/2 for halfway in-between
+CENTER_RATIO = 2/3
+DUPLICATE_RATIO = 3/4
+DUPLICATE_ROT = -math.pi/3
+
+
+def default_handle_positions(centroid: Vec2, reactants: List[Node], products: List[Node]):
+    src_handle_pos = reactants[0].rect.center_point * (1 - CENTER_RATIO) + centroid * CENTER_RATIO
+    handle_positions = [(n.rect.center_point + centroid) / 2 for n in reactants]
+    react_indices = [n.index for n in reactants]
+    for prod in products:
+        p_rect = prod.rect
+        if prod.index in react_indices:
+            # If also a reactant, shift the handle to not have the curves completely overlap
+            diff = centroid - p_rect.center_point
+            length = diff.norm * DUPLICATE_RATIO
+            new_dir = rotate_unit(diff, DUPLICATE_ROT)
+            handle_positions.append(p_rect.center_point + new_dir * length)
+        else:
+            handle_positions.append((p_rect.center_point + centroid) / 2)
+
+    return [src_handle_pos] + handle_positions

@@ -1,3 +1,8 @@
+"""
+Original author:    RJ Zhou
+"Forked" from:      https://github.com/zrj26/go-NOM
+Adapted by:         Gary Geng
+"""
 import json
 
 class TNode(object):

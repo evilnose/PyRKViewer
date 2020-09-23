@@ -176,15 +176,18 @@ class BezierHandle(CanvasElement):
         brush = wx.Brush(c)
         pen = gc.CreatePen(wx.GraphicsPenInfo(c))
 
+        sbase = self.data.base * cstate.scale
+        stip = self.data.tip * cstate.scale
+
         gc.SetPen(pen)
 
         # Draw handle lines
-        gc.StrokeLine(*self.data.base, *self.data.tip)
+        gc.StrokeLine(*sbase, *stip)
 
         # Draw handle circles
         gc.SetBrush(brush)
-        gc.DrawEllipse(self.data.tip.x - BezierHandle.HANDLE_RADIUS,
-                       self.data.tip.y - BezierHandle.HANDLE_RADIUS,
+        gc.DrawEllipse(stip.x - BezierHandle.HANDLE_RADIUS,
+                       stip.y - BezierHandle.HANDLE_RADIUS,
                        2 * BezierHandle.HANDLE_RADIUS, 2 * BezierHandle.HANDLE_RADIUS)
 
     def do_mouse_enter(self, logical_pos: Vec2) -> bool:

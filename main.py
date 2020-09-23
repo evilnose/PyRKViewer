@@ -51,6 +51,7 @@ def setup_logging():
             'console': {
                 'class': 'logging.StreamHandler',
                 'level': 'INFO',
+                'stream': 'ext://sys.stdout',
             },
             'debug': {
                 'class': 'logging.FileHandler',

@@ -744,7 +744,7 @@ class NodeForm(EditPanelForm):
 @dataclass
 class StoichInfo:
     """Helper class that stores node stoichiometry info for reaction form"""
-    node_id: str
+    nodei: int
     stoich: float
 
 
@@ -893,8 +893,9 @@ class ReactionForm(EditPanelForm):
             self._reactant_subtitle = self._AppendSubtitle(sizer, 'Reactants')
             for stoich in reactants:
                 stoich_ctrl = wx.TextCtrl(self, value=no_rzeros(stoich.stoich, precision=2))
-                self._AppendControl(sizer, stoich.node_id, stoich_ctrl)
-                inner_callback = self._MakeSetSrcStoichFunction(reai, stoich.node_id)
+                node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
+                self._AppendControl(sizer, node_id, stoich_ctrl)
+                inner_callback = self._MakeSetSrcStoichFunction(reai, stoich.nodei)
                 callback = self._MakeFloatCtrlFunction(stoich_ctrl.GetId(), inner_callback, (0, None),
                                                     left_incl=False)
                 stoich_ctrl.Bind(wx.EVT_TEXT, callback)
@@ -902,8 +903,9 @@ class ReactionForm(EditPanelForm):
             self._product_subtitle = self._AppendSubtitle(sizer, 'Products')
             for stoich in products:
                 stoich_ctrl = wx.TextCtrl(self, value=no_rzeros(stoich.stoich, precision=2))
-                self._AppendControl(sizer, stoich.node_id, stoich_ctrl)
-                inner_callback = self._MakeSetDestStoichFunction(reai, stoich.node_id)
+                node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
+                self._AppendControl(sizer, node_id, stoich_ctrl)
+                inner_callback = self._MakeSetDestStoichFunction(reai, stoich.nodei)
                 callback = self._MakeFloatCtrlFunction(
                     stoich_ctrl.GetId(), inner_callback, (0, None), left_incl=False)
                 stoich_ctrl.Bind(wx.EVT_TEXT, callback)
@@ -911,27 +913,27 @@ class ReactionForm(EditPanelForm):
         sizer.Layout()
         self.Thaw()
 
-    def _MakeSetSrcStoichFunction(self, reai: int, node_id: str):
+    def _MakeSetSrcStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self._self_changes = True
-            self.controller.set_src_node_stoich(self.net_index, reai, node_id, val)
+            self.controller.set_src_node_stoich(self.net_index, reai, nodei, val)
 
         return ret
 
-    def _MakeSetDestStoichFunction(self, reai: int, node_id: str):
+    def _MakeSetDestStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self._self_changes = True
-            self.controller.set_dest_node_stoich(self.net_index, reai, node_id, val)
+            self.controller.set_dest_node_stoich(self.net_index, reai, nodei, val)
 
         return ret
 
     def _GetSrcStoichs(self, reai: int):
-        ids = self.controller.get_list_of_src_ids(self.net_index, reai)
+        ids = self.controller.get_list_of_src_indices(self.net_index, reai)
         return [StoichInfo(id_, self.controller.get_src_node_stoich(self.net_index, reai, id_))
                 for id_ in ids]
 
     def _GetDestStoichs(self, reai: int):
-        ids = self.controller.get_list_of_dest_ids(self.net_index, reai)
+        ids = self.controller.get_list_of_dest_indices(self.net_index, reai)
         return [StoichInfo(id_, self.controller.get_dest_node_stoich(self.net_index, reai, id_))
                 for id_ in ids]
 

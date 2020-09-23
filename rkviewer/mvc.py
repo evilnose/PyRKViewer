@@ -122,7 +122,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_src_node_stoich(self, neti: int, reai: int, node_id: str) -> float:
+    def get_src_node_stoich(self, neti: int, reai: int, nodei: int) -> float:
         pass
 
     @abc.abstractmethod
@@ -138,11 +138,11 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_src_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+    def get_src_node_handle(self, neti: int, reai: int, nodei: int) -> Vec2:
         pass
 
     @abc.abstractmethod
-    def get_dest_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+    def get_dest_node_handle(self, neti: int, reai: int, nodei: int) -> Vec2:
         pass
 
     @abc.abstractmethod
@@ -150,11 +150,11 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_list_of_src_ids(self, neti: int, reai: int) -> List[str]:
+    def get_list_of_src_indices(self, neti: int, reai: int) -> List[int]:
         pass
 
     @abc.abstractmethod
-    def get_list_of_dest_ids(self, neti: int, reai: int) -> List[str]:
+    def get_list_of_dest_indices(self, neti: int, reai: int) -> List[int]:
         pass
 
     @abc.abstractmethod
@@ -172,6 +172,10 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def get_node_index(self, neti: int, node_id: str) -> int:
+        pass
+
+    @abc.abstractmethod
+    def get_node_id(self, neti: int, nodei: int) -> str:
         pass
 
     @abc.abstractmethod

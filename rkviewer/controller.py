@@ -209,11 +209,10 @@ class Controller(IController):
                                     reaction.fill_color.Blue())
         for (gi, nodei), handle in zip(gchain(reaction.sources, reaction.targets), reaction.handles):
             pos = handle.tip
-            id_ = iod.getNodeID(neti, nodei)
             if gi == 0:
-                iod.setReactionSrcNodeHandlePosition(neti, reai, id_, pos.x, pos.y)
+                iod.setReactionSrcNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
             else:
-                iod.setReactionDestNodeHandlePosition(neti, reai, id_, pos.x, pos.y)
+                iod.setReactionDestNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
 
         cpos = reaction.src_c_handle.tip
         iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
@@ -225,49 +224,43 @@ class Controller(IController):
 
     @setter
     def set_src_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float):
-        node_id = iod.getNodeID(neti, nodei)
-        iod.setReactionSrcNodeStoich(neti, reai, node_id, stoich)
+        iod.setReactionSrcNodeStoich(neti, reai, nodei, stoich)
 
     @setter
     def set_dest_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float):
-        node_id = iod.getNodeID(neti, nodei)
-        iod.setReactionDestNodeStoich(neti, reai, node_id, stoich)
+        iod.setReactionDestNodeStoich(neti, reai, nodei, stoich)
 
     @setter
     def set_src_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
-        node_id = iod.getNodeID(neti, nodei)
-        iod.setReactionSrcNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
+        iod.setReactionSrcNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
 
     @setter
     def set_dest_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
-        node_id = iod.getNodeID(neti, nodei)
-        iod.setReactionDestNodeHandlePosition(neti, reai, node_id, pos.x, pos.y)
+        iod.setReactionDestNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
 
     @setter
     def set_center_handle(self, neti: int, reai: int, pos: Vec2):
         iod.setReactionCenterHandlePosition(neti, reai, pos.x, pos.y)
 
-    def get_src_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
-        return Vec2(iod.getReactionSrcNodeHandlePosition(neti, reai, node_id))
+    def get_src_node_handle(self, neti: int, reai: int, nodei: int) -> Vec2:
+        return Vec2(iod.getReactionSrcNodeHandlePosition(neti, reai, nodei))
 
-    def get_dest_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
-        return Vec2(iod.getReactionDestNodeHandlePosition(neti, reai, node_id))
+    def get_dest_node_handle(self, neti: int, reai: int, nodei: int) -> Vec2:
+        return Vec2(iod.getReactionDestNodeHandlePosition(neti, reai, nodei))
 
     def get_center_handle(self, neti: int, reai: int) -> Vec2:
         return Vec2(iod.getReactionCenterHandlePosition(neti, reai))
 
     def get_src_node_stoich(self, neti: int, reai: int, nodei: int):
-        node_id = iod.getNodeID(neti, nodei)
-        return iod.getReactionSrcNodeStoich(neti, reai, node_id)
+        return iod.getReactionSrcNodeStoich(neti, reai, nodei)
 
     def get_dest_node_stoich(self, neti: int, reai: int, nodei: int):
-        node_id = iod.getNodeID(neti, nodei)
-        return iod.getReactionDestNodeStoich(neti, reai, node_id)
+        return iod.getReactionDestNodeStoich(neti, reai, nodei)
 
-    def get_list_of_src_ids(self, neti: int, reai: int):
+    def get_list_of_src_indices(self, neti: int, reai: int):
         return iod.getListOfReactionSrcNodes(neti, reai)
 
-    def get_list_of_dest_ids(self, neti: int, reai: int):
+    def get_list_of_dest_indices(self, neti: int, reai: int):
         return iod.getListOfReactionDestNodes(neti, reai)
 
     def get_list_of_node_ids(self, neti: int) -> List[str]:
@@ -291,6 +284,9 @@ class Controller(IController):
 
     def get_node_index(self, neti: int, node_id: str) -> int:
         return iod.getNodeIndex(neti, node_id)
+
+    def get_node_id(self, neti: int, nodei: int) -> str:
+        return iod.getNodeID(neti, nodei)
 
     def get_reaction_index(self, neti: int, rxn_id: str) -> int:
         return iod.getReactionIndex(neti, rxn_id)
@@ -316,17 +312,15 @@ class Controller(IController):
 
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:
         id_ = iod.getReactionID(neti, reai)
-        sids = iod.getListOfReactionSrcNodes(neti, reai)
-        sindices = [iod.getNodeIndex(neti, sid) for sid in sids]
-        tids = iod.getListOfReactionDestNodes(neti, reai)
-        tindices = [iod.getNodeIndex(neti, tid) for tid in tids]
+        sindices = iod.getListOfReactionSrcNodes(neti, reai)
+        tindices = iod.getListOfReactionDestNodes(neti, reai)
         fill_rgb = iod.getReactionFillColorRGB(neti, reai)
         fill_alpha = iod.getReactionFillColorAlpha(neti, reai)
 
         items = list()
         items.append(self.get_center_handle(neti, reai))
-        items += [self.get_src_node_handle(neti, reai, id_) for id_ in sids]
-        items += [self.get_dest_node_handle(neti, reai, id_) for id_ in tids]
+        items += [self.get_src_node_handle(neti, reai, i) for i in sindices]
+        items += [self.get_dest_node_handle(neti, reai, i) for i in tindices]
 
         return Reaction(id_,
                         sources=sindices,
@@ -341,6 +335,7 @@ class Controller(IController):
     # get the updated list of nodes from model and update
     def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
+
         self.stacklen += 1  # TODO remove once fixed
         neti = 0
         self.view.update_all(self.get_list_of_nodes(neti), self.get_list_of_reactions(neti))

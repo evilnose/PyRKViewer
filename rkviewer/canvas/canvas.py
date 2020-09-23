@@ -357,7 +357,7 @@ class Canvas(wx.ScrolledWindow):
         self.reaction_map = defaultdict(set)
         for rxn in reactions:
             for nodei in chain(rxn.sources, rxn.targets):
-                self.reaction_map[rxn.index].add(nodei)
+                self.reaction_map[nodei].add(rxn.index)
 
         self._nodes = nodes
         self._reactions = reactions

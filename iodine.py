@@ -2097,8 +2097,6 @@ def setReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int, hand
             errCode = -6
         elif srcNodeIdx not in r[reai].srcDict:
             errCode = -2
-        elif handleX < 0 or handleY < 0:
-            errCode = -12
         else:
             if stackFlag:
                 redoStack = TStack()
@@ -2127,8 +2125,6 @@ def setReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int, ha
             errCode = -6
         elif destNodeIdx not in r[reai].destDict:
             errCode = -2
-        elif handleX < 0 or handleY < 0:
-            errCode = -12
         else:
             if stackFlag:
                 redoStack = TStack()
@@ -2223,7 +2219,7 @@ def setReactionLineThickness(neti: int, reai: int, thickness: float):
     raise ExceptionDict[errCode](errorDict[errCode], neti, reai, thickness)
 
 
-def setReactionCenterHandlePosition(neti: int, reai: int,  centerHandleX: float, centerHandleY: float):
+def setReactionCenterHandlePosition(neti: int, reai: int, centerHandleX: float, centerHandleY: float):
     """
     setReactionCenterHandlePosition setReactionCenterHandlePosition
     errCode: -6: reaction index out of range
@@ -2237,8 +2233,6 @@ def setReactionCenterHandlePosition(neti: int, reai: int,  centerHandleX: float,
     else:
         if reai not in networkDict[neti].reactions:
             errCode = -6
-        elif centerHandleX < 0 or centerHandleY < 0:
-            errCode = -12
         else:
             if stackFlag:
                 redoStack = TStack()

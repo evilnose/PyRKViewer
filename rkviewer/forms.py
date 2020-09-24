@@ -399,7 +399,7 @@ class NodeForm(EditPanelForm):
 
     Attributes:
         _nodes: List[Node]  #: current list of nodes in canvas.
-        _selected_idx: Set[int]  #: current list of selected indices in canvas.
+        _sel_nodes_idx: Set[int]  #: current list of selected indices in canvas.
         _bounding_rect: Optional[Rect]  #: the exact bounding rectangle of the selected nodes
         id_ctrl: wx.TextCtrl
         pos_ctrl: wx.TextCtrl
@@ -414,7 +414,7 @@ class NodeForm(EditPanelForm):
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
         self._nodes = list()
-        self._selected_idx = set()
+        self._sel_nodes_idx = set()
         self._bounding_rect = None  # No padding
         sizer = self.InitAndGetSizer()
         self.CreateControls(sizer)
@@ -422,43 +422,43 @@ class NodeForm(EditPanelForm):
         self.SetupScrolling()
 
     @property
-    def selected_idx(self):
-        return self._selected_idx
+    def sel_nodes_idx(self):
+        return self._sel_nodes_idx
 
     def UpdateNodes(self, nodes: List[Node]):
         """Function called after the list of nodes have been updated."""
         self._nodes = nodes
-        if len(self._selected_idx) != 0 and not self._self_changes:
+        if len(self._sel_nodes_idx) != 0 and not self._self_changes:
             self.UpdateAllFields()
 
         # clear validation errors
         for id_ in self.badges.keys():
             self._SetValidationState(True, id_)
 
-    def UpdateNodeSelection(self, selected_idx: List[int]):
+    def UpdateNodeSelection(self, sel_nodes_idx: List[int]):
         """Function called after the list of selected nodes have been updated."""
-        self._selected_idx = selected_idx
-        if len(self._selected_idx) != 0:
+        self._sel_nodes_idx = sel_nodes_idx
+        if len(self._sel_nodes_idx) != 0:
             # clear position value
             self.pos_ctrl.ChangeValue('')
             self.UpdateAllFields()
 
-            title_label = 'Edit Node' if len(self._selected_idx) == 1 else 'Edit Multiple Nodes'
+            title_label = 'Edit Node' if len(self._sel_nodes_idx) == 1 else 'Edit Multiple Nodes'
             self._title.SetLabel(title_label)
 
-            id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
+            id_text = 'identifier' if len(self._sel_nodes_idx) == 1 else 'identifiers'
             self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
 
-            size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
+            size_text = 'size' if len(self._sel_nodes_idx) == 1 else 'total span'
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
 
     def UpdateDidDragMoveNodes(self):
         """Function called after the selected nodes were moved by dragging."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         prec = settings['decimal_precision']
 
         pos: Vec2
-        if len(self._selected_idx) == 1:
+        if len(self._sel_nodes_idx) == 1:
             [node] = nodes
             pos = node.position
         else:
@@ -468,11 +468,11 @@ class NodeForm(EditPanelForm):
 
     def UpdateDidDragResizeNodes(self):
         """Function called after the selected nodes were resized by dragging."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         prec = settings['decimal_precision']
         pos: Vec2
         size: Vec2
-        if len(self._selected_idx) == 1:
+        if len(self._sel_nodes_idx) == 1:
             [node] = nodes
             pos = node.position
             size = node.size
@@ -517,8 +517,8 @@ class NodeForm(EditPanelForm):
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
-        assert len(self._selected_idx) == 1
-        [nodei] = self._selected_idx
+        assert len(self._sel_nodes_idx) == 1
+        [nodei] = self._sel_nodes_idx
         ctrl_id = self.id_ctrl.GetId()
         if len(new_id) == 0:
             self._SetValidationState(False, ctrl_id, "ID cannot be empty")
@@ -531,7 +531,7 @@ class NodeForm(EditPanelForm):
             else:
                 # loop terminated fine. There is no duplicate ID
                 self._self_changes = True
-                if not self.controller.try_rename_node(self.net_index, nodei, new_id):
+                if not self.controller.rename_node(self.net_index, nodei, new_id):
                     # this should not happen!
                     assert False
         self._SetValidationState(True, self.id_ctrl.GetId())
@@ -549,7 +549,7 @@ class NodeForm(EditPanelForm):
         if pos.x < 0 or pos.y < 0:
             self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
             return
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         bounds = Rect(Vec2(), self.canvas.realsize)
         clamped = None
         if len(nodes) == 1:
@@ -558,22 +558,22 @@ class NodeForm(EditPanelForm):
             if node.position != clamped or pos != clamped:
                 self._self_changes = True
                 node.position = clamped
-                self.controller.try_start_group()
+                self.controller.start_group()
                 post_event(DidMoveNodesEvent(nodes, clamped - node.position, dragged=False))
-                self.controller.try_move_node(self.net_index, node.index, node.position)
-                self.controller.try_end_group()
+                self.controller.move_node(self.net_index, node.index, node.position)
+                self.controller.end_group()
         else:
             clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
             if self._bounding_rect.position != pos or pos != clamped:
                 offset = clamped - self._bounding_rect.position
                 self._self_changes = True
-                self.controller.try_start_group()
+                self.controller.start_group()
                 for node in nodes:
                     node.position += offset
                 post_event(DidMoveNodesEvent(nodes, offset, dragged=False))
                 for node in nodes:
-                    self.controller.try_move_node(self.net_index, node.index, node.position)
-                self.controller.try_end_group()
+                    self.controller.move_node(self.net_index, node.index, node.position)
+                self.controller.end_group()
         self._SetValidationState(True, self.pos_ctrl.GetId())
 
     def _OnSizeText(self, evt):
@@ -585,9 +585,9 @@ class NodeForm(EditPanelForm):
             self._SetValidationState(False, ctrl_id, 'Should be in the form "width, height"')
             return
 
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        min_width = theme['min_node_width']
-        min_height = theme['min_node_height']
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
+        min_width = settings['min_node_width']
+        min_height = settings['min_node_height']
         size = Vec2(wh)
         if len(nodes) == 1:
             [node] = nodes
@@ -600,7 +600,7 @@ class NodeForm(EditPanelForm):
             clamped = clamp_rect_size(Rect(node.position, size), self.canvas.realsize)
             if node.size != clamped or size != clamped:
                 self._self_changes = True
-                self.controller.try_set_node_size(self.net_index, node.index,
+                self.controller.set_node_size(self.net_index, node.index,
                                                   Vec2(clamped.x, clamped.y))
         else:
             min_nw = min(n.size.x for n in nodes)
@@ -619,79 +619,79 @@ class NodeForm(EditPanelForm):
             if self._bounding_rect.size != clamped or size != clamped:
                 ratio = clamped.elem_div(self._bounding_rect.size)
                 self._self_changes = True
-                self.controller.try_start_group()
+                self.controller.start_group()
                 for node in nodes:
                     rel_pos = node.position - self._bounding_rect.position
                     new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
-                    self.controller.try_move_node(self.net_index, node.index, new_pos)
-                    self.controller.try_set_node_size(self.net_index, node.index,
+                    self.controller.move_node(self.net_index, node.index, new_pos)
+                    self.controller.set_node_size(self.net_index, node.index,
                                                       node.size.elem_mul(ratio))
-                self.controller.try_end_group()
+                self.controller.end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
     def _OnFillColorChanged(self, evt: wx.Event):
         """Callback for the fill color control."""
         fill = evt.GetColour()
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
             if on_msw():
-                self.controller.try_set_node_fill_rgb(self.net_index, node.index, fill)
+                self.controller.set_node_fill_rgb(self.net_index, node.index, fill)
             else:
                 # we can set both the RGB and the alpha at the same time
-                self.controller.try_set_node_fill_rgb(self.net_index, node.index, fill)
-                self.controller.try_set_node_fill_alpha(self.net_index, node.index, fill.Alpha())
-        self.controller.try_end_group()
+                self.controller.set_node_fill_rgb(self.net_index, node.index, fill)
+                self.controller.set_node_fill_alpha(self.net_index, node.index, fill.Alpha())
+        self.controller.end_group()
 
     def _OnBorderColorChanged(self, evt: wx.Event):
         """Callback for the border color control."""
         border = evt.GetColour()
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
             if on_msw():
-                self.controller.try_set_node_border_rgb(self.net_index, node.index, border)
+                self.controller.set_node_border_rgb(self.net_index, node.index, border)
             else:
                 # we can set both the RGB and the alpha at the same time
-                self.controller.try_set_node_border_rgb(self.net_idnex, node.index, border)
-                self.controller.try_set_node_border_alpha(
+                self.controller.set_node_border_rgb(self.net_idnex, node.index, border)
+                self.controller.set_node_border_alpha(
                     self.net_index, node.index, border.Alpha())
-        self.controller.try_end_group()
+        self.controller.end_group()
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
-            self.controller.try_set_node_fill_alpha(self.net_index, node.index, int(alpha * 255))
-        self.controller.try_end_group()
+            self.controller.set_node_fill_alpha(self.net_index, node.index, int(alpha * 255))
+        self.controller.end_group()
 
     def _BorderAlphaCallback(self, alpha: float):
         """Callback for when the border alpha changes."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
-            self.controller.try_set_node_border_alpha(self.net_index, node.index, int(alpha * 255))
-        self.controller.try_end_group()
+            self.controller.set_node_border_alpha(self.net_index, node.index, int(alpha * 255))
+        self.controller.end_group()
 
     def _BorderWidthCallback(self, width: float):
         """Callback for when the border width changes."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for node in nodes:
-            self.controller.try_set_node_border_width(self.net_index, node.index, width)
-        self.controller.try_end_group()
+            self.controller.set_node_border_width(self.net_index, node.index, width)
+        self.controller.end_group()
 
     def UpdateAllFields(self):
         """Update the form field values based on current data."""
         self._self_changes = False
-        assert len(self._selected_idx) != 0
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        assert len(self._sel_nodes_idx) != 0
+        nodes = get_nodes_by_idx(self._nodes, self._sel_nodes_idx)
         prec = settings['decimal_precision']
         id_text: str
         pos: Vec2
@@ -700,7 +700,7 @@ class NodeForm(EditPanelForm):
         fill_alpha: Optional[int]
         border: wx.Colour
         border_alpha: Optional[int]
-        if len(self._selected_idx) == 1:
+        if len(self._sel_nodes_idx) == 1:
             [node] = nodes
             self.id_ctrl.Enable(True)
             id_text = node.id_
@@ -744,7 +744,7 @@ class NodeForm(EditPanelForm):
 @dataclass
 class StoichInfo:
     """Helper class that stores node stoichiometry info for reaction form"""
-    node_id: str
+    nodei: int
     stoich: float
 
 
@@ -753,7 +753,7 @@ class ReactionForm(EditPanelForm):
         super().__init__(parent, canvas, controller)
 
         self._reactions = list()
-        self._selected_idx = set()
+        self._sel_nodes_idx = set()
 
         sizer = self.InitAndGetSizer()
         self.CreateControls(sizer)
@@ -761,8 +761,8 @@ class ReactionForm(EditPanelForm):
         self.SetupScrolling()
 
     @property
-    def selected_idx(self):
-        return self._selected_idx
+    def sel_nodes_idx(self):
+        return self._sel_nodes_idx
 
     def CreateControls(self, sizer: wx.Sizer):
         # TODO create field for stroke thickness
@@ -786,9 +786,9 @@ class ReactionForm(EditPanelForm):
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
-        assert len(self._selected_idx) == 1, 'Reaction ID field should be disabled when ' + \
+        assert len(self._sel_nodes_idx) == 1, 'Reaction ID field should be disabled when ' + \
             'multiple are selected'
-        [reai] = self._selected_idx
+        [reai] = self._sel_nodes_idx
         ctrl_id = self.id_ctrl.GetId()
         if len(new_id) == 0:
             self._SetValidationState(False, ctrl_id, "ID cannot be empty")
@@ -801,45 +801,45 @@ class ReactionForm(EditPanelForm):
 
             # loop terminated fine. There is no duplicate ID
             self._self_changes = True
-            self.controller.try_rename_reaction(self.net_index, reai, new_id)
+            self.controller.rename_reaction(self.net_index, reai, new_id)
             self._SetValidationState(True, ctrl_id)
 
     def _OnFillColorChanged(self, evt: wx.Event):
         """Callback for the fill color control."""
         fill = evt.GetColour()
-        reactions = [r for r in self._reactions if r.index in self._selected_idx]
+        reactions = [r for r in self._reactions if r.index in self._sel_nodes_idx]
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for rxn in reactions:
             if on_msw():
-                self.controller.try_set_reaction_fill_rgb(self.net_index, rxn.index, fill)
+                self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
             else:
                 # we can set both the RGB and the alpha at the same time
-                self.controller.try_set_reaction_fill_rgb(self.net_index, rxn.index, fill)
-                self.controller.try_set_reaction_fill_alpha(self.net_index, rxn.index, fill.Alpha())
-        self.controller.try_end_group()
+                self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
+                self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, fill.Alpha())
+        self.controller.end_group()
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
-        reactions = (r for r in self._reactions if r.index in self._selected_idx)
+        reactions = (r for r in self._reactions if r.index in self._sel_nodes_idx)
         self._self_changes = True
-        self.controller.try_start_group()
+        self.controller.start_group()
         for rxn in reactions:
-            self.controller.try_set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
-        self.controller.try_end_group()
+            self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
+        self.controller.end_group()
 
     def _OnRateLawText(self, evt: wx.Event):
         ratelaw = evt.GetString()
-        assert len(self._selected_idx) == 1, 'Reaction rate law field should be disabled when ' + \
+        assert len(self._sel_nodes_idx) == 1, 'Reaction rate law field should be disabled when ' + \
             'multiple are selected'
-        [reai] = self._selected_idx
+        [reai] = self._sel_nodes_idx
         self._self_changes = True
-        self.controller.try_set_reaction_ratelaw(self.net_index, reai, ratelaw)
+        self.controller.set_reaction_ratelaw(self.net_index, reai, ratelaw)
 
     def UpdateReactions(self, reactions: List[Reaction]):
         """Function called after the list of nodes have been updated."""
         self._reactions = reactions
-        if len(self._selected_idx) != 0 and not self._self_changes:
+        if len(self._sel_nodes_idx) != 0 and not self._self_changes:
             self.UpdateAllFields()
 
             # clear validation errors
@@ -847,15 +847,15 @@ class ReactionForm(EditPanelForm):
                 self._SetValidationState(True, id_)
         self._self_changes = False
 
-    def UpdateReactionSelection(self, selected_idx: List[int]):
+    def UpdateReactionSelection(self, sel_nodes_idx: List[int]):
         """Function called after the list of selected nodes have been updated."""
-        self._selected_idx = selected_idx
-        if len(self._selected_idx) != 0:
-            title_label = 'Edit Reaction' if len(self._selected_idx) == 1 \
+        self._sel_nodes_idx = sel_nodes_idx
+        if len(self._sel_nodes_idx) != 0:
+            title_label = 'Edit Reaction' if len(self._sel_nodes_idx) == 1 \
                 else 'Edit Multiple Reactions'
             self._title.SetLabel(title_label)
 
-            id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
+            id_text = 'identifier' if len(self._sel_nodes_idx) == 1 else 'identifiers'
             self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
             self.UpdateAllFields()
 
@@ -893,8 +893,9 @@ class ReactionForm(EditPanelForm):
             self._reactant_subtitle = self._AppendSubtitle(sizer, 'Reactants')
             for stoich in reactants:
                 stoich_ctrl = wx.TextCtrl(self, value=no_rzeros(stoich.stoich, precision=2))
-                self._AppendControl(sizer, stoich.node_id, stoich_ctrl)
-                inner_callback = self._MakeSetSrcStoichFunction(reai, stoich.node_id)
+                node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
+                self._AppendControl(sizer, node_id, stoich_ctrl)
+                inner_callback = self._MakeSetSrcStoichFunction(reai, stoich.nodei)
                 callback = self._MakeFloatCtrlFunction(stoich_ctrl.GetId(), inner_callback, (0, None),
                                                     left_incl=False)
                 stoich_ctrl.Bind(wx.EVT_TEXT, callback)
@@ -902,8 +903,9 @@ class ReactionForm(EditPanelForm):
             self._product_subtitle = self._AppendSubtitle(sizer, 'Products')
             for stoich in products:
                 stoich_ctrl = wx.TextCtrl(self, value=no_rzeros(stoich.stoich, precision=2))
-                self._AppendControl(sizer, stoich.node_id, stoich_ctrl)
-                inner_callback = self._MakeSetDestStoichFunction(reai, stoich.node_id)
+                node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
+                self._AppendControl(sizer, node_id, stoich_ctrl)
+                inner_callback = self._MakeSetDestStoichFunction(reai, stoich.nodei)
                 callback = self._MakeFloatCtrlFunction(
                     stoich_ctrl.GetId(), inner_callback, (0, None), left_incl=False)
                 stoich_ctrl.Bind(wx.EVT_TEXT, callback)
@@ -911,35 +913,35 @@ class ReactionForm(EditPanelForm):
         sizer.Layout()
         self.Thaw()
 
-    def _MakeSetSrcStoichFunction(self, reai: int, node_id: str):
+    def _MakeSetSrcStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self._self_changes = True
-            self.controller.try_set_src_node_stoich(self.net_index, reai, node_id, val)
+            self.controller.set_src_node_stoich(self.net_index, reai, nodei, val)
 
         return ret
 
-    def _MakeSetDestStoichFunction(self, reai: int, node_id: str):
+    def _MakeSetDestStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self._self_changes = True
-            self.controller.try_set_dest_node_stoich(self.net_index, reai, node_id, val)
+            self.controller.set_dest_node_stoich(self.net_index, reai, nodei, val)
 
         return ret
 
     def _GetSrcStoichs(self, reai: int):
-        ids = self.controller.get_list_of_src_ids(self.net_index, reai)
+        ids = self.controller.get_list_of_src_indices(self.net_index, reai)
         return [StoichInfo(id_, self.controller.get_src_node_stoich(self.net_index, reai, id_))
                 for id_ in ids]
 
     def _GetDestStoichs(self, reai: int):
-        ids = self.controller.get_list_of_dest_ids(self.net_index, reai)
+        ids = self.controller.get_list_of_dest_indices(self.net_index, reai)
         return [StoichInfo(id_, self.controller.get_dest_node_stoich(self.net_index, reai, id_))
                 for id_ in ids]
 
     def UpdateAllFields(self):
         """Update all reaction fields from current data."""
         self._self_changes = False
-        assert len(self._selected_idx) != 0
-        reactions = [r for r in self._reactions if r.index in self._selected_idx]
+        assert len(self._sel_nodes_idx) != 0
+        reactions = [r for r in self._reactions if r.index in self._sel_nodes_idx]
         id_text = '; '.join(sorted(list(r.id_ for r in reactions)))
         fill: wx.Colour
         fill_alpha: Optional[int]
@@ -947,7 +949,7 @@ class ReactionForm(EditPanelForm):
 
         prec = settings['decimal_precision']
 
-        if len(self._selected_idx) == 1:
+        if len(self._sel_nodes_idx) == 1:
             [reaction] = reactions
             reai = reaction.index
             self.id_ctrl.Enable()

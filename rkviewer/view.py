@@ -11,7 +11,7 @@ from typing import Callable, List, Dict, Any, Tuple
 from .events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
     SelectionDidUpdateEvent
 from .canvas.canvas import Canvas
-from .canvas.data import Node, Reaction
+from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import cstate, InputMode
 from .config import settings, theme
 from .forms import NodeForm, ReactionForm
@@ -75,7 +75,7 @@ class EditPanel(fnb.FlatNotebook):
 
         cur_page = self.GetCurrentPage()
 
-        if self.node_form.selected_idx != evt.node_indices:
+        if self.node_form.sel_nodes_idx != evt.node_indices:
             self.node_form.UpdateNodeSelection(evt.node_indices)
         if should_show_nodes:
             if node_index == -1:
@@ -92,7 +92,7 @@ class EditPanel(fnb.FlatNotebook):
                 reaction_index = i
                 break
 
-        if self.reaction_form.selected_idx != evt.reaction_indices:
+        if self.reaction_form.sel_nodes_idx != evt.reaction_indices:
             self.reaction_form.UpdateReactionSelection(evt.reaction_indices)
         if should_show_reactions:
             if reaction_index == -1:
@@ -138,11 +138,11 @@ class Toolbar(wx.Panel):
         sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
         undo_button = wx.Button(self, label="Undo")
         sizer.Add(undo_button, sizerflags)
-        undo_button.Bind(wx.EVT_BUTTON, lambda _: controller.try_undo())
+        undo_button.Bind(wx.EVT_BUTTON, lambda _: controller.undo())
 
         redo_button = wx.Button(self, label="Redo")
         sizer.Add(redo_button, sizerflags)
-        redo_button.Bind(wx.EVT_BUTTON, lambda _: controller.try_redo())
+        redo_button.Bind(wx.EVT_BUTTON, lambda _: controller.redo())
 
         sizer.Add(zoom_in_btn, sizerflags)
         zoom_in_btn.Bind(wx.EVT_BUTTON, lambda _: zoom_callback(True))
@@ -173,7 +173,8 @@ class ModePanel(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.AppendModeButton('Select', InputMode.SELECT, sizer)
-        self.AppendModeButton('Add', InputMode.ADD, sizer)
+        self.AppendModeButton('+Nodes', InputMode.ADD_NODES, sizer)
+        self.AppendModeButton('+Compts', InputMode.ADD_COMPARTMENTS, sizer)
         self.AppendModeButton('Zoom', InputMode.ZOOM, sizer)
 
         self.AppendSeparator(sizer)
@@ -335,9 +336,9 @@ class MainFrame(wx.Frame):
                          id_=wx.ID_EXIT)
 
         edit_menu = wx.Menu()
-        self.AddMenuItem(edit_menu, '&Undo', 'Undo action', lambda _: controller.try_undo(),
+        self.AddMenuItem(edit_menu, '&Undo', 'Undo action', lambda _: controller.undo(),
                          entries, key=(wx.ACCEL_CTRL, ord('Z')))
-        self.AddMenuItem(edit_menu, '&Redo', 'Redo action', lambda _: controller.try_redo(),
+        self.AddMenuItem(edit_menu, '&Redo', 'Redo action', lambda _: controller.redo(),
                          entries, key=(wx.ACCEL_CTRL, ord('Y')))
         edit_menu.AppendSeparator()
         self.AddMenuItem(edit_menu, '&Copy', 'Copy selected nodes', lambda _: canvas.CopySelected(),
@@ -411,7 +412,7 @@ class MainFrame(wx.Frame):
     def AddMenuItem(self, menu: wx.Menu, text: str, help_text: str, callback: Callable,
                     entries: List, key: Tuple[Any, wx.KeyCode] = None, id_: str = None):
         if id_ is None:
-            id_ = wx.NewId()
+            id_ = wx.NewIdRef(count=1)
 
         shortcut = ''
         if key is not None:
@@ -477,26 +478,29 @@ class View(IView):
     def __init__(self):
         self.controller = None
         self.manager = None
+        self.app = None
 
     def bind_controller(self, controller: IController):
         self.controller = controller
 
-    def main_loop(self):
+    def init(self):
         assert self.controller is not None
-        app = wx.App()
+        self.app = wx.App()
         self.manager = PluginManager(self.controller)
         self.manager.load_from('plugins')
         self.frame = MainFrame(self.controller, self.manager, title='RK Network Viewer')
         self.canvas_panel = self.frame.main_panel.canvas
-        # self.canvas_panel.RegisterAllChildren(self.frame)
+
+    def main_loop(self):
+        assert self.app is not None
         self.frame.Show()
+        self.app.MainLoop()
 
-        app.MainLoop()
-
-    def update_all(self, nodes: List[Node], reactions: List[Reaction]):
+    def update_all(self, nodes: List[Node], reactions: List[Reaction],
+                   compartments: List[Compartment]):
         """Update the list of nodes.
 
         Note that View takes ownership of the list of nodes and may modify it.
         """
-        self.canvas_panel.Reset(nodes, reactions)
+        self.canvas_panel.Reset(nodes, reactions, compartments)
         self.canvas_panel.LazyRefresh()

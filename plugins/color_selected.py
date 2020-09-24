@@ -47,15 +47,15 @@ class ColorSelected(WindowedPlugin):
         with api.group_action():
             # color selected nodes
             for index in api.selected_node_indices():
-                api.set_node_fill(api.cur_net_index(), index, color)
-                api.set_node_border(api.cur_net_index(), index, color)
+                api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
 
             # color selected reactions
             for index in api.selected_reaction_indices():
                 api.set_reaction_color(api.cur_net_index(), index, color)
 
-    def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int]):
-        self.num_selected = len(node_indices) + len(reaction_indices)
+    def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int],
+                                compartment_indices: List[int]):
+        self.num_selected = len(node_indices) + len(reaction_indices) + len(compartment_indices)
         self.update_text()
 
     def update_text(self):

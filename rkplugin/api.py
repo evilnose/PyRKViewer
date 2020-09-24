@@ -1,4 +1,6 @@
 # pylint: disable=maybe-no-member
+from iodine import NetIndexNotFoundError
+from rkviewer.canvas.geometry import Rect, within_rect
 from rkviewer.config import DEFAULT_ARROW_TIP
 import wx
 import copy
@@ -35,17 +37,21 @@ def cur_net_index() -> int:
 
 @contextmanager
 def group_action():
-    _controller.try_start_group()
+    """Context manager for doing a group operation in the controller, for undo/redo purposes.
+
+    TODO more documentation on this
+    """
+    _controller.start_group()
     yield
-    _controller.try_end_group()
+    _controller.end_group()
 
 
 def all_nodes() -> List[Node]:
-    return _canvas.nodes
+    return _controller.get_list_of_nodes(cur_net_index())
 
 
 def all_reactions() -> List[Reaction]:
-    return _canvas.reactions
+    return _controller.get_list_of_reactions(cur_net_index())
 
 
 def selected_nodes() -> List[Node]:
@@ -53,49 +59,138 @@ def selected_nodes() -> List[Node]:
 
 
 def selected_node_indices() -> Set[int]:
-    return _canvas.selected_idx.item_copy()
+    return _canvas.sel_nodes_idx.item_copy()
 
 
 def selected_reaction_indices() -> Set[int]:
     return _canvas.sel_reactions_idx.item_copy()
 
 
-def get_node_by_index(index: int) -> Node:
-    nodes = [n for n in _canvas.nodes]
-    assert len(nodes) <= 1
-    return nodes[0]
+def get_node_by_index(net_index: int, node_index: int) -> Node:
+    return _controller.get_node_by_index(net_index, node_index)
+
+
+def get_reaction_by_index(net_index: int, reaction_index: int) -> Reaction:
+    return _controller.get_reaction_by_index(net_index, reaction_index)
+
+
+def add_node(net_index: int, node: Node):
+    _controller.add_node_g(net_index, node)
+
+
+def add_reaction(net_index: int, reaction: Reaction):
+    _controller.add_reaction_g(net_index, reaction)
 
 
 # TODO add "cosmetic" versions of these functions, where changes made to controller are not added
 # to the history stack. This requires controller to have "programmatic group" feature, i.e. actions
 # performed inside such groups are not recorded. programmatic groups nested within group operations
 # should be ignored.
-def set_node_fill(net_idx: int, node_idx: int, color: wx.Colour):
+def update_node(net_index: int, node_index: int, id_: str = None, fill_color: wx.Colour = None,
+                border_color: wx.Colour = None, border_width: float = None, position: Vec2 = None,
+                size: Vec2 = None):
+    """Update one or multiple properties of a node.
+
+    Args:
+        net_index: The network index.
+        node_index: The node index of the node to modify.
+        id_: If specified, the new ID of the node.
+        fill_color: If specified, the new fill color of the node.
+        border_color: If specified, the new border color of the node.
+        border_width: If specified, the new border width of the node.
+        position: If specified, the new position of the node.
+        size: If specified, the new size of the node.
+
+    Raises:
+        ValueError: If ID is empty or if at least one of border_width, position, and size is out of
+                    range.
+    """
+    # Make sure this node exists
+    old_node = get_node_by_index(net_index, node_index)
+    # Validate
+    # Check ID not empty
+    if id_ is not None and len(id_) == 0:
+        raise ValueError('id_ cannot be empty')
+
+    # Check border at least 0
+    if border_width is not None and border_width < 0:
+        raise ValueError("border_width must be at least 0")
+
+    # Check position at least 0
+    if position is not None and (position.x < 0 or position.y < 0):
+        raise ValueError("position cannot have negative coordinates, but got '{}'".format(position))
+
+    # Check size at least 0
+    if size is not None and (size.x < 0 or size.y < 0):
+        raise ValueError("size cannot have negative coordinates, but got '{}'".format(size))
+
+    # Check within bounds
+    if position is not None or size is not None:
+        pos = position if position is not None else old_node.position
+        sz = size if size is not None else old_node.size
+        botright = pos + sz
+        if botright.x > _canvas.realsize.x or botright.y > _canvas.realsize.y:
+            raise ValueError('Invalid position and size combination ({} and {}): bottom right '
+                             'corner exceed canvas boundary {}', pos, sz, _canvas.realsize)
+
     with group_action():
-        _controller.try_set_node_fill_rgb(net_idx, node_idx, color)
-        _controller.try_set_node_fill_alpha(net_idx, node_idx, color.Alpha())
+        if id_ is not None:
+            _controller.rename_node(net_index, node_index, id_)
+        if fill_color is not None:
+            _controller.set_node_fill_rgb(net_index, node_index, fill_color)
+            _controller.set_node_fill_alpha(net_index, node_index, fill_color.Alpha())
+        if border_color is not None:
+            _controller.set_node_border_rgb(net_index, node_index, border_color)
+            _controller.set_node_border_alpha(net_index, node_index, border_color.Alpha())
+        if border_width is not None:
+            _controller.set_node_border_width(net_index, node_index, border_width)
+        if position is not None:
+            _controller.move_node(net_index, node_index, position)
+        if size is not None:
+            _controller.set_node_size(net_index, node_index, size)
 
 
-def set_node_border(net_idx: int, node_idx: int, color: wx.Colour):
-    _controller.try_start_group()
-    with group_action():
-        _controller.try_set_node_border_rgb(net_idx, node_idx, color)
-        _controller.try_set_node_border_alpha(net_idx, node_idx, color.Alpha())
+def update_reaction(net_index: int, reaction_index: int, id_: str = None,
+                    fill_color: wx.Colour = None, thickness: float = None, ratelaw: str = None):
+    # TODO get old reaction
+    # Validate
+    # Check ID not empty
+    if id_ is not None and len(id_) == 0:
+        raise ValueError('id_ cannot be empty')
 
-def set_reaction_color(net_idx: int, rxn_idx: int, color: wx.Colour):
-    with group_action():
-        _controller.try_set_reaction_fill_rgb(net_idx, rxn_idx, color)
-        _controller.try_set_reaction_fill_alpha(net_idx, rxn_idx, color.Alpha())
+    if thickness is not None and thickness < 0:
+        raise ValueError('thickness must be at least 0')
 
-def set_reaction_line_thickness(net_idx, rxn_idx: int, thickness: float):
+    if ratelaw is not None and len(ratelaw) == 0:
+        raise ValueError('ratelaw cannot be empty')
+
     with group_action():
-        _controller.try_set_reaction_line_thickness(net_idx, rxn_idx, thickness)
+        if id_ is not None:
+            _controller.rename_reaction(net_index, reaction_index, id_)
+        if fill_color is not None:
+            _controller.set_reaction_fill_rgb(net_index, reaction_index, fill_color)
+            _controller.set_reaction_fill_alpha(net_index, reaction_index, fill_color.Alpha())
+        if thickness is not None:
+            _controller.set_reaction_line_thickness(net_index, reaction_index, thickness)
+        if ratelaw is not None:
+            _controller.set_reaction_ratelaw(net_index, reaction_index, ratelaw)
+
+
+def update_reactant_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
+    _controller.set_src_node_stoich(net_index, reaction_index, node_index, stoich)
+
+
+def update_product_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
+    _controller.set_dest_node_stoich(net_index, reaction_index, node_index, stoich)
+
 
 def get_arrow_tip() -> ArrowTip:
     return cstate.arrow_tip.clone()
 
+
 def get_default_arrow_tip() -> ArrowTip:
     return ArrowTip(copy.copy(DEFAULT_ARROW_TIP))
+
 
 def set_arrow_tip(value: ArrowTip):
     cstate.arrow_tip = value.clone()

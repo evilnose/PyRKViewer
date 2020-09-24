@@ -74,7 +74,7 @@ Plugin!".format(handler_name)
             menu.AppendSeparator()
 
         for plugin in commands:
-            id_ = wx.NewId()
+            id_ = wx.NewIdRef(count=1)
             item = menu.Append(id_, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, self.make_command_callback(plugin), item)
 
@@ -82,15 +82,15 @@ Plugin!".format(handler_name)
             menu.AppendSeparator()
 
         for plugin in windowed:
-            id_ = wx.NewId()
+            id_ = wx.NewIdRef(count=1)
             item = menu.Append(id_, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, self.make_windowed_callback(plugin, parent), item)
 
     def make_command_callback(self, command: CommandPlugin) -> Callable[[Any], None]:
         def command_cb(_):
-            self.controller.try_start_group()
+            self.controller.start_group()
             command.run()
-            self.controller.try_end_group()
+            self.controller.end_group()
 
         return command_cb
 

@@ -5,7 +5,6 @@ from rkviewer.canvas.geometry import Rect, Vec2, within_rect, clamp_rect_pos, cl
 
 
 class TestRectUtils(unittest.TestCase):
-
     def test_within_rect(self):
         pos = Vec2(50, 50)
         rect = Rect(Vec2(40, 40), Vec2(20, 65.0))

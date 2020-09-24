@@ -12,7 +12,8 @@ from typing import Any, Callable, List, Tuple
 class InputMode(Enum):
     """Enum for the current input mode of the canvas."""
     SELECT = 'Select'
-    ADD = 'Add'
+    ADD_NODES = 'Add Nodes'
+    ADD_COMPARTMENTS = 'Add Compartments'
     ZOOM = 'Zoom'
 
     def __str__(self):

@@ -1,4 +1,5 @@
 # pylint: disable=maybe-no-member
+from rkviewer.utils import opacity_mul
 from rkviewer.canvas.state import ArrowTip
 import wx
 from typing import List, Tuple
@@ -38,12 +39,11 @@ class DesignerWindow(wx.Window):
 
         self.handle_c = api.theme['handle_color']
         self.hl_handle_c = api.theme['highlighted_handle_color']
-        self.handle_pen = wx.GraphicsPen(self.handle_c)
+        self.handle_pen = wx.Pen(self.handle_c)
         self.hl_handle_pen = wx.Pen(self.hl_handle_c)
         self.handle_brush = wx.Brush(self.handle_c)
         self.hl_handle_brush = wx.Brush(self.hl_handle_c)
-        phantom_c = wx.Colour(self.handle_c.Red(), self.handle_c.Green(), self.handle_c.Blue(),
-                              self.handle_c.Alpha() / 2)
+        phantom_c = opacity_mul(self.handle_c, 0.5)
         self.phantom_pen = wx.Pen(phantom_c)
         self.phantom_brush = wx.Brush(phantom_c)
 

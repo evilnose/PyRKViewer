@@ -17,11 +17,16 @@ class ExceptionDialog(wx.MessageDialog):
 # for monkey-patching exceptions
 def create_excepthook(old_excepthook):
     dlg = None
+    # whether we've already displayed the dialog once, since wx might take some time to die
+    over = False
     def custom_excepthook(etype, value, tb):
-        nonlocal dlg
+        nonlocal over, dlg
+        if over:
+            return
+        over = True
         err_msg = ''.join(traceback.format_exception(etype, value, tb))
         logging.error(err_msg)
-        old_excepthook(etype, value, traceback)
+        #old_excepthook(etype, value, traceback)
 
         if dlg is None:
             dlg = ExceptionDialog(err_msg)
@@ -46,6 +51,7 @@ def setup_logging():
             'console': {
                 'class': 'logging.StreamHandler',
                 'level': 'INFO',
+                'stream': 'ext://sys.stdout',
             },
             'debug': {
                 'class': 'logging.FileHandler',
@@ -89,4 +95,5 @@ if __name__ == '__main__':
     view = View()
     controller = Controller(view)
     view.bind_controller(controller)
+    view.init()
     view.main_loop()

@@ -3,7 +3,7 @@ import wx
 import abc
 from typing import List, Optional
 from .canvas.geometry import Vec2
-from .canvas.data import Node, Reaction
+from .canvas.data import Compartment, Node, Reaction
 
 
 class IController(abc.ABC):
@@ -18,12 +18,12 @@ class IController(abc.ABC):
     """
 
     @abc.abstractmethod
-    def try_start_group(self) -> bool:
+    def start_group(self) -> bool:
         """Try to signal start of group operation"""
         pass
 
     @abc.abstractmethod
-    def try_end_group(self) -> bool:
+    def end_group(self) -> bool:
         """Try to signal end of group operation"""
         pass
 
@@ -33,112 +33,121 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_undo(self) -> bool:
+    def undo(self) -> bool:
         """Try to undo last operation"""
         pass
 
     @abc.abstractmethod
-    def try_redo(self) -> bool:
+    def redo(self) -> bool:
         """Try to redo last undone operation"""
         pass
 
     @abc.abstractmethod
-    def try_add_node_g(self, neti: int, node: Node) -> bool:
+    def add_node_g(self, neti: int, node: Node) -> bool:
         """Try to add the given Node to the canvas."""
         pass
 
     @abc.abstractmethod
-    def try_move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False) -> bool:
+    def add_compartment_g(self, neti: int, compartment: Compartment) -> bool:
+        """Try to add the given Compartment to the canvas."""
+        pass
+
+    @abc.abstractmethod
+    def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def try_set_node_size(self, neti: int, nodei: int, size: Vec2, programmatic: bool = False) -> bool:
+    def set_node_size(self, neti: int, nodei: int, size: Vec2, programmatic: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def try_rename_node(self, neti: int, nodei: int, new_id: str) -> bool:
+    def rename_node(self, neti: int, nodei: int, new_id: str) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
+    def set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_fill_alpha(self, neti: int, nodei: int, alpha: int) -> bool:
+    def set_node_fill_alpha(self, neti: int, nodei: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
+    def set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_border_alpha(self, neti: int, nodei: int, alpha: int) -> bool:
+    def set_node_border_alpha(self, neti: int, nodei: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_node_border_width(self, neti: int, nodei: int, width: float) -> bool:
+    def set_node_border_width(self, neti: int, nodei: int, width: float) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_rename_reaction(self, neti: int, reai: int, new_id: str) -> bool:
+    def rename_reaction(self, neti: int, reai: int, new_id: str) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_reaction_line_thickness(self, neti: int, reai: int, thickness: float) -> bool:
+    def set_reaction_line_thickness(self, neti: int, reai: int, thickness: float) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour) -> bool:
+    def set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int) -> bool:
+    def set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_reaction_ratelaw(self, neti: int, reai: int, ratelaw: str) -> bool:
+    def set_reaction_ratelaw(self, neti: int, reai: int, ratelaw: str) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_delete_node(self, neti: int, nodei: int) -> bool:
+    def delete_node(self, neti: int, nodei: int) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_delete_reaction(self, neti: int, reai: int) -> bool:
+    def delete_reaction(self, neti: int, reai: int) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_src_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float) -> bool:
+    def set_src_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_dest_node_stoich(self, neti: int, reai: int, node_id: str, stoich: float) -> bool:
+    def get_dest_node_stoich(self, neti: int, reai: int, nodei: int) -> float:
         pass
 
     @abc.abstractmethod
-    def get_src_node_stoich(self, neti: int, reai: int, node_id: str) -> float:
+    def set_dest_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float) -> bool:
         pass
 
     @abc.abstractmethod
-    def try_set_src_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+    def get_src_node_stoich(self, neti: int, reai: int, nodei: int) -> float:
         pass
 
     @abc.abstractmethod
-    def try_set_dest_node_handle(self, neti: int, reai: int, node_id: str, pos: Vec2):
+    def set_src_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
         pass
 
     @abc.abstractmethod
-    def try_set_center_handle(self, neti: int, reai: int, pos: Vec2):
+    def set_dest_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
         pass
 
     @abc.abstractmethod
-    def get_src_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+    def set_center_handle(self, neti: int, reai: int, pos: Vec2):
         pass
 
     @abc.abstractmethod
-    def get_dest_node_handle(self, neti: int, reai: int, node_id: str) -> Vec2:
+    def get_src_node_handle(self, neti: int, reai: int, nodei: int) -> Vec2:
+        pass
+
+    @abc.abstractmethod
+    def get_dest_node_handle(self, neti: int, reai: int, nodei: int) -> Vec2:
         pass
 
     @abc.abstractmethod
@@ -146,15 +155,11 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_dest_node_stoich(self, neti: int, reai: int, node_id: str) -> float:
+    def get_list_of_src_indices(self, neti: int, reai: int) -> List[int]:
         pass
 
     @abc.abstractmethod
-    def get_list_of_src_ids(self, neti: int, reai: int) -> List[str]:
-        pass
-
-    @abc.abstractmethod
-    def get_list_of_dest_ids(self, neti: int, reai: int) -> List[str]:
+    def get_list_of_dest_indices(self, neti: int, reai: int) -> List[int]:
         pass
 
     @abc.abstractmethod
@@ -163,7 +168,23 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def get_list_of_nodes(self, neti: int) -> List[Node]:
+        pass
+
+    @abc.abstractmethod
+    def get_list_of_reactions(self, neti: int) -> List[Reaction]:
+        pass
+
+    @abc.abstractmethod
+    def get_list_of_compartments(self, neti: int) -> List[Compartment]:
+        pass
+
+    @abc.abstractmethod
     def get_node_index(self, neti: int, node_id: str) -> int:
+        pass
+
+    @abc.abstractmethod
+    def get_node_id(self, neti: int, nodei: int) -> str:
         pass
 
     @abc.abstractmethod
@@ -171,7 +192,19 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def try_add_reaction_g(self, neti: int,  reaction: Reaction) -> bool:
+    def add_reaction_g(self, neti: int, reaction: Reaction) -> bool:
+        pass
+
+    @abc.abstractmethod
+    def get_node_by_index(self, neti: int, nodei: int) -> Node:
+        pass
+
+    @abc.abstractmethod
+    def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:
+        pass
+
+    @abc.abstractmethod
+    def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:
         pass
 
 
@@ -197,6 +230,6 @@ class IView(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_all(self, nodes, reactions):
+    def update_all(self, nodes, reactions, compartments):
         """Update all the graph objects, and redraw everything at the end"""
         pass

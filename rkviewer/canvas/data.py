@@ -1,5 +1,6 @@
 """Classes for storing and managing data for graph elements."""
 # pylint: disable=maybe-no-member
+from __future__ import annotations
 from dataclasses import dataclass
 import wx
 import copy
@@ -7,7 +8,7 @@ import math
 from itertools import chain
 import numpy as np
 from scipy.special import comb
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Container, List, Optional, Sequence, Tuple
 from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segments_intersect
 from .state import cstate
 from ..config import settings, theme
@@ -100,20 +101,22 @@ class Node:
     def rect(self):
         """The same as s_rect, but the rectangle is unscaled.
         """
-        return Rect(copy.copy(self.position), copy.copy(self.size))
+        return Rect(self.position, self.size)
 
-    @property
-    def center_point(self) -> Vec2:
-        return self.position + self.size / 2
+    def __repr__(self):
+        return 'Node(index={}, id="{}")'.format(self.index, self.id_)
+
+    def props_equal(self, other: Node):
+        return self.id_ == other.id_ and self.position == other.position and \
+            self.size == other.size and self.border_width == other.border_width and \
+            self.border_color.GetRGB() == other.border_color.GetRGB() and \
+            self.fill_color.GetRGB() == other.fill_color.GetRGB()
 
 
-ToScrolledFn = Callable[[Vec2], Vec2]
-
-
-def compute_centroid(reactants: List[Node], products: List[Node]) -> Vec2:
+def compute_centroid(rects: Sequence[Rect]) -> Vec2:
     """Compute the centroid position of a list of reactant and product nodes."""
-    total = sum((n.center_point for n in chain(reactants, products)), Vec2())
-    return total / (len(reactants) + len(products))
+    total = sum((r.center_point for r in rects), Vec2())
+    return total / (len(rects))
 
 
 BezJ = np.zeros((MAXSEGS + 1, 5))  #: Precomputed Bezier curve data
@@ -141,6 +144,7 @@ def init_bezier():
         INITIALIZED = True
 
 
+@dataclass
 class Reaction:
     """Class that keeps track of data for a reaction as well as its Bezier curve.
 
@@ -150,16 +154,14 @@ class Reaction:
         fill_color: reaction fill color.
         line_thickness: Bezier curve thickness.
         rate_law: reaction rate law.
-        bezier: Instance that keeps track of the Bezier curve data associated to this reaction.
         position: The centroid position.
         s_position: The scaled centroid position. TODO this is sort of redundant.
-        sources: The source (reactant) nodes.
-        target: The target (product) nodes.
+        sources: The source (reactant) node indices.
+        target: The target (product) node indices.
     """
 
-    def __init__(self, id_: str, *, sources: List[Node], targets: List[Node],
-                 handle_pos: List[Vec2] = None, fill_color: wx.Colour, line_thickness: float,
-                 rate_law: str, index: int = -1):
+    def __init__(self, id_: str, *, sources: List[int], targets: List[int], handle_positions: List[Vec2], fill_color: wx.Colour,
+                 line_thickness: float, rate_law: str, index: int = -1):
         """Constructor for a reaction.
 
         Args:
@@ -178,30 +180,29 @@ class Reaction:
         self.rate_law = rate_law
         self._sources = sources
         self._targets = targets
-        self.bezier = ReactionBezier(sources, targets, line_thickness, handle_pos)
         self._thickness = line_thickness
 
-        self.update_nodes(sources, targets)
+        assert len(handle_positions) == len(sources) + len(targets) + 1
+        src_handle_pos = handle_positions[0]
+        # Initialize to some arbitrary value. This should be controlled by ReactionBezier later.
+        dest_handle_pos = Vec2()
+        handle_pos = handle_positions[1:]
 
-    def update_nodes(self, sources: List[Node], targets: List[Node]):
-        """Called when the node position/size has changed."""
-        s = sum((n.position + n.size / 2 for n in sources + targets), Vec2())
-        self._position = s / (len(sources) + len(targets))
+        self.src_c_handle = HandleData(src_handle_pos)
+        self.dest_c_handle = HandleData(dest_handle_pos)
 
-    @property
-    def position(self) -> Vec2:
-        return self._position
-
-    @property
-    def s_position(self) -> Vec2:
-        return self._position * cstate.scale
+        self.handles = [HandleData(p) for p in handle_pos]
 
     @property
-    def sources(self) -> List[Node]:
+    def thickness(self) -> float:
+        return self._thickness
+
+    @property
+    def sources(self) -> List[int]:
         return self._sources
 
     @property
-    def targets(self) -> List[Node]:
+    def targets(self) -> List[int]:
         return self._targets
 
 
@@ -246,6 +247,7 @@ class SpeciesBezier:
     """Class that keeps track of the Bezier curve associated with a reaction species.
 
     Attributes:
+        TODO update node
         node: The associated node.
         node_intersection: The intersection point between the handle and the padded node, i.e. the
                            point after which the handle is not drawn, to create a gap.
@@ -255,7 +257,7 @@ class SpeciesBezier:
         is_source: Whether this species is considered a source or a dest node.
         arrow_adjusted_coords: Coordinate array for the arrow vertices.
     """
-    node: Node
+    node_idx: int
     node_intersection: Optional[Vec2]
     handle: HandleData
     centroid_handle: HandleData
@@ -265,11 +267,11 @@ class SpeciesBezier:
     _collision_dirty: bool  #: Whether the Bezier curve needs to be recomputed.
     _paint_dirty: bool
 
-    def __init__(self, node: Node, handle: HandleData, centroid: Vec2,
+    def __init__(self, node_idx: int, node_rect: Rect, handle: HandleData, centroid: Vec2,
                  centroid_handle: HandleData, is_source: bool, thickness: float):
         assert INITIALIZED, 'Bezier matrices not initialized! Call init_bezier()'
-
-        self.node = node
+        self.node_idx = node_idx
+        self.node_rect = node_rect
         self.node_intersection = None
         self.handle = handle
         self.centroid_handle = centroid_handle
@@ -295,11 +297,11 @@ class SpeciesBezier:
 
         if self._collision_dirty or self._paint_dirty:
             # STEP 1, get intersection between handle and node outer padding
-            node_center = self.node.position + self.node.size / 2
+            node_center = self.node_rect.position + self.node_rect.size / 2
 
             # add a padding to node, so that the Bezier curve starts outside the node. The portion
             # of the handle within this is not drawn
-            outer_rect = padded_rect(self.node.rect, NODE_EDGE_GAP_DISTANCE)
+            outer_rect = padded_rect(self.node_rect, NODE_EDGE_GAP_DISTANCE)
 
             self.node_intersection = None
             # extend handle to make sure that an intersection is found between the handle and the
@@ -424,6 +426,7 @@ class ReactionBezier:
     """Class that keeps track of all Bezier curve data for a reaction.
 
     Attributes:
+        TODO move this documentation to utils
         CENTER_RATIO: The ratio of source centroid handle length to the distance between the zeroth
                       node and the centroid (center handle is aligned with the zeroth node)
         DUPLICATE_RATIO: Valid for a Bezier whose node is both a product and a reactant. The ratio
@@ -435,22 +438,15 @@ class ReactionBezier:
                        would completely overlap).
         src_beziers: List of SpeciesBezier instances for reactants.
         dest_beziers: List of SpeciesBezier instances for products.
+        TODO move this to Reaction
         src_c_handle: Centroid bezier handle that controls the reactant curves.
         dest_c_handle: Centroid bezier handle that controls the product curves.
         handles: List of all the BezierHandle instances, stored for convenience.
     """
-    CENTER_RATIO = 2/3
-    DUPLICATE_RATIO = 3/4
-    DUPLICATE_ROT = -math.pi/3
-
     src_beziers: List[SpeciesBezier]
     dest_beziers: List[SpeciesBezier]
-    src_c_handle: HandleData
-    dest_c_handle: HandleData
-    handles: List[HandleData]
 
-    def __init__(self, reactants: List[Node], products: List[Node], thickness: float,
-                 handle_positions: List[Vec2] = None):
+    def __init__(self, reaction: Reaction, reactants: List[Node], products: List[Node]):
         """Constructor.
 
         Args:
@@ -463,53 +459,26 @@ class ReactionBezier:
                               automatically initialize the handle positions (e.g. when a new
                               reaction is created).
         """
-        self.reactants = reactants
-        self.products = products
-        self.centroid = compute_centroid(reactants, products)
+        assert len(reactants) == len(reaction.sources)
+        assert len(products) == len(reaction.targets)
+        self.reaction = reaction
+        self.centroid = compute_centroid([n.rect for n in chain(reactants, products)])
         self.src_beziers = list()
         self.dest_beziers = list()
-        self.thickness = thickness
 
-        src_handle_pos: Vec2
-        handle_pos: List[Vec2]
-        if handle_positions is not None:
-            assert len(handle_positions) == len(self.reactants) + len(self.products) + 1
-            src_handle_pos = handle_positions[0]
-            handle_pos = handle_positions[1:]
-        else:
-            # the higher the value, the closer the src handle is to the centroid. 1/2 for halfway
-            # in-between
-            src_handle_pos = self.reactants[0].center_point * (1 - ReactionBezier.CENTER_RATIO) + \
-                self.centroid * ReactionBezier.CENTER_RATIO
-            handle_pos = [(n.center_point + self.centroid) / 2 for n in reactants]
-            reactant_indices = [n.index for n in reactants]
-            for n in products:
-                if n.index in reactant_indices:
-                    # If also a reactant, shift the handle to not have the curves completely overlap
-                    diff = self.centroid - n.center_point
-                    length = diff.norm * ReactionBezier.DUPLICATE_RATIO
-                    new_dir = rotate_unit(diff, ReactionBezier.DUPLICATE_ROT)
-                    handle_pos.append(n.center_point + new_dir * length)
-                else:
-                    handle_pos.append((n.center_point + self.centroid) / 2)
-
-        self.src_c_handle = HandleData(src_handle_pos, self.centroid)
-        self.dest_c_handle = HandleData(2 * self.centroid - src_handle_pos, self.centroid)
-
-        self.handles = [self.src_c_handle, self.dest_c_handle]
-
+        reaction.dest_c_handle.tip = self.centroid * 2 - reaction.src_c_handle.tip
+        reaction.src_c_handle.base = self.centroid
+        reaction.dest_c_handle.base = self.centroid
         # create handles for species
-        for index, (node, gi) in enumerate(gchain(self.reactants, self.products)):
+        for index, (gi, node) in enumerate(gchain(reactants, products)):
             in_products = bool(gi)
 
-            node_handle = HandleData(handle_pos[index])
-            centroid_handle = self.dest_c_handle if in_products else self.src_c_handle
-            sb = SpeciesBezier(node, node_handle, self.centroid, centroid_handle, not in_products,
-                               thickness)
+            node_handle = reaction.handles[index]
+            centroid_handle = self.reaction.dest_c_handle if in_products else self.reaction.src_c_handle
+            sb = SpeciesBezier(node.index, node.rect, node_handle, self.centroid, centroid_handle,
+                               not in_products, self.reaction.thickness)
             to_append = self.dest_beziers if in_products else self.src_beziers
             to_append.append(sb)
-            self.handles.append(node_handle)
-            index += 1
 
     def make_handle_moved_func(self, sb: SpeciesBezier):
         """Manufacture a callback function (on_moved) for the given SpeciesBezier."""
@@ -526,25 +495,44 @@ class ReactionBezier:
 
     def src_handle_moved(self):
         """Special callback for when the source centroid handle is moved."""
-        self.dest_c_handle.tip = 2 * self.centroid - self.src_c_handle.tip
+        self.reaction.dest_c_handle.tip = 2 * self.centroid - self.reaction.src_c_handle.tip
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
     def dest_handle_moved(self):
         """Special callback for when the dest centroid handle is moved."""
-        self.src_c_handle.tip = 2 * self.centroid - self.dest_c_handle.tip
+        self.reaction.src_c_handle.tip = 2 * self.centroid - self.reaction.dest_c_handle.tip
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.centroid)
 
-    def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
-        # TODO HACK this recomputes the centroid to detect changes. Instead use a dirty flag that
-        # is set to True whenever nodes are moved. Pending https://github.com/evilnose/PyRKViewer/issues/15
-        new_centroid = compute_centroid(self.reactants, self.products)
-        if new_centroid != self.centroid:
-            self.centroid = new_centroid
-            self.src_c_handle.base = new_centroid
-            self.dest_c_handle.base = new_centroid
-            self.src_handle_moved()
+    def nodes_moved(self, rects: List[Rect]):
+        self.centroid = compute_centroid(rects)
+        self.reaction.src_c_handle.base = self.centroid
+        self.reaction.dest_c_handle.base = self.centroid
+        for i, sb in enumerate(chain(self.src_beziers, self.dest_beziers)):
+            sb.node_rect = rects[i]
+        self.src_handle_moved()
 
+    def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.do_paint(gc, fill, selected)
+
+
+@dataclass
+class Compartment:
+    id_: str
+    nodes: List[int]
+    volume: float  #: Size (i.e. length/area/volume/...) of the container
+    position: Vec2
+    size: Vec2  #: Size for drawing on the GUI
+    fill: wx.Colour
+    border: wx.Colour
+    border_width: float
+    index: int = -1
+    #dimensions: int
+
+    @property
+    def rect(self):
+        """The same as s_rect, but the rectangle is unscaled.
+        """
+        return Rect(self.position, self.size)

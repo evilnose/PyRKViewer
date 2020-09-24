@@ -1,5 +1,5 @@
 # pylint: disable=maybe-no-member
-from iodine import NetIndexOutOfRangeError
+from iodine import NetIndexNotFoundError
 from rkviewer.canvas.geometry import Rect, within_rect
 from rkviewer.config import DEFAULT_ARROW_TIP
 import wx

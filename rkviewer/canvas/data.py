@@ -522,7 +522,7 @@ class ReactionBezier:
 class Compartment:
     id_: str
     nodes: List[int]
-    virtual_size: float  #: Size (i.e. length/area/volume/...) of the container
+    volume: float  #: Size (i.e. length/area/volume/...) of the container
     position: Vec2
     size: Vec2  #: Size for drawing on the GUI
     fill: wx.Colour

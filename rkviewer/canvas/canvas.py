@@ -660,7 +660,7 @@ class Canvas(wx.ScrolledWindow):
                 compart = Compartment(id_,
                                       index=self.comp_index,
                                       nodes=list(),
-                                      virtual_size=1,
+                                      volume=1,
                                       position=self._drag_rect.position / cstate.scale,
                                       size=clipped_size / cstate.scale,
                                       fill=theme['comp_fill'],

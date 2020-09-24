@@ -26,7 +26,7 @@ def create_excepthook(old_excepthook):
         over = True
         err_msg = ''.join(traceback.format_exception(etype, value, tb))
         logging.error(err_msg)
-        old_excepthook(etype, value, traceback)
+        #old_excepthook(etype, value, traceback)
 
         if dlg is None:
             dlg = ExceptionDialog(err_msg)

@@ -6,23 +6,25 @@ import traceback
 from typing import Collection, List, Optional, Set
 import iodine as iod
 import logging
+
+from iodine import TColor
 from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
-from .canvas.data import Node, Reaction
+from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView
 
 
-def setter(controller_setter):
-    """Decorator for controller setter methods that catches Errors and auto updates views."""
+def iod_setter(controller_iod_setter):
+    """Decorator for controller iod_setter methods that catches Errors and auto updates views."""
     # If programmatic is True, then do not trigger a C-Event
 
     def ret(self, *args):
-        controller_setter(self, *args)
+        controller_iod_setter(self, *args)
         '''
         try:
-            controller_setter(self, *args)
+            controller_iod_setter(self, *args)
         except iod.Error:
             logger = logging.getLogger('controller')
             logger.error('Caught error when trying to set something in controller:')
@@ -108,7 +110,7 @@ class Controller(IController):
         self._update_view()
         return True
 
-    @setter
+    @iod_setter
     def add_node_g(self, neti: int, node: Node, programmatic: bool = False):
         '''
         Add node represented by the given Node variable.
@@ -130,7 +132,23 @@ class Controller(IController):
             post_event(DidAddNodeEvent(node))
         self.end_group()
 
-    @setter
+    def wx_to_tcolor(self, color: wx.Colour) -> TColor:
+        return TColor(color.Red(), color.Green(), color.Blue(), color.Alpha())
+
+    def tcolor_to_wx(self, color: TColor) -> wx.Colour:
+        return wx.Colour(color.r, color.g, color.b, color.a)
+
+    @iod_setter
+    def add_compartment_g(self, neti: int, compartment: Compartment):
+        self.start_group()
+        compi = iod.addCompartment(neti, compartment.id_, *compartment.position, *compartment.size)
+        iod.setCompartmentFillColor(neti, compi, self.wx_to_tcolor(compartment.fill))
+        iod.setCompartmentOutlineColor(neti, compi, self.wx_to_tcolor(compartment.border))
+        iod.setCompartmentOutlineThickness(neti, compi, compartment.border_width)
+        iod.setCompartmentVolume(neti, compi, compartment.volume)
+        self.end_group()
+
+    @iod_setter
     def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False):
         assert pos.x >= 0 and pos.y >= 0
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
@@ -138,59 +156,59 @@ class Controller(IController):
         if not programmatic:
             post_event(DidCommitNodePositionsEvent())
 
-    @setter
+    @iod_setter
     def set_node_size(self, neti: int, nodei: int, size: Vec2):
         iod.setNodeSize(neti, nodei, size.x, size.y)
 
-    @setter
+    @iod_setter
     def rename_node(self, neti: int, nodei: int, new_id: str):
         iod.setNodeID(neti, nodei, new_id)
 
-    @setter
+    @iod_setter
     def set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour):
         iod.setNodeFillColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
-    @setter
+    @iod_setter
     def set_node_fill_alpha(self, neti: int, nodei: int, alpha: int):
         iod.setNodeFillColorAlpha(neti, nodei, alpha / 255)
 
-    @setter
+    @iod_setter
     def set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour):
         iod.setNodeOutlineColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
-    @setter
+    @iod_setter
     def set_node_border_alpha(self, neti: int, nodei: int, alpha: int):
         iod.setNodeOutlineColorAlpha(neti, nodei, alpha / 255)
 
-    @setter
+    @iod_setter
     def rename_reaction(self, neti: int, reai: int, new_id: str):
         iod.setReactionID(neti, reai, new_id)
 
-    @setter
+    @iod_setter
     def set_reaction_line_thickness(self, neti: int, reai: int, thickness: float):
         iod.setReactionLineThickness(neti, reai, thickness)
 
-    @setter
+    @iod_setter
     def set_reaction_fill_rgb(self, neti: int, reai: int, color: wx.Colour):
         iod.setReactionFillColorRGB(neti, reai, color.Red(), color.Green(), color.Blue())
 
-    @setter
+    @iod_setter
     def set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int):
         iod.setReactionFillColorAlpha(neti, reai, alpha / 255)
 
-    @setter
+    @iod_setter
     def set_node_border_width(self, neti: int, nodei: int, width: float):
         iod.setNodeOutlineThickness(neti, nodei, width)
 
-    @setter
+    @iod_setter
     def delete_node(self, neti: int, nodei: int):
         iod.deleteNode(neti, nodei)
 
-    @setter
+    @iod_setter
     def delete_reaction(self, neti: int, reai: int):
         iod.deleteReaction(neti, reai)
 
-    @setter
+    @iod_setter
     def add_reaction_g(self, neti: int, reaction: Reaction):
         """Try create a reaction."""
         self.start_group()
@@ -218,27 +236,27 @@ class Controller(IController):
         iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
         self.end_group()
 
-    @setter
+    @iod_setter
     def set_reaction_ratelaw(self, neti: int, reai: int, ratelaw: str):
         iod.setRateLaw(neti, reai, ratelaw)
 
-    @setter
+    @iod_setter
     def set_src_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float):
         iod.setReactionSrcNodeStoich(neti, reai, nodei, stoich)
 
-    @setter
+    @iod_setter
     def set_dest_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float):
         iod.setReactionDestNodeStoich(neti, reai, nodei, stoich)
 
-    @setter
+    @iod_setter
     def set_src_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
         iod.setReactionSrcNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
 
-    @setter
+    @iod_setter
     def set_dest_node_handle(self, neti: int, reai: int, nodei: int, pos: Vec2):
         iod.setReactionDestNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
 
-    @setter
+    @iod_setter
     def set_center_handle(self, neti: int, reai: int, pos: Vec2):
         iod.setReactionCenterHandlePosition(neti, reai, pos.x, pos.y)
 
@@ -271,7 +289,6 @@ class Controller(IController):
         for id_ in iod.getListOfNodeIDs(neti):
             nodei = iod.getNodeIndex(neti, id_)
             nodes.append(self.get_node_by_index(neti, nodei))
-
         return nodes
 
     def get_list_of_reactions(self, neti: int) -> List[Reaction]:
@@ -279,8 +296,11 @@ class Controller(IController):
         for id_ in iod.getListOfReactionIDs(neti):
             reai = iod.getReactionIndex(neti, id_)
             reactions.append(self.get_reaction_by_index(neti, reai))
-
         return reactions
+
+    def get_list_of_compartments(self, neti: int) -> List[Compartment]:
+        return [self.get_compartment_by_index(neti, compi)
+                for compi in iod.getListOfCompartments(neti)]
 
     def get_node_index(self, neti: int, node_id: str) -> int:
         return iod.getNodeIndex(neti, node_id)
@@ -317,6 +337,7 @@ class Controller(IController):
         fill_rgb = iod.getReactionFillColorRGB(neti, reai)
         fill_alpha = iod.getReactionFillColorAlpha(neti, reai)
 
+        # Handle positions array
         items = list()
         items.append(self.get_center_handle(neti, reai))
         items += [self.get_src_node_handle(neti, reai, i) for i in sindices]
@@ -331,6 +352,20 @@ class Controller(IController):
                         rate_law=iod.getReactionRateLaw(neti, reai),
                         handle_positions=items
                         )
+        
+    def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:
+        id_ = iod.getCompartmentID(neti, compi)
+
+        return Compartment(id_,
+                           nodes=iod.getNodesInCompartment(neti, compi),
+                           volume=iod.getCompartmentVolume(neti, compi),
+                           position=Vec2(iod.getCompartmentPosition(neti, compi)),
+                           size=Vec2(iod.getCompartmentSize(neti, compi)),
+                           fill=self.tcolor_to_wx(iod.getCompartmentFillColor(neti, compi)),
+                           border=self.tcolor_to_wx(iod.getCompartmentOutlineColor(neti, compi)),
+                           border_width=iod.getCompartmentOutlineThickness(neti, compi),
+        )
+
 
     # get the updated list of nodes from model and update
     def _update_view(self):
@@ -338,4 +373,5 @@ class Controller(IController):
 
         self.stacklen += 1  # TODO remove once fixed
         neti = 0
-        self.view.update_all(self.get_list_of_nodes(neti), self.get_list_of_reactions(neti))
+        self.view.update_all(self.get_list_of_nodes(neti), self.get_list_of_reactions(neti),
+                             self.get_list_of_compartments(neti))

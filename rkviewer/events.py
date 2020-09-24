@@ -3,15 +3,25 @@
 These events may later be used within a plugin system, where plugins are allowed to bind their own
 handlers to these events.
 """
-from __future__ import annotations
 # pylint: disable=maybe-no-member
-from itertools import chain
-import wx
-from dataclasses import dataclass, is_dataclass, fields
-from rkviewer.canvas.geometry import Vec2
-from rkviewer.canvas.data import Node, Reaction
+from __future__ import annotations
 from collections import defaultdict
-from typing import Callable, DefaultDict, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from dataclasses import dataclass, fields, is_dataclass
+from typing import (
+    Callable,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+)
+
+import wx
+
+from rkviewer.canvas.data import Node, Reaction
+from rkviewer.canvas.geometry import Vec2
 
 
 class CanvasEvent:

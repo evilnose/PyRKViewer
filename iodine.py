@@ -80,9 +80,11 @@ class TNetwork:
         self.reactions[self.lastReactionIdx] = rea
         self.lastReactionIdx += 1
 
-    def addCompartment(self, comp: TCompartment):
-        self.compartments[self.lastCompartmentIdx] = comp
+    def addCompartment(self, comp: TCompartment) -> int:
+        ind = self.lastCompartmentIdx
+        self.compartments[ind] = comp
         self.lastCompartmentIdx += 1
+        return ind
 
     def getFreenodes(self) -> Set[int]:
         """
@@ -2258,9 +2260,9 @@ def setReactionCenterHandlePosition(neti: int, reai: int, centerHandleX: float, 
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def addCompartment(neti: int, compID: str, x: float, y: float, w: float, h: float):
+def addCompartment(neti: int, compID: str, x: float, y: float, w: float, h: float) -> int:
     """
-    Create a compartment and add to canvas.
+    Create a compartment and add to canvas. Return the index of the compartment added.
 
     Args:
         neti: network index.
@@ -2277,7 +2279,7 @@ def addCompartment(neti: int, compID: str, x: float, y: float, w: float, h: floa
     if any((compID == c.id for c in net.compartments.values())):
         _raiseError(-3)
     _pushUndoStack()
-    net.addCompartment(comp)
+    return net.addCompartment(comp)
 
 
 def deleteCompartment(neti: int, compi: int):

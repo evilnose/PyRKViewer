@@ -387,6 +387,26 @@ class SelectBox(CanvasElement):
                       1-1.
         bounding_rect: The exact bounding rectangle (without padding).
         mode: Current input mode of the SelectBox.
+
+    Note:
+        The behavior of the SelectBox depends on the nodes and compartments selected, but not the
+        reactions. The cases of behaviors are documented here:
+
+        1) Only compartments are selected. Nodes within these compartments are dragged along with
+           them, but they are not resized.
+        3) Only nodes are selected, and they are all in the same compartment. In this case, the
+           nodes may be moved normally. They also may be moved outside of their compartment to be
+           assigned to another compartment (this is the only case where this is possible). However
+           note that the nodes may not be resized to be larger than the containing compartment.
+        3) Otherwise, there are two cases depending on if the selected nodes are in the union of
+           the selected compartments.
+            a) If the selected nodes are entirely contained in the list of selected compartments,
+               then everything is moved and resized together, as usual.
+            b) Otherwise (i.e. some node is not in any selected compartment), then dragging and
+               resizing are disabled.
+        Note that in case 2), if all selected nodes are in the base compartment (i.e. no
+        compartment), then the base compartment is assumed to be selected, and resizing and moving
+        work as usual.
     """
     CURSOR_TYPES = [wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE,
                     wx.CURSOR_SIZENWSE, wx.CURSOR_SIZENS, wx.CURSOR_SIZENESW, wx.CURSOR_SIZEWE]
@@ -410,6 +430,21 @@ class SelectBox(CanvasElement):
         IDLE = 0
         MOVING = 1
         RESIZING = 2
+
+    class SpecialMode(enum.Enum):
+        """For what this does, see "Notes" section of the class documentation."""
+
+        COMP_ONLY = 0
+        """Only compartments are selected."""
+        NODES_IN_ONE = 1
+        """Only nodes are selected, and they are in a single compartment."""
+        CONTAINED = 2
+        """Nodes are entirely contained in the selected compartments, or they are all in the base
+        compartment.
+        """
+        NOT_CONTAINED = 3
+        """Nodes are not entirely contained in the selected compartments."""
+
 
     def __init__(self, canvas, nodes: List[Node], compartments: List[Compartment], bounds: Rect,
                  controller: IController, net_index: int, set_cursor_fn: SetCursorFn, layer: int):
@@ -451,8 +486,25 @@ class SelectBox(CanvasElement):
             self.bounding_rect = get_bounding_rect(
                 [n.rect for n in nodes] + [c.rect for c in compartments])
 
-        # TODO document
-        self.assoc_comps = {self.canvas.node2comp[n.index] for n in nodes}
+        # Determine SpecialMode
+        # The set of compartments the nodes are in. TODO
+        if len(nodes) == 0:
+            self._special_mode = SelectBox.SpecialMode.COMP_ONLY
+        else:
+            assoc_comps = {self.canvas.node2comp[n.index] for n in nodes}
+            if len(compartments) == 0:
+                if len(assoc_comps) == 1:
+                    # Nodes are in one compartment
+                    self._special_mode = SelectBox.SpecialMode.NODES_IN_ONE
+                else:
+                    # Cannot possibly contain
+                    self._special_mode = SelectBox.SpecialMode.NOT_CONTAINED
+            else:
+                selected_comps = set(c.index for c in compartments)
+                if selected_comps >= assoc_comps:
+                    self._special_mode = SelectBox.SpecialMode.CONTAINED
+                else:
+                    self._special_mode = SelectBox.SpecialMode.NOT_CONTAINED
 
     def outline_rect(self) -> Rect:
         """Helper that returns the scaled, padded bounding rectangle."""
@@ -575,6 +627,7 @@ class SelectBox(CanvasElement):
         return False
 
     def do_left_up(self, logical_pos: Vec2):
+        # TODO implement compartments and drop nodes
         assert len(self.nodes) != 0
         if self._mode == SelectBox.Mode.MOVING:
             if self._did_move:
@@ -600,6 +653,8 @@ class SelectBox(CanvasElement):
         self._mode = SelectBox.Mode.IDLE
 
     def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
+        # TODO we may want to make Node and Compartment inherit from a Rectangle class. This will
+        # make the code more general.
         assert self._mode != SelectBox.Mode.IDLE
         if self._mode == SelectBox.Mode.RESIZING:
             self._resize(logical_pos)

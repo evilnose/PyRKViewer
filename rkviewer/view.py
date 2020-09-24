@@ -11,7 +11,7 @@ from typing import Callable, List, Dict, Any, Tuple
 from .events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
     SelectionDidUpdateEvent
 from .canvas.canvas import Canvas
-from .canvas.data import Node, Reaction
+from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import cstate, InputMode
 from .config import settings, theme
 from .forms import NodeForm, ReactionForm
@@ -496,10 +496,11 @@ class View(IView):
         self.frame.Show()
         self.app.MainLoop()
 
-    def update_all(self, nodes: List[Node], reactions: List[Reaction]):
+    def update_all(self, nodes: List[Node], reactions: List[Reaction],
+                   compartments: List[Compartment]):
         """Update the list of nodes.
 
         Note that View takes ownership of the list of nodes and may modify it.
         """
-        self.canvas_panel.Reset(nodes, reactions)
+        self.canvas_panel.Reset(nodes, reactions, compartments)
         self.canvas_panel.LazyRefresh()

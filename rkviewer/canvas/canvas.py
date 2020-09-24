@@ -116,7 +116,7 @@ class Canvas(wx.ScrolledWindow):
     _accum_frames: int
     _last_fps_update: int
     _last_refresh: int
-    node2comp: DefaultDict[int, Optional[CanvasElement]]  #: Maps node index to the compartment index
+    node2comp: DefaultDict[int, int]  #: Maps node index to the compartment index
     node_idx_map: Dict[int, Node]  #: Maps node index to itself
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
@@ -217,7 +217,7 @@ class Canvas(wx.ScrolledWindow):
         self._last_refresh = 0
         cstate.input_mode_changed = self.InputModeChanged
         self.comp_index = 0  # Compartment of index; remove once controller implements compartments
-        self.node2comp = defaultdict(lambda: None)
+        self.node2comp = defaultdict(lambda: -1)
         self.node_idx_map = dict()
 
         self.SetOverlayPositions()
@@ -330,9 +330,8 @@ class Canvas(wx.ScrolledWindow):
     def CreateCompartmentElement(self, comp: Compartment) -> CompartmentElt:
         return CompartmentElt(comp, Canvas.COMPARTMENT_LAYER, comp.index)
 
-    def Reset(self, nodes: List[Node], reactions: List[Reaction]):
+    def Reset(self, nodes: List[Node], reactions: List[Reaction], compartments: List[Compartment]):
         """Update the list of nodes and apply the current scale."""
-        # TODO create elements from compartments
         # destroy old elements
         for elt in self._elements:
             elt.destroy()
@@ -340,10 +339,12 @@ class Canvas(wx.ScrolledWindow):
         # cull removed indices
         node_idx = {n.index for n in nodes}
         rxn_idx = {r.index for r in reactions}
+        comp_idx = {c.index for c in compartments}
 
         self.sel_nodes_idx.set_item(self.sel_nodes_idx.item_copy() & node_idx)
         new_sel_reactions = self.sel_reactions_idx.item_copy() & rxn_idx
         self.sel_reactions_idx.set_item(new_sel_reactions)
+        self.sel_compartments_idx.set_item(self.sel_compartments_idx.item_copy() & comp_idx)
 
         self._reactant_idx &= node_idx
         self._product_idx &= node_idx
@@ -361,12 +362,13 @@ class Canvas(wx.ScrolledWindow):
 
         self._nodes = nodes
         self._reactions = reactions
+        self._compartments = compartments
         self.hovered_element = None
         self.dragged_element = None
         self.InputModeChanged(cstate.input_mode)
         self._node_elements = [self.CreateNodeElement(n) for n in nodes]
         self._reaction_elements = [self.CreateReactionElement(r) for r in reactions]
-        self._compartment_elements = [self.CreateCompartmentElement(c) for c in self._compartments]
+        self._compartment_elements = [self.CreateCompartmentElement(c) for c in compartments]
         select_elements = cast(List[CanvasElement], self._node_elements) + cast(
             List[CanvasElement], self._reaction_elements) + cast(
                 List[CanvasElement], self._compartment_elements)
@@ -655,6 +657,7 @@ class Canvas(wx.ScrolledWindow):
                 self.drag_sel_nodes_idx = set()
             elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                 id_ = self._GetUniqueName('c', [c.id_ for c in self._compartments])
+                # make sure the compartment is at least of some size
                 clipped_size = Vec2(max(self._drag_rect.size.x, settings['min_comp_width']),
                                     max(self._drag_rect.size.y, settings['min_comp_height']))
                 compart = Compartment(id_,
@@ -667,10 +670,7 @@ class Canvas(wx.ScrolledWindow):
                                       border=theme['comp_border'],
                                       border_width=theme['comp_border_width'],
                                       )
-                self.comp_index += 1
-                self._compartments.append(compart)
-                # TODO tell controller to add compartment here
-                self.Reset(self._nodes, self._reactions)
+                self.controller.add_compartment_g(self.net_index, compart)
         elif cstate.input_mode == InputMode.SELECT:
             # perform left_up on dragged_element if it exists, or just find the node under the
             # cursor

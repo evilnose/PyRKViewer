@@ -3,7 +3,7 @@ import wx
 import abc
 from typing import List, Optional
 from .canvas.geometry import Vec2
-from .canvas.data import Node, Reaction
+from .canvas.data import Compartment, Node, Reaction
 
 
 class IController(abc.ABC):
@@ -45,6 +45,11 @@ class IController(abc.ABC):
     @abc.abstractmethod
     def add_node_g(self, neti: int, node: Node) -> bool:
         """Try to add the given Node to the canvas."""
+        pass
+
+    @abc.abstractmethod
+    def add_compartment_g(self, neti: int, compartment: Compartment) -> bool:
+        """Try to add the given Compartment to the canvas."""
         pass
 
     @abc.abstractmethod
@@ -171,6 +176,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def get_list_of_compartments(self, neti: int) -> List[Compartment]:
+        pass
+
+    @abc.abstractmethod
     def get_node_index(self, neti: int, node_id: str) -> int:
         pass
 
@@ -191,7 +200,11 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_reaction_by_index(self, neti: int, reai: int) -> Node:
+    def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:
+        pass
+
+    @abc.abstractmethod
+    def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:
         pass
 
 
@@ -217,6 +230,6 @@ class IView(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def update_all(self, nodes, reactions):
+    def update_all(self, nodes, reactions, compartments):
         """Update all the graph objects, and redraw everything at the end"""
         pass

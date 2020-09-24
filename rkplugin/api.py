@@ -70,7 +70,7 @@ def get_node_by_index(net_index: int, node_index: int) -> Node:
     return _controller.get_node_by_index(net_index, node_index)
 
 
-def get_reaction_by_index(net_index: int, reaction_index: int) -> Node:
+def get_reaction_by_index(net_index: int, reaction_index: int) -> Reaction:
     return _controller.get_reaction_by_index(net_index, reaction_index)
 
 

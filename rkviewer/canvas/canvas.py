@@ -66,8 +66,10 @@ class Canvas(wx.ScrolledWindow):
         net_index: The index of the current network. Rightn now it can be zero.
         sel_nodes_idx: The set of indices of the currently selected nodes.
         sel_reactions_idx: The set of indices of the currently selected reactions.
+        sel_compartments_idx: The set of indices of the currently selected compartments.
         drag_sel_nodes_idx: The set of indices tentatively selected during dragging. This is added
                            to sel_nodes_idx only after the user has stopped drag-selecting.
+        drag_sel_comp_idx: See drag_sel_nodes_idx but for compartments
         hovered_element: The element over which the mouse is hovering, or None.
         zoom_slider: The zoom slider widget.
         reaction_map: Maps node index to the set of reaction (indices) that it is in.
@@ -86,6 +88,7 @@ class Canvas(wx.ScrolledWindow):
     realsize: Vec2
     sel_nodes_idx: SetSubject
     sel_reactions_idx: SetSubject
+    sel_compartments_idx: SetSubject
     drag_sel_nodes_idx: Set[int]
     hovered_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
@@ -116,7 +119,6 @@ class Canvas(wx.ScrolledWindow):
     _accum_frames: int
     _last_fps_update: int
     _last_refresh: int
-    node2comp: DefaultDict[int, int]  #: Maps node index to the compartment index
     node_idx_map: Dict[int, Node]  #: Maps node index to itself
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
@@ -199,6 +201,7 @@ class Canvas(wx.ScrolledWindow):
         self._drag_select_start = Vec2()
         self._drag_rect = Rect(Vec2(), Vec2())
         self.drag_sel_nodes_idx = set()
+        self.drag_sel_comp_idx = set()
 
         self._status_bar = self.GetTopLevelParent().GetStatusBar()
         assert self._status_bar is not None, "Need to create status bar before creating canvas!"
@@ -217,7 +220,6 @@ class Canvas(wx.ScrolledWindow):
         self._last_refresh = 0
         cstate.input_mode_changed = self.InputModeChanged
         self.comp_index = 0  # Compartment of index; remove once controller implements compartments
-        self.node2comp = defaultdict(lambda: -1)
         self.node_idx_map = dict()
 
         self.SetOverlayPositions()
@@ -318,8 +320,8 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.realsize = self.realsize
         self._minimap.nodes = self._nodes
 
-    def CreateNodeElement(self, node: Node) -> NodeElement:
-        return NodeElement(node, self, Canvas.NODE_LAYER)
+    def CreateNodeElement(self, node: Node, layers: Union[int, List[int]]) -> NodeElement:
+        return NodeElement(node, self, layers)
 
     def CreateReactionElement(self, rxn: Reaction) -> ReactionElement:
         snodes = [self.node_idx_map[id_] for id_ in rxn.sources]
@@ -328,6 +330,11 @@ class Canvas(wx.ScrolledWindow):
         return ReactionElement(rxn, rb, self, Canvas.REACTION_LAYER, Canvas.HANDLE_LAYER)
 
     def CreateCompartmentElement(self, comp: Compartment) -> CompartmentElt:
+        # NOTE the index of the compartment is used as its *secondary layer*, i.e. all compartments
+        # share the same main layor (COMPARTMENT_LAYER), but to make sure the containing nodes
+        # are rendered correctly, a secondary layer is applied to each compartment, taking its
+        # index. This works because compartments with higher indices are added later and therefore
+        # should be rendered on top.
         return CompartmentElt(comp, Canvas.COMPARTMENT_LAYER, comp.index)
 
     def Reset(self, nodes: List[Node], reactions: List[Reaction], compartments: List[Compartment]):
@@ -366,9 +373,15 @@ class Canvas(wx.ScrolledWindow):
         self.hovered_element = None
         self.dragged_element = None
         self.InputModeChanged(cstate.input_mode)
-        self._node_elements = [self.CreateNodeElement(n) for n in nodes]
         self._reaction_elements = [self.CreateReactionElement(r) for r in reactions]
         self._compartment_elements = [self.CreateCompartmentElement(c) for c in compartments]
+        # create node elements and assign the correct layers to them (accounting for compartments)
+        self._node_elements = list()
+        for node in nodes:
+            compi = self.controller.get_compartment_of_node(self.net_index, node.index)
+            layers = Canvas.NODE_LAYER if compi == -1 else [Canvas.COMPARTMENT_LAYER, compi, 1]
+            self._node_elements.append(self.CreateNodeElement(node, layers))
+
         select_elements = cast(List[CanvasElement], self._node_elements) + cast(
             List[CanvasElement], self._reaction_elements) + cast(
                 List[CanvasElement], self._compartment_elements)
@@ -384,6 +397,13 @@ class Canvas(wx.ScrolledWindow):
 
         evt = CanvasDidUpdateEvent(nodes=self._nodes, reactions=self._reactions)
         post_event(evt)
+
+    def GetCompartment(self, comp_idx: int) -> Optional[Compartment]:
+        for comp in self._compartments:
+            if comp.index == comp_idx:
+                return comp
+
+        return Optional[None]
 
     def _SetStatusText(self, name: str, text: str):
         idx = self._reverse_status[name]
@@ -556,9 +576,9 @@ class Canvas(wx.ScrolledWindow):
                         self.sel_compartments_idx.set_item(set())
 
                 self._FloatNodes()
-                # if clicked on a new node, immediately allow dragging on the
+                # if clicked on a new node/compartment, immediately allow dragging on the
                 # updated select box
-                if not cstate.multi_select and node and self._select_box.pos_inside(logical_pos):
+                if not cstate.multi_select and (node or comp) and self._select_box.pos_inside(logical_pos):
                     self._select_box.do_mouse_enter(logical_pos)
                     good = self._select_box.do_left_down(logical_pos)
                     assert good
@@ -571,6 +591,7 @@ class Canvas(wx.ScrolledWindow):
                     self._drag_select_start = logical_pos
                     self._drag_rect = Rect(self._drag_select_start, Vec2())
                     self.drag_sel_nodes_idx = set()
+                    self.drag_sel_comp_idx = set()
             elif cstate.input_mode == InputMode.ADD_NODES:
                 size = Vec2(theme['node_width'], theme['node_height'])
 
@@ -584,6 +605,7 @@ class Canvas(wx.ScrolledWindow):
                     fill_color=theme['node_fill'],
                     border_color=theme['node_border'],
                     border_width=theme['node_border_width'],
+                    comp_idx=self.InWhichCompartment([Rect(adj_pos, size)]),
                 )
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])
@@ -624,7 +646,7 @@ class Canvas(wx.ScrolledWindow):
             elt = cast(NodeElement, elt)
             if elt.node.index in self.sel_nodes_idx:
                 node_elements.append(elt)
-            
+
         for elt in node_elements:
             self.ResetLayer(elt, self.DRAGGED_NODE_LAYER)
 
@@ -652,25 +674,35 @@ class Canvas(wx.ScrolledWindow):
         elif self._drag_selecting:
             self._drag_selecting = False
             if cstate.input_mode == InputMode.SELECT:
-                self.sel_nodes_idx.set_item(self.sel_nodes_idx.item_copy()
-                                            | self.drag_sel_nodes_idx)
+                self.sel_nodes_idx.union(self.drag_sel_nodes_idx)
+                self.sel_compartments_idx.union(self.drag_sel_comp_idx)
                 self.drag_sel_nodes_idx = set()
+                self.drag_sel_comp_idx = set()
             elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                 id_ = self._GetUniqueName('c', [c.id_ for c in self._compartments])
+
+                size = self._drag_rect.size / cstate.scale
                 # make sure the compartment is at least of some size
-                clipped_size = Vec2(max(self._drag_rect.size.x, settings['min_comp_width']),
-                                    max(self._drag_rect.size.y, settings['min_comp_height']))
-                compart = Compartment(id_,
-                                      index=self.comp_index,
-                                      nodes=list(),
-                                      volume=1,
-                                      position=self._drag_rect.position / cstate.scale,
-                                      size=clipped_size / cstate.scale,
-                                      fill=theme['comp_fill'],
-                                      border=theme['comp_border'],
-                                      border_width=theme['comp_border_width'],
-                                      )
-                self.controller.add_compartment_g(self.net_index, compart)
+                adj_size = Vec2(max(size.x, settings['min_comp_width']),
+                                max(size.y, settings['min_comp_height']))
+                # compute position
+                size_diff = adj_size - self._drag_rect.size
+                # center position if drag_rect size has been adjusted
+                pos = self._drag_rect.position / cstate.scale - size_diff / 2
+
+                comp = Compartment(id_,
+                                   index=self.comp_index,
+                                   nodes=list(),
+                                   volume=1,
+                                   position=pos,
+                                   size=adj_size,
+                                   fill=theme['comp_fill'],
+                                   border=theme['comp_border'],
+                                   border_width=theme['comp_border_width'],
+                                   )
+                # clip osition
+                comp.position = clamp_rect_pos(comp.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
+                self.controller.add_compartment_g(self.net_index, comp)
         elif cstate.input_mode == InputMode.SELECT:
             # perform left_up on dragged_element if it exists, or just find the node under the
             # cursor
@@ -715,9 +747,12 @@ class Canvas(wx.ScrolledWindow):
                                 max(logical_pos.y, self._drag_select_start.y))
                 self._drag_rect = Rect(topleft, botright - topleft)
                 if cstate.input_mode == InputMode.SELECT:
-                    selected_nodes = [n for n in self._nodes if rects_overlap(n.s_rect,
-                                                                              self._drag_rect)]
+                    selected_nodes = [n for n in self._nodes
+                                      if rects_overlap(n.s_rect, self._drag_rect)]
+                    selected_comps = [c for c in self._compartments
+                                      if rects_overlap(c.rect * cstate.scale, self._drag_rect)]
                     self.drag_sel_nodes_idx = set(n.index for n in selected_nodes)
+                    self.drag_sel_comp_idx = set(c.index for c in selected_comps)
                 elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                     pass
                 redraw = True
@@ -816,16 +851,23 @@ class Canvas(wx.ScrolledWindow):
                 el.do_paint(gc)
 
             sel_node_idx = self.sel_nodes_idx.item_copy()
-            orig_count = len(sel_node_idx)
+            sel_comp_idx = self.sel_compartments_idx.item_copy()
+            orig_count = len(sel_node_idx) + len(sel_comp_idx)
             drawing_drag = False
             if self._drag_selecting:
                 sel_node_idx |= self.drag_sel_nodes_idx
-                if len(sel_node_idx) != orig_count:
+                sel_comp_idx |= self.drag_sel_comp_idx
+                # Flag that indicates whether there are nodes/comps not selected but within
+                # the drag-selection rectangle
+                if len(sel_node_idx) + len(sel_comp_idx) != orig_count:
                     drawing_drag = True
             sel_nodes = [n for n in self._nodes if n.index in sel_node_idx]
-            sel_comps = [c for c in self._compartments if c.index in self.sel_compartments_idx]
+            sel_comps = [c for c in self._compartments if c.index in sel_comp_idx]
             sel_rects = [n.rect for n in sel_nodes] + [c.rect for c in sel_comps]
 
+            # If we are not drag-selecting, don't draw selection outlines if there is only one rect
+            # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
+            # documented above)
             if len(sel_rects) > 1 or drawing_drag:
                 for rect in sel_rects:
                     rect = rect.aligned()
@@ -833,7 +875,7 @@ class Canvas(wx.ScrolledWindow):
                     rect = padded_rect(rect, theme['select_outline_padding'])
                     # draw rect
                     draw_rect(gc, rect, border=theme['handle_color'],
-                            border_width=theme['select_outline_width'])
+                              border_width=theme['select_outline_width'])
 
             # Draw reactant and product marker outlines
             def draw_reaction_outline(color: wx.Colour, padding: int):
@@ -951,8 +993,26 @@ class Canvas(wx.ScrolledWindow):
         post_event(SelectionDidUpdateEvent(node_indices=node_idx, reaction_indices=rxn_idx,
                                            compartment_indices=comp_idx))
 
+    def InWhichCompartment(self, rects: List[Rect]) -> int:
+        """Return which compartment the given floating rectangles are in, or -1 if not in any.
+
+        This does not return which compartment the nodes currently are in. Rather, it assumes that
+        the user is dragging the nodes (as in the nodes is floating), and tests from the highest
+        compartment to the lowest, whether the nodes as a whole are considered inside that
+        compartment.
+
+        Right now, a group of nodes are considered to be inside a compartment iff all the nodes are
+        entirely within in the compartment boundaries.
+        """
+        for el in reversed(self._elements):
+            if isinstance(el, CompartmentElt):
+                comp = cast(CompartmentElt, el).compartment
+                comp_rect = comp.rect
+                if all(comp_rect.contains(r) for r in rects):
+                    return comp.index
+        return -1
+
     def DeleteSelectedItems(self):
-        # TODO allow deletion of reactions
         # First, get the list of reaction indices IF the currently selected reactions were deleted.
         sel_reactions_idx = self.sel_reactions_idx.item_copy()
         sel_nodes_idx = self.sel_nodes_idx.item_copy()

@@ -127,6 +127,7 @@ class Controller(IController):
         iod.setNodeOutlineColorRGB(neti, nodei, node.border_color.Red(),
                                    node.border_color.Green(), node.border_color.Blue())
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
+        iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
 
         if not programmatic:
             post_event(DidAddNodeEvent(node))
@@ -302,6 +303,21 @@ class Controller(IController):
         return [self.get_compartment_by_index(neti, compi)
                 for compi in iod.getListOfCompartments(neti)]
 
+    @iod_setter
+    def move_compartment(self, neti: int, compi: int, pos: Vec2):
+        iod.setCompartmentPosition(neti, compi, *pos)
+
+    @iod_setter
+    def set_compartment_size(self, neti: int, compi: int, size: Vec2):
+        iod.setCompartmentSize(neti, compi, *size)
+
+    @iod_setter
+    def set_compartment_of_node(self, neti: int, nodei: int, compi: int):
+        iod.setCompartmentOfNode(neti, nodei, compi)
+
+    def get_compartment_of_node(self, neti: int, nodei: int) -> int:
+        return iod.getCompartmentOfNode(neti, nodei)
+
     def get_node_index(self, neti: int, node_id: str) -> int:
         return iod.getNodeIndex(neti, node_id)
 
@@ -328,6 +344,7 @@ class Controller(IController):
             fill_color=fill_color,
             border_color=border_color,
             border_width=iod.getNodeOutlineThickness(neti, nodei),
+            comp_idx=iod.getCompartmentOfNode(neti, nodei),
         )
 
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:
@@ -352,7 +369,7 @@ class Controller(IController):
                         rate_law=iod.getReactionRateLaw(neti, reai),
                         handle_positions=items
                         )
-        
+
     def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:
         id_ = iod.getCompartmentID(neti, compi)
 
@@ -364,10 +381,11 @@ class Controller(IController):
                            fill=self.tcolor_to_wx(iod.getCompartmentFillColor(neti, compi)),
                            border=self.tcolor_to_wx(iod.getCompartmentOutlineColor(neti, compi)),
                            border_width=iod.getCompartmentOutlineThickness(neti, compi),
-        )
-
+                           index=compi,
+                           )
 
     # get the updated list of nodes from model and update
+
     def _update_view(self):
         """tell the view to update by re-populating its list of nodes."""
 

@@ -64,8 +64,8 @@ DEFAULT_SETTINGS = {
     'reaction_radius': 6,
     'min_node_width': 20,
     'min_node_height': 15,
-    'min_comp_width': 150,
-    'min_comp_height': 100,
+    'min_comp_width': 350,
+    'min_comp_height': 200,
 }
 
 

@@ -4,6 +4,9 @@ Iodine Network Object Model.
 Original author:    RJ Zhou
 "Forked" from:      https://github.com/zrj26/go-NOM
 Adapted by:         Gary Geng
+
+TODOs
+    * Phase out errCode, or at least provide more detalis in error messages.
 """
 from __future__ import annotations
 import copy
@@ -525,9 +528,11 @@ def _getNode(neti: int, nodei: int) -> TNode:
 
 
 def _getCompartment(neti: int, compi: int) -> TCompartment:
+    global errCode
     net = _getNetwork(neti)
     if compi not in net.compartments:
-        _raiseError(-13)
+        errCode = -13
+        raise CompartmentIndexNotFoundError('Unknown index: {}'.format(compi))
     return net.compartments[compi]
 
 

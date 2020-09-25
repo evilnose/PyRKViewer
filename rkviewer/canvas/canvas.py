@@ -372,7 +372,7 @@ class Canvas(wx.ScrolledWindow):
         self._compartments = compartments
         self.hovered_element = None
         self.dragged_element = None
-        self.InputModeChanged(cstate.input_mode)
+        #self.InputModeChanged(cstate.input_mode)
         self._reaction_elements = [self.CreateReactionElement(r) for r in reactions]
         self._compartment_elements = [self.CreateCompartmentElement(c) for c in compartments]
         # create node elements and assign the correct layers to them (accounting for compartments)
@@ -700,7 +700,7 @@ class Canvas(wx.ScrolledWindow):
                                    border=theme['comp_border'],
                                    border_width=theme['comp_border_width'],
                                    )
-                # clip osition
+                # clip position
                 comp.position = clamp_rect_pos(comp.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 self.controller.add_compartment_g(self.net_index, comp)
         elif cstate.input_mode == InputMode.SELECT:
@@ -863,7 +863,7 @@ class Canvas(wx.ScrolledWindow):
                     drawing_drag = True
             sel_nodes = [n for n in self._nodes if n.index in sel_node_idx]
             sel_comps = [c for c in self._compartments if c.index in sel_comp_idx]
-            sel_rects = [n.rect for n in sel_nodes] + [c.rect for c in sel_comps]
+            sel_rects = [n.rect * cstate.scale for n in sel_nodes] + [c.rect * cstate.scale for c in sel_comps]
 
             # If we are not drag-selecting, don't draw selection outlines if there is only one rect
             # selected (for aesthetics); but do draw outlines if drawing_drag is True (as

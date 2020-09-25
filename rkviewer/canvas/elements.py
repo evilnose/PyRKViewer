@@ -363,7 +363,7 @@ class CompartmentElt(CanvasElement):
         self.compartment = compartment
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return within_rect(logical_pos, self.compartment.rect)
+        return within_rect(logical_pos, self.compartment.rect * cstate.scale)
 
     def do_left_down(self, logical_pos: Vec2) -> bool:
         return True
@@ -562,7 +562,9 @@ class SelectBox(CanvasElement):
             if within_rect(logical_pos, rect):
                 return i
 
-        if within_rect(logical_pos, self.bounding_rect * cstate.scale):
+        rects = [n.rect for n in self.nodes] + [c.rect for c in self.compartments]
+        if any(within_rect(logical_pos, r * cstate.scale) for r in rects):
+            self.canvas.SetCursor(wx.Cursor(wx.CURSOR_SIZING))
             return -1
         else:
             return -2
@@ -597,17 +599,17 @@ class SelectBox(CanvasElement):
             if self._hovered_part >= 0:
                 cursor = SelectBox.CURSOR_TYPES[self._hovered_part]
                 self.set_cursor_fn(wx.Cursor(cursor))
-                pass
             elif self._hovered_part == -1:
+                pass
+            else:
                 # HACK re-set input_mode with the same value to make canvas update the cursor
                 # See issue #9 for details
                 cstate.input_mode = cstate.input_mode
-            else:
-                cstate.input_mode = cstate.input_mode
 
     def map_rel_pos(self, positions: Iterable[Vec2]) -> List[Vec2]:
-        return [p * cstate.scale - self._orig_rect.position - Vec2.repeat(self._padding)
+        temp = [p * cstate.scale - self._orig_rect.position - Vec2.repeat(self._padding)
                 for p in positions]
+        return temp
 
     def do_left_down(self, logical_pos: Vec2):
         if len(self.nodes) + len(self.compartments) == 0:
@@ -629,7 +631,9 @@ class SelectBox(CanvasElement):
             # calculate minimum resize ratio, enforcing min size constraints on nodes and comps
             self._update_min_resize_ratio()
 
-            self._orig_rect = self.outline_rect()
+            #self._orig_rect = self.outline_rect()
+            # Take unaligned bounding rect as orig_rect for better accuracy
+            self._orig_rect = padded_rect((self.bounding_rect * cstate.scale), self._padding)
             # relative starting positions to the select box
             self._orig_node_pos = self.map_rel_pos((n.position for n in self.nodes))
             self._orig_comp_pos = self.map_rel_pos((c.position for c in self.compartments))
@@ -715,7 +719,7 @@ class SelectBox(CanvasElement):
             # Return True since we still want this to appear to be dragging, just not working.
             return True
         if self._mode == SelectBox.Mode.RESIZING:
-            
+            # TODO move the orig_rpos, etc. code to update()
             bounds = self._bounds
             if self._special_mode == SelectBox.SMode.NODES_IN_ONE:
                 # constrain resizing to within this compartment
@@ -801,12 +805,12 @@ class SelectBox(CanvasElement):
         # calculate and keep incremental ratio for the event arguments
         inc_ratio = orig_bb_size.elem_mul(size_ratio / cstate.scale).elem_div(rect_data[0].size)
         for rdata, opos, osize in zip(rect_data, orig_pos, orig_sizes):
-            assert opos.x >= -1e-6 and opos.y >= -1e-6
-            rdata.position = (br_pos + opos.elem_mul(size_ratio)) / cstate.scale + pad_off
+            #assert opos.x >= -1e-6 and opos.y >= -1e-6
+            rdata.position = (br_pos + opos.elem_mul(size_ratio) + pad_off) / cstate.scale
             rdata.size = osize.elem_mul(size_ratio) / cstate.scale
 
         # STEP 5 apply new bounding_rect position and size
-        self.bounding_rect.position = br_pos / cstate.scale + pad_off
+        self.bounding_rect.position = (br_pos + pad_off) / cstate.scale
         self.bounding_rect.size = target_size / cstate.scale
 
         # STEP 6 post event
@@ -852,7 +856,7 @@ class SelectBox(CanvasElement):
         # Note that don't need to test if out of bounds by peripheral nodes, since all
         # peripheral nodes must be inside selected compartments.
         for node in self.peripheral_nodes:
-            node.position += pos_offset / cstate.scale
+            node.position += pos_offset
 
         if len(self.nodes) != 0:
             post_event(DidMoveNodesEvent(self.nodes, pos_offset, dragged=True))

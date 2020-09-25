@@ -5,7 +5,7 @@ import bisect
 import enum
 from functools import partial
 from itertools import chain
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 
 import wx
 
@@ -17,7 +17,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import even_round, gchain, int_round
-from .data import Compartment, HandleData, Node, Reaction, ReactionBezier, SpeciesBezier, compute_centroid
+from .data import Compartment, HandleData, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, compute_centroid
 from .geometry import (
     Rect,
     Vec2,
@@ -100,8 +100,8 @@ class NodeElement(CanvasElement):
     canvas: Any
 
     # HACK no type specified for canvas since otherwise there would be circular dependency
-    def __init__(self, node: Node, canvas, layer: int):
-        super().__init__(layer)
+    def __init__(self, node: Node, canvas, layers: Union[int, List[int]]):
+        super().__init__(layers)
         self.node = node
         self.canvas = canvas
         self.gfont = None  # In the future
@@ -363,7 +363,7 @@ class CompartmentElt(CanvasElement):
         self.compartment = compartment
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return within_rect(logical_pos, self.compartment.rect)
+        return within_rect(logical_pos, self.compartment.rect * cstate.scale)
 
     def do_left_down(self, logical_pos: Vec2) -> bool:
         return True
@@ -431,7 +431,7 @@ class SelectBox(CanvasElement):
         MOVING = 1
         RESIZING = 2
 
-    class SpecialMode(enum.Enum):
+    class SMode(enum.Enum):
         """For what this does, see "Notes" section of the class documentation."""
 
         COMP_ONLY = 0
@@ -445,11 +445,13 @@ class SelectBox(CanvasElement):
         NOT_CONTAINED = 3
         """Nodes are not entirely contained in the selected compartments."""
 
-
     def __init__(self, canvas, nodes: List[Node], compartments: List[Compartment], bounds: Rect,
                  controller: IController, net_index: int, set_cursor_fn: SetCursorFn, layer: int):
         super().__init__(layer)
         self.canvas = canvas
+        # List of nodes that are not selected, but are within selected compartments. Used only
+        # for SMode.CONTAINED
+        self.peripheral_nodes = list()
         self.update(nodes, compartments)
         self.set_cursor_fn = set_cursor_fn
         self.controller = controller
@@ -460,6 +462,7 @@ class SelectBox(CanvasElement):
         self._did_move = False
         self._rel_positions = None
         self._orig_rect = None
+        # TODO add fields like orig_node_pos
         self._resize_handle = -1
         self._min_resize_ratio = Vec2()
         self._hovered_part = -2
@@ -486,25 +489,36 @@ class SelectBox(CanvasElement):
             self.bounding_rect = get_bounding_rect(
                 [n.rect for n in nodes] + [c.rect for c in compartments])
 
-        # Determine SpecialMode
-        # The set of compartments the nodes are in. TODO
+        selected_comps = set(c.index for c in compartments) | {-1}
+        # Determine SMode
         if len(nodes) == 0:
-            self._special_mode = SelectBox.SpecialMode.COMP_ONLY
+            self._special_mode = SelectBox.SMode.COMP_ONLY
         else:
-            assoc_comps = {self.canvas.node2comp[n.index] for n in nodes}
+            assoc_comps = {n.comp_idx for n in nodes}
             if len(compartments) == 0:
                 if len(assoc_comps) == 1:
                     # Nodes are in one compartment
-                    self._special_mode = SelectBox.SpecialMode.NODES_IN_ONE
+                    self._special_mode = SelectBox.SMode.NODES_IN_ONE
                 else:
                     # Cannot possibly contain
-                    self._special_mode = SelectBox.SpecialMode.NOT_CONTAINED
+                    self._special_mode = SelectBox.SMode.NOT_CONTAINED
             else:
-                selected_comps = set(c.index for c in compartments)
                 if selected_comps >= assoc_comps:
-                    self._special_mode = SelectBox.SpecialMode.CONTAINED
+                    self._special_mode = SelectBox.SMode.CONTAINED
                 else:
-                    self._special_mode = SelectBox.SpecialMode.NOT_CONTAINED
+                    self._special_mode = SelectBox.SMode.NOT_CONTAINED
+
+        # Compute peripheral nodes
+        if self._special_mode == SelectBox.SMode.NOT_CONTAINED:
+            self.peripheral_nodes = list()
+        else:
+            peri_indices = set()
+            for comp in compartments:
+                if comp.index in selected_comps:
+                    peri_indices |= set(comp.nodes)
+
+            peri_indices -= set(n.index for n in nodes)
+            self.peripheral_nodes = [self.canvas.node_idx_map[i] for i in peri_indices]
 
     def outline_rect(self) -> Rect:
         """Helper that returns the scaled, padded bounding rectangle."""
@@ -540,7 +554,7 @@ class SelectBox(CanvasElement):
             The handle index (0-3) if pos is within a handle, -1 if pos is not within a handle
             but within the bounding rectangle, or -2 if pos is outside.
         """
-        if len(self.nodes) == 0:
+        if len(self.nodes) + len(self.compartments) == 0:
             return -2
 
         rects = self._resize_handle_rects()
@@ -548,7 +562,9 @@ class SelectBox(CanvasElement):
             if within_rect(logical_pos, rect):
                 return i
 
-        if within_rect(logical_pos, self.bounding_rect * cstate.scale):
+        rects = [n.rect for n in self.nodes] + [c.rect for c in self.compartments]
+        if any(within_rect(logical_pos, r * cstate.scale) for r in rects):
+            self.canvas.SetCursor(wx.Cursor(wx.CURSOR_SIZING))
             return -1
         else:
             return -2
@@ -583,13 +599,17 @@ class SelectBox(CanvasElement):
             if self._hovered_part >= 0:
                 cursor = SelectBox.CURSOR_TYPES[self._hovered_part]
                 self.set_cursor_fn(wx.Cursor(cursor))
-                pass
             elif self._hovered_part == -1:
+                pass
+            else:
                 # HACK re-set input_mode with the same value to make canvas update the cursor
                 # See issue #9 for details
                 cstate.input_mode = cstate.input_mode
-            else:
-                cstate.input_mode = cstate.input_mode
+
+    def map_rel_pos(self, positions: Iterable[Vec2]) -> List[Vec2]:
+        temp = [p * cstate.scale - self._orig_rect.position - Vec2.repeat(self._padding)
+                for p in positions]
+        return temp
 
     def do_left_down(self, logical_pos: Vec2):
         if len(self.nodes) + len(self.compartments) == 0:
@@ -608,40 +628,71 @@ class SelectBox(CanvasElement):
         if handle >= 0:
             self._mode = SelectBox.Mode.RESIZING
             self._resize_handle = handle
-            min_width = min(n.size.x for n in self.nodes)
-            min_height = min(n.size.y for n in self.nodes)
-            self._min_resize_ratio = Vec2(settings['min_node_width'] / min_width,
-                                          settings['min_node_height'] / min_height)
-            self._orig_rect = self.outline_rect()
-            self._orig_positions = [n.s_position - self._orig_rect.position - Vec2.repeat(self._padding)
-                                    for n in self.nodes]
-            self._orig_sizes = [n.s_size for n in self.nodes]
+            # calculate minimum resize ratio, enforcing min size constraints on nodes and comps
+            self._update_min_resize_ratio()
+
+            #self._orig_rect = self.outline_rect()
+            # Take unaligned bounding rect as orig_rect for better accuracy
+            self._orig_rect = padded_rect((self.bounding_rect * cstate.scale), self._padding)
+            # relative starting positions to the select box
+            self._orig_node_pos = self.map_rel_pos((n.position for n in self.nodes))
+            self._orig_comp_pos = self.map_rel_pos((c.position for c in self.compartments))
+            self._orig_node_sizes = [n.size * cstate.scale for n in self.nodes]
+            self._orig_comp_sizes = [c.size * cstate.scale for c in self.compartments]
             self._resize_handle_offset = self._resize_handle_pos(handle) - logical_pos
             return True
         elif handle == -1:
             self._mode = SelectBox.Mode.MOVING
-            self._rel_positions = [n.s_position - logical_pos for n in self.nodes]
+            # relative starting positions to the mouse positions
+            self._rel_node_pos = [n.position * cstate.scale - logical_pos for n in self.nodes]
+            self._rel_comp_pos = [c.position * cstate.scale -
+                                  logical_pos for c in self.compartments]
             self._drag_rel = self.bounding_rect.position * cstate.scale - logical_pos
             return True
 
         return False
 
+    def _update_min_resize_ratio(self):
+        node_min_ratio = None
+        comp_min_ratio = None
+        if len(self.nodes) != 0:
+            min_width = min(n.size.x for n in self.nodes)
+            min_height = min(n.size.y for n in self.nodes)
+            node_min_ratio = Vec2(settings['min_node_width'] / min_width,
+                                        settings['min_node_height'] / min_height)
+        if len(self.compartments) != 0:
+            min_comp_width = min(c.size.x for c in self.compartments)
+            min_comp_height = min(c.size.y for c in self.compartments)
+            comp_min_ratio = Vec2(settings['min_comp_width'] / min_comp_width,
+                                        settings['min_comp_height'] / min_comp_height)
+
+        if node_min_ratio is not None and comp_min_ratio is not None:
+            self._min_resize_ratio = node_min_ratio.reduce2(max, comp_min_ratio)
+        elif node_min_ratio is not None:
+            self._min_resize_ratio = node_min_ratio
+        elif comp_min_ratio is not None:
+            self._min_resize_ratio = comp_min_ratio
+        else:
+            assert False, 'Cannot possibly click on handle when nothing is selected.'
+
     def do_left_up(self, logical_pos: Vec2):
-        # TODO implement compartments and drop nodes
-        assert len(self.nodes) != 0
+        assert len(self.nodes) + len(self.compartments) != 0
         if self._mode == SelectBox.Mode.MOVING:
             if self._did_move:
                 self._did_move = False
-                self.controller.start_group()
 
-                # TODO write out logic for moving/resizing multiple selected nodes/compartments
-                for node in self.nodes:
+                self.controller.start_group()
+                for node in chain(self.nodes, self.peripheral_nodes):
                     self.controller.move_node(self.net_index, node.index, node.position)
-                    # TODO change this to controller code once possible
-                bounding_rect = get_bounding_rect([n.rect for n in self.nodes])
-                for comp in reversed(self.compartments):
-                    if comp.rect.contains(bounding_rect):
-                        pass  # TODO Here
+
+                for comp in self.compartments:
+                    self.controller.move_compartment(self.net_index, comp.index, comp.position)
+
+                if self._special_mode == SelectBox.SMode.NODES_IN_ONE:
+                    compi = self.canvas.InWhichCompartment([n.rect for n in self.nodes])
+                    for node in self.nodes:
+                        self.controller.set_compartment_of_node(self.net_index, node.index, compi)
+
                 self.controller.end_group()
         elif self._mode == SelectBox.Mode.RESIZING:
             assert not self._did_move
@@ -649,20 +700,44 @@ class SelectBox(CanvasElement):
             for node in self.nodes:
                 self.controller.move_node(self.net_index, node.index, node.position)
                 self.controller.set_node_size(self.net_index, node.index, node.size)
+            for comp in self.compartments:
+                self.controller.move_compartment(self.net_index, comp.index, comp.position)
+                self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
             self.controller.end_group()
+
+            # Need to do this in case _special_mode == NOT_CONTAINED, so that the mouse has now
+            # left the handle. do_mouse_leave is not triggered because it's considered to be dragging.
+            self._hovered_part = self._pos_inside_part(logical_pos)
         self._mode = SelectBox.Mode.IDLE
 
     def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
         # TODO we may want to make Node and Compartment inherit from a Rectangle class. This will
         # make the code more general.
         assert self._mode != SelectBox.Mode.IDLE
+        rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)
+        if self._special_mode == SelectBox.SMode.NOT_CONTAINED:
+            # Return True since we still want this to appear to be dragging, just not working.
+            return True
         if self._mode == SelectBox.Mode.RESIZING:
-            self._resize(logical_pos)
+            # TODO move the orig_rpos, etc. code to update()
+            bounds = self._bounds
+            if self._special_mode == SelectBox.SMode.NODES_IN_ONE:
+                # constrain resizing to within this compartment
+                if self.nodes[0].comp_idx != -1:
+                    containing_comp = self.canvas.GetCompartment(self.nodes[0].comp_idx)
+                    assert containing_comp is not None
+                    bounds = containing_comp.rect
+
+            orig_rpos = self._orig_comp_pos + self._orig_node_pos
+            orig_rsizes = self._orig_comp_sizes + self._orig_node_sizes
+            self._resize(logical_pos, rect_data, orig_rpos, orig_rsizes, bounds)
         else:
-            self._move(logical_pos)
+            rel_positions = self._rel_comp_pos + self._rel_node_pos
+            self._move(logical_pos, rect_data, rel_positions)
         return True
 
-    def _resize(self, pos: Vec2):
+    def _resize(self, pos: Vec2, rect_data: List[RectData], orig_pos: List[Vec2],
+                orig_sizes: List[Vec2], bounds: Rect):
         """Helper that performs resize on the bounding box, given the logical mouse position."""
         # STEP 1, get new rect vertices
         # see class comment for resize handle format. For side-handles, get the vertex in the
@@ -685,7 +760,7 @@ class SelectBox(CanvasElement):
                 target_point.y = orig_dragged_point.y
 
         # clamp target point
-        target_point = clamp_point(target_point, self._bounds * cstate.scale)
+        target_point = clamp_point(target_point, bounds * cstate.scale)
 
         # STEP 2, get and validate rect ratio
 
@@ -705,10 +780,10 @@ class SelectBox(CanvasElement):
 
         # take absolute value and subtract padding to get actual difference (i.e. sizing)
         pad_off = Vec2.repeat(self._padding)
-        orig_size = (orig_dragged_point - fixed_point).elem_abs() - pad_off * 2
+        orig_bb_size = (orig_dragged_point - fixed_point).elem_abs() - pad_off * 2
         target_size = (target_point - fixed_point).elem_abs() - pad_off * 2
 
-        size_ratio = target_size.elem_div(orig_size)
+        size_ratio = target_size.elem_div(orig_bb_size)
 
         # size too small?
         if size_ratio.x < self._min_resize_ratio.x:
@@ -720,37 +795,40 @@ class SelectBox(CanvasElement):
             target_point.y = cur_dragged_point.y
 
         # re-calculate target_size in case size_ratio changed
-        target_size = orig_size.elem_mul(size_ratio)
+        target_size = orig_bb_size.elem_mul(size_ratio)
 
         # STEP 3 calculate new bounding_rect position and size
         br_pos = Vec2(min(fixed_point.x, target_point.x),
                       min(fixed_point.y, target_point.y))
 
         # STEP 4 calculate and apply new node positions and sizes
-        # incremental ratio for the event
-        inc_ratio = orig_size.elem_mul(size_ratio / cstate.scale).elem_div(self.nodes[0].size)
-        for node, orig_pos, orig_size in zip(self.nodes, self._orig_positions, self._orig_sizes):
-            assert orig_pos.x >= -1e-6 and orig_pos.y >= -1e-6
-            node.position = (br_pos + orig_pos.elem_mul(size_ratio)) / cstate.scale + pad_off
-            node.size = orig_size.elem_mul(size_ratio) / cstate.scale
-            assert node.size == node.s_size and node.size == node.rect.size
+        # calculate and keep incremental ratio for the event arguments
+        inc_ratio = orig_bb_size.elem_mul(size_ratio / cstate.scale).elem_div(rect_data[0].size)
+        for rdata, opos, osize in zip(rect_data, orig_pos, orig_sizes):
+            #assert opos.x >= -1e-6 and opos.y >= -1e-6
+            rdata.position = (br_pos + opos.elem_mul(size_ratio) + pad_off) / cstate.scale
+            rdata.size = osize.elem_mul(size_ratio) / cstate.scale
 
         # STEP 5 apply new bounding_rect position and size
-        self.bounding_rect.position = br_pos / cstate.scale + pad_off
+        self.bounding_rect.position = (br_pos + pad_off) / cstate.scale
         self.bounding_rect.size = target_size / cstate.scale
 
         # STEP 6 post event
-        post_event(DidDragResizeNodesEvent(nodes=self.nodes, ratio=inc_ratio))
+        if len(self.nodes) != 0:
+            post_event(DidDragResizeNodesEvent(nodes=self.nodes, ratio=inc_ratio))
+        # TODO post compartment event
 
-    def _move(self, pos: Vec2):
+    def _move(self, pos: Vec2, rect_data: List[RectData], rel_positions: List[Vec2]):
         """Helper that performs resize on the bounding box, given the logical mouse position."""
+        assert len(rect_data) == len(rel_positions)
+        assert len(rect_data) !=  0
         # campute tentative new positions. May need to clamp it.
         self._did_move = True
-        new_positions = [pos + rp for rp in self._rel_positions]
+        new_positions = [pos + rp for rp in rel_positions]
         min_x = min(p.x for p in new_positions)
         min_y = min(p.y for p in new_positions)
-        max_x = max(p.x + n.s_size.x for p, n in zip(new_positions, self.nodes))
-        max_y = max(p.y + n.s_size.y for p, n in zip(new_positions, self.nodes))
+        max_x = max(p.x + r.size.x * cstate.scale for p, r in zip(new_positions, rect_data))
+        max_y = max(p.y + r.size.y * cstate.scale for p, r in zip(new_positions, rect_data))
         offset = Vec2(0, 0)
 
         s_bounds = self._bounds * cstate.scale
@@ -770,7 +848,16 @@ class SelectBox(CanvasElement):
             offset += Vec2(0, lim_botright.y - max_y)
 
         self.bounding_rect.position = (pos + offset + self._drag_rel) / cstate.scale
-        pos_offset = (new_positions[0] + offset) / cstate.scale - self.nodes[0].position
-        for node, np in zip(self.nodes, new_positions):
-            node.position = (np + offset) / cstate.scale
-        post_event(DidMoveNodesEvent(self.nodes, pos_offset, dragged=True))
+        # The actual amount moved by the rects
+        pos_offset = (new_positions[0] + offset) / cstate.scale - rect_data[0].position
+        for rdata, np in zip(rect_data, new_positions):
+            rdata.position = (np + offset) / cstate.scale
+
+        # Note that don't need to test if out of bounds by peripheral nodes, since all
+        # peripheral nodes must be inside selected compartments.
+        for node in self.peripheral_nodes:
+            node.position += pos_offset
+
+        if len(self.nodes) != 0:
+            post_event(DidMoveNodesEvent(self.nodes, pos_offset, dragged=True))
+        # TODO post compartment event

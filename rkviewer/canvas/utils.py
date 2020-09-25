@@ -141,6 +141,18 @@ class SetSubject(Subject[Set[T]]):
         if not equal:
             self.notify()
 
+    def union(self, other: Set[T]):
+        prev_len = len(self._item)
+        self._item |= other
+        if len(self._item) != prev_len:
+            self.notify()
+
+    def intersect(self, other: Set[T]):
+        prev_len = len(self._item)
+        self._item &= other
+        if len(self._item) != prev_len:
+            self.notify()
+    
     def __len__(self):
         return len(self._item)
 

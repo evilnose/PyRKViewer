@@ -180,6 +180,22 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def move_compartment(self, neti: int, compi: int, pos: Vec2):
+        pass
+
+    @abc.abstractmethod
+    def set_compartment_size(self, neti: int, compi: int, size: Vec2):
+        pass
+
+    @abc.abstractmethod
+    def set_compartment_of_node(self, neti: int, nodei: int, compi: int):
+        pass
+
+    @abc.abstractmethod
+    def get_compartment_of_node(self, neti: int, nodei: int) -> int:
+        pass
+
+    @abc.abstractmethod
     def get_node_index(self, neti: int, node_id: str) -> int:
         pass
 

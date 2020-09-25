@@ -22,7 +22,12 @@ NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
 TIP_DISPLACEMENT = 4
 
 
-class Node:
+class RectData:
+    position: Vec2
+    size: Vec2
+
+
+class Node(RectData):
     """Class that represents a Node for rendering purposes.
 
     Attributes:
@@ -33,60 +38,44 @@ class Node:
         border_color: The border color of the node.
         border_width: The border width of the node.
     """
-    index: int
     id_: str
     fill_color: wx.Colour
     border_color: wx.Colour
     border_width: float
-    _position: Vec2
-    _size: Vec2
+    position: Vec2
+    size: Vec2
+    comp_idx: int
+    index: int
 
     # force keyword-only arguments
     def __init__(self, id_: str, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, index: int = -1):
+                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, index: int = -1):
         self.index = index
         self.id_ = id_
-        self._position = pos
-        self._size = size
+        self.position = pos
+        self.size = size
         self.fill_color = fill_color
         self.border_color = border_color
         self.border_width = border_width
-
-    @property
-    def position(self):
-        """The unscaled position of the node."""
-        return self._position
-
-    @position.setter
-    def position(self, val: Vec2):
-        self._position = val
+        self.comp_idx = comp_idx
 
     @property
     def s_position(self):
         """The scaled position of the node obtained by multiplying the scale."""
-        return self._position * cstate.scale
+        return self.position * cstate.scale
 
     @s_position.setter
     def s_position(self, val: Vec2):
         self.position = val / cstate.scale
 
     @property
-    def size(self):
-        """The unscaled size of the node."""
-        return self._size
-
-    @size.setter
-    def size(self, val: Vec2):
-        self._size = val
-
-    @property
     def s_size(self):
         """The scaled size of the node obtained by multiplying the scale."""
-        return self._size * cstate.scale
+        return self.size * cstate.scale
 
     @s_size.setter
     def s_size(self, val: Vec2):
-        self._size = val / cstate.scale
+        self.size = val / cstate.scale
 
     @property
     def s_rect(self):
@@ -519,7 +508,7 @@ class ReactionBezier:
 
 
 @dataclass
-class Compartment:
+class Compartment(RectData):
     id_: str
     nodes: List[int]
     volume: float  #: Size (i.e. length/area/volume/...) of the container

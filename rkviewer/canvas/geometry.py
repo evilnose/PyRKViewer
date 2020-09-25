@@ -139,7 +139,7 @@ class Vec2:
         """Map the given operation across the two elements of the vector."""
         return Vec2(op(self.x), op(self.y))
 
-    def reduce(self, op: Callable[[TNum, TNum], Any], other: Vec2) -> Vec2:
+    def reduce2(self, op: Callable[[TNum, TNum], Any], other: Vec2) -> Vec2:
         return Vec2(op(self.x, other.x), op(self.y, other.y))
 
     @property
@@ -228,8 +228,8 @@ class Rect:
 
     def union(self, other: Rect) -> Rect:
         """Return a Rect that contains both self and other"""
-        pos = self.position.reduce(min, other.position)
-        botright = (self.position + self.size).reduce(max, other.position + other.size)
+        pos = self.position.reduce2(min, other.position)
+        botright = (self.position + self.size).reduce2(max, other.position + other.size)
         return Rect(pos, botright - pos)
 
     def aligned(self) -> Rect:
@@ -250,8 +250,8 @@ class Rect:
         """Returns whether self contains the other rectangle entirely."""
         botright = self.position + self.size
         other_botright = other.position + other.size
-        return (self.position.x >= other.position.x) and (self.position.y >= other.position.y) and \
-            (botright.x <= other_botright.x) and (botright.y <= other_botright.y)
+        return (self.position.x <= other.position.x) and (self.position.y <= other.position.y) and \
+            (botright.x >= other_botright.x) and (botright.y >= other_botright.y)
 
 
 class Direction(Enum):

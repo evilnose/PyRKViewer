@@ -210,6 +210,10 @@ class Controller(IController):
         iod.deleteReaction(neti, reai)
 
     @iod_setter
+    def delete_compartment(self, neti: int, compi: int):
+        iod.deleteCompartment(neti, compi)
+
+    @iod_setter
     def add_reaction_g(self, neti: int, reaction: Reaction):
         """Try create a reaction."""
         self.start_group()
@@ -302,6 +306,10 @@ class Controller(IController):
     def get_list_of_compartments(self, neti: int) -> List[Compartment]:
         return [self.get_compartment_by_index(neti, compi)
                 for compi in iod.getListOfCompartments(neti)]
+    
+    @iod_setter
+    def rename_compartment(self, neti: int, compi: int, new_id: str):
+        iod.setCompartmentID(neti, compi, new_id)
 
     @iod_setter
     def move_compartment(self, neti: int, compi: int, pos: Vec2):

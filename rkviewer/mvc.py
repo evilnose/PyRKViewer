@@ -115,6 +115,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def delete_compartment(self, neti: int, compi: int) -> bool:
+        pass
+
+    @abc.abstractmethod
     def set_src_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float) -> bool:
         pass
 
@@ -177,6 +181,10 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def get_list_of_compartments(self, neti: int) -> List[Compartment]:
+        pass
+
+    @abc.abstractmethod
+    def rename_compartment(self, neti: int, compi: int, new_id: str):
         pass
 
     @abc.abstractmethod

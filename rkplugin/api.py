@@ -59,7 +59,7 @@ def selected_nodes() -> List[Node]:
 
 
 def selected_node_indices() -> Set[int]:
-    return _canvas.sel_nodes_idx.item_copy()
+    return _canvas.selected_idx.item_copy()
 
 
 def selected_reaction_indices() -> Set[int]:

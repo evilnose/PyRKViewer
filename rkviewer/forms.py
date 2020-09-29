@@ -495,7 +495,6 @@ class NodeForm(EditPanelForm):
         self._ChangePairValue(self.size_ctrl, size, prec)
 
     def CreateControls(self, sizer):
-        # ID form control
         self.id_ctrl = wx.TextCtrl(self)
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self._AppendControl(sizer, 'identifier', self.id_ctrl)
@@ -763,7 +762,6 @@ class ReactionForm(EditPanelForm):
         super().__init__(parent, canvas, controller)
 
         self._reactions = list()
-
         self.InitLayout()
 
     def CreateControls(self, sizer: wx.Sizer):
@@ -779,6 +777,12 @@ class ReactionForm(EditPanelForm):
         self.fill_ctrl, self.fill_alpha_ctrl = self._CreateColorControl(
             'fill color', 'fill opacity',
             self._OnFillColorChanged, self._FillAlphaCallback, sizer)
+
+        self.stroke_width_ctrl = wx.TextCtrl(self)
+        stroke_cb = self._MakeFloatCtrlFunction(self.stroke_width_ctrl.GetId(),
+                                                      self._StrokeWidthCallback, (0.1, 100))
+        self.stroke_width_ctrl.Bind(wx.EVT_TEXT, stroke_cb)
+        self._AppendControl(sizer, 'line width', self.stroke_width_ctrl)
 
         self._reactant_subtitle = None
         self._product_subtitle = None
@@ -805,6 +809,14 @@ class ReactionForm(EditPanelForm):
             self._self_changes = True
             self.controller.rename_reaction(self.net_index, reai, new_id)
             self._SetValidationState(True, ctrl_id)
+    
+    def _StrokeWidthCallback(self, width: float):
+        reactions = [r for r in self._reactions if r.index in self._selected_idx]
+        self._self_changes = True
+        self.controller.start_group()
+        for rxn in reactions:
+            self.controller.set_reaction_line_thickness(self.net_index, rxn.index, width)
+        self.controller.end_group()
 
     def _OnFillColorChanged(self, evt: wx.Event):
         """Callback for the fill color control."""
@@ -942,6 +954,7 @@ class ReactionForm(EditPanelForm):
         fill: wx.Colour
         fill_alpha: Optional[int]
         ratelaw_text: str
+        line_width: str
 
         prec = settings['decimal_precision']
 
@@ -953,6 +966,7 @@ class ReactionForm(EditPanelForm):
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
             self.ratelaw_ctrl.Enable()
+            line_width = str(reaction.thickness)
             self._UpdateStoichFields(reai, self._GetSrcStoichs(reai), self._GetDestStoichs(reai))
         else:
             self.id_ctrl.Disable()
@@ -961,9 +975,12 @@ class ReactionForm(EditPanelForm):
             self.ratelaw_ctrl.Disable()
             self._UpdateStoichFields(0, [], [])
 
+        stroke_width = self._GetMultiFloatText(set(r.thickness for r in reactions), prec)
+
         self.id_ctrl.ChangeValue(id_text)
         self.fill_ctrl.SetColour(fill)
         self.ratelaw_ctrl.ChangeValue(ratelaw_text)
+        self.stroke_width_ctrl.ChangeValue(stroke_width)
 
         if on_msw():
             self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))

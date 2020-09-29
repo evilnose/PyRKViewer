@@ -963,10 +963,6 @@ class Canvas(wx.ScrolledWindow):
                     border_width=bwidth,
                 )
 
-            # Re-create PaintDC to undo the effects of DoPrepareDC(), i.e. we need to draw without
-            # position calculations for overlays
-            dc = wx.PaintDC(self)
-            gc = wx.GraphicsContext.Create(dc)
             # Draw minimap
             self._minimap.DoPaint(gc)
             post_event(DidPaintCanvasEvent(gc))

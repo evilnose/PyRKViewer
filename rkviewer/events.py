@@ -15,12 +15,12 @@ from typing import (
     Optional,
     Set,
     Tuple,
-    Type,
+    Type, Union,
 )
 
 import wx
 
-from rkviewer.canvas.data import Node, Reaction
+from rkviewer.canvas.data import Compartment, Node, Reaction
 from rkviewer.canvas.geometry import Vec2
 
 
@@ -51,10 +51,12 @@ class CanvasDidUpdateEvent(CanvasEvent):
 
     Attributes:
         nodes: The list of nodes.
-        reaction: The list of reactions.
+        reactions: The list of reactions.
+        compartments: The list of compartments.
     """
     nodes: List[Node]
     reactions: List[Reaction]
+    compartments: List[Compartment]
 
 
 @dataclass
@@ -67,10 +69,11 @@ class DidMoveNodesEvent(CanvasEvent):
 
     Attributes:
         nodes: The nodes that were moved.
-        offset: The position offset.
+        offset: The position offset. If all nodes were moved by the same offset, then a single Vec2
+                is given; otherwise, a list of offsets are given, with each offset matching a node.
     """
     nodes: List[Node]
-    offset: Vec2
+    offset: Union[Vec2, List[Vec2]]
     dragged: bool
 
 

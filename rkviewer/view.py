@@ -14,7 +14,7 @@ from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import cstate, InputMode
 from .config import settings, theme
-from .forms import NodeForm, ReactionForm
+from .forms import CompartmentForm, NodeForm, ReactionForm
 from .mvc import IController, IView
 from .utils import ButtonGroup, get_path
 
@@ -29,7 +29,7 @@ class EditPanel(fnb.FlatNotebook):
     node_form: wx.Panel
     reaction_form: wx.Panel
     null_message: wx.StaticText
-    FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | fnb.FNB_NODRAG | fnb.FNB_VC8
+    FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | fnb.FNB_NODRAG | fnb.FNB_VC8 | fnb.FNB_DROPDOWN_TABS_LIST
 
     def __init__(self, parent, canvas: Canvas, controller: IController, **kw):
         super().__init__(parent, agwStyle=EditPanel.FNB_STYLE, **kw)
@@ -38,6 +38,7 @@ class EditPanel(fnb.FlatNotebook):
 
         self.node_form = NodeForm(self, canvas, controller)
         self.reaction_form = ReactionForm(self, canvas, controller)
+        self.comp_form = CompartmentForm(self, canvas, controller)
 
         self.null_message = wx.Panel(self)
         text = wx.StaticText(self.null_message, label="Nothing is selected.", style=wx.ALIGN_CENTER)
@@ -48,6 +49,7 @@ class EditPanel(fnb.FlatNotebook):
 
         self.node_form.Hide()
         self.reaction_form.Hide()
+        self.comp_form.Hide()
         # overall sizer for alternating form and "nothing selected" displays
         #sizer = wx.BoxSizer(wx.HORIZONTAL)
         #sizer.Add(null_message, proportion=1, flag=wx.ALIGN_CENTER_VERTICAL)
@@ -61,26 +63,26 @@ class EditPanel(fnb.FlatNotebook):
     def OnCanvasDidUpdate(self, evt):
         self.node_form.UpdateNodes(evt.nodes)
         self.reaction_form.UpdateReactions(evt.reactions)
+        self.comp_form.UpdateCompartments(evt.compartments)
 
     def OnSelectionDidUpdate(self, evt):
         focused = self.GetTopLevelParent().FindFocus()
         should_show_nodes = len(evt.node_indices) != 0
         should_show_reactions = len(evt.reaction_indices) != 0
+        should_show_comps = len(evt.compartment_indices) != 0
+
+        cur_page = self.GetCurrentPage()
 
         node_index = -1
         for i in range(self.GetPageCount()):
             if self.GetPage(i) == self.node_form:
                 node_index = i
                 break
-
-        cur_page = self.GetCurrentPage()
-
-        if self.node_form.sel_nodes_idx != evt.node_indices:
-            self.node_form.UpdateNodeSelection(evt.node_indices)
+        if self.node_form.selected_idx != evt.node_indices:
+            self.node_form.UpdateSelection(evt.node_indices)
         if should_show_nodes:
             if node_index == -1:
                 self.InsertPage(0, self.node_form, 'Nodes')
-                # self.node_form.Show()
         elif node_index != -1:
             # find and remove existing page
             self.RemovePage(node_index)
@@ -91,21 +93,33 @@ class EditPanel(fnb.FlatNotebook):
             if self.GetPage(i) == self.reaction_form:
                 reaction_index = i
                 break
-
-        if self.reaction_form.sel_nodes_idx != evt.reaction_indices:
-            self.reaction_form.UpdateReactionSelection(evt.reaction_indices)
+        if self.reaction_form.selected_idx != evt.reaction_indices:
+            self.reaction_form.UpdateSelection(evt.reaction_indices)
         if should_show_reactions:
             if reaction_index == -1:
                 self.AddPage(self.reaction_form, 'Reactions')
-                # self.reaction_form.Show()
         elif reaction_index != -1:
             self.RemovePage(reaction_index)
             self.reaction_form.Hide()
 
-        # set the active tab to the same as before. Note: only works with two tabs for now
-        if cur_page != self.GetCurrentPage():
-            self.AdvanceSelection()
-            # self.LazyRefresh()
+        comp_index = -1
+        for i in range(self.GetPageCount()):
+            if self.GetPage(i) == self.comp_form:
+                comp_index = i
+                break
+        if self.comp_form.selected_idx != evt.compartment_indices:
+            self.comp_form.UpdateSelection(evt.compartment_indices)
+        if should_show_comps:
+            if comp_index == -1:
+                self.AddPage(self.comp_form, 'Compartments')
+        elif comp_index != -1:
+            self.RemovePage(comp_index)
+            self.comp_form.Hide()
+
+        # set the active tab to the same as before
+        if cur_page is not None and self.GetCurrentPage() is not None:
+            if cur_page is self.GetCurrentPage():
+                self.AdvanceSelection()
 
         # need to reset focus to canvas, since for some reason FlatNotebook sets focus to the first
         # field in a notebook page after it is added.
@@ -115,7 +129,7 @@ class EditPanel(fnb.FlatNotebook):
         focused.SetFocus()
 
         # need to manually show this for some reason
-        if not should_show_nodes and not should_show_reactions:
+        if not should_show_nodes and not should_show_reactions and not should_show_comps:
             self.null_message.Show()
 
     def OnNodesDidMove(self, evt):

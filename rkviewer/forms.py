@@ -12,7 +12,7 @@ from .events import DidMoveNodesEvent, post_event
 from .mvc import IController
 from .utils import no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
-from .canvas.data import Reaction
+from .canvas.data import Compartment, Reaction
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx
 
@@ -99,10 +99,30 @@ class EditPanelForm(ScrolledPanel):
         title_font = wx.Font(wx.FontInfo(10))
         self._title.SetFont(title_font)
         self._self_changes = False
+        self._selected_idx = set()
+
+    @property
+    def selected_idx(self):
+        return self._selected_idx
 
     @abstractmethod
     def UpdateAllFields(self):
         pass
+
+    def Update(self):
+        if len(self._selected_idx) != 0 and not self._self_changes:
+            self.UpdateAllFields()
+
+        # clear validation errors
+        for id_ in self.badges.keys():
+            self._SetValidationState(True, id_)
+        self._self_changes = False
+
+    def InitLayout(self):
+        sizer = self.InitAndGetSizer()
+        self.CreateControls(sizer)
+        self.SetSizer(sizer)
+        self.SetupScrolling()
 
     def InitAndGetSizer(self) -> wx.Sizer:
         VGAP = 8
@@ -414,28 +434,15 @@ class NodeForm(EditPanelForm):
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
         self._nodes = list()
-        self._selected_idx = set()
         self._bounding_rect = None  # No padding
-        sizer = self.InitAndGetSizer()
-        self.CreateControls(sizer)
-        self.SetSizer(sizer)
-        self.SetupScrolling()
-
-    @property
-    def selected_idx(self):
-        return self._selected_idx
+        self.InitLayout()
 
     def UpdateNodes(self, nodes: List[Node]):
         """Function called after the list of nodes have been updated."""
         self._nodes = nodes
-        if len(self._selected_idx) != 0 and not self._self_changes:
-            self.UpdateAllFields()
+        self.Update()
 
-        # clear validation errors
-        for id_ in self.badges.keys():
-            self._SetValidationState(True, id_)
-
-    def UpdateNodeSelection(self, selected_idx: List[int]):
+    def UpdateSelection(self, selected_idx: List[int]):
         """Function called after the list of selected nodes have been updated."""
         self._selected_idx = selected_idx
         if len(self._selected_idx) != 0:
@@ -454,6 +461,9 @@ class NodeForm(EditPanelForm):
 
     def UpdateDidDragMoveNodes(self):
         """Function called after the selected nodes were moved by dragging."""
+        # possibly empty because node was dragged along with its compartment
+        if len(self._selected_idx) == 0:
+            return
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         prec = settings['decimal_precision']
 
@@ -752,16 +762,7 @@ class ReactionForm(EditPanelForm):
         super().__init__(parent, canvas, controller)
 
         self._reactions = list()
-        self._selected_idx = set()
-
-        sizer = self.InitAndGetSizer()
-        self.CreateControls(sizer)
-        self.SetSizer(sizer)
-        self.SetupScrolling()
-
-    @property
-    def selected_idx(self):
-        return self._selected_idx
+        self.InitLayout()
 
     def CreateControls(self, sizer: wx.Sizer):
         # TODO create field for stroke thickness
@@ -852,15 +853,9 @@ class ReactionForm(EditPanelForm):
     def UpdateReactions(self, reactions: List[Reaction]):
         """Function called after the list of nodes have been updated."""
         self._reactions = reactions
-        if len(self._selected_idx) != 0 and not self._self_changes:
-            self.UpdateAllFields()
+        self.Update()
 
-            # clear validation errors
-            for id_ in self.badges.keys():
-                self._SetValidationState(True, id_)
-        self._self_changes = False
-
-    def UpdateReactionSelection(self, selected_idx: List[int]):
+    def UpdateSelection(self, selected_idx: List[int]):
         """Function called after the list of selected nodes have been updated."""
         self._selected_idx = selected_idx
         if len(self._selected_idx) != 0:
@@ -989,3 +984,68 @@ class ReactionForm(EditPanelForm):
 
         if on_msw():
             self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
+
+
+class CompartmentForm(EditPanelForm):
+    _compartments: List[Compartment]
+
+    def __init__(self, parent, canvas: Canvas, controller: IController):
+        super().__init__(parent, canvas, controller)
+        self._compartments = list()
+        
+        self.InitLayout()
+
+    def CreateControls(self, sizer: wx.Sizer):
+        self.id_ctrl = wx.TextCtrl(self)
+        self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
+        self._AppendControl(sizer, 'identifier', self.id_ctrl)
+
+    def _OnIdText(self, evt):
+        """Callback for the ID control."""
+        new_id = evt.GetString()
+        assert len(self._selected_idx) == 1, 'Compartment ID field should be disabled when ' + \
+            'multiple are selected'
+        [compi] = self._selected_idx
+        ctrl_id = self.id_ctrl.GetId()
+        if len(new_id) == 0:
+            self._SetValidationState(False, ctrl_id, "ID cannot be empty")
+            return
+        else:
+            for rxn in self._reactions:
+                if rxn.id_ == new_id:
+                    self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
+                    return
+
+            # loop terminated fine. There is no duplicate ID
+            self._self_changes = True
+            self.controller.rename_compartment(self.net_index, compi, new_id)
+            self._SetValidationState(True, ctrl_id)
+
+    def UpdateCompartments(self, comps: List[Compartment]):
+        self._compartments = comps
+        self.Update()
+
+    def UpdateSelection(self, selected_idx: List[int]):
+        self._selected_idx = selected_idx
+        if len(self._selected_idx) != 0:
+            # clear position value
+            #self.pos_ctrl.ChangeValue('')
+            self.UpdateAllFields()
+
+            title_label = 'Edit Compartment' if len(self._selected_idx) == 1 else 'Edit Multiple Compartments'
+            self._title.SetLabel(title_label)
+
+            id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
+            self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
+
+    def UpdateAllFields(self):
+        self._self_changes = False
+        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        assert len(comps) == len(self.selected_idx)
+        id_text = '; '.join([c.id_ for c in comps])
+        if len(self._selected_idx) == 1:
+            [comp] = comps
+            self.id_ctrl.Enable()
+        else:
+            self.id_ctrl.Disable()
+        self.id_ctrl.ChangeValue(id_text)

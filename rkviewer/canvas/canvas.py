@@ -193,8 +193,13 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_SLIDER, self.OnSlider)
 
         # Set a placeholder value for position; we will set it later in SetOverlayPositions().
-        self._minimap = Minimap(pos=Vec2(), width=200, realsize=self.realsize,
+        self._minimap = Minimap(pos=Vec2(), device_pos=Vec2(), width=200, realsize=self.realsize,
                                 window_size=Vec2(self.GetSize()), pos_callback=self.SetOriginPos)
+        minimap_pos = Vec2(self.GetSize()) - self._scroll_off - self._minimap.size
+        _, slider_height = self.zoom_slider.GetSize()
+        minimap_pos.y -= slider_height + 10
+        self._minimap.device_pos = minimap_pos
+
         self._overlays = [self._minimap]
 
         self._drag_selecting = False
@@ -282,7 +287,7 @@ class Canvas(wx.ScrolledWindow):
         size = Vec2.repeat(theme['reaction_center_size']) * cstate.scale
         return Rect(s_pos - size / 2, size)
 
-    def _InWhichOverlay(self, pos: Vec2) -> Optional[CanvasOverlay]:
+    def _InWhichOverlay(self, device_pos: Vec2) -> Optional[CanvasOverlay]:
         """If position is within an overlay, return that overlay; otherwise return None.
 
         Note:
@@ -293,7 +298,7 @@ class Canvas(wx.ScrolledWindow):
             An overlay if applicable, or None if not.
         """
         # TODO right now this is hardcoded; in the future add List[CanvasOverlay] attribute
-        if within_rect(pos, Rect(self._minimap.position, self._minimap.size)):
+        if within_rect(device_pos, Rect(self._minimap.device_pos, self._minimap.size)):
             return self._minimap
         return None
 
@@ -309,10 +314,7 @@ class Canvas(wx.ScrolledWindow):
         self.zoom_slider.SetPosition(zoom_pos.to_wx_point())
 
         # do all the minimap updates here, since this is simpler and less prone to bugs
-        minimap_pos = Vec2(self.GetSize()) - self._scroll_off - self._minimap.size
-        _, slider_height = self.zoom_slider.GetSize()
-        minimap_pos.y -= slider_height + 10
-        self._minimap.position = minimap_pos
+        self._minimap.position = Vec2(*self.CalcUnscrolledPosition(*self._minimap.device_pos))
         self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(0, 0)) / cstate.scale
         # TODO for windows, need to subtract scroll offset from window size. Need to test if this
         # is true for Mac and Linux, however. -Gary
@@ -424,6 +426,7 @@ class Canvas(wx.ScrolledWindow):
         # need to mult by scale here since self.VirtualPosition is artificially increased, per
         # scale * self.realsize
         self.Scroll(*pos)
+        self.SetOverlayPositions()
 
     def SetZoomLevel(self, zoom: int, anchor: Vec2):
         """Zoom in/out with the given anchor.

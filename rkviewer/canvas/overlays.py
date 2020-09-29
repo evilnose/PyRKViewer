@@ -70,11 +70,12 @@ class Minimap(CanvasOverlay):
     """
     Callback = Callable[[Vec2], None]
     window_pos: Vec2
-    
     window_size: Vec2
     nodes: List[Node]
+    device_pos: Vec2
 
-    _realsize: Vec2
+    _position: Vec2  #: Unscrolled, i.e. logical position of the minimap. This varies by scrolling.
+    _realsize: Vec2  #: Full size of the canvas
     _width: int
     _callback: Callback #: the function called when the minimap position changes
     _dragging: bool
@@ -86,7 +87,7 @@ class Minimap(CanvasOverlay):
     """
 
 
-    def __init__(self, *, pos: Vec2, width: int, realsize: Vec2, window_pos: Vec2 = Vec2(),
+    def __init__(self, *, pos: Vec2, device_pos: Vec2, width: int, realsize: Vec2, window_pos: Vec2 = Vec2(),
                  window_size: Vec2, pos_callback: Callback):
         """The constructor of the minimap
 
@@ -99,6 +100,7 @@ class Minimap(CanvasOverlay):
             pos_callback: The callback function called when the minimap window changes position.
         """
         self._position = pos
+        self.device_pos = device_pos  # should stay fixed
         self._width = width
         self.realsize = realsize  # use the setter to set the _size as well
         self.window_pos = window_pos
@@ -165,7 +167,7 @@ class Minimap(CanvasOverlay):
     def OnLeftDown(self, device_pos: Vec2):
         if not self._dragging:
             scale = self._size.x / self._realsize.x
-            pos = device_pos - self.position
+            pos = device_pos - self.device_pos
             if within_rect(pos, Rect(self.window_pos * scale, self.window_size * scale)):
                 self._dragging = True
                 self._drag_rel = pos - self.window_pos * scale
@@ -178,7 +180,7 @@ class Minimap(CanvasOverlay):
 
     def OnMotion(self, device_pos: Vec2, is_down: bool):
         scale = self._size.x / self._realsize.x
-        pos = device_pos - self.position
+        pos = device_pos - self.device_pos
         pos = clamp_point(pos, Rect(Vec2(), self.size))
         if is_down:
             if not self._dragging:

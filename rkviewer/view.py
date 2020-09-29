@@ -75,7 +75,7 @@ class EditPanel(fnb.FlatNotebook):
 
         cur_page = self.GetCurrentPage()
 
-        if self.node_form.sel_nodes_idx != evt.node_indices:
+        if self.node_form.selected_idx != evt.node_indices:
             self.node_form.UpdateNodeSelection(evt.node_indices)
         if should_show_nodes:
             if node_index == -1:
@@ -92,7 +92,7 @@ class EditPanel(fnb.FlatNotebook):
                 reaction_index = i
                 break
 
-        if self.reaction_form.sel_nodes_idx != evt.reaction_indices:
+        if self.reaction_form.selected_idx != evt.reaction_indices:
             self.reaction_form.UpdateReactionSelection(evt.reaction_indices)
         if should_show_reactions:
             if reaction_index == -1:

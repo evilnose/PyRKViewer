@@ -1,5 +1,6 @@
 """The main View class and associated widgets.
 """
+from rkviewer.canvas.geometry import get_bounding_rect
 import rkviewer
 from rkplugin.api import init_api
 from rkviewer.plugin_manage import PluginManager
@@ -8,7 +9,7 @@ import wx
 import wx.lib.agw.flatnotebook as fnb
 import wx.lib.agw.shortcuteditor as sedit
 from typing import Callable, List, Dict, Any, Tuple
-from .events import DidDragResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
+from .events import DidResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
     SelectionDidUpdateEvent
 from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
@@ -41,7 +42,8 @@ class EditPanel(fnb.FlatNotebook):
         self.comp_form = CompartmentForm(self, canvas, controller)
 
         self.null_message = wx.Panel(self)
-        text = wx.StaticText(self.null_message, label="Nothing is selected.", style=wx.ALIGN_CENTER)
+        text = wx.StaticText(
+            self.null_message, label="Nothing is selected.", style=wx.ALIGN_CENTER)
         null_sizer = wx.BoxSizer(wx.HORIZONTAL)
         null_sizer.Add(text, proportion=1, flag=wx.ALIGN_CENTER_VERTICAL)
         self.null_message.SetSizer(null_sizer)
@@ -58,7 +60,7 @@ class EditPanel(fnb.FlatNotebook):
         bind_handler(CanvasDidUpdateEvent, self.OnCanvasDidUpdate)
         bind_handler(SelectionDidUpdateEvent, self.OnSelectionDidUpdate)
         bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
-        bind_handler(DidDragResizeNodesEvent, self.OnDidDragResizeNodes)
+        bind_handler(DidResizeNodesEvent, self.OnDidResizeNodes)
 
     def OnCanvasDidUpdate(self, evt):
         self.node_form.UpdateNodes(evt.nodes)
@@ -94,7 +96,7 @@ class EditPanel(fnb.FlatNotebook):
             if self.GetPage(i) == self.reaction_form:
                 reaction_index = i
                 break
-             
+
         if self.reaction_form.selected_idx != evt.reaction_indices:
             self.reaction_form.UpdateSelection(evt.reaction_indices)
         if should_show_reactions:
@@ -136,10 +138,21 @@ class EditPanel(fnb.FlatNotebook):
 
     def OnNodesDidMove(self, evt):
         if evt.dragged:
-            self.node_form.UpdateDidDragMoveNodes()
+            self.node_form.UpdateBoundingRect()
 
-    def OnDidDragResizeNodes(self, evt):
-        self.node_form.UpdateDidDragResizeNodes()
+    def OnCompartmentsDidMove(self, evt):
+        if evt.dragged:
+            assert False
+            #TODO update bounding rect
+
+    def OnDidResizeNodes(self, evt):
+        if evt.dragged:
+            self.node_form.UpdateBoundingRect()
+
+    def OnDidResizeCompartments(self, evt):
+        if evt.dragged:
+            assert False
+            #TODO update bounding rect
 
 
 class Toolbar(wx.Panel):
@@ -205,7 +218,8 @@ class ModePanel(wx.Panel):
 
     def AppendModeButton(self, label: str, mode: InputMode, sizer: wx.Sizer):
         btn = wx.ToggleButton(self, label=label)
-        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        sizer.Add(btn, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER).Border(wx.TOP, 10))
         self.btn_group.AddButton(btn, mode)
 
     def AppendNormalButton(self, label: str, callback, sizer: wx.Sizer, tooltip: str = None):
@@ -213,7 +227,8 @@ class ModePanel(wx.Panel):
         if tooltip is not None:
             btn.SetToolTip(tooltip)
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
-        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        sizer.Add(btn, wx.SizerFlags().Align(
+            wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
     def AppendSeparator(self, sizer: wx.Sizer):
         line = wx.StaticLine(self, style=wx.LI_HORIZONTAL)
@@ -236,8 +251,10 @@ class MainPanel(wx.Panel):
         self.controller = controller
 
         self.canvas = Canvas(self.controller, self,
-                             size=(theme['canvas_width'], theme['canvas_height']),
-                             realsize=(4 * theme['canvas_width'], 4 * theme['canvas_height']),
+                             size=(theme['canvas_width'],
+                                   theme['canvas_height']),
+                             realsize=(4 * theme['canvas_width'],
+                                       4 * theme['canvas_height']),
                              )
         init_api(self.canvas, controller)
         self.canvas.SetScrollRate(10, 10)
@@ -256,7 +273,8 @@ class MainPanel(wx.Panel):
                                     )
         self.mode_panel.SetBackgroundColour(theme['toolbar_bg'])
 
-        toolbar_width = theme['canvas_width'] + theme['edit_panel_width'] + theme['vgap']
+        toolbar_width = theme['canvas_width'] + \
+            theme['edit_panel_width'] + theme['vgap']
         self.toolbar = Toolbar(self, controller,
                                size=(toolbar_width, theme['toolbar_height']),
                                zoom_callback=self.canvas.ZoomCenter,
@@ -271,7 +289,8 @@ class MainPanel(wx.Panel):
         # and create a sizer to manage the layout of child widgets
         sizer = wx.GridBagSizer(vgap=theme['vgap'], hgap=theme['hgap'])
 
-        sizer.Add(self.toolbar, wx.GBPosition(0, 1), wx.GBSpan(1, 2), flag=wx.EXPAND)
+        sizer.Add(self.toolbar, wx.GBPosition(0, 1),
+                  wx.GBSpan(1, 2), flag=wx.EXPAND)
         sizer.Add(self.mode_panel, wx.GBPosition(1, 0), flag=wx.EXPAND)
         sizer.Add(self.canvas, wx.GBPosition(1, 1),  flag=wx.EXPAND)
         sizer.Add(self.edit_panel, wx.GBPosition(1, 2), flag=wx.EXPAND)
@@ -330,7 +349,8 @@ class MainFrame(wx.Frame):
     """The main frame."""
 
     def __init__(self, controller: IController, manager: PluginManager, **kw):
-        super().__init__(None, style=wx.DEFAULT_FRAME_STYLE | wx.WS_EX_PROCESS_UI_UPDATES, **kw)
+        super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
+                         wx.WS_EX_PROCESS_UI_UPDATES, **kw)
 
         self.manager = manager
         status_fields = settings['status_fields']
@@ -403,7 +423,8 @@ class MainFrame(wx.Frame):
         self.manager.register_menu(plugins_menu, self)
 
         help_menu = wx.Menu()
-        self.AddMenuItem(help_menu, '&About...', 'Show about dialog', self.ShowAbout, entries)
+        self.AddMenuItem(help_menu, '&About...',
+                         'Show about dialog', self.ShowAbout, entries)
 
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')
@@ -504,7 +525,8 @@ class View(IView):
         self.app = wx.App()
         self.manager = PluginManager(self.controller)
         self.manager.load_from('plugins')
-        self.frame = MainFrame(self.controller, self.manager, title='RK Network Viewer')
+        self.frame = MainFrame(
+            self.controller, self.manager, title='RK Network Viewer')
         self.canvas_panel = self.frame.main_panel.canvas
 
     def main_loop(self):

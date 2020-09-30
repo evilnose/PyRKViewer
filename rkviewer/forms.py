@@ -414,6 +414,7 @@ class EditPanelForm(ScrolledPanel):
                 no_rzeros(new_val.x, prec), no_rzeros(new_val.y, prec)))
 
 
+# TODO send DidResizeNodes event (non-dragged)
 class NodeForm(EditPanelForm):
     """Form for editing one or multiple nodes.
 
@@ -459,40 +460,14 @@ class NodeForm(EditPanelForm):
             size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
 
-    def UpdateDidDragMoveNodes(self):
-        """Function called after the selected nodes were moved by dragging."""
-        # possibly empty because node was dragged along with its compartment
-        if len(self._selected_idx) == 0:
-            return
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        prec = settings['decimal_precision']
-
-        pos: Vec2
-        if len(self._selected_idx) == 1:
-            [node] = nodes
-            pos = node.position
-        else:
-            self._bounding_rect = get_bounding_rect([n.rect for n in nodes])
-            pos = self._bounding_rect.position
-        self._ChangePairValue(self.pos_ctrl, pos, prec)
-
-    def UpdateDidDragResizeNodes(self):
-        """Function called after the selected nodes were resized by dragging."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        prec = settings['decimal_precision']
-        pos: Vec2
-        size: Vec2
-        if len(self._selected_idx) == 1:
-            [node] = nodes
-            pos = node.position
-            size = node.size
-        else:
-            self._bounding_rect = get_bounding_rect([n.rect for n in nodes])
-            pos = self._bounding_rect.position
-            size = self._bounding_rect.size
-
-        self._ChangePairValue(self.pos_ctrl, pos, prec)
-        self._ChangePairValue(self.size_ctrl, size, prec)
+    def UpdateBoundingRect(self):
+        """Update bounding rectangle; mixed indicates whether both nodes and comps are selected.
+        """
+        rects = [n.rect for n in self.nodes if n.index in self.selected_idx]
+        self._bounding_rect = get_bounding_rect(rects)
+        prec = 2
+        self._ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
+        self._ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
 
     def CreateControls(self, sizer):
         self.id_ctrl = wx.TextCtrl(self)
@@ -577,6 +552,8 @@ class NodeForm(EditPanelForm):
                 offset = clamped - self._bounding_rect.position
                 self._self_changes = True
                 self.controller.start_group()
+                # TODO only allow set pos and size when a single type of items are selected
+                # and in addition to that, restrict nodes to be in the same compartment.
                 for node in nodes:
                     node.position += offset
                 post_event(DidMoveNodesEvent(nodes, offset, dragged=False))
@@ -765,7 +742,6 @@ class ReactionForm(EditPanelForm):
         self.InitLayout()
 
     def CreateControls(self, sizer: wx.Sizer):
-        # TODO create field for stroke thickness
         self.id_ctrl = wx.TextCtrl(self)
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self._AppendControl(sizer, 'identifier', self.id_ctrl)
@@ -954,7 +930,6 @@ class ReactionForm(EditPanelForm):
         fill: wx.Colour
         fill_alpha: Optional[int]
         ratelaw_text: str
-        line_width: str
 
         prec = settings['decimal_precision']
 
@@ -966,7 +941,6 @@ class ReactionForm(EditPanelForm):
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
             self.ratelaw_ctrl.Enable()
-            line_width = str(reaction.thickness)
             self._UpdateStoichFields(reai, self._GetSrcStoichs(reai), self._GetDestStoichs(reai))
         else:
             self.id_ctrl.Disable()
@@ -1000,6 +974,14 @@ class CompartmentForm(EditPanelForm):
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self._AppendControl(sizer, 'identifier', self.id_ctrl)
 
+        self.pos_ctrl = wx.TextCtrl(self)
+        self.pos_ctrl.Bind(wx.EVT_TEXT, self._OnPosText)
+        self._AppendControl(sizer, 'position', self.pos_ctrl)
+
+        self.size_ctrl = wx.TextCtrl(self)
+        self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
+        self._AppendControl(sizer, 'size', self.size_ctrl)
+    
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
@@ -1020,6 +1002,99 @@ class CompartmentForm(EditPanelForm):
             self._self_changes = True
             self.controller.rename_compartment(self.net_index, compi, new_id)
             self._SetValidationState(True, ctrl_id)
+
+    def _OnPosText(self, evt):
+        """Callback for the position control."""
+        text = evt.GetString()
+        xy = parse_num_pair(text)
+        ctrl_id = self.pos_ctrl.GetId()
+        if xy is None:
+            self._SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
+            return
+
+        pos = Vec2(xy)
+        if pos.x < 0 or pos.y < 0:
+            self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
+            return
+        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        bounds = Rect(Vec2(), self.canvas.realsize)
+        clamped = None
+        if len(comps) == 1:
+            [comp] = comps
+            clamped = clamp_rect_pos(Rect(pos, node.size), bounds)
+            if node.position != clamped or pos != clamped:
+                self._self_changes = True
+                node.position = clamped
+                self.controller.start_group()
+                post_event(DidMoveNodesEvent(nodes, clamped - node.position, dragged=False))
+                self.controller.move_node(self.net_index, node.index, node.position)
+                self.controller.end_group()
+        else:
+            clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
+            if self._bounding_rect.position != pos or pos != clamped:
+                offset = clamped - self._bounding_rect.position
+                self._self_changes = True
+                self.controller.start_group()
+                for node in nodes:
+                    node.position += offset
+                post_event(DidMoveNodesEvent(nodes, offset, dragged=False))
+                for node in nodes:
+                    self.controller.move_node(self.net_index, node.index, node.position)
+                self.controller.end_group()
+        self._SetValidationState(True, self.pos_ctrl.GetId())
+
+    def _OnSizeText(self, evt):
+        """Callback for the size control."""
+        ctrl_id = self.size_ctrl.GetId()
+        text = evt.GetString()
+        wh = parse_num_pair(text)
+        if wh is None:
+            self._SetValidationState(False, ctrl_id, 'Should be in the form "width, height"')
+            return
+
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        min_width = settings['min_node_width']
+        min_height = settings['min_node_height']
+        size = Vec2(wh)
+        if len(nodes) == 1:
+            [node] = nodes
+
+            if size.x < min_width or size.y < min_height:
+                message = 'Node size needs to be at least ({}, {})'.format(min_width, min_height)
+                self._SetValidationState(False, ctrl_id, message)
+                return
+
+            clamped = clamp_rect_size(Rect(node.position, size), self.canvas.realsize)
+            if node.size != clamped or size != clamped:
+                self._self_changes = True
+                self.controller.set_node_size(self.net_index, node.index,
+                                                  Vec2(clamped.x, clamped.y))
+        else:
+            min_nw = min(n.size.x for n in nodes)
+            min_nh = min(n.size.y for n in nodes)
+            min_ratio = Vec2(min_width / min_nw, min_height / min_nh)
+            limit = self._bounding_rect.size.elem_mul(min_ratio)
+
+            if size.x < limit.x or size.y < limit.y:
+                message = 'Size of bounding box needs to be at least ({}, {})'.format(
+                    no_rzeros(limit.x, 2), no_rzeros(limit.y, 2))
+                self._SetValidationState(False, ctrl_id, message)
+                return
+
+            clamped = clamp_rect_size(Rect(self._bounding_rect.position, size),
+                                      self.canvas.realsize)
+            if self._bounding_rect.size != clamped or size != clamped:
+                ratio = clamped.elem_div(self._bounding_rect.size)
+                self._self_changes = True
+                self.controller.start_group()
+                for node in nodes:
+                    rel_pos = node.position - self._bounding_rect.position
+                    new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
+                    self.controller.move_node(self.net_index, node.index, new_pos)
+                    self.controller.set_node_size(self.net_index, node.index,
+                                                      node.size.elem_mul(ratio))
+                self.controller.end_group()
+        self._SetValidationState(True, self.size_ctrl.GetId())
 
     def UpdateCompartments(self, comps: List[Compartment]):
         self._compartments = comps
@@ -1049,3 +1124,8 @@ class CompartmentForm(EditPanelForm):
         else:
             self.id_ctrl.Disable()
         self.id_ctrl.ChangeValue(id_text)
+
+    def UpdateBoundingRect(self, bounding_rect: Rect, mixed: bool):
+        """Update bounding rectangle; mixed indicates whether both nodes and comps are selected.
+        """
+        self._bounding_rect = bounding_rect

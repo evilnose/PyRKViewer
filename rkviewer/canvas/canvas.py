@@ -128,7 +128,8 @@ class Canvas(wx.ScrolledWindow):
     _in_selection_group: bool
     #: bool to indicate whether a selection changed event was fired inside selection group.
     _selection_dirty: bool
-    node_idx_map: Dict[int, Node]  #: Maps node index to itself
+    node_idx_map: Dict[int, Node]  #: Maps node index to node
+    comp_idx_map: Dict[int, Compartment]  #: Maps compartment index to compartment
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
         # ensure the parent's __init__ is called
@@ -234,6 +235,7 @@ class Canvas(wx.ScrolledWindow):
         cstate.input_mode_changed = self.InputModeChanged
         self.comp_index = 0  # Compartment of index; remove once controller implements compartments
         self.node_idx_map = dict()
+        self.comp_idx_map = dict()
 
         self._nodes_floating = False
         self._in_selection_group = False
@@ -374,6 +376,9 @@ class Canvas(wx.ScrolledWindow):
         self.node_idx_map = dict()
         for node in nodes:
             self.node_idx_map[node.index] = node
+        self.comp_idx_map = dict()
+        for comp in compartments:
+            self.comp_idx_map[comp.index] = comp
 
         # Update reaction map
         self.reaction_map = defaultdict(set)

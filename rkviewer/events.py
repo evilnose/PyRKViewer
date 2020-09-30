@@ -78,22 +78,22 @@ class DidMoveNodesEvent(CanvasEvent):
 
 
 @dataclass
-class DidCommitNodePositionsEvent(CanvasEvent):
-    """Called after the node positions are commited to the controller.
-
-    This even is emitted only after a node move action has been regsitered with the controller.
-    E.g., when a user drag-moves a ndoe, only after they release the left mouse button is the action
-    recorded in the undo stack.
+class DidMoveCompartmentsEvent(CanvasEvent):
+    """TODO document (same as DidMoveNodesEvent)
     """
+    compartments: List[Compartment]
+    offset: Union[Vec2, List[Vec2]]
+    dragged: bool
 
 
 @dataclass
-class DidDragResizeNodesEvent(CanvasEvent):
-    """Called after the list of selected nodes has been moved by dragging.
+class DidResizeNodesEvent(CanvasEvent):
+    """Called after the list of selected nodes has been resized.
 
     Attributes:
         nodes: The list of resized nodes.
         ratio: The resize ratio.
+        dragged: Whether the resize operation was done by the user dragging.
 
     Note:
         This event triggers only if the user has performed a drag operation, and not, for example,
@@ -101,6 +101,26 @@ class DidDragResizeNodesEvent(CanvasEvent):
     """
     nodes: List[Node]
     ratio: Vec2
+    dragged: bool
+
+
+@dataclass
+class DidResizeCompartmentsEvent(CanvasEvent):
+    """TODO document (same as DidResizeNodesEvent)
+    """
+    compartments: List[Compartment]
+    ratio: Union[Vec2, List[Vec2]]
+    dragged: bool
+
+
+@dataclass
+class DidCommitNodePositionsEvent(CanvasEvent):
+    """Called after the node positions are commited to the controller.
+
+    This even is emitted only after a node move action has been regsitered with the controller.
+    E.g., when a user drag-moves a ndoe, only after they release the left mouse button is the action
+    recorded in the undo stack.
+    """
 
 
 @dataclass

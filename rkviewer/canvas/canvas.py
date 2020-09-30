@@ -206,7 +206,7 @@ class Canvas(wx.ScrolledWindow):
                                 window_size=Vec2(self.GetSize()), pos_callback=self.SetOriginPos)
         minimap_pos = Vec2(self.GetSize()) - self._scroll_off - self._minimap.size
         _, slider_height = self.zoom_slider.GetSize()
-        minimap_pos.y -= slider_height + 10
+        minimap_pos.swapped(1, minimap_pos.y - (slider_height + 10))
         self._minimap.device_pos = minimap_pos
 
         self._overlays = [self._minimap]
@@ -250,6 +250,10 @@ class Canvas(wx.ScrolledWindow):
         if not self.LazyRefresh():
             # Not processed; request more
             evt.RequestMore()
+
+    @property
+    def select_box(self):
+        return self._select_box
 
     @property
     def nodes(self):
@@ -441,12 +445,10 @@ class Canvas(wx.ScrolledWindow):
         """Set the origin position (position of the topleft corner) to pos by scrolling."""
         pos *= cstate.scale
         # check if out of bounds
-        pos.x = max(pos.x, 0)
-        pos.y = max(pos.y, 0)
+        pos = pos.map(lambda e: max(e, 0))
 
         limit = self.realsize * cstate.scale - Vec2(self.GetSize())
-        pos.x = min(pos.x, limit.x)
-        pos.y = min(pos.y, limit.x)
+        pos = pos.reduce2(min, limit)
 
         pos = pos.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
         # need to mult by scale here since self.VirtualPosition is artificially increased, per
@@ -699,7 +701,7 @@ class Canvas(wx.ScrolledWindow):
             evt.Skip()
 
     # TODO improve this. we might want a special mouseLeftWindow event
-    def _EndDrag(self, evt: wx.Event):
+    def _EndDrag(self, evt: wx.MouseEvent):
         """Send the updated node positions and sizes to the controller.
 
         This is called after a dragging operation has completed in OnLeftUp or OnLeaveWindow.
@@ -759,7 +761,7 @@ class Canvas(wx.ScrolledWindow):
                         return
 
         if overlay is not None:
-            overlay.OnLeftUp(evt)
+            overlay.OnLeftUp(device_pos)
 
     def CalcScrolledPositionFloat(self, pos: Vec2) -> Vec2:
         """Convert logical position to scrolled (device) position, retaining floating point.
@@ -944,7 +946,7 @@ class Canvas(wx.ScrolledWindow):
             # Draw drag-selection rect
             if self._drag_selecting:
                 fill: wx.Colour
-                border: wx.Colour
+                border: Optional[wx.Colour]
                 bwidth: int
                 if cstate.input_mode == InputMode.SELECT:
                     fill = theme['drag_fill']

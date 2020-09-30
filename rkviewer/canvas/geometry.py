@@ -18,8 +18,8 @@ class Vec2:
     Note:
         Vec2 objects are immutable, meaning one cannot modify elements of the vector.
     """
-    x: TNum
-    y: TNum
+    _x: TNum
+    _y: TNum
     _i: int
 
     def __init__(self, x=None, y=None):
@@ -33,13 +33,13 @@ class Vec2:
         self._i = 0
         if x is None:
             assert y is None, 'y cannot be set when x is None'
-            self.x = 0
-            self.y = 0
+            self._x = 0
+            self._y = 0
         elif y is None:
-            self.x, self.y = x
+            self._x, self._y = x
         else:
-            self.x = x
-            self.y = y
+            self._x = x
+            self._y = y
 
         '''
         for e in (self.x, self.y):
@@ -47,6 +47,14 @@ class Vec2:
                 raise ValueError('Vec2 should be initialized with int or float. Got {} \
     instead'.format(type(e)))
         '''
+
+    @property
+    def x(self):
+        return self._x
+
+    @property
+    def y(self):
+        return self._y
 
     def __iter__(self) -> Vec2:
         self._i = 0

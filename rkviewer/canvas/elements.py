@@ -448,6 +448,8 @@ class SelectBox(CanvasElement):
     #: relative positions of the nodes to the bounding rect
     _rel_positions: Optional[List[Vec2]]
     _resize_handle: int  #: the node resize handle.
+    node_min_ratio: Optional[Vec2]
+    comp_min_ratio: Optional[Vec2]
     #: the minimum resize ratio for each axis, to avoid making the nodes too small
     _min_resize_ratio: Vec2
     #: the bounding rect when dragging/resizing started
@@ -543,8 +545,7 @@ class SelectBox(CanvasElement):
                     peri_indices |= set(comp.nodes)
 
             peri_indices -= set(n.index for n in nodes)
-            self.peripheral_nodes = [
-                self.canvas.node_idx_map[i] for i in peri_indices]
+            self.peripheral_nodes = [self.canvas.node_idx_map[i] for i in peri_indices]
 
     def outline_rect(self) -> Rect:
         """Helper that returns the scaled, padded bounding rectangle."""
@@ -693,7 +694,13 @@ class SelectBox(CanvasElement):
 
         return False
 
-    def _update_min_resize_ratio(self):
+    def compute_min_ratio(self) -> Tuple[Optional[Vec2], Optional[Vec2]]:
+        """Compute minimum size ratio resizing nodes and compartments.
+        
+        Returns:
+            A tuple containing (node mininum resize ratio, comp minimum resize ratio). Each ratio
+            may be None, in the case that no elements of that type is selected.
+        """
         node_min_ratio = None
         comp_min_ratio = None
         if len(self.nodes) != 0:
@@ -701,15 +708,24 @@ class SelectBox(CanvasElement):
             min_height = min(n.size.y for n in self.nodes)
             node_min_ratio = Vec2(settings['min_node_width'] / min_width,
                                   settings['min_node_height'] / min_height)
+
         if len(self.compartments) != 0:
             min_comp_width = min(c.size.x for c in self.compartments)
             min_comp_height = min(c.size.y for c in self.compartments)
             comp_min_ratio = Vec2(settings['min_comp_width'] / min_comp_width,
                                   settings['min_comp_height'] / min_comp_height)
+            for node in self.peripheral_nodes:
+                comp = self.canvas.comp_idx_map[node.comp_idx]
+                ratio = node.size.elem_div(comp.size)
+                comp_min_ratio = comp_min_ratio.reduce2(max, ratio)
+
+        return node_min_ratio, comp_min_ratio
+
+    def _update_min_resize_ratio(self):
+        node_min_ratio, comp_min_ratio = self.compute_min_ratio()
 
         if node_min_ratio is not None and comp_min_ratio is not None:
-            self._min_resize_ratio = node_min_ratio.reduce2(
-                max, comp_min_ratio)
+            self._min_resize_ratio = node_min_ratio.reduce2(max, comp_min_ratio)
         elif node_min_ratio is not None:
             self._min_resize_ratio = node_min_ratio
         elif comp_min_ratio is not None:
@@ -809,10 +825,10 @@ class SelectBox(CanvasElement):
         if self._resize_handle % 2 == 1:
             if self._resize_handle % 4 == 1:
                 # vertical resize; keep x the same
-                target_point.x = orig_dragged_point.x
+                target_point = target_point.swapped(0, orig_dragged_point.x)
             else:
                 assert self._resize_handle % 4 == 3
-                target_point.y = orig_dragged_point.y
+                target_point = target_point.swapped(1, orig_dragged_point.y)
 
         # clamp target point
         target_point = clamp_point(target_point, bounds * cstate.scale)
@@ -828,10 +844,10 @@ class SelectBox(CanvasElement):
 
         # bounding_rect flipped?
         if signs.x < 0:
-            target_point.x = cur_dragged_point.x
+            target_point = target_point.swapped(0, cur_dragged_point.x)
 
         if signs.y < 0:
-            target_point.y = cur_dragged_point.y
+            target_point = target_point.swapped(1, cur_dragged_point.y)
 
         # take absolute value and subtract padding to get actual difference (i.e. sizing)
         pad_off = Vec2.repeat(self._padding)
@@ -844,11 +860,9 @@ class SelectBox(CanvasElement):
         # size too small?
         if size_ratio.x < self._min_resize_ratio.x:
             size_ratio = size_ratio.swapped(0, self._min_resize_ratio.x)
-            target_point.x = cur_dragged_point.x
 
         if size_ratio.y < self._min_resize_ratio.y:
             size_ratio = size_ratio.swapped(1, self._min_resize_ratio.y)
-            target_point.y = cur_dragged_point.y
 
         # re-calculate target_size in case size_ratio changed
         target_size = orig_bb_size.elem_mul(size_ratio)

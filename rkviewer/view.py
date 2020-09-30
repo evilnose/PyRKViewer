@@ -9,7 +9,7 @@ import wx
 import wx.lib.agw.flatnotebook as fnb
 import wx.lib.agw.shortcuteditor as sedit
 from typing import Callable, List, Dict, Any, Tuple
-from .events import DidResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
+from .events import DidMoveCompartmentsEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
     SelectionDidUpdateEvent
 from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
@@ -27,9 +27,10 @@ class EditPanel(fnb.FlatNotebook):
         node_form: The actual form widget. This is at the same level as null_message. TODO
         null_message: The widget displayed in place of the form,  when nothing is selected.
     """
-    node_form: wx.Panel
-    reaction_form: wx.Panel
-    null_message: wx.StaticText
+    node_form: NodeForm
+    reaction_form: ReactionForm
+    comp_form: CompartmentForm
+    null_message: wx.Panel
     FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | fnb.FNB_NODRAG | fnb.FNB_VC8 | fnb.FNB_DROPDOWN_TABS_LIST
 
     def __init__(self, parent, canvas: Canvas, controller: IController, **kw):
@@ -61,6 +62,8 @@ class EditPanel(fnb.FlatNotebook):
         bind_handler(SelectionDidUpdateEvent, self.OnSelectionDidUpdate)
         bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
         bind_handler(DidResizeNodesEvent, self.OnDidResizeNodes)
+        bind_handler(DidMoveCompartmentsEvent, self.OnNodesDidMove)
+        bind_handler(DidResizeCompartmentsEvent, self.OnDidResizeNodes)
 
     def OnCanvasDidUpdate(self, evt):
         self.node_form.UpdateNodes(evt.nodes)
@@ -72,6 +75,8 @@ class EditPanel(fnb.FlatNotebook):
         should_show_nodes = len(evt.node_indices) != 0
         should_show_reactions = len(evt.reaction_indices) != 0
         should_show_comps = len(evt.compartment_indices) != 0
+        need_update_nodes = self.node_form.selected_idx != evt.node_indices
+        need_update_comps = self.comp_form.selected_idx != evt.compartment_indices
 
         cur_page = self.GetCurrentPage()
 
@@ -81,8 +86,8 @@ class EditPanel(fnb.FlatNotebook):
                 node_index = i
                 break
 
-        if self.node_form.selected_idx != evt.node_indices:
-            self.node_form.UpdateSelection(evt.node_indices)
+        if need_update_nodes or need_update_comps:
+            self.node_form.UpdateSelection(evt.node_indices, comps_selected=should_show_comps)
         if should_show_nodes:
             if node_index == -1:
                 self.InsertPage(0, self.node_form, 'Nodes')
@@ -111,8 +116,8 @@ class EditPanel(fnb.FlatNotebook):
             if self.GetPage(i) == self.comp_form:
                 comp_index = i
                 break
-        if self.comp_form.selected_idx != evt.compartment_indices:
-            self.comp_form.UpdateSelection(evt.compartment_indices)
+        if need_update_comps or need_update_nodes:
+            self.comp_form.UpdateSelection(evt.compartment_indices, nodes_selected=should_show_nodes)
         if should_show_comps:
             if comp_index == -1:
                 self.AddPage(self.comp_form, 'Compartments')
@@ -137,22 +142,16 @@ class EditPanel(fnb.FlatNotebook):
             self.null_message.Show()
 
     def OnNodesDidMove(self, evt):
-        if evt.dragged:
-            self.node_form.UpdateBoundingRect()
+        self.node_form.NodesMovedOrResized(evt)
 
     def OnCompartmentsDidMove(self, evt):
-        if evt.dragged:
-            assert False
-            #TODO update bounding rect
+        self.comp_form.CompsMovedOrResized(evt)
 
     def OnDidResizeNodes(self, evt):
-        if evt.dragged:
-            self.node_form.UpdateBoundingRect()
+        self.node_form.NodesMovedOrResized(evt)
 
     def OnDidResizeCompartments(self, evt):
-        if evt.dragged:
-            assert False
-            #TODO update bounding rect
+        self.comp_form.CompsMovedOrResized(evt)
 
 
 class Toolbar(wx.Panel):
@@ -302,10 +301,6 @@ class MainPanel(wx.Panel):
         # Set the sizer and *prevent the user from resizing it to a smaller size
         self.SetSizerAndFit(sizer)
 
-    def OnNodeDrop(self, obj: wx.Window, pos: wx.Point):
-        if obj == self.canvas:
-            self.canvas.OnNodeDrop(pos)
-
     def ToggleEditPanel(self, evt):
         sizer = self.GetSizer()
         if self.edit_panel.IsShown():
@@ -447,7 +442,7 @@ class MainFrame(wx.Frame):
         self.Center()
 
     def AddMenuItem(self, menu: wx.Menu, text: str, help_text: str, callback: Callable,
-                    entries: List, key: Tuple[Any, wx.KeyCode] = None, id_: str = None):
+                    entries: List, key: Tuple[Any, int] = None, id_: int = None):
         if id_ is None:
             id_ = wx.NewIdRef(count=1)
 

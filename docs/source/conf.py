@@ -27,6 +27,8 @@ author = 'cperena'
 release = '0.0.1'
 import sphinx_rtd_theme
 
+# readthedocs can't deal with wx, so we tell it to pretend it can
+autodoc_mock_imports = ["wx"]
 
 # -- General configuration ---------------------------------------------------
 

@@ -1,0 +1,432 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>arrow_designer module &mdash; Plugin Documentation 0.0.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="color_selected module" href="color_selected.html" />
+    <link rel="prev" title="Plugins" href="pluginsModules.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Plugin Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="pluginsModules.html">Plugins</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">arrow_designer module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="color_selected.html">color_selected module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="disco.html">disco module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="rkpluginModules.html">rkplugin</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Plugin Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="pluginsModules.html">Plugins</a> &raquo;</li>
+        
+      <li>arrow_designer module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/arrow_designer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-arrow_designer">
+<span id="arrow-designer-module"></span><h1>arrow_designer module<a class="headerlink" href="#module-arrow_designer" title="Permalink to this headline">¶</a></h1>
+<p>Arrow tip designer for reaction plugin.</p>
+<p>Version 0.01: Author: Gary Geng (2020)</p>
+<dl class="py class">
+<dt id="arrow_designer.ArrowDesigner">
+<em class="property">class </em><code class="sig-prename descclassname">arrow_designer.</code><code class="sig-name descname">ArrowDesigner</code><a class="reference internal" href="_modules/arrow_designer.html#ArrowDesigner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.ArrowDesigner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defining the arrow designer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>WindowedPlugin</strong> – For this specific type of plugin.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="arrow_designer.ArrowDesigner.OnRestore">
+<code class="sig-name descname">OnRestore</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evt</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#ArrowDesigner.OnRestore"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.ArrowDesigner.OnRestore" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the arrow point to be set to default values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – designer used.</p></li>
+<li><p><strong>evt</strong> – the event being executed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.ArrowDesigner.OnSave">
+<code class="sig-name descname">OnSave</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evt</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#ArrowDesigner.OnSave"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.ArrowDesigner.OnSave" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the new arrow tip when saving.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – designer used.</p></li>
+<li><p><strong>evt</strong> – the event being executed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.ArrowDesigner.create_window">
+<code class="sig-name descname">create_window</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dialog</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#ArrowDesigner.create_window"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.ArrowDesigner.create_window" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creating a window.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – </p></li>
+<li><p><strong>dialog</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="arrow_designer.DesignerWindow">
+<em class="property">class </em><code class="sig-prename descclassname">arrow_designer.</code><code class="sig-name descname">DesignerWindow</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span></em>, <em class="sig-param"><span class="n">arrow_tip</span><span class="p">:</span> <span class="n">rkviewer.canvas.state.ArrowTip</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defining the designer window.</p>
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.OnLeftDown">
+<code class="sig-name descname">OnLeftDown</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evt</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.OnLeftDown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.OnLeftDown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Action to take when selecting left and downward.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>evt</strong> – the event being executed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.OnLeftUp">
+<code class="sig-name descname">OnLeftUp</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evt</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.OnLeftUp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.OnLeftUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Action to take when selecting left upward.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>evt</strong> – the event being executed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.OnMotion">
+<code class="sig-name descname">OnMotion</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evt</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.OnMotion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.OnMotion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Action to take when moving around the screen.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>evt</strong> – the event being executed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.OnPaint">
+<code class="sig-name descname">OnPaint</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evt</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.OnPaint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.OnPaint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Action to take when painting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>evt</strong> – the event being executed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.draw_background">
+<code class="sig-name descname">draw_background</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gc</span><span class="p">:</span> <span class="n">wx._core.GraphicsContext</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.draw_background"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.draw_background" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drawing a window background.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>gc</strong> (<em>wx.GraphixContext</em>) – Graphics context to modify.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.draw_point">
+<code class="sig-name descname">draw_point</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gc</span><span class="p">:</span> <span class="n">wx._core.GraphicsContext</span></em>, <em class="sig-param"><span class="n">point</span><span class="p">:</span> <span class="n">rkviewer.canvas.geometry.Vec2</span></em>, <em class="sig-param"><span class="n">radius</span><span class="p">:</span> <span class="n">float</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.draw_point"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.draw_point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drawing a single point.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>gc</strong> (<em>wx.GraphixContext</em>) – Graphics context to modify.</p></li>
+<li><p><strong>point</strong> (<em>Vect2</em>) – Point to be drawn.</p></li>
+<li><p><strong>radius</strong> (<em>float</em>) – radius for the point.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.draw_points">
+<code class="sig-name descname">draw_points</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gc</span><span class="p">:</span> <span class="n">wx._core.GraphicsContext</span></em>, <em class="sig-param"><span class="n">points</span><span class="p">:</span> <span class="n">List<span class="p">[</span>rkviewer.canvas.geometry.Vec2<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">radius</span><span class="p">:</span> <span class="n">float</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.draw_points"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.draw_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drawing points for arrow.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>gc</strong> (<em>wx.GraphixContext</em>) – Graphics context to modify.</p></li>
+<li><p><strong>points</strong> (<em>List</em><em>[</em><em>Vect2</em><em>]</em>) – Points to be drawn in form of a list.</p></li>
+<li><p><strong>radius</strong> (<em>float</em>) – radius for the points.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.projected_landing">
+<code class="sig-name descname">projected_landing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">point</span><span class="p">:</span> <span class="n">rkviewer.canvas.geometry.Vec2</span></em><span class="sig-paren">)</span> &#x2192; rkviewer.canvas.geometry.Vec2<a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.projected_landing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.projected_landing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Definine projectedlanding point for arrow.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>point</strong> (<em>vect2</em>) – point goven to find porjected landing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>projected point for landing.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Vec2</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.update_arrow_tip">
+<code class="sig-name descname">update_arrow_tip</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">arrow_tip</span><span class="p">:</span> <span class="n">rkviewer.canvas.state.ArrowTip</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.update_arrow_tip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.update_arrow_tip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updating the designed arrow tip.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>arrow_tip</strong> – modified arrow tip.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="arrow_designer.DesignerWindow.update_hover_idx">
+<code class="sig-name descname">update_hover_idx</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pos</span><span class="p">:</span> <span class="n">rkviewer.canvas.geometry.Vec2</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/arrow_designer.html#DesignerWindow.update_hover_idx"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#arrow_designer.DesignerWindow.update_hover_idx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updating the hover index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – the Designer Window to initialize.</p></li>
+<li><p><strong>pos</strong> (<em>Vec2</em>) – Posotion over which user is currently hovering.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="color_selected.html" class="btn btn-neutral float-right" title="color_selected module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="pluginsModules.html" class="btn btn-neutral float-left" title="Plugins" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, cperena
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

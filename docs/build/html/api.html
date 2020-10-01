@@ -1,0 +1,459 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>api module &mdash; Plugin Documentation 0.0.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="plugins module" href="plugins.html" />
+    <link rel="prev" title="rkplugin" href="rkpluginModules.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Plugin Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pluginsModules.html">Plugins</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="rkpluginModules.html">rkplugin</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">api module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html">plugins module</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Plugin Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="rkpluginModules.html">rkplugin</a> &raquo;</li>
+        
+      <li>api module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-api">
+<span id="api-module"></span><h1>api module<a class="headerlink" href="#module-api" title="Permalink to this headline">¶</a></h1>
+<p>API manager for the rkplugins.</p>
+<dl class="py function">
+<dt id="api.add_node">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">add_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">node</span><span class="p">:</span> <span class="n">rkviewer.canvas.data.Node</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#add_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.add_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a node to the api to the last overall index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – the index overall</p></li>
+<li><p><strong>node</strong> (<em>Node</em>) – the Node you wish to add</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.add_reaction">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">add_reaction</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">reaction</span><span class="p">:</span> <span class="n">rkviewer.canvas.data.Reaction</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#add_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.add_reaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a reaction to the api to the last overall index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – the index overall</p></li>
+<li><p><strong>reaction</strong> (<em>Reaction</em>) – the Node you wish to add</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.all_nodes">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">all_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>rkviewer.canvas.data.Node<span class="p">]</span><a class="reference internal" href="_modules/api.html#all_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.all_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists out all nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List[Node]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.all_reactions">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">all_reactions</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>rkviewer.canvas.data.Reaction<span class="p">]</span><a class="reference internal" href="_modules/api.html#all_reactions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.all_reactions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists out all reactions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List[Reaction]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_arrow_tip">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_arrow_tip</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; rkviewer.canvas.state.ArrowTip<a class="reference internal" href="_modules/api.html#get_arrow_tip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_arrow_tip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the existing arrow tip.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_default_arrow_tip">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_default_arrow_tip</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; rkviewer.canvas.state.ArrowTip<a class="reference internal" href="_modules/api.html#get_default_arrow_tip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_default_arrow_tip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the default arrow tip.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_node_by_index">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_node_by_index</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">node_index</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span> &#x2192; rkviewer.canvas.data.Node<a class="reference internal" href="_modules/api.html#get_node_by_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_node_by_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets nodes from their index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – the index overall</p></li>
+<li><p><strong>node_index</strong> (<em>int</em>) – the index of the specific node</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Node</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_reaction_by_index">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_reaction_by_index</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">reaction_index</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span> &#x2192; rkviewer.canvas.data.Reaction<a class="reference internal" href="_modules/api.html#get_reaction_by_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_reaction_by_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets reactions from their index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – the index overall</p></li>
+<li><p><strong>node_index</strong> (<em>int</em>) – the index of the specific node</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Node</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.group_action">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">group_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#group_action"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.group_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Context manager for doing a group operation in the controller, for undo/redo purposes.</p>
+<p>TODO more documentation on this</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.init_api">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">init_api</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">canvas</span><span class="p">:</span> <span class="n">rkviewer.canvas.canvas.Canvas</span></em>, <em class="sig-param"><span class="n">controller</span><span class="p">:</span> <span class="n">rkviewer.mvc.IController</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#init_api"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.init_api" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes api.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Canvas</strong> (<em>canvas</em>) – On which you are working</p></li>
+<li><p><strong>ICOntroller</strong> (<em>controller</em>) – chosen controller</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.selected_node_indices">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">selected_node_indices</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>int<span class="p">]</span><a class="reference internal" href="_modules/api.html#selected_node_indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.selected_node_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists out all the selected nodes’ indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Set[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.selected_nodes">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">selected_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>rkviewer.canvas.data.Node<span class="p">]</span><a class="reference internal" href="_modules/api.html#selected_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.selected_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists out all selected nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List[Node]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.selected_reaction_indices">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">selected_reaction_indices</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span>int<span class="p">]</span><a class="reference internal" href="_modules/api.html#selected_reaction_indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.selected_reaction_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lists out all the selected reactions’ indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Set[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.set_arrow_tip">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">set_arrow_tip</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span><span class="p">:</span> <span class="n">rkviewer.canvas.state.ArrowTip</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#set_arrow_tip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.set_arrow_tip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the arrow tip to a given one.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ArrowTip</strong> (<em>value</em>) – the given ArrowTip to set to.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_node">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">node_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">id_</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fill_color</span><span class="p">:</span> <span class="n">wx._core.Colour</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">border_color</span><span class="p">:</span> <span class="n">wx._core.Colour</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">border_width</span><span class="p">:</span> <span class="n">float</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">position</span><span class="p">:</span> <span class="n">rkviewer.canvas.geometry.Vec2</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">size</span><span class="p">:</span> <span class="n">rkviewer.canvas.geometry.Vec2</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update one or multiple properties of a node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – The network index.</p></li>
+<li><p><strong>node_index</strong> (<em>int</em>) – The node index of the node to modify.</p></li>
+<li><p><strong>id</strong> (<em>str</em>) – If specified, the new ID of the node.</p></li>
+<li><p><strong>fill_color</strong> (<em>wx.Colour</em>) – If specified, the new fill color of the node.</p></li>
+<li><p><strong>border_color</strong> (<em>wx.Colour</em>) – If specified, the new border color of the node.</p></li>
+<li><p><strong>border_width</strong> (<em>float</em>) – If specified, the new border width of the node.</p></li>
+<li><p><strong>position</strong> (<em>Vec2</em>) – If specified, the new position of the node.</p></li>
+<li><p><strong>size</strong> (<em>Vec2</em>) – If specified, the new size of the node.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If ID is empty or if at least one of border_width, position, and size is out of
+    range.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_product_stoich">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_product_stoich</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">reaction_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">node_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">stoich</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_product_stoich"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_product_stoich" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the product’s stoichiometry.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – the index overall</p></li>
+<li><p><strong>node_index</strong> (<em>int</em>) – the index of the specific reaction</p></li>
+<li><p><strong>node_index</strong> – the index of the specific node</p></li>
+<li><p><strong>stoich</strong> (<em>int</em>) – the value you are setting for the product</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_reactant_stoich">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_reactant_stoich</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">reaction_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">node_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">stoich</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_reactant_stoich"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_reactant_stoich" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the reactant’s stoichiometry.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – the index overall</p></li>
+<li><p><strong>node_index</strong> (<em>int</em>) – the index of the specific reaction</p></li>
+<li><p><strong>node_index</strong> – the index of the specific node</p></li>
+<li><p><strong>stoich</strong> (<em>int</em>) – the value you are setting for the reactant</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_reaction">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_reaction</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">reaction_index</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">id_</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fill_color</span><span class="p">:</span> <span class="n">wx._core.Colour</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">thickness</span><span class="p">:</span> <span class="n">float</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ratelaw</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_reaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update one or multiple properties of a reaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – The network index.</p></li>
+<li><p><strong>reaction_index</strong> (<em>int</em>) – The reaction index of the reaction to modify.</p></li>
+<li><p><strong>id</strong> (<em>str</em>) – If specified, the new ID of the reaction.</p></li>
+<li><p><strong>fill_color</strong> (<em>wx.Colour</em>) – If specified, the new fill color of the reaction.</p></li>
+<li><p><strong>thickness</strong> (<em>float</em>) – If specified, the thickness of the reaction.</p></li>
+<li><p><strong>ratelaw</strong> (<em>str</em>) – If specified, the rate law of the equation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If ID is empty, thickness is out of range, or the rate law is set to zero.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="plugins.html" class="btn btn-neutral float-right" title="plugins module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="rkpluginModules.html" class="btn btn-neutral float-left" title="rkplugin" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, cperena
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

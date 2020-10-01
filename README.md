@@ -7,6 +7,9 @@ use that Python installation for building.
 add an entry in the pyinstaller settings as described
 [here](https://stackoverflow.com/a/40676321)
 
+## Documentation
+The documentation can be found at: http://XXX.readthedocs.io/en/latest/
+
 ## PyInstaller Build Notes
 * Always run `pyinstaller rkviewer.spec` when `rkviewer.spec` is present.
 * If somehow `rkviewer.spec` went missing or you want to regenerate the build specs,

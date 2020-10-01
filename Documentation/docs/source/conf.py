@@ -12,9 +12,9 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath("evilnose/PyRKViewer/plugins"))
-sys.path.insert(0, os.path.abspath("evilnose/PyRKViewer/rkplugin"))
-sys.path.insert(0, os.path.abspath("evilnose/PyRKViewer"))
+sys.path.insert(0, os.path.abspath("PyRKViewer/plugins"))
+sys.path.insert(0, os.path.abspath("PyRKViewer/rkplugin"))
+sys.path.insert(0, os.path.abspath("PyRKViewer"))
 
 
 # -- Project information -----------------------------------------------------

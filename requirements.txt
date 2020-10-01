@@ -1,1 +1,1 @@
-wxPython
+# wxPython (can't be used when building readthedocs)

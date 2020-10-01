@@ -12,9 +12,9 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath("C:/Users/cpere/OneDrive/2020/FALL 2020/SAURO LAB/PyRKViewer/plugins"))
-sys.path.insert(0, os.path.abspath("C:/Users/cpere/OneDrive/2020/FALL 2020/SAURO LAB/PyRKViewer/rkplugin"))
-sys.path.insert(0, os.path.abspath("C:/Users/cpere/OneDrive/2020/FALL 2020/SAURO LAB/PyRKViewer"))
+sys.path.insert(0, os.path.abspath("evilnose/PyRKViewer/plugins"))
+sys.path.insert(0, os.path.abspath("evilnose/PyRKViewer/rkplugin"))
+sys.path.insert(0, os.path.abspath("evilnose/PyRKViewer"))
 
 
 # -- Project information -----------------------------------------------------

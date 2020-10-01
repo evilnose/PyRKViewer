@@ -875,6 +875,7 @@ class Canvas(wx.ScrolledWindow):
         self.SetOverlayPositions()  # have to do this here to prevent jitters
 
         dc = wx.PaintDC(self)
+        #: transform for drawing to scrolled coordinates
         self.DoPrepareDC(dc)
         # Create graphics context since we need transparency
         gc = wx.GraphicsContext.Create(dc)
@@ -888,11 +889,24 @@ class Canvas(wx.ScrolledWindow):
             )
 
             # Draw nodes
+            within_comp = None
+            if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
+                size = Vec2(theme['node_width'], theme['node_height'])
+                pos = self._cursor_logical_pos - size/2
+                within_comp = self.InWhichCompartment([Rect(pos, size)])
+            elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
+                within_comp = self.InWhichCompartment([n.rect for n in self._select_box.nodes])
+
+
             # create font for nodes
             for el in self._elements:
                 if not el.enabled:
                     continue
-                el.do_paint(gc)
+                if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
+                    # Highlight compartment that will be dropped in.
+                    el.do_paint(gc, highlight=True)
+                else:
+                    el.do_paint(gc)
 
             sel_node_idx = self.sel_nodes_idx.item_copy()
             sel_comp_idx = self.sel_compartments_idx.item_copy()

@@ -1,7 +1,7 @@
 """All sorts of form widgets, mainly those used in EditPanel.
 """
 # pylint: disable=maybe-no-member
-from itertools import chain
+from itertools import chain, compress
 import wx
 from wx.lib.scrolledpanel import ScrolledPanel
 from abc import abstractmethod
@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .config import theme, settings
 from .events import DidMoveCompartmentsEvent, DidMoveNodesEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, post_event
 from .mvc import IController
-from .utils import no_rzeros, on_msw, resource_path
+from .utils import change_opacity, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
 from .canvas.data import Compartment, Reaction, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
@@ -459,7 +459,7 @@ class NodeForm(EditPanelForm):
 
     def NodesMovedOrResized(self, evt):
         """Called when nodes are moved or resized by dragging"""
-        if evt.dragged:
+        if not evt.dragged:
             return
         # Possibly no nodes are selected because they are moved along with the compartments
         if len(self.selected_idx) != 0:
@@ -1010,10 +1010,12 @@ class ReactionForm(EditPanelForm):
 
 class CompartmentForm(EditPanelForm):
     _compartments: List[Compartment]
+    contiguous: bool
 
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
         self._compartments = list()
+        self.contiguous = True
 
         self.InitLayout()
 
@@ -1029,6 +1031,22 @@ class CompartmentForm(EditPanelForm):
         self.size_ctrl = wx.TextCtrl(self)
         self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
         self._AppendControl(sizer, 'size', self.size_ctrl)
+
+        self.fill_ctrl, self.fill_alpha_ctrl = self._CreateColorControl(
+            'fill color', 'fill opacity',
+            self._OnFillColorChanged, self._FillAlphaCallback,
+            sizer)
+
+        self.border_ctrl, self.border_alpha_ctrl = self._CreateColorControl(
+            'border color', 'border opacity',
+            self._OnBorderColorChanged, self._BorderAlphaCallback,
+            sizer)
+
+        self.border_width_ctrl = wx.TextCtrl(self)
+        self._AppendControl(sizer, 'border width', self.border_width_ctrl)
+        border_callback = self._MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
+                                                      self._BorderWidthCallback, (1, 100))
+        self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
 
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -1139,6 +1157,57 @@ class CompartmentForm(EditPanelForm):
             self.controller.end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
+    def _OnFillColorChanged(self, fill: wx.Colour):
+        """Callback for the fill color control."""
+        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        self._self_changes = True
+        self.controller.start_group()
+        for comp in comps:
+            if on_msw():
+                fill = wx.Colour(fill.GetRGB())  # remove alpha channel
+            self.controller.set_compartment_fill(self.net_index, comp.index, fill)
+        self.controller.end_group()
+
+    def _OnBorderColorChanged(self, border: wx.Colour):
+        """Callback for the border color control."""
+        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        self._self_changes = True
+        self.controller.start_group()
+        for comp in comps:
+            if on_msw():
+                border = wx.Colour(border.GetRGB())  # remove alpha channel
+            self.controller.set_compartment_border(self.net_index, comp.index, border)
+        self.controller.end_group()
+
+    def _FillAlphaCallback(self, alpha: float):
+        """Callback for when the fill alpha changes."""
+        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        self._self_changes = True
+        self.controller.start_group()
+        for comp in comps:
+            new_fill = change_opacity(comp.fill, int(alpha * 255))
+            self.controller.set_compartment_fill(self.net_index, comp.index, new_fill)
+        self.controller.end_group()
+
+    def _BorderAlphaCallback(self, alpha: float):
+        """Callback for when the border alpha changes."""
+        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        self._self_changes = True
+        self.controller.start_group()
+        for comp in comps:
+            new_border = change_opacity(comp.border, int(alpha * 255))
+            self.controller.set_compartment_border(self.net_index, comp.index, new_border)
+        self.controller.end_group()
+
+    def _BorderWidthCallback(self, width: float):
+        """Callback for when the border width changes."""
+        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        self._self_changes = True
+        self.controller.start_group()
+        for comp in comps:
+            self.controller.set_compartment_border_width(self.net_index, comp.index, width)
+        self.controller.end_group()
+
     def UpdateCompartments(self, comps: List[Compartment]):
         self._compartments = comps
         self._UpdateBoundingRect()
@@ -1149,11 +1218,7 @@ class CompartmentForm(EditPanelForm):
         if len(selected_idx) != 0:
             self._UpdateBoundingRect()
 
-        if nodes_selected:
-            self.contiguous = False
-        else:
-            comps = [c for c in self._compartments if c.index in selected_idx]
-            self.contiguous = len(set(c.index for c in comps)) <= 1
+        self.contiguous = not nodes_selected
 
         if len(self._selected_idx) != 0:
             # clear position value
@@ -1171,17 +1236,52 @@ class CompartmentForm(EditPanelForm):
         self._self_changes = False
         comps = [c for c in self._compartments if c.index in self.selected_idx]
         assert len(comps) == len(self.selected_idx)
+        prec = 2
+
         id_text = '; '.join([c.id_ for c in comps])
+        fill: wx.Colour
+        fill_alpha: Optional[int]
+        border: wx.Colour
+        border_alpha: Optional[int]
+
+        self.pos_ctrl.Enable(self.contiguous)
+        self.size_ctrl.Enable(self.contiguous)
+        border_width = self._GetMultiFloatText(set(c.border_width for c in comps), prec)
+
+        if not self.contiguous:
+            self.pos_ctrl.ChangeValue('?')
+            self.size_ctrl.ChangeValue('?')
+        else:
+            self._ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
+            self._ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
+
         if len(self._selected_idx) == 1:
             [comp] = comps
             self.id_ctrl.Enable()
+            fill = comp.fill
+            fill_alpha = comp.fill.Alpha()
+            border = comp.border
+            border_alpha = comp.border.Alpha()
         else:
             self.id_ctrl.Disable()
+            fill, fill_alpha = self._GetMultiColor(list(c.fill for c in comps))
+            border, border_alpha = self._GetMultiColor(list(c.border for c in comps))
+
         self.id_ctrl.ChangeValue(id_text)
+        self.fill_ctrl.SetColour(fill)
+        self.border_ctrl.SetColour(border)
+
+        # set fill alpha if on windows
+        if on_msw():
+            self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
+            self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
+
+        self.border_width_ctrl.ChangeValue(border_width)
+
 
     def CompsMovedOrResized(self, evt):
         """Called when nodes are moved or resized by dragging"""
-        if evt.dragged:
+        if not evt.dragged:
             return
         self._UpdateBoundingRect()
         prec = 2

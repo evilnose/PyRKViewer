@@ -62,8 +62,8 @@ class EditPanel(fnb.FlatNotebook):
         bind_handler(SelectionDidUpdateEvent, self.OnSelectionDidUpdate)
         bind_handler(DidMoveNodesEvent, self.OnNodesDidMove)
         bind_handler(DidResizeNodesEvent, self.OnDidResizeNodes)
-        bind_handler(DidMoveCompartmentsEvent, self.OnNodesDidMove)
-        bind_handler(DidResizeCompartmentsEvent, self.OnDidResizeNodes)
+        bind_handler(DidMoveCompartmentsEvent, self.OnCompartmentsDidMove)
+        bind_handler(DidResizeCompartmentsEvent, self.OnDidResizeCompartments)
 
     def OnCanvasDidUpdate(self, evt):
         self.node_form.UpdateNodes(evt.nodes)
@@ -144,11 +144,11 @@ class EditPanel(fnb.FlatNotebook):
     def OnNodesDidMove(self, evt):
         self.node_form.NodesMovedOrResized(evt)
 
-    def OnCompartmentsDidMove(self, evt):
-        self.comp_form.CompsMovedOrResized(evt)
-
     def OnDidResizeNodes(self, evt):
         self.node_form.NodesMovedOrResized(evt)
+
+    def OnCompartmentsDidMove(self, evt):
+        self.comp_form.CompsMovedOrResized(evt)
 
     def OnDidResizeCompartments(self, evt):
         self.comp_form.CompsMovedOrResized(evt)

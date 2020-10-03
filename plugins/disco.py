@@ -1,3 +1,10 @@
+"""
+The fill and border color of all nodes are set to a random color.
+
+Version 0.01: Author: Gary Geng (2020)
+
+"""
+
 # pylint: disable=maybe-no-member
 import wx
 import random
@@ -16,9 +23,23 @@ metadata = PluginMetadata(
 
 class Disco(CommandPlugin):
     def __init__(self):
+        """
+        Initialize the ColorSelected with no values for a Command Plugin.
+
+        Args:
+            self
+
+        """
         super().__init__(metadata)
 
     def run(self):
+        """
+        Set the nodes to a random color.
+
+        Args:
+            self
+
+        """
         nodes = api.all_nodes()
         rgb = random.getrandbits(24)
         color = wx.Colour(rgb)

@@ -1,3 +1,8 @@
+"""
+API manager for the rkplugins.
+
+"""
+
 # pylint: disable=maybe-no-member
 from iodine import NetIndexNotFoundError
 from rkviewer.canvas.geometry import Rect, within_rect
@@ -26,6 +31,13 @@ _controller: Optional[IController] = None
 
 
 def init_api(canvas: Canvas, controller: IController):
+    """
+    Initializes api.
+
+    Args:
+        Canvas (canvas) : On which you are working
+        ICOntroller (controller): chosen controller
+    """
     global _canvas, _controller
     _canvas = canvas
     _controller = controller
@@ -47,38 +59,111 @@ def group_action():
 
 
 def all_nodes() -> List[Node]:
+    """ 
+    Lists out all nodes.
+
+    Returns:
+        List[Node]
+
+    """
     return _controller.get_list_of_nodes(cur_net_index())
 
 
 def all_reactions() -> List[Reaction]:
+    """ 
+    Lists out all reactions.
+    
+    Returns:
+        List[Reaction]
+    
+    """
     return _controller.get_list_of_reactions(cur_net_index())
 
 
 def selected_nodes() -> List[Node]:
+    """ 
+    Lists out all selected nodes.
+
+    Returns:
+        List[Node]
+    
+    """
     return _canvas.GetSelectedNodes()
 
 
 def selected_node_indices() -> Set[int]:
-    return _canvas.sel_nodes_idx.item_copy()
+    """ 
+    Lists out all the selected nodes' indices.
+
+    Returns:
+        Set[int]
+    
+    """
+    return _canvas.selected_idx.item_copy()
 
 
 def selected_reaction_indices() -> Set[int]:
+    """ 
+    Lists out all the selected reactions' indices.
+    
+    Returns:
+        Set[int]
+    
+    """
     return _canvas.sel_reactions_idx.item_copy()
 
 
 def get_node_by_index(net_index: int, node_index: int) -> Node:
+    """ 
+    Gets nodes from their index.
+
+    Args:  
+        net_index (int): the index overall
+        node_index (int): the index of the specific node
+
+    Returns:
+        Node
+    
+    """
     return _controller.get_node_by_index(net_index, node_index)
 
 
 def get_reaction_by_index(net_index: int, reaction_index: int) -> Reaction:
+    """ 
+    Gets reactions from their index.
+
+    Args:  
+        net_index (int): the index overall
+        node_index (int): the index of the specific node
+
+    Returns:
+        Node
+    
+    """
     return _controller.get_reaction_by_index(net_index, reaction_index)
 
 
 def add_node(net_index: int, node: Node):
+    """ 
+    Adds a node to the api to the last overall index.
+
+    Args:  
+        net_index (int): the index overall
+        node (Node): the Node you wish to add
+    
+    """
     _controller.add_node_g(net_index, node)
 
 
 def add_reaction(net_index: int, reaction: Reaction):
+    """ 
+    Adds a reaction to the api to the last overall index.
+
+    Args:  
+        net_index (int): the index overall
+        reaction (Reaction): the Node you wish to add
+    
+    """
     _controller.add_reaction_g(net_index, reaction)
 
 
@@ -89,17 +174,18 @@ def add_reaction(net_index: int, reaction: Reaction):
 def update_node(net_index: int, node_index: int, id_: str = None, fill_color: wx.Colour = None,
                 border_color: wx.Colour = None, border_width: float = None, position: Vec2 = None,
                 size: Vec2 = None):
-    """Update one or multiple properties of a node.
+    """
+    Update one or multiple properties of a node.
 
     Args:
-        net_index: The network index.
-        node_index: The node index of the node to modify.
-        id_: If specified, the new ID of the node.
-        fill_color: If specified, the new fill color of the node.
-        border_color: If specified, the new border color of the node.
-        border_width: If specified, the new border width of the node.
-        position: If specified, the new position of the node.
-        size: If specified, the new size of the node.
+        net_index (int): The network index.
+        node_index (int): The node index of the node to modify.
+        id_ (str): If specified, the new ID of the node.
+        fill_color (wx.Colour): If specified, the new fill color of the node.
+        border_color (wx.Colour): If specified, the new border color of the node.
+        border_width (float): If specified, the new border width of the node.
+        position (Vec2): If specified, the new position of the node.
+        size (Vec2): If specified, the new size of the node.
 
     Raises:
         ValueError: If ID is empty or if at least one of border_width, position, and size is out of
@@ -152,6 +238,22 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: wx
 
 def update_reaction(net_index: int, reaction_index: int, id_: str = None,
                     fill_color: wx.Colour = None, thickness: float = None, ratelaw: str = None):
+
+    """
+    Update one or multiple properties of a reaction.
+
+    Args:
+        net_index (int): The network index.
+        reaction_index (int): The reaction index of the reaction to modify.
+        id_ (str): If specified, the new ID of the reaction.
+        fill_color (wx.Colour): If specified, the new fill color of the reaction.
+        thickness (float): If specified, the thickness of the reaction.
+        ratelaw (str): If specified, the rate law of the equation.
+
+    Raises:
+        ValueError: If ID is empty, thickness is out of range, or the rate law is set to zero.
+
+    """
     # TODO get old reaction
     # Validate
     # Check ID not empty
@@ -177,22 +279,58 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
 
 
 def update_reactant_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
+    """ 
+    Updates the reactant's stoichiometry.
+
+    Args:  
+        net_index (int): the index overall
+        node_index (int): the index of the specific reaction
+        node_index (int): the index of the specific node
+        stoich (int): the value you are setting for the reactant
+    
+    """
     _controller.set_src_node_stoich(net_index, reaction_index, node_index, stoich)
 
 
 def update_product_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
+    """ 
+    Updates the product's stoichiometry.
+
+    Args:  
+        net_index (int): the index overall
+        node_index (int): the index of the specific reaction
+        node_index (int): the index of the specific node
+        stoich (int): the value you are setting for the product
+    
+    """
     _controller.set_dest_node_stoich(net_index, reaction_index, node_index, stoich)
 
 
 def get_arrow_tip() -> ArrowTip:
+    """ 
+    Gets the existing arrow tip.
+    
+    """
     return cstate.arrow_tip.clone()
 
 
 def get_default_arrow_tip() -> ArrowTip:
+    """ 
+    Gets the default arrow tip.
+    
+    """
     return ArrowTip(copy.copy(DEFAULT_ARROW_TIP))
 
 
 def set_arrow_tip(value: ArrowTip):
+    """ 
+    Set the arrow tip to a given one.
+
+    Args: 
+        ArrowTip (value): the given ArrowTip to set to.
+    
+    """
     cstate.arrow_tip = value.clone()
     _canvas.ArrowTipChanged()
     # TODO save to settings; pending https://github.com/evilnose/PyRKViewer/issues/16
+

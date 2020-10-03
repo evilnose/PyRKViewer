@@ -81,7 +81,7 @@ class DidMoveNodesEvent(CanvasEvent):
 class DidCommitNodePositionsEvent(CanvasEvent):
     """Called after the node positions are commited to the controller.
 
-    This even is emitted only after a node move action has been regsitered with the controller.
+    This event is emitted only after a node move action has been registered with the controller.
     E.g., when a user drag-moves a ndoe, only after they release the left mouse button is the action
     recorded in the undo stack.
     """

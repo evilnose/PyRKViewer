@@ -128,7 +128,8 @@ class Canvas(wx.ScrolledWindow):
     _in_selection_group: bool
     #: bool to indicate whether a selection changed event was fired inside selection group.
     _selection_dirty: bool
-    node_idx_map: Dict[int, Node]  #: Maps node index to itself
+    node_idx_map: Dict[int, Node]  #: Maps node index to node
+    comp_idx_map: Dict[int, Compartment]  #: Maps compartment index to compartment
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
         # ensure the parent's __init__ is called
@@ -205,7 +206,7 @@ class Canvas(wx.ScrolledWindow):
                                 window_size=Vec2(self.GetSize()), pos_callback=self.SetOriginPos)
         minimap_pos = Vec2(self.GetSize()) - self._scroll_off - self._minimap.size
         _, slider_height = self.zoom_slider.GetSize()
-        minimap_pos.y -= slider_height + 10
+        minimap_pos.swapped(1, minimap_pos.y - (slider_height + 10))
         self._minimap.device_pos = minimap_pos
 
         self._overlays = [self._minimap]
@@ -234,6 +235,7 @@ class Canvas(wx.ScrolledWindow):
         cstate.input_mode_changed = self.InputModeChanged
         self.comp_index = 0  # Compartment of index; remove once controller implements compartments
         self.node_idx_map = dict()
+        self.comp_idx_map = dict()
 
         self._nodes_floating = False
         self._in_selection_group = False
@@ -248,6 +250,10 @@ class Canvas(wx.ScrolledWindow):
         if not self.LazyRefresh():
             # Not processed; request more
             evt.RequestMore()
+
+    @property
+    def select_box(self):
+        return self._select_box
 
     @property
     def nodes(self):
@@ -374,6 +380,9 @@ class Canvas(wx.ScrolledWindow):
         self.node_idx_map = dict()
         for node in nodes:
             self.node_idx_map[node.index] = node
+        self.comp_idx_map = dict()
+        for comp in compartments:
+            self.comp_idx_map[comp.index] = comp
 
         # Update reaction map
         self.reaction_map = defaultdict(set)
@@ -436,12 +445,10 @@ class Canvas(wx.ScrolledWindow):
         """Set the origin position (position of the topleft corner) to pos by scrolling."""
         pos *= cstate.scale
         # check if out of bounds
-        pos.x = max(pos.x, 0)
-        pos.y = max(pos.y, 0)
+        pos = pos.map(lambda e: max(e, 0))
 
         limit = self.realsize * cstate.scale - Vec2(self.GetSize())
-        pos.x = min(pos.x, limit.x)
-        pos.y = min(pos.y, limit.x)
+        pos = pos.reduce2(min, limit)
 
         pos = pos.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
         # need to mult by scale here since self.VirtualPosition is artificially increased, per
@@ -694,7 +701,7 @@ class Canvas(wx.ScrolledWindow):
             evt.Skip()
 
     # TODO improve this. we might want a special mouseLeftWindow event
-    def _EndDrag(self, evt: wx.Event):
+    def _EndDrag(self, evt: wx.MouseEvent):
         """Send the updated node positions and sizes to the controller.
 
         This is called after a dragging operation has completed in OnLeftUp or OnLeaveWindow.
@@ -754,7 +761,7 @@ class Canvas(wx.ScrolledWindow):
                         return
 
         if overlay is not None:
-            overlay.OnLeftUp(evt)
+            overlay.OnLeftUp(device_pos)
 
     def CalcScrolledPositionFloat(self, pos: Vec2) -> Vec2:
         """Convert logical position to scrolled (device) position, retaining floating point.
@@ -868,6 +875,7 @@ class Canvas(wx.ScrolledWindow):
         self.SetOverlayPositions()  # have to do this here to prevent jitters
 
         dc = wx.PaintDC(self)
+        #: transform for drawing to scrolled coordinates
         self.DoPrepareDC(dc)
         # Create graphics context since we need transparency
         gc = wx.GraphicsContext.Create(dc)
@@ -881,11 +889,24 @@ class Canvas(wx.ScrolledWindow):
             )
 
             # Draw nodes
+            within_comp = None
+            if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
+                size = Vec2(theme['node_width'], theme['node_height'])
+                pos = self._cursor_logical_pos - size/2
+                within_comp = self.InWhichCompartment([Rect(pos, size)])
+            elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
+                within_comp = self.InWhichCompartment([n.rect for n in self._select_box.nodes])
+
+
             # create font for nodes
             for el in self._elements:
                 if not el.enabled:
                     continue
-                el.do_paint(gc)
+                if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
+                    # Highlight compartment that will be dropped in.
+                    el.do_paint(gc, highlight=True)
+                else:
+                    el.do_paint(gc)
 
             sel_node_idx = self.sel_nodes_idx.item_copy()
             sel_comp_idx = self.sel_compartments_idx.item_copy()
@@ -939,7 +960,7 @@ class Canvas(wx.ScrolledWindow):
             # Draw drag-selection rect
             if self._drag_selecting:
                 fill: wx.Colour
-                border: wx.Colour
+                border: Optional[wx.Colour]
                 bwidth: int
                 if cstate.input_mode == InputMode.SELECT:
                     fill = theme['drag_fill']

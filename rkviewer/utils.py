@@ -80,6 +80,10 @@ def opacity_mul(color: wx.Colour, fraction: float) -> wx.Colour:
     return wx.Colour(color.Red(), color.Green(), color.Blue(), color.Alpha() * fraction)
 
 
+def change_opacity(color: wx.Colour, new_op: int):
+    return wx.Colour(color.Red(), color.Green(), color.Blue(), new_op)
+
+
 class ButtonGroup:
     """Class for keeping track of a group of buttons, where exactly one of them can be selected.
 

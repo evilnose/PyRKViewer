@@ -150,8 +150,8 @@ class Minimap(CanvasOverlay):
         win_size = self.window_size * scale
 
         # clip window size
-        win_size.x = min(win_size.x, my_botright.x - win_pos.x)
-        win_size.y = min(win_size.y, my_botright.y - win_pos.y)
+        span = my_botright - win_pos
+        win_size = win_size.reduce2(min, span)
 
         # draw visible rect
         draw_rect(gc, Rect(win_pos, win_size), fill=foreground)

@@ -320,6 +320,18 @@ class Controller(IController):
         iod.setCompartmentSize(neti, compi, *size)
 
     @iod_setter
+    def set_compartment_fill(self, neti: int, compi: int, fill: wx.Colour):
+        iod.setCompartmentFillColor(neti, compi, self.wx_to_tcolor(fill))
+
+    @iod_setter
+    def set_compartment_border(self, neti: int, compi: int, border: wx.Colour):
+        iod.setCompartmentOutlineColor(neti, compi, self.wx_to_tcolor(border))
+
+    @iod_setter
+    def set_compartment_border_width(self, neti: int, compi: int, width: float):
+        iod.setCompartmentOutlineThickness(neti, compi, width)
+
+    @iod_setter
     def set_compartment_of_node(self, neti: int, nodei: int, compi: int):
         iod.setCompartmentOfNode(neti, nodei, compi)
 

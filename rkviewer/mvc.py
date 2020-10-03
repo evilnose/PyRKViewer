@@ -196,6 +196,18 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def set_compartment_fill(self, neti: int, compi: int, fill: wx.Colour):
+        pass
+
+    @abc.abstractmethod
+    def set_compartment_border(self, neti: int, compi: int, fill: wx.Colour):
+        pass
+
+    @abc.abstractmethod
+    def set_compartment_border_width(self, neti: int, compi: int, width: float):
+        pass
+
+    @abc.abstractmethod
     def set_compartment_of_node(self, neti: int, nodei: int, compi: int):
         pass
 

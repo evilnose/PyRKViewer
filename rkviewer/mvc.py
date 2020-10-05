@@ -208,6 +208,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def set_compartment_volume(self, neti: int, compi: int, volume: float):
+        pass
+
+    @abc.abstractmethod
     def set_compartment_of_node(self, neti: int, nodei: int, compi: int):
         pass
 

@@ -332,6 +332,10 @@ class Controller(IController):
         iod.setCompartmentOutlineThickness(neti, compi, width)
 
     @iod_setter
+    def set_compartment_volume(self, neti: int, compi: int, volume: float):
+        iod.setCompartmentVolume(neti, compi, volume)
+
+    @iod_setter
     def set_compartment_of_node(self, neti: int, nodei: int, compi: int):
         iod.setCompartmentOfNode(neti, nodei, compi)
 

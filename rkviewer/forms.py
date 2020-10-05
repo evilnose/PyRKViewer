@@ -332,8 +332,8 @@ class EditPanelForm(ScrolledPanel):
                     err_msg = "Value must be in range {}{}, {}{}".format(left, lo, hi, right)
                 else:
                     if lo is not None:
-                        incl_text = 'or equal to' if left_incl else ''
-                        err_msg = "Value must greater than {} {}".format(incl_text, lo)
+                        incl_text = 'or equal to ' if left_incl else ''
+                        err_msg = "Value must greater than {}{}".format(incl_text, lo)
                     else:
                         incl_text = 'or equal to' if right_incl else ''
                         err_msg = "Value must less than {} {}".format(incl_text, hi)
@@ -502,6 +502,7 @@ class NodeForm(EditPanelForm):
 
             size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
+        self.ExternalUpdate()
 
     def CreateControls(self, sizer: wx.GridSizer):
         self.id_ctrl = wx.TextCtrl(self)
@@ -745,10 +746,6 @@ class NodeForm(EditPanelForm):
             [node] = nodes
             self.id_ctrl.Enable(True)
             id_text = node.id_
-            '''
-            pos_text = '{}, {}'.format(no_trailing_zeros(node.position.x, prec),
-                                    no_trailing_zeros(node.position.y, prec))
-            '''
             fill = node.fill_color
             fill_alpha = node.fill_color.Alpha()
             border = node.border_color
@@ -890,6 +887,7 @@ class ReactionForm(EditPanelForm):
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
             self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
             self.UpdateAllFields()
+        self.ExternalUpdate()
 
     def _UpdateStoichFields(self, reai: int, reactants: List[StoichInfo], products: List[StoichInfo]):
         sizer = self.GetSizer()
@@ -1032,6 +1030,12 @@ class CompartmentForm(EditPanelForm):
         self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
         self._AppendControl(sizer, 'size', self.size_ctrl)
 
+        self.volume_ctrl = wx.TextCtrl(self)
+        self._AppendControl(sizer, 'volume', self.volume_ctrl)
+        volume_callback = self._MakeFloatCtrlFunction(self.volume_ctrl.GetId(),
+                                                      self._VolumeCallback, (0, None), left_incl=False)
+        self.volume_ctrl.Bind(wx.EVT_TEXT, volume_callback)
+
         self.fill_ctrl, self.fill_alpha_ctrl = self._CreateColorControl(
             'fill color', 'fill opacity',
             self._OnFillColorChanged, self._FillAlphaCallback,
@@ -1157,6 +1161,15 @@ class CompartmentForm(EditPanelForm):
             self.controller.end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
+    def _VolumeCallback(self, volume: float):
+        """Callback for when the border width changes."""
+        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        self._self_changes = True
+        self.controller.start_group()
+        for comp in comps:
+            self.controller.set_compartment_volume(self.net_index, comp.index, volume)
+        self.controller.end_group()
+
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
         comps = [c for c in self._compartments if c.index in self.selected_idx]
@@ -1231,6 +1244,7 @@ class CompartmentForm(EditPanelForm):
 
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
             self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
+        self.ExternalUpdate()
 
     def UpdateAllFields(self):
         self._self_changes = False
@@ -1242,11 +1256,11 @@ class CompartmentForm(EditPanelForm):
         fill: wx.Colour
         fill_alpha: Optional[int]
         border: wx.Colour
-        border_alpha: Optional[int]
 
         self.pos_ctrl.Enable(self.contiguous)
         self.size_ctrl.Enable(self.contiguous)
         border_width = self._GetMultiFloatText(set(c.border_width for c in comps), prec)
+        volume = self._GetMultiFloatText(set(c.volume for c in comps), prec)
 
         if not self.contiguous:
             self.pos_ctrl.ChangeValue('?')
@@ -1270,6 +1284,7 @@ class CompartmentForm(EditPanelForm):
         self.id_ctrl.ChangeValue(id_text)
         self.fill_ctrl.SetColour(fill)
         self.border_ctrl.SetColour(border)
+        self.volume_ctrl.ChangeValue(volume)
 
         # set fill alpha if on windows
         if on_msw():
@@ -1277,7 +1292,6 @@ class CompartmentForm(EditPanelForm):
             self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
 
         self.border_width_ctrl.ChangeValue(border_width)
-
 
     def CompsMovedOrResized(self, evt):
         """Called when nodes are moved or resized by dragging"""

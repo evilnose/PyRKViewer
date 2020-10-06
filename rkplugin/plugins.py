@@ -17,9 +17,17 @@ from enum import Enum
 @dataclass
 class PluginMetadata:
     """
-    Defines the metadata information for a plugin.
-    These include: name (str), author (str), version (str), short_desc (str), and long_desc (str)
+    Metadata for the plugin.
 
+    Attributes:
+        name: The display name of the plugin.
+        author: The author of the plugin.
+        version: The version string of the plugin.
+        short_desc: A short description of the plugin. This is displayed as a tooltip, introduction,
+                    etc.
+        long_desc: A long, detailed description of the plugin. This is shown in the plugin details
+                   page, as a comprehensive description of what this plugin does. This string will
+                   be rendered as HTML.
     """
     name: str
     author: str
@@ -30,10 +38,12 @@ class PluginMetadata:
 
 class PluginType(Enum):
     """
-    Defines the pluging type creating an ennumeration.
-
-    """
+    Enumeration of plugin types, dictating how a plugin would appear in the application.
     
+    NULL: Null enumeration. There should not be a plugin instance with this type.
+    COMMAND: A command plugin. See CommandPlugin for more details.
+    WINDOWED: A windowed plugin. See WindowedPlugin for more details.
+    """
     NULL = 0
     COMMAND = 1
     WINDOWED = 2
@@ -41,8 +51,10 @@ class PluginType(Enum):
 
 class Plugin:
     """
-    Defines Plugin objects.
+    The base class for a Plugin. 
 
+    The user should not directly instantiate this but rather one of its subclasses,
+    e.g. CommandPlugin.
     """
     metadata: PluginMetadata
     ptype: PluginType
@@ -55,8 +67,6 @@ class Plugin:
             self (self): Plugin you are creating.
             metadata (PluginMetadata): metadata information of plugin.
             ptype (PluginType): defines the type of plugin to create.
-
-        TODO: document the following functions when written
         """
         self.metadata = metadata
         self.ptype = ptype
@@ -78,55 +88,69 @@ class Plugin:
                                 compartment_indices: List[int]):
         pass
 
-    
-class CommandPlugin(Plugin, abc.ABC):
-    """
-    Defines the command plugins.
 
+class CommandPlugin(Plugin, abc.ABC):
+    """Base class for simple plugins that is essentially one single command.
+
+    One may think of a CommandPlugin as (obviously) a command, or a sort of macro in the simpler
+    cases. The user may invoke the command defined when they click on the associated menu item
+    under the "Plugins" menu, or they may be able to use a keybaord shortcut, once that is
+    implemented. To subclass CommandPlugin one needs to override `run()`.
     """
+
     def __init__(self, metadata: PluginMetadata):
         """
-        Creating a CommandPlugin object.
+        Create a CommandPlugin.
 
         Args:
-            self (self): CommandPlugin you are creating.
             metadata (PluginMetadata): metadata information of plugin.
-
-        TODO: document the following functions when written
         """
 
         super().__init__(metadata, PluginType.COMMAND)
 
-    # TODO: document the following functions when written
     @abc.abstractmethod
     def run(self):
+        """Called when the user invokes this command manually.
+
+        This should implement whatever action/macro that this Plugin claims to execute.
+        """
         pass
 
 
 class WindowedPlugin(Plugin, abc.ABC):
     def __init__(self, metadata: PluginMetadata):
-        """
-        Creating a WindowedPlugin object.
+        """Base class for plugins with an associated popup window.
+
+        When the user clicks the menu item of this plugin under the "Plugins" menu, a popup dialog
+        is created, which may display data, and which the user may interact with. This type of
+        plugin is suitable to more complex or visually-based plugins, such as that utilizing a 
+        chart or an interactive form.
+
+        To implement a subclass of WindowedPlugin, one needs to override the method `create_window`.
 
         Args:
-            self (self): WindowedPlugin you are creating.
             metadata (PluginMetadata): metadata information of plugin.
-
-        TODO: document the following functions when written
         """
         super().__init__(metadata, PluginType.WINDOWED)
 
-    # TODO: document the following functions when written
     @abc.abstractmethod
     def create_window(self, dialog: wx.Window) -> wx.Window:
+        """Called when the user requests a dialog window from the plugin.
+
+        For one overriding this method, they should either create or reuse a `wx.Window` instance
+        to display in a dialog. One likely wants to bind events to the controls inside the returned
+        `wx.Window` to capture user input.
+        """
         pass
 
     def on_will_close_window(self, evt):
+        """TODO not implemented"""
         evt.Skip()
 
     def on_did_focus(self):
+        """TODO not implemented"""
         pass
 
     def on_did_unfocus(self):
+        """TODO not implemented"""
         pass
-

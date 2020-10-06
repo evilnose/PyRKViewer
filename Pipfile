@@ -6,6 +6,9 @@ verify_ssl = true
 [dev-packages]
 pylint = "*"
 tuna = "*"
+Sphinx="*"
+sphinx_rtd_theme="*"
+sphinx-autodoc-typehints="*"
 
 [packages]
 wxpython = "==4.1.0"

@@ -43,6 +43,7 @@ extensions =  [
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.inheritance_diagram',
+    'sphinx_autodoc_typehints',
 ]
 
 

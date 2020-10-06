@@ -60,109 +60,114 @@ def group_action():
 
 def all_nodes() -> List[Node]:
     """ 
-    Lists out all nodes.
+    Returns the list of all nodes.
+
+    Note:
+        Modifying elements of this list will not update the canvas.
 
     Returns:
-        List[Node]
-
+        The list of nodes.
     """
     return _controller.get_list_of_nodes(cur_net_index())
 
 
 def all_reactions() -> List[Reaction]:
     """ 
-    Lists out all reactions.
+    Returns the list of all reactions.
+
+    Note:
+        Modifying elements of this list will not update the canvas.
     
     Returns:
-        List[Reaction]
-    
+        The list of reactions.
     """
     return _controller.get_list_of_reactions(cur_net_index())
 
 
 def selected_nodes() -> List[Node]:
     """ 
-    Lists out all selected nodes.
+    Returns the list of selected nodes.
 
+    Note:
+        Modifying elements of this list will not update the canvas.
+    
     Returns:
-        List[Node]
+        The list of selected nodes.
     
     """
-    return _canvas.GetSelectedNodes()
+    return _canvas.GetSelectedNodes(copy=True)
 
 
 def selected_node_indices() -> Set[int]:
     """ 
-    Lists out all the selected nodes' indices.
+    Returns the set of indices of the selected nodes.
 
     Returns:
-        Set[int]
-    
+        The set of selected nodes' indices.
     """
-    return _canvas.selected_idx.item_copy()
+    return _canvas.sel_nodes_idx.item_copy()
 
 
 def selected_reaction_indices() -> Set[int]:
     """ 
-    Lists out all the selected reactions' indices.
+    Returns the set of indices of the selected reactions.
     
     Returns:
-        Set[int]
-    
+        The set of selected reactions' indices.
     """
     return _canvas.sel_reactions_idx.item_copy()
 
 
 def get_node_by_index(net_index: int, node_index: int) -> Node:
     """ 
-    Gets nodes from their index.
+    Given an index, return the node that it corresponds to.
 
     Args:  
-        net_index (int): the index overall
-        node_index (int): the index of the specific node
+        net_index (int): The network index.
+        node_index (int): The node index.
 
     Returns:
-        Node
-    
+        The node that corresponds to the given indices.
     """
     return _controller.get_node_by_index(net_index, node_index)
 
 
 def get_reaction_by_index(net_index: int, reaction_index: int) -> Reaction:
     """ 
-    Gets reactions from their index.
+    Given an index, return the reaction that it corresponds to.
 
     Args:  
-        net_index (int): the index overall
-        node_index (int): the index of the specific node
+        net_index (int): The network index.
+        reaction_index (int): The reaction index.
 
     Returns:
-        Node
-    
+        The reaction that corresponds to the given indices.
     """
     return _controller.get_reaction_by_index(net_index, reaction_index)
 
 
 def add_node(net_index: int, node: Node):
     """ 
-    Adds a node to the api to the last overall index.
+    Adds a node to the given network.
+
+    The node indices are assigned in increasing order, regardless of deletion.
 
     Args:  
-        net_index (int): the index overall
-        node (Node): the Node you wish to add
-    
+        net_index: The network index.
+        node: The Node to add.
     """
     _controller.add_node_g(net_index, node)
 
 
 def add_reaction(net_index: int, reaction: Reaction):
     """ 
-    Adds a reaction to the api to the last overall index.
+    Adds a reaction.
+
+    The reaction indices are assigned in increasing order, regardless of deletion.
 
     Args:  
-        net_index (int): the index overall
-        reaction (Reaction): the Node you wish to add
-    
+        net_index: the index overall
+        reaction: the Reaction to add
     """
     _controller.add_reaction_g(net_index, reaction)
 
@@ -178,14 +183,14 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: wx
     Update one or multiple properties of a node.
 
     Args:
-        net_index (int): The network index.
-        node_index (int): The node index of the node to modify.
-        id_ (str): If specified, the new ID of the node.
-        fill_color (wx.Colour): If specified, the new fill color of the node.
-        border_color (wx.Colour): If specified, the new border color of the node.
-        border_width (float): If specified, the new border width of the node.
-        position (Vec2): If specified, the new position of the node.
-        size (Vec2): If specified, the new size of the node.
+        net_index: The network index.
+        node_index: The node index of the node to modify.
+        id_: If specified, the new ID of the node.
+        fill_color: If specified, the new fill color of the node.
+        border_color: If specified, the new border color of the node.
+        border_width: If specified, the new border width of the node.
+        position: If specified, the new position of the node.
+        size: If specified, the new size of the node.
 
     Raises:
         ValueError: If ID is empty or if at least one of border_width, position, and size is out of
@@ -243,12 +248,12 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
     Update one or multiple properties of a reaction.
 
     Args:
-        net_index (int): The network index.
-        reaction_index (int): The reaction index of the reaction to modify.
-        id_ (str): If specified, the new ID of the reaction.
-        fill_color (wx.Colour): If specified, the new fill color of the reaction.
-        thickness (float): If specified, the thickness of the reaction.
-        ratelaw (str): If specified, the rate law of the equation.
+        net_index: The network index.
+        reaction_index: The reaction index of the reaction to modify.
+        id_: If specified, the new ID of the reaction.
+        fill_color: If specified, the new fill color of the reaction.
+        thickness: If specified, the thickness of the reaction.
+        ratelaw: If specified, the rate law of the equation.
 
     Raises:
         ValueError: If ID is empty, thickness is out of range, or the rate law is set to zero.
@@ -280,13 +285,13 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
 
 def update_reactant_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
     """ 
-    Updates the reactant's stoichiometry.
+    Updates the stoichiometry of a reactant node.
 
     Args:  
-        net_index (int): the index overall
-        node_index (int): the index of the specific reaction
-        node_index (int): the index of the specific node
-        stoich (int): the value you are setting for the reactant
+        net_index: The network index
+        reaction_index: The index of the reaction.
+        node_index: The index of the node which must be a reactant of the reaction.
+        stoich: The new stoichiometry value.
     
     """
     _controller.set_src_node_stoich(net_index, reaction_index, node_index, stoich)
@@ -297,19 +302,17 @@ def update_product_stoich(net_index: int, reaction_index: int, node_index: int, 
     Updates the product's stoichiometry.
 
     Args:  
-        net_index (int): the index overall
-        node_index (int): the index of the specific reaction
-        node_index (int): the index of the specific node
-        stoich (int): the value you are setting for the product
-    
+        net_index: The network index
+        reaction_index: The index of the reaction
+        node_index: The index of the node which must be a product of the reaction.
+        stoich: The new stoichiometry value.
     """
     _controller.set_dest_node_stoich(net_index, reaction_index, node_index, stoich)
 
 
 def get_arrow_tip() -> ArrowTip:
     """ 
-    Gets the existing arrow tip.
-    
+    Gets the current arrow tip.
     """
     return cstate.arrow_tip.clone()
 
@@ -317,7 +320,6 @@ def get_arrow_tip() -> ArrowTip:
 def get_default_arrow_tip() -> ArrowTip:
     """ 
     Gets the default arrow tip.
-    
     """
     return ArrowTip(copy.copy(DEFAULT_ARROW_TIP))
 
@@ -327,8 +329,7 @@ def set_arrow_tip(value: ArrowTip):
     Set the arrow tip to a given one.
 
     Args: 
-        ArrowTip (value): the given ArrowTip to set to.
-    
+        The given ArrowTip to set to.
     """
     cstate.arrow_tip = value.clone()
     _canvas.ArrowTipChanged()

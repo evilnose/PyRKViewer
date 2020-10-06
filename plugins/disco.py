@@ -44,5 +44,4 @@ class Disco(CommandPlugin):
         rgb = random.getrandbits(24)
         color = wx.Colour(rgb)
         for node in nodes:
-            api.set_node_fill(api.cur_net_index(), node.index, color)
-            api.set_node_border(api.cur_net_index(), node.index, color)
+            api.update_node(api.cur_net_index(), node.index, fill_color=color, border_color=color)

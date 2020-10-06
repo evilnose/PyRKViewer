@@ -994,9 +994,12 @@ class Canvas(wx.ScrolledWindow):
         elt.set_layers(layers)
         self._elements.add(elt)
 
-    def GetSelectedNodes(self) -> List[Node]:
+    def GetSelectedNodes(self, copy=False) -> List[Node]:
         """Get the list of selected nodes using self.sel_nodes_idx."""
-        return [n for n in self._nodes if self.sel_nodes_idx.contains(n.index)]
+        if copy:
+            return [copy.copy(n) for n in self._nodes if self.sel_nodes_idx.contains(n.index)]
+        else:
+            return [n for n in self._nodes if self.sel_nodes_idx.contains(n.index)]
 
     def OnScroll(self, evt):
         # Need to use wx.CallAfter() to ensure the scroll event is finished before we update the

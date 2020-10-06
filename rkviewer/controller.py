@@ -13,7 +13,7 @@ from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
-from .mvc import IController, IView
+from .mvc import IController, IView, ModelError
 
 
 def iod_setter(controller_iod_setter):
@@ -88,7 +88,7 @@ class Controller(IController):
         except iod.StackEmptyError:
             logging.getLogger('controller').info('Undo stack is empty')
             return False
-        except iod.Error as e:
+        except ModelError as e:
             print('Error undoing:', str(e))
             return False
 
@@ -103,7 +103,7 @@ class Controller(IController):
         except iod.StackEmptyError:
             logging.getLogger('controller').info('Redo stack is empty')
             return False
-        except iod.Error as e:
+        except ModelError as e:
             print('Error redoing:', str(e))
             return False
 

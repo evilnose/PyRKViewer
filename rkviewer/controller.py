@@ -4,10 +4,10 @@
 import wx
 import traceback
 from typing import Collection, List, Optional, Set
-import iodine as iod
+import rkviewer.iodine as iod
 import logging
 
-from iodine import TColor
+from rkviewer.iodine import TColor
 from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
 from .canvas.data import Compartment, Node, Reaction

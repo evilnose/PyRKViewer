@@ -9,6 +9,9 @@ TODOs
     * Phase out errCode, or at least provide more detalis in error messages.
 """
 from __future__ import annotations
+from .mvc import (IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexNotFoundError,
+                  ReactionIndexError, NodeIndexNotFoundError, CompartmentIndexError, StoichError,
+                  StackEmptyError, JSONError, FileError)
 import copy
 from dataclasses import dataclass, field
 import json
@@ -72,7 +75,6 @@ class TNetwork:
         self.lastNodeIdx = 0
         self.lastReactionIdx = 0
         self.lastCompartmentIdx = 0
-
 
     def addNode(self, node: TNode):
         self.nodes[self.lastNodeIdx] = node
@@ -162,6 +164,7 @@ class TCompartment:
 
 class TStack:
     items: List[TNetworkDict]
+
     def __init__(self):
         self.items = []
 
@@ -176,63 +179,10 @@ class TStack:
         return self.items.pop()
 
 
-class TNetworkDict(Dict[int, TNetwork], dict):
+class TNetworkDict(Dict[int, TNetwork]):
     def __init__(self):
         super().__init__()
         self.lastNetIndex = 0
-
-
-class Error(Exception):
-    """Base class for other exceptions"""
-    pass
-
-
-class IDNotFoundError(Error):
-    pass
-
-
-class IDRepeatError(Error):
-    pass
-
-
-class NodeNotFreeError(Error):
-    pass
-
-
-class NetIndexNotFoundError(Error):
-    pass
-
-
-class ReactionIndexNotFoundError(Error):
-    pass
-
-
-class NodeIndexNotFoundError(Error):
-    pass
-
-
-class StoichError(Error):
-    pass
-
-
-class StackEmptyError(Error):
-    pass
-
-
-class JSONError(Error):
-    pass
-
-
-class FileError(Error):
-    pass
-
-
-class VariableOutOfRangeError(Error):
-    pass
-
-
-class CompartmentIndexNotFoundError(Error):
-    pass
 
 
 class ErrorCode(Enum):
@@ -275,14 +225,14 @@ ExceptionDict = {
     -3: IDRepeatError,
     -4: NodeNotFreeError,
     -5: NetIndexNotFoundError,
-    -6: ReactionIndexNotFoundError,
+    -6: ReactionIndexError,
     -7: NodeIndexNotFoundError,
     -8: StoichError,
     -9: StackEmptyError,
     -10: JSONError,
     -11: FileError,
-    -12: VariableOutOfRangeError,
-    -13: CompartmentIndexNotFoundError,
+    -12: ValueError,
+    -13: CompartmentIndexError,
 }
 
 
@@ -532,7 +482,7 @@ def _getCompartment(neti: int, compi: int) -> TCompartment:
     net = _getNetwork(neti)
     if compi not in net.compartments:
         errCode = -13
-        raise CompartmentIndexNotFoundError('Unknown index: {}'.format(compi))
+        raise CompartmentIndexError('Unknown index: {}'.format(compi))
     return net.compartments[compi]
 
 
@@ -2415,9 +2365,9 @@ def setCompartmentOutlineThickness(neti: int, compi: int, thickness: float):
 
 def getCompartmentOutlineThickness(neti: int, compi: int) -> float:
     return _getCompartment(neti, compi).outlineThickness
-    
 
-def createUniUni(neti: int, reaID:str, rateLaw:str, srci: int, desti: int, srcStoich:float, destStoich:float):
+
+def createUniUni(neti: int, reaID: str, rateLaw: str, srci: int, desti: int, srcStoich: float, destStoich: float):
     startGroup()
     createReaction(neti, reaID)
     reai = getReactionIndex(neti, reaID)
@@ -2428,7 +2378,7 @@ def createUniUni(neti: int, reaID:str, rateLaw:str, srci: int, desti: int, srcSt
     endGroup()
 
 
-def CreateUniBi(neti: int, reaID: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich:float, dest2Stoich:float):
+def CreateUniBi(neti: int, reaID: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich: float, dest2Stoich: float):
     startGroup()
     createReaction(neti, reaID)
     reai = getReactionIndex(neti, reaID)
@@ -2452,7 +2402,7 @@ def CreateBiUni(neti: int, reaID: str, rateLaw: str, src1i: int, src2i: int, des
     endGroup()
 
 
-def CreateBiBi(neti:int, reaID:str, rateLaw:str, src1i:int, src2i:int, dest1i:int, dest2i:int, src1Stoich:float, src2Stoich:float, dest1Stoich:float, dest2Stoich:float):
+def CreateBiBi(neti: int, reaID: str, rateLaw: str, src1i: int, src2i: int, dest1i: int, dest2i: int, src1Stoich: float, src2Stoich: float, dest1Stoich: float, dest2Stoich: float):
     startGroup()
     createReaction(neti, reaID)
     reai = getReactionIndex(neti, reaID)

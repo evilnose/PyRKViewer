@@ -273,3 +273,52 @@ class IView(abc.ABC):
     def update_all(self, nodes, reactions, compartments):
         """Update all the graph objects, and redraw everything at the end"""
         pass
+
+
+class ModelError(Exception):
+    """Base class for other exceptions"""
+    pass
+
+
+class IDNotFoundError(ModelError):
+    pass
+
+
+class IDRepeatError(ModelError):
+    pass
+
+
+class NodeNotFreeError(ModelError):
+    pass
+
+
+class NetIndexNotFoundError(ModelError):
+    pass
+
+
+class ReactionIndexError(ModelError):
+    pass
+
+
+class NodeIndexNotFoundError(ModelError):
+    pass
+
+
+class CompartmentIndexError(ModelError):
+    pass
+
+
+class StoichError(ModelError):
+    pass
+
+
+class StackEmptyError(ModelError):
+    pass
+
+
+class JSONError(ModelError):
+    pass
+
+
+class FileError(ModelError):
+    pass

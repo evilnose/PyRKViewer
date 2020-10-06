@@ -1,7 +1,7 @@
-import iodine as IodineAPI
+import rkviewer.iodine as IodineAPI
 import unittest
 
-from iodine import CompartmentIndexNotFoundError, IDRepeatError, NetIndexNotFoundError, VariableOutOfRangeError
+from rkviewer.iodine import CompartmentIndexError, IDRepeatError, NetIndexNotFoundError
 
 
 class TestNetworkFunc(unittest.TestCase):
@@ -107,17 +107,17 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.addNode(2, "node5", 1.2, 3.2, 2.5, 4.1)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.addNode(0, "node5", -1, 2.5, 5.4, 6.4)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.addNode(0, "node5", 1.1, -1, 5.4, 6.4)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.addNode(0, "node5", 1.1, 2.5, -1, 6.4)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.addNode(0, "node5", 1.1, 2.5,  0, 6.4)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.addNode(0, "node5", 1.1, 2.5, 5.4, -1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.addNode(0, "node5", 1.1, 2.5, 5.4,  0)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -434,9 +434,9 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeCoordinate(1, 4, 1.2, 3.2)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeCoordinate(0, 1, -1, 2.5)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeCoordinate(0, 1, 1.1, -1)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -464,13 +464,13 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeSize(1, 4, 2.5, 4.1)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeSize(0, 1, -1, 6.4)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeSize(0, 1, 0, 6.4)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeSize(0, 1, 5.4, -1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeSize(0, 1, 5.4, 0)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -496,17 +496,17 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeFillColorRGB(1, 4, 30, 180, 160)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFillColorRGB(0, 1, -1, 180, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFillColorRGB(0, 1, 256, 180, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFillColorRGB(0, 1, 30, -1, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFillColorRGB(0, 1, 30, 256, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFillColorRGB(0, 1, 30, 180, -1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFillColorRGB(0, 1, 30, 180, 256)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -529,9 +529,9 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeFillColorAlpha(1, 4, 1)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFillColorAlpha(0, 1, -0.1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFillColorAlpha(0, 1, 1.1)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -556,17 +556,17 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeOutlineColorRGB(1, 4, 30, 180, 160)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineColorRGB(0, 1, -1, 180, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineColorRGB(0, 1, 256, 180, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineColorRGB(0, 1, 30, -1, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineColorRGB(0, 1, 30, 256, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineColorRGB(0, 1, 30, 180, -1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineColorRGB(0, 1, 30, 180, 256)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -591,9 +591,9 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeOutlineColorAlpha(1, 4, 1)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineColorAlpha(0, 1, -0.1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineColorAlpha(0, 1, 1.1)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -615,9 +615,9 @@ class TestNodeFunc(unittest.TestCase):
             IodineAPI.setNodeOutlineThickness(1, -1, 1)
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeOutlineThickness(1, 4, 1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineThickness(0, 1, 0)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeOutlineThickness(0, 1, -1)
         with self.assertRaises(IodineAPI.StackEmptyError):
             IodineAPI.redo()
@@ -638,9 +638,9 @@ class TestNodeFunc(unittest.TestCase):
             IodineAPI.setNodeFontPointSize(1, -1, 1)
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeFontPointSize(1, 4, 1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontPointSize(0, 1, 0)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontPointSize(0, 1, -1)
         with self.assertRaises(IodineAPI.StackEmptyError):
             IodineAPI.redo()
@@ -661,9 +661,9 @@ class TestNodeFunc(unittest.TestCase):
             IodineAPI.setNodeFontFamily(1, -1, "default")
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeFontFamily(1, 1, "default")
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontFamily(0, 1, "Aefault")
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontFamily(0, 1, "normal")
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -685,9 +685,9 @@ class TestNodeFunc(unittest.TestCase):
             IodineAPI.setNodeFontStyle(1, -1, "normal")
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeFontStyle(1, 1, "normal")
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontStyle(0, 1, "default")
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontStyle(0, 1, "Normal")
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -709,9 +709,9 @@ class TestNodeFunc(unittest.TestCase):
             IodineAPI.setNodeFontWeight(1, -1, "default")
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeFontWeight(1, 1, "default")
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontWeight(0, 1, "Default")
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontWeight(0, 1, "normal")
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -757,17 +757,17 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeFontColorRGB(1, 4, 30, 180, 160)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontColorRGB(0, 1, -1, 180, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontColorRGB(0, 1, 256, 180, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontColorRGB(0, 1, 30, -1, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontColorRGB(0, 1, 30, 256, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontColorRGB(0, 1, 30, 180, -1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontColorRGB(0, 1, 30, 180, 256)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -793,9 +793,9 @@ class TestNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.setNodeFontColorAlpha(1, 4, 1)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontColorAlpha(0, 1, -0.1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setNodeFontColorAlpha(0, 1, 1.1)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -865,7 +865,7 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.deleteReaction(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.deleteReaction(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.deleteReaction(0, -1)
         IodineAPI.deleteReaction(0, 1)
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -907,9 +907,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionID(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionID(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionID(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionID(0, 2)
 
     def test_getListOfReactionIDs(self):
@@ -925,9 +925,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionRateLaw(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionRateLaw(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionRateLaw(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionRateLaw(0, 2)
 
     def test_getReactionFillColor(self):
@@ -937,9 +937,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionFillColor(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionFillColor(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionFillColor(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionFillColor(0, 2)
 
     def test_getReactionFillColorRGB(self):
@@ -949,9 +949,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionFillColorRGB(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionFillColorRGB(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionFillColorRGB(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionFillColorRGB(0, 2)
 
     def test_getReactionFillColorAlpha(self):
@@ -960,9 +960,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionFillColorAlpha(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionFillColorAlpha(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionFillColorAlpha(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionFillColorAlpha(0, 2)
 
     def test_getReactionLineThickness(self):
@@ -971,9 +971,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionLineThickness(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionLineThickness(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionLineThickness(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionLineThickness(0, 2)
 
     def test_getReactionCenterHandlePosition(self):
@@ -982,9 +982,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionCenterHandlePosition(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionCenterHandlePosition(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionCenterHandlePosition(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionCenterHandlePosition(0, 2)
 
     def test_getReactionSrcNodeStoich(self):
@@ -993,9 +993,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionSrcNodeStoich(-1, 0, 1)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionSrcNodeStoich(1, 0, 1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionSrcNodeStoich(0, -1, 1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionSrcNodeStoich(0, 2, 1)
 
     def test_getReactionDestNodeStoich(self):
@@ -1004,9 +1004,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionDestNodeStoich(-1, 0, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionDestNodeStoich(1, 0, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionDestNodeStoich(0, -1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionDestNodeStoich(0, 2, 0)
 
     def test_getReactionSrcNodeHandlePosition(self):
@@ -1015,9 +1015,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionSrcNodeHandlePosition(-1, 0, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionSrcNodeHandlePosition(1, 0, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionSrcNodeHandlePosition(0, -1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionSrcNodeHandlePosition(0, 2, 0)
 
     def test_getReactionDestNodeHandlePosition(self):
@@ -1026,9 +1026,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getReactionDestNodeHandlePosition(-1, 0, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getReactionDestNodeHandlePosition(1, 0, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionDestNodeHandlePosition(0, -1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getReactionDestNodeHandlePosition(0, 2, 0)
 
     def test_getNumberOfSrcNodes(self):
@@ -1039,9 +1039,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getNumberOfSrcNodes(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getNumberOfSrcNodes(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getNumberOfSrcNodes(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getNumberOfSrcNodes(0, 2)
 
     def test_getNumberOfDestNodes(self):
@@ -1052,9 +1052,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getNumberOfDestNodes(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getNumberOfDestNodes(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getNumberOfDestNodes(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getNumberOfDestNodes(0, 2)
 
     def test_getListOfReactionSrcNodes(self):
@@ -1067,9 +1067,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getListOfReactionSrcNodes(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getListOfReactionSrcNodes(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getListOfReactionSrcNodes(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getListOfReactionSrcNodes(0, 2)
 
     def test_getListOfReactionDestNodes(self):
@@ -1082,9 +1082,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getListOfReactionDestNodes(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getListOfReactionDestNodes(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getListOfReactionDestNodes(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getListOfReactionDestNodes(0, 2)
 
     def test_getListOfReactionSrcStoich(self):
@@ -1094,9 +1094,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getListOfReactionSrcStoich(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getListOfReactionSrcStoich(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getListOfReactionSrcStoich(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getListOfReactionSrcStoich(0, 2)
 
     def test_getListOfReactionDestStoich(self):
@@ -1106,9 +1106,9 @@ class TestReactionFunc(unittest.TestCase):
             IodineAPI.getListOfReactionDestStoich(-1, 0)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.getListOfReactionDestStoich(1, 0)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getListOfReactionDestStoich(0, -1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.getListOfReactionDestStoich(0, 2)
 
 
@@ -1145,9 +1145,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.addSrcNode(-1, 0, 3, 1.1)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.addSrcNode(1, 0, 3, 1.1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.addSrcNode(0, -1, 3, 1.1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.addSrcNode(0, 2, 3, 1.1)
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.addSrcNode(0, 0, -1, 1.1)
@@ -1174,9 +1174,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.addDestNode(-1, 0, 3, 1.1)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.addDestNode(1, 0, 3, 1.1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.addDestNode(0, -1, 3, 1.1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.addDestNode(0, 2, 3, 1.1)
         with self.assertRaises(IodineAPI.NodeIndexNotFoundError):
             IodineAPI.addDestNode(0, 0, -1, 1.1)
@@ -1207,9 +1207,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.deleteSrcNode(-1, 1, 3)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.deleteSrcNode(1, 1, 3)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.deleteSrcNode(0, -1, 3)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.deleteSrcNode(0, 2, 3)
         with self.assertRaises(IodineAPI.IDNotFoundError):
             IodineAPI.deleteSrcNode(0, 1, 1)
@@ -1231,9 +1231,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.deleteDestNode(-1, 1, 3)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.deleteDestNode(1, 1, 3)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.deleteDestNode(0, -1, 3)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.deleteDestNode(0, 2, 3)
         with self.assertRaises(IodineAPI.IDNotFoundError):
             IodineAPI.deleteDestNode(0, 1, 4)
@@ -1254,9 +1254,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setReactionID(-1, 1, "ABC")
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionID(1, 1, "ABC")
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionID(0, -1, "ABC")
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionID(0, 2, "ABC")
         with self.assertRaises(IodineAPI.IDRepeatError):
             IodineAPI.setReactionID(0, 1, "Rea1")
@@ -1278,9 +1278,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setRateLaw(-1, 1, "ABC")
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setRateLaw(1, 1, "ABC")
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setRateLaw(0, -1, "ABC")
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setRateLaw(0, 2, "ABC")
         with self.assertRaises(IodineAPI.StackEmptyError):
             IodineAPI.redo()
@@ -1299,9 +1299,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setReactionSrcNodeStoich(-1, 0, 1, 3.1)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionSrcNodeStoich(1, 0, 1, 3.1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionSrcNodeStoich(0, -1, 1, 3.1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionSrcNodeStoich(0, 2, 1, 3.1)
         with self.assertRaises(IodineAPI.StoichError):
             IodineAPI.setReactionSrcNodeStoich(0, 0, 1, 0)
@@ -1326,9 +1326,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setReactionDestNodeStoich(-1, 0, 3, 3.1)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionDestNodeStoich(1, 0, 3, 3.1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionDestNodeStoich(0, -1, 3, 3.1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionDestNodeStoich(0, 2, 3, 3.1)
         with self.assertRaises(IodineAPI.StoichError):
             IodineAPI.setReactionDestNodeStoich(0, 0, 3, 0)
@@ -1354,7 +1354,7 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setReactionSrcNodeHandlePosition(-1, 0, 1, 2.1, 3.2)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionSrcNodeHandlePosition(1, 0, 1, 2.1, 3.2)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionSrcNodeHandlePosition(0, -1, 1, 2.1, 3.2)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -1379,10 +1379,10 @@ class TestReactionNodeFunc(unittest.TestCase):
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionDestNodeHandlePosition(
                 1, 0, 3, 2.1, 3.2)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionDestNodeHandlePosition(
                 0, -1, 3, 2.1, 3.2)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionDestNodeHandlePosition(
                 0, 2, 3, 2.1, 3.2)
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -1405,22 +1405,22 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setReactionFillColorRGB(-1, 1, 30, 180, 160)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionFillColorRGB(3, 1, 30, 180, 160)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionFillColorRGB(0, -1, 30, 180, 160)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionFillColorRGB(0, 4, 30, 180, 160)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionFillColorRGB(0, 1, -1, 180, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionFillColorRGB(0, 1, 256, 180, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionFillColorRGB(0, 1, 30, -1, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionFillColorRGB(0, 1, 30, 256, 160)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionFillColorRGB(0, 1, 30, 180, -1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionFillColorRGB(0, 1, 30, 180, 256)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -1441,14 +1441,14 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setReactionFillColorAlpha(-1, 1, 1)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionFillColorAlpha(3, 1, 1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionFillColorAlpha(0, -1, 1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionFillColorAlpha(0, 4, 1)
 
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionFillColorAlpha(0, 1, -0.1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionFillColorAlpha(0, 1, 1.1)
 
         with self.assertRaises(IodineAPI.StackEmptyError):
@@ -1466,13 +1466,13 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setReactionLineThickness(-1, 1, 1)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionLineThickness(3, 1, 1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionLineThickness(0, -1, 1)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionLineThickness(0, 4, 1)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionLineThickness(0, 1, 0)
-        with self.assertRaises(IodineAPI.VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.setReactionLineThickness(0, 1, -1)
         with self.assertRaises(IodineAPI.StackEmptyError):
             IodineAPI.redo()
@@ -1490,9 +1490,9 @@ class TestReactionNodeFunc(unittest.TestCase):
             IodineAPI.setReactionCenterHandlePosition(-1, 1, 2.1, 3.2)
         with self.assertRaises(IodineAPI.NetIndexNotFoundError):
             IodineAPI.setReactionCenterHandlePosition(3, 1, 2.1, 3.2)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionCenterHandlePosition(0, -1, 2.1, 3.2)
-        with self.assertRaises(IodineAPI.ReactionIndexNotFoundError):
+        with self.assertRaises(IodineAPI.ReactionIndexError):
             IodineAPI.setReactionCenterHandlePosition(0, 4, 2.1, 3.2)
         with self.assertRaises(IodineAPI.StackEmptyError):
             IodineAPI.redo()
@@ -1551,9 +1551,9 @@ class TestCompartmentFunc(unittest.TestCase):
         self.assertEqual(IodineAPI.getCompartmentSize(0, 1), (2.3, 8.1))
         with self.assertRaises(NetIndexNotFoundError):
             IodineAPI.addCompartment(12, "Adam", x=2, y=3, w=4, h=6)
-        with self.assertRaises(VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.addCompartment(0, "comp4", x=-1, y=3, w=32, h=10)
-        with self.assertRaises(VariableOutOfRangeError):
+        with self.assertRaises(ValueError):
             IodineAPI.addCompartment(0, "comp4", x=0.6, y=0.2, w=-9, h=-12)
         with self.assertRaises(IDRepeatError):
             IodineAPI.addCompartment(0, "comp2", x=0.6, y=0.2, w=9, h=12)
@@ -1566,7 +1566,7 @@ class TestCompartmentFunc(unittest.TestCase):
         self.assertEqual(IodineAPI.getListOfCompartments(0), [1, 2])
         with self.assertRaises(NetIndexNotFoundError):
             IodineAPI.deleteCompartment(3, 1)
-        with self.assertRaises(CompartmentIndexNotFoundError):
+        with self.assertRaises(CompartmentIndexError):
             IodineAPI.deleteCompartment(0, 4)
 
     def test_addNodeToCompartment(self):
@@ -1606,13 +1606,13 @@ class TestCompartmentFunc(unittest.TestCase):
         self.assertEqual(IodineAPI.getNodesInCompartment(0, -1), [0, 1, 3])
 
     def test_compartmentNotFound(self):
-        with self.assertRaises(CompartmentIndexNotFoundError):
+        with self.assertRaises(CompartmentIndexError):
             IodineAPI.deleteCompartment(0, 5)
         
-        with self.assertRaises(CompartmentIndexNotFoundError):
+        with self.assertRaises(CompartmentIndexError):
             IodineAPI.setCompartmentOfNode(0, 0, 7)
 
-        with self.assertRaises(CompartmentIndexNotFoundError):
+        with self.assertRaises(CompartmentIndexError):
             IodineAPI.getNodesInCompartment(0, -2)
 
     def test_compartmentUndoAndRedo(self):

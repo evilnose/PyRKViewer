@@ -1,5 +1,5 @@
 plugins module
 ==============
 
-.. automodule:: plugins
+.. automodule:: rkplugin.plugins
    :members:

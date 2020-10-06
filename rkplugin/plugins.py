@@ -1,6 +1,5 @@
 """
-The rkplugins.
-
+The plugin base classes that the user should subclass from when creating plugins.
 """
 
 # pylint: disable=maybe-no-member

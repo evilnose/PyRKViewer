@@ -1,6 +1,5 @@
 """
-API manager for the rkplugins.
-
+API for the RKViewer GUI and model. Allows viewing and modifying the network model.
 """
 
 # pylint: disable=maybe-no-member

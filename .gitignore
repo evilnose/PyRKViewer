@@ -8,6 +8,7 @@ docs/build
 # python
 __pycache__
 .python-version
+.mypy_cache
 
 # Mac
 .DS_STORE

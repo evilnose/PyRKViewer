@@ -23,25 +23,13 @@ metadata = PluginMetadata(
 
 class ColorSelected(WindowedPlugin):
     def __init__(self):
-        """
-        Initialize the ColorSelected with no values for a Windowed Plugin.
-
-        Args:
-            self
-
-        """
         super().__init__(metadata)
         self.num_selected = 0
         self.text = None
 
     def create_window(self, dialog):
         """
-        Create a window with an information message, a color picker, and a sizer.
-
-        Args:
-            self
-            dialog
-
+        Create the popup window which contains the crucial color picker control.
         """
         # Create top-level window
         window = wx.Window(dialog, size=(300, 400))
@@ -64,13 +52,7 @@ class ColorSelected(WindowedPlugin):
 
     def color_callback(self, evt):
         """
-        Change the colors.
-        Set up a tracking of changes made to allow possibility to undo them.
-        
-        Args:
-            self
-            evt
-
+        Callback for the color picker control; sets the color of every node/reaction selected.
         """
         color = evt.GetColour()
 
@@ -87,14 +69,13 @@ class ColorSelected(WindowedPlugin):
     def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int],
                                 compartment_indices: List[int]):
         """
-        Look for changed color nodes, compartments, or reactions to report.
+        Overrides base class event handler to update number of items selected.
         
         Args:
             self
             node_indices(List[int]): List of node indices changed.
             reaction_indices (List[int]): List of reaction indices changed.
             compartment_indices (List[int]): List of compartment indices changed.
-
         """
         self.num_selected = len(node_indices) + len(reaction_indices) + len(compartment_indices)
         self.update_text()
@@ -102,10 +83,6 @@ class ColorSelected(WindowedPlugin):
     def update_text(self):
         """
         Update the information text to report the number of selected (changed) items.
-
-        Args:
-            self
-
         """
         if self.text is not None:
             self.text.SetLabel('Number of items selected: {}'.format(self.num_selected))

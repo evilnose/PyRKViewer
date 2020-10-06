@@ -24,16 +24,14 @@ metadata = PluginMetadata(
 
 class DesignerWindow(wx.Window):
     """
-    Defining the designer window.
-
+    The arrow designer window.
     """
     def __init__(self, parent, arrow_tip: ArrowTip):
         """
-        Creates the designer window for the arraw to design.
+        Initialize the arrow designer window with the given starting arrow tip.
 
         Args: 
-            self: the Designer Window to initialize.
-            parent: parent window.
+            parent: The parent window.
             arrow_tip: ArrowTip object defining the arrow tip used.
 
         """
@@ -80,7 +78,7 @@ class DesignerWindow(wx.Window):
 
     def OnPaint(self, evt):
         """
-        Action to take when painting.
+        Overrides wx Paint event to draw the grid, arrow, etc. as if on a canvas.
 
         Args: 
             self: the Designer Window to initialize.
@@ -93,26 +91,16 @@ class DesignerWindow(wx.Window):
         self.draw_points(gc, self.arrow_tip.points, self.radius)
         evt.Skip()
 
-    def OnLeftDown(self, evt):
+    def OnLeftDown(self, evt: wx.MouseEvent):
         """
-        Action to take when selecting left and downward.
-
-        Args: 
-            self: the Designer Window to initialize.
-            evt: the event being executed.
-
+        Handler for mouse left button down event.
         """
         if self.hover_idx != -1:
             self.dragging = True
 
-    def OnLeftUp(self, evt):
+    def OnLeftUp(self, evt: wx.MouseEvent):
         """
-        Action to take when selecting left upward.
-
-        Args: 
-            self: the Designer Window to initialize.
-            evt: the event being executed.
-
+        Handler for mouse left button up event.
         """
         if self.dragging:
             assert self.dragged_point is not None
@@ -125,7 +113,7 @@ class DesignerWindow(wx.Window):
 
     def update_arrow_tip(self, arrow_tip: ArrowTip):
         """
-        Updating the designed arrow tip.
+        Updating the current arrow tip in designer.
 
         Args: 
             self: the Designer Window to initialize.
@@ -137,15 +125,16 @@ class DesignerWindow(wx.Window):
 
     def projected_landing(self, point: Vec2) -> Vec2:
         """
-        Definine projectedlanding point for arrow.
+        Return the projected discrete landing point for the cursor.
+
+        This is to make sure the user sees where the dragged arrow tip point will be dropped on
+        the grid.
 
         Args: 
-            self: the Designer Window to initialize.
-            point (vect2): point goven to find porjected landing.
+            point (vect2): The cursor position relative to the window.
 
         Returns:
             Vec2 : projected point for landing.
-
         """
         lx = point.x - point.x % self.csize
         ly = point.y - point.y % self.csize
@@ -164,9 +153,9 @@ class DesignerWindow(wx.Window):
 
         return Vec2(drop_x, drop_y)
 
-    def OnMotion(self, evt):
+    def OnMotion(self, evt: wx.MouseEvent):
         """
-        Action to take when moving around the screen.
+        Handler for mouse motion events.
 
         Args: 
             self: the Designer Window to initialize.
@@ -183,12 +172,7 @@ class DesignerWindow(wx.Window):
 
     def update_hover_idx(self, pos: Vec2):
         """
-        Updating the hover index.
-
-        Args: 
-            self: the Designer Window to initialize.
-            pos (Vec2): Posotion over which user is currently hovering.
-
+        Helper to update the hovered arrow tip point index.
         """
         self.hover_idx = -1
 
@@ -200,12 +184,7 @@ class DesignerWindow(wx.Window):
 
     def draw_background(self, gc: wx.GraphicsContext):
         """
-        Drawing a window background.
-
-        Args: 
-            self: the Designer Window to initialize.
-            gc (wx.GraphixContext): Graphics context to modify.
-
+        Drawing the gridlines background.
         """
         gc.SetPen(wx.Pen(wx.BLACK))
         gc.StrokeLineSegments(self.begin_points, self.end_points)
@@ -215,11 +194,10 @@ class DesignerWindow(wx.Window):
         Drawing points for arrow.
 
         Args: 
-            self: the Designer Window to initialize.
-            gc (wx.GraphixContext): Graphics context to modify.
-            points (List[Vect2]): Points to be drawn in form of a list.
-            radius (float): radius for the points.
-
+            gc: The Graphics context to modify.
+            points: The points to be drawn, in counterclockwise order, with the last point being
+                    the tip.
+            radius (float): The radius of the points.
         """
         gc.SetPen(wx.Pen(wx.BLACK, 2))
         gc.SetBrush(wx.Brush(wx.BLACK, wx.BRUSHSTYLE_FDIAGONAL_HATCH))
@@ -262,42 +240,24 @@ class DesignerWindow(wx.Window):
         Drawing a single point.
 
         Args: 
-            self: the Designer Window to initialize.
             gc (wx.GraphixContext): Graphics context to modify.
             point (Vect2): Point to be drawn.
-            radius (float): radius for the point.
-
+            radius (float): Radius of the point.
         """
         gc.DrawEllipse(*(point - Vec2.repeat(radius / 2)), radius, radius)
 
 
 class ArrowDesigner(WindowedPlugin):
     """
-    Defining the arrow designer.
-
-    Args: 
-        WindowedPlugin: For this specific type of plugin.
-
+    The ArrowDesigner plugin that subclasses WindowedPlugin.
     """
     def __init__(self):
-        """
-        Initializing a new designer.
-
-        Args:
-            self: designer used.
-
-        """
         super().__init__(metadata)
         self.arrow_tip = api.get_arrow_tip()
 
     def create_window(self, dialog):
         """
-        Creating a window.
-
-        Args:
-            self
-            dialog
-
+        Called when creating a window. Create the designer window as well as control buttons.
         """
         window = wx.Window(dialog, size=(500, 500))
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -315,23 +275,13 @@ class ArrowDesigner(WindowedPlugin):
 
     def OnSave(self, evt):
         """
-        Set the new arrow tip when saving.
-
-        Args:
-            self: designer used.
-            evt: the event being executed.
-
+        Handler for the "save" button. Save the new arrow tip.
         """
         api.set_arrow_tip(self.arrow_tip)
 
     def OnRestore(self, evt):
         """
         Update the arrow point to be set to default values.
-
-        Args:
-            self: designer used.
-            evt: the event being executed.
-
         """
         default_tip = api.get_default_arrow_tip()
         api.set_arrow_tip(default_tip)

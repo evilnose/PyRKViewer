@@ -553,8 +553,47 @@ def update_reactant_stoich(net_index: int, reaction_index: int, node_index: int,
         node_index: The index of the node which must be a reactant of the reaction.
         stoich: The new stoichiometry value.
 
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+        NodeIndexError: If the given node index does not match any existing node.
+        ValueError: If the given node index exists but is not a reactant of the reaction.
     """
     _controller.set_src_node_stoich(net_index, reaction_index, node_index, stoich)
+
+
+def get_reactant_stoich(net_index: int, reaction_index: int, node_index: int) -> float:
+    """Returns the stoichiometry of a reactant node.
+
+    Args:  
+        net_index: The network index
+        reaction_index: The index of the reaction.
+        node_index: The index of the node which must be a reactant of the reaction.
+    
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+        NodeIndexError: If the given node index does not match any existing node.
+        ValueError: If the given node index exists but is not a reactant of the reaction.
+    """
+    return _controller.get_src_node_stoich(net_index, reaction_index, node_index)
+
+
+def get_product_stoich(net_index: int, product_index: int, node_index: int) -> float:
+    """Returns the stoichiometry of a product node.
+    
+    Args:  
+        net_index: The network index.
+        reaction_index: The index of the reaction.
+        node_index: The index of the node which must be a product of the reaction.
+
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+        NodeIndexError: If the given node index does not match any existing node.
+        ValueError: If the given node index exists but is not a product of the reaction.
+    """
+    return _controller.get_dest_node_stoich(net_index, product_index, node_index)
 
 
 def update_product_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
@@ -562,10 +601,16 @@ def update_product_stoich(net_index: int, reaction_index: int, node_index: int, 
     Updates the product's stoichiometry.
 
     Args:  
-        net_index: The network index
-        reaction_index: The index of the reaction
+        net_index: The network index.
+        reaction_index: The index of the reaction.
         node_index: The index of the node which must be a product of the reaction.
         stoich: The new stoichiometry value.
+
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+        NodeIndexError: If the given node index does not match any existing node.
+        ValueError: If the given node index exists but is not a reactant of the reaction.
     """
     _controller.set_dest_node_stoich(net_index, reaction_index, node_index, stoich)
 

@@ -3,7 +3,7 @@ API for the RKViewer GUI and model. Allows viewing and modifying the network mod
 """
 
 # pylint: disable=maybe-no-member
-#from rkviewer.mvc import NetIndexNotFoundError
+#from rkviewer.mvc import NetIndexError
 from rkviewer.canvas.geometry import Rect, within_rect
 from rkviewer.config import DEFAULT_ARROW_TIP
 import wx
@@ -43,6 +43,13 @@ def init_api(canvas: Canvas, controller: IController):
     _controller = controller
 
 
+def uninit_api():
+    global _canvas, _controller
+    _controller.clear_network(0)
+    _canvas = None
+    _controller = None
+
+
 def cur_net_index() -> int:
     return _canvas.net_index
 
@@ -65,6 +72,48 @@ def group_action():
     _controller.start_group()
     yield
     _controller.end_group()
+
+
+def canvas_size() -> Vec2:
+    """Return the total size of canvas."""
+    return _canvas.realsize
+
+
+def window_size() -> Vec2:
+    """Return the size of the window (visible part of the canvas)."""
+    return Vec2(_canvas.GetSize())
+
+
+def window_position() -> Vec2:
+    """Return the position of the topleft corner on the canvas."""
+    return Vec2(_canvas.CalcUnscrolledPosition(0, 0))
+
+
+def canvas_scale() -> float:
+    """Return the zoom scale of the canvas."""
+    return cstate.scale
+
+
+def zoom_level() -> int:
+    """The zoom level of the canvas (Ranges from -10 to 10, with 0 being the default zoom).
+
+    This is a discrete value that corresponds to the zoom slider to the bottom-right of the canvas
+    window.
+    """
+    return _canvas.zoom_level
+
+
+def set_zoom_level(level: int, anchor: Vec2):
+    """Set the zoom level of the canvas.
+    
+    See zoom_level() for more details.
+
+    Args:
+        level: The zoom level to set.
+        anchor: A point on the window whose position will remain the same after zooming. E.g. when
+                the user zooms by scrolling the mouse, the anchor is the center of the window.
+    """
+    _canvas.SetZoomLevel(level, anchor)
 
 
 def get_nodes(net_index: int) -> List[Node]:
@@ -132,6 +181,14 @@ def set_compartment_of_node(net_index: int, node_index: int, comp_index: int):
     Move the node to the given compartment. Set comp_index to -1 to move it to the base compartment.
     """
     _controller.set_compartment_of_node(net_index, node_index, comp_index)
+
+
+def get_compartment_of_node(net_index: int, node_index: int) -> int:
+    return _controller.get_compartment_of_node(net_index, node_index)
+
+
+def get_nodes_in_compartment(net_index: int, comp_index: int) -> List[int]:
+    return _controller.get_nodes_in_compartment(net_index, comp_index)
 
 
 def selected_nodes() -> List[Node]:
@@ -211,8 +268,7 @@ def get_compartment_by_index(net_index: int, comp_index: int) -> Compartment:
 
 
 def add_node(net_index: int, node: Node):
-    """ 
-    Adds a node to the given network.
+    """Adds a node to the given network.
 
     The node indices are assigned in increasing order, regardless of deletion.
 
@@ -221,6 +277,21 @@ def add_node(net_index: int, node: Node):
         node: The Node to add.
     """
     _controller.add_node_g(net_index, node)
+
+
+def delete_node(net_index: int, node_index: int):
+    """Delete a node with the given index in the given network.
+
+    Args:
+        net_index: The network index.
+        node_index: The node index.
+
+    Raises:
+        NetIndexError:
+        NodeIndexError: If the given node does not exist in the network.
+        NodeNotFreeError: If the given onde is part of a reaction.
+    """
+    _controller.delete_node(net_index, node_index)
 
 
 def add_reaction(net_index: int, reaction: Reaction):
@@ -234,6 +305,49 @@ def add_reaction(net_index: int, reaction: Reaction):
         reaction: the Reaction to add
     """
     _controller.add_reaction_g(net_index, reaction)
+
+
+def delete_reaction(net_index: int, reaction_index: int):
+    """Delete a reaction with the given index in the given network.
+
+    Args:
+        net_index: The network index.
+        reaction_index: The reaction index.
+
+    Raises:
+        NetIndexError:
+        ReactionIndexError: If the given reaction does not exist in the network.
+    """
+    _controller.delete_reaction(net_index, reaction_index)
+
+
+def delete_compartment(net_index: int, comp_index: int):
+    """Delete a node with the given index in the given network.
+
+    Nodes that are within this compartment are dropped to the base compartment (index -1).
+
+    Args:
+        net_index: The network index.
+        comp_index: The compartment index.
+
+    Raises:
+        NetIndexError:
+        CompartmentIndexError: If the given node does not exist in the network.
+    """
+    _controller.delete_compartment(net_index, comp_index)
+
+
+def add_compartment(net_index: int, compartment: Compartment):
+    """ 
+    Adds a compartment.
+
+    The Compartment indices are assigned in increasing order, regardless of deletion.
+
+    Args:  
+        net_index: the index overall
+        compartment: the Compartment to add
+    """
+    _controller.add_compartment_g(net_index, compartment)
 
 
 # TODO add "cosmetic" versions of these functions, where changes made to controller are not added

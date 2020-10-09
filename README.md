@@ -24,7 +24,7 @@ e.g. `Canvas::RegisterAllChildren`.
 
 ## Testing and Profiling
 * To run all tests, go to project root and run `python -m unittest`.
-* To run a particular test, run e.g. `python -m unittest test.rkplugin.test_nodes`.
+* To run a particular test, run e.g. `python -m unittest test.rkplugin.test_api`.
 * To profile the application, run `sphinx-build -b html docs\source docs\build`.
 
 ## Mac Notes
@@ -37,8 +37,8 @@ add an entry in the pyinstaller settings as described
 [here](https://stackoverflow.com/a/40676321)
 
 ## TODOs
-* BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip those
-values.
+* BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip
+those values.
 * OPTIMIZE: Do not rebuild reaction forms. Instead, keep them all in a dict() and only make the
 currently used one visible.
 * REFACTOR: Refactor Minimap so that it's a CanvasElement. We also need CanvasElement functions to

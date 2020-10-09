@@ -43,6 +43,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def clear_network(self, neti: int):
+        pass
+
+    @abc.abstractmethod
     def add_node_g(self, neti: int, node: Node) -> bool:
         """Try to add the given Node to the canvas."""
         pass
@@ -220,6 +224,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def get_nodes_in_compartment(self, neti: int, cmpi: int) -> List[int]:
+        pass
+
+    @abc.abstractmethod
     def get_node_index(self, neti: int, node_id: str) -> int:
         pass
 
@@ -292,7 +300,7 @@ class NodeNotFreeError(ModelError):
     pass
 
 
-class NetIndexNotFoundError(ModelError):
+class NetIndexError(ModelError):
     pass
 
 
@@ -300,7 +308,7 @@ class ReactionIndexError(ModelError):
     pass
 
 
-class NodeIndexNotFoundError(ModelError):
+class NodeIndexError(ModelError):
     pass
 
 

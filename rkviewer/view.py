@@ -255,7 +255,6 @@ class MainPanel(wx.Panel):
                              realsize=(4 * theme['canvas_width'],
                                        4 * theme['canvas_height']),
                              )
-        init_api(self.canvas, controller)
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()
@@ -522,6 +521,7 @@ class View(IView):
         self.manager.load_from('plugins')
         self.frame = MainFrame(
             self.controller, self.manager, title='RK Network Viewer')
+        init_api(self.frame.main_panel.canvas, self.controller)
         self.canvas_panel = self.frame.main_panel.canvas
 
     def main_loop(self):

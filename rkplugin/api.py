@@ -184,10 +184,12 @@ def set_compartment_of_node(net_index: int, node_index: int, comp_index: int):
 
 
 def get_compartment_of_node(net_index: int, node_index: int) -> int:
+    """Return the compartment that the node is in, or -1 if it is in the base compartment."""
     return _controller.get_compartment_of_node(net_index, node_index)
 
 
 def get_nodes_in_compartment(net_index: int, comp_index: int) -> List[int]:
+    """Return the list node indices in the given compartment."""
     return _controller.get_nodes_in_compartment(net_index, comp_index)
 
 

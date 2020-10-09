@@ -9,6 +9,9 @@ TODOs
     * Phase out errCode, or at least provide more detalis in error messages.
 """
 from __future__ import annotations
+from .mvc import (IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexError,
+                  ReactionIndexError, NodeIndexError, CompartmentIndexError, StoichError,
+                  StackEmptyError, JSONError, FileError)
 import copy
 from dataclasses import dataclass, field
 import json
@@ -72,7 +75,6 @@ class TNetwork:
         self.lastNodeIdx = 0
         self.lastReactionIdx = 0
         self.lastCompartmentIdx = 0
-
 
     def addNode(self, node: TNode):
         self.nodes[self.lastNodeIdx] = node
@@ -162,6 +164,7 @@ class TCompartment:
 
 class TStack:
     items: List[TNetworkDict]
+
     def __init__(self):
         self.items = []
 
@@ -176,63 +179,10 @@ class TStack:
         return self.items.pop()
 
 
-class TNetworkDict(Dict[int, TNetwork], dict):
+class TNetworkDict(Dict[int, TNetwork]):
     def __init__(self):
         super().__init__()
         self.lastNetIndex = 0
-
-
-class Error(Exception):
-    """Base class for other exceptions"""
-    pass
-
-
-class IDNotFoundError(Error):
-    pass
-
-
-class IDRepeatError(Error):
-    pass
-
-
-class NodeNotFreeError(Error):
-    pass
-
-
-class NetIndexNotFoundError(Error):
-    pass
-
-
-class ReactionIndexNotFoundError(Error):
-    pass
-
-
-class NodeIndexNotFoundError(Error):
-    pass
-
-
-class StoichError(Error):
-    pass
-
-
-class StackEmptyError(Error):
-    pass
-
-
-class JSONError(Error):
-    pass
-
-
-class FileError(Error):
-    pass
-
-
-class VariableOutOfRangeError(Error):
-    pass
-
-
-class CompartmentIndexNotFoundError(Error):
-    pass
 
 
 class ErrorCode(Enum):
@@ -274,15 +224,15 @@ ExceptionDict = {
     -2: IDNotFoundError,
     -3: IDRepeatError,
     -4: NodeNotFreeError,
-    -5: NetIndexNotFoundError,
-    -6: ReactionIndexNotFoundError,
-    -7: NodeIndexNotFoundError,
+    -5: NetIndexError,
+    -6: ReactionIndexError,
+    -7: NodeIndexError,
     -8: StoichError,
     -9: StackEmptyError,
     -10: JSONError,
     -11: FileError,
-    -12: VariableOutOfRangeError,
-    -13: CompartmentIndexNotFoundError,
+    -12: ValueError,
+    -13: CompartmentIndexError,
 }
 
 
@@ -532,7 +482,7 @@ def _getCompartment(neti: int, compi: int) -> TCompartment:
     net = _getNetwork(neti)
     if compi not in net.compartments:
         errCode = -13
-        raise CompartmentIndexNotFoundError('Unknown index: {}'.format(compi))
+        raise CompartmentIndexError('Unknown index: {}'.format(compi))
     return net.compartments[compi]
 
 
@@ -1438,7 +1388,7 @@ def setNodeFontColorAlpha(neti: int, nodei: int, a: float):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def createReaction(neti: int, reaID: str):
+def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]):
     """
     createReaction create an empty reacton
     errCode: -3: id repeat
@@ -1446,16 +1396,34 @@ def createReaction(neti: int, reaID: str):
     """
     global stackFlag, errCode, networkDict, netSetStack, redoStack
     errCode = 0
-    if neti not in networkDict:
-        errCode = -5
+
+    if len(sources) == 0 or len(targets) == 0:
+        raise ValueError('Both the sources and targets of a reaction must be nonempty.')
+
+    net = _getNetwork(neti)
+    # duplicate ID?
+    if any((r.id == reaID for r in net.reactions.values())):
+        errCode = -3
     else:
-        if any((r.id == reaID for r in networkDict[neti].reactions.values())):
-            errCode = -3
-        else:
-            _pushUndoStack()
-            newReact = TReaction(reaID)
-            networkDict[neti].addReaction(newReact)
-            return
+        # ensure nodes exist
+        if any(nodei not in net.nodes.keys() for nodei in sources):
+            _raiseError(-7)
+        if any(nodei not in net.nodes.keys() for nodei in targets):
+            _raiseError(-7)
+
+        if set(sources) == set(targets):
+            raise ValueError('Reaction source node set and target node set cannot be identical.')
+        _pushUndoStack()
+        newReact = TReaction(reaID)
+
+        # Add src/target nodes
+        for srcNodeIdx in sources:
+            newReact.srcDict[srcNodeIdx] = TSpeciesNode(1)  # default stoich to 1
+        for destNodeIdx in targets:
+            newReact.destDict[destNodeIdx] = TSpeciesNode(1)  # default stoich to 1
+
+        net.addReaction(newReact)
+        return
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1886,130 +1854,59 @@ def printReactionInfo(neti: int, reai: int):
     print("DestNodeStoichs:", getListOfReactionDestStoich(neti, reai))
 
 
-def addSrcNode(neti: int, reai: int, nodei: int, stoich: float):
-    """
-    addSrcNode add node and Stoich to reactionlist
-    errCode:  0:ok,
-    -5: net index out of range
-    -6: reaction index out of range,
-    -7: node index out of range
-    -8: "wrong stoich: stoich has to be positive"
-    -3: id repeat
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        r = networkDict[neti].reactions
-        if reai not in networkDict[neti].reactions:
-            errCode = -6
-        elif nodei not in networkDict[neti].nodes:
-            errCode = -7
-        elif stoich <= 0.0:
-            errCode = -8
-        else:
-            rea = r[reai]
-            srcNodeIdx = nodei
-            if srcNodeIdx in r[reai].srcDict:
-                errCode = -3
-            else:
-                _pushUndoStack()
-                rea.srcDict[srcNodeIdx] = TSpeciesNode(stoich)
-                networkDict[neti].reactions[reai] = rea
-                return
+# def deleteSrcNode(neti: int, reai: int, srcNodeIdx: int):
+#     """
+#     deleteSrcNode delete src nodes by id(ID).
+#     errCode: -6: reaction index out of range,
+#     -5: net index out of range
+#     -2: id not found
+#     """
+#     global stackFlag, errCode, networkDict, netSetStack, redoStack
+#     errCode = 0
+#     if neti not in networkDict:
+#         errCode = -5
+#     else:
+#         r = networkDict[neti].reactions
+#         if reai not in networkDict[neti].reactions:
+#             errCode = -6
+#         else:
+#             rea = r[reai]
+#             if srcNodeIdx not in rea.srcDict:
+#                 errCode = -2
+#             else:
+#                 _pushUndoStack()
+#                 del rea.srcDict[srcNodeIdx]
+#                 networkDict[neti].reactions[reai] = rea
+#                 return
 
-    raise ExceptionDict[errCode](errorDict[errCode])
+#     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def addDestNode(neti: int, reai: int, nodei: int, stoich: float):
-    """
-    addDestNode add node and Stoich to reactionlist
-    errCode:  0:ok,
-    -5: net index out of range
-    -6: reaction index out of range,
-    -7: node index out of range
-    -8: "wrong stoich: stoich has to be positive"
-    -3: id repeat
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        r = networkDict[neti].reactions
-        if reai not in networkDict[neti].reactions:
-            errCode = -6
-        elif nodei not in networkDict[neti].nodes:
-            errCode = -7
-        elif stoich <= 0:
-            errCode = -8
-        else:
-            rea = r[reai]
-            if nodei in rea.destDict:
-                errCode = -3
-            else:
-                _pushUndoStack()
-                rea.destDict[nodei] = TSpeciesNode(stoich)
-                networkDict[neti].reactions[reai] = rea
-                return
+# def deleteDestNode(neti: int, reai: int, destNodeIdx: int):
+#     """
+#     deleteDestNode delete all dest nodes by id
+#     errCode: -6: reaction index out of range,
+#     -5: net index out of range
+#     -2: id not found
+#     """
+#     global stackFlag, errCode, networkDict, netSetStack, redoStack
+#     errCode = 0
+#     if neti not in networkDict:
+#         errCode = -5
+#     else:
+#         r = networkDict[neti].reactions
+#         if reai not in networkDict[neti].reactions:
+#             errCode = -6
+#         else:
+#             rea = r[reai]
+#             if destNodeIdx not in rea.destDict:
+#                 errCode = -2
+#             else:
+#                 _pushUndoStack()
+#                 del rea.destDict[destNodeIdx]
+#                 return
 
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def deleteSrcNode(neti: int, reai: int, srcNodeIdx: int):
-    """
-    deleteSrcNode delete src nodes by id(ID).
-    errCode: -6: reaction index out of range,
-    -5: net index out of range
-    -2: id not found
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        r = networkDict[neti].reactions
-        if reai not in networkDict[neti].reactions:
-            errCode = -6
-        else:
-            rea = r[reai]
-            if srcNodeIdx not in rea.srcDict:
-                errCode = -2
-            else:
-                _pushUndoStack()
-                del rea.srcDict[srcNodeIdx]
-                networkDict[neti].reactions[reai] = rea
-                return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def deleteDestNode(neti: int, reai: int, destNodeIdx: int):
-    """
-    deleteDestNode delete all dest nodes by id
-    errCode: -6: reaction index out of range,
-    -5: net index out of range
-    -2: id not found
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        r = networkDict[neti].reactions
-        if reai not in networkDict[neti].reactions:
-            errCode = -6
-        else:
-            rea = r[reai]
-            if destNodeIdx not in rea.destDict:
-                errCode = -2
-            else:
-                _pushUndoStack()
-                del rea.destDict[destNodeIdx]
-                return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+#     raise ExceptionDict[errCode](errorDict[errCode])
 
 
 def setReactionID(neti: int, reai: int, newID: str):
@@ -2075,7 +1972,7 @@ def setReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int, newStoich: f
         if reai not in networkDict[neti].reactions:
             errCode = -6
         elif srcNodeIdx not in r[reai].srcDict:
-            errCode = -2
+            errCode = -7
         elif newStoich <= 0.0:
             errCode = -8
         else:
@@ -2102,7 +1999,7 @@ def setReactionDestNodeStoich(neti: int, reai: int, destNodeIdx: int, newStoich:
         if reai not in networkDict[neti].reactions:
             errCode = -6
         elif destNodeIdx not in r[reai].destDict:
-            errCode = -2
+            errCode = -7
         elif newStoich <= 0.0:
             errCode = -8
         else:
@@ -2297,7 +2194,9 @@ def deleteCompartment(neti: int, compi: int):
     # Put all nodes in compartment in base compartment (-1)
     for nodei in net.compartments[compi].node_indices:
         assert net.nodes[nodei].compi == compi
+        # move to base compartment
         net.nodes[nodei].compi = -1
+        net.baseNodes.add(nodei)
 
     del net.compartments[compi]
 
@@ -2415,52 +2314,52 @@ def setCompartmentOutlineThickness(neti: int, compi: int, thickness: float):
 
 def getCompartmentOutlineThickness(neti: int, compi: int) -> float:
     return _getCompartment(neti, compi).outlineThickness
-    
 
-def createUniUni(neti: int, reaID:str, rateLaw:str, srci: int, desti: int, srcStoich:float, destStoich:float):
+
+def createUniUni(neti: int, reaID: str, rateLaw: str, srci: int, desti: int, srcStoich: float, destStoich: float):
     startGroup()
-    createReaction(neti, reaID)
+    createReaction(neti, reaID, [srci], [desti])
     reai = getReactionIndex(neti, reaID)
 
-    addSrcNode(neti, reai, srci, srcStoich)
-    addDestNode(neti, reai, desti, destStoich)
+    setReactionSrcNodeStoich(neti, reai, srci, srcStoich)
+    setReactionDestNodeStoich(neti, reai, desti, destStoich)
     setRateLaw(neti, reai, rateLaw)
     endGroup()
 
 
-def CreateUniBi(neti: int, reaID: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich:float, dest2Stoich:float):
+def CreateUniBi(neti: int, reaID: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich: float, dest2Stoich: float):
     startGroup()
-    createReaction(neti, reaID)
+    createReaction(neti, reaID, [srci], [dest1i, dest2i])
     reai = getReactionIndex(neti, reaID)
 
-    addSrcNode(neti, reai, srci, srcStoich)
-    addDestNode(neti, reai, dest1i, dest1Stoich)
-    addDestNode(neti, reai, dest2i, dest2Stoich)
+    setReactionSrcNodeStoich(neti, reai, srci, srcStoich)
+    setReactionDestNodeStoich(neti, reai, dest1i, dest1Stoich)
+    setReactionDestNodeStoich(neti, reai, dest2i, dest2Stoich)
     setRateLaw(neti, reai, rateLaw)
     endGroup()
 
 
 def CreateBiUni(neti: int, reaID: str, rateLaw: str, src1i: int, src2i: int, desti: int, src1Stoich: float, src2Stoich: float, destStoich: float):
     startGroup()
-    createReaction(neti, reaID)
+    createReaction(neti, reaID, [src1i, src2i], [desti])
     reai = getReactionIndex(neti, reaID)
 
-    addSrcNode(neti, reai, src1i, src1Stoich)
-    addSrcNode(neti, reai, src2i, src2Stoich)
-    addDestNode(neti, reai, desti, destStoich)
+    setReactionSrcNodeStoich(neti, reai, src1i, src1Stoich)
+    setReactionSrcNodeStoich(neti, reai, src2i, src2Stoich)
+    setReactionDestNodeStoich(neti, reai, desti, destStoich)
     setRateLaw(neti, reai, rateLaw)
     endGroup()
 
 
-def CreateBiBi(neti:int, reaID:str, rateLaw:str, src1i:int, src2i:int, dest1i:int, dest2i:int, src1Stoich:float, src2Stoich:float, dest1Stoich:float, dest2Stoich:float):
+def CreateBiBi(neti: int, reaID: str, rateLaw: str, src1i: int, src2i: int, dest1i: int, dest2i: int, src1Stoich: float, src2Stoich: float, dest1Stoich: float, dest2Stoich: float):
     startGroup()
-    createReaction(neti, reaID)
+    createReaction(neti, reaID, [src1i, src2i], [dest1i, dest2i])
     reai = getReactionIndex(neti, reaID)
 
-    addSrcNode(neti, reai, src1i, src1Stoich)
-    addSrcNode(neti, reai, src2i, src2Stoich)
-    addDestNode(neti, reai, dest1i, dest1Stoich)
-    addDestNode(neti, reai, dest2i, dest2Stoich)
+    setReactionSrcNodeStoich(neti, reai, src1i, src1Stoich)
+    setReactionSrcNodeStoich(neti, reai, src2i, src2Stoich)
+    setReactionDestNodeStoich(neti, reai, dest1i, dest1Stoich)
+    setReactionDestNodeStoich(neti, reai, dest2i, dest2Stoich)
     setRateLaw(neti, reai, rateLaw)
     endGroup()
 

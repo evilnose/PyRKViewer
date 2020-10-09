@@ -760,11 +760,9 @@ class SelectBox(CanvasElement):
                         self.net_index, comp.index, comp.position)
 
                 if self._special_mode == SelectBox.SMode.NODES_IN_ONE:
-                    compi = self.canvas.InWhichCompartment(
-                        [n.rect for n in self.nodes])
+                    compi = self.canvas.InWhichCompartment([n.rect for n in self.nodes])
                     for node in self.nodes:
-                        self.controller.set_compartment_of_node(
-                            self.net_index, node.index, compi)
+                        self.controller.set_compartment_of_node(self.net_index, node.index, compi)
 
                 self.controller.end_group()
         elif self._mode == SelectBox.Mode.RESIZING:

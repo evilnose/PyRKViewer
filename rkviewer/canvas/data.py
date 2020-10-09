@@ -402,7 +402,7 @@ class SpeciesBezier:
             color = theme['handle_color'] if selected else fill
             self.paint_arrow_tip(gc, color)
 
-    def paint_arrow_tip(self, gc: wx.Colour, fill: wx.Colour):
+    def paint_arrow_tip(self, gc: wx.GraphicsContext, fill: wx.Colour):
         assert len(self.arrow_adjusted_coords) == 4, \
             "Arrow adjusted coords is not of length 4: {}".format(self.arrow_adjusted_coords)
         gc.SetPen(gc.CreatePen(wx.GraphicsPenInfo(fill)))

@@ -40,7 +40,7 @@ class Disco(CommandPlugin):
             self
 
         """
-        nodes = api.all_nodes()
+        nodes = api.get_nodes(api.cur_net_index())
         rgb = random.getrandbits(24)
         color = wx.Colour(rgb)
         for node in nodes:

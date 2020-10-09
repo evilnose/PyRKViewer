@@ -456,6 +456,10 @@ class Canvas(wx.ScrolledWindow):
         self.Scroll(*pos)
         self.SetOverlayPositions()
 
+    @property
+    def zoom_level(self) -> int:
+        return self._zoom_level
+
     def SetZoomLevel(self, zoom: int, anchor: Vec2):
         """Zoom in/out with the given anchor.
 
@@ -463,7 +467,9 @@ class Canvas(wx.ScrolledWindow):
         zooming. Note that the anchor position is scrolled position,
         i.e. device position
         """
-        assert zoom >= Canvas.MIN_ZOOM_LEVEL and zoom <= Canvas.MAX_ZOOM_LEVEL
+        if zoom < Canvas.MIN_ZOOM_LEVEL or zoom > Canvas.MAX_ZOOM_LEVEL:
+            raise ValueError('Zoom level must be between {} and {}. Got {} instead.',
+                             Canvas.MIN_ZOOM_LEVEL, Canvas.MAX_ZOOM_LEVEL, zoom)
         self._zoom_level = zoom
         old_scale = cstate.scale
         cstate.scale = 1.2 ** zoom
@@ -896,7 +902,6 @@ class Canvas(wx.ScrolledWindow):
                 within_comp = self.InWhichCompartment([Rect(pos, size)])
             elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
                 within_comp = self.InWhichCompartment([n.rect for n in self._select_box.nodes])
-
 
             # create font for nodes
             for el in self._elements:

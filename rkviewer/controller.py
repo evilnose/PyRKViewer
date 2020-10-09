@@ -4,16 +4,16 @@
 import wx
 import traceback
 from typing import Collection, List, Optional, Set
-import iodine as iod
+import rkviewer.iodine as iod
 import logging
 
-from iodine import TColor
+from rkviewer.iodine import TColor
 from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
-from .mvc import IController, IView
+from .mvc import IController, IView, ModelError
 
 
 def iod_setter(controller_iod_setter):
@@ -88,9 +88,6 @@ class Controller(IController):
         except iod.StackEmptyError:
             logging.getLogger('controller').info('Undo stack is empty')
             return False
-        except iod.Error as e:
-            print('Error undoing:', str(e))
-            return False
 
         self.stacklen -= 2  # -2 to correct the +1 in update_view
         self._update_view()
@@ -103,12 +100,13 @@ class Controller(IController):
         except iod.StackEmptyError:
             logging.getLogger('controller').info('Redo stack is empty')
             return False
-        except iod.Error as e:
-            print('Error redoing:', str(e))
-            return False
 
         self._update_view()
         return True
+
+    @iod_setter
+    def clear_network(self, neti):
+        iod.clearNetwork(neti)
 
     @iod_setter
     def add_node_g(self, neti: int, node: Node, programmatic: bool = False):
@@ -141,6 +139,9 @@ class Controller(IController):
 
     @iod_setter
     def add_compartment_g(self, neti: int, compartment: Compartment):
+        if len(compartment.nodes) != 0:
+            raise ValueError('The "nodes" list for a newly added compartment should be empty. '
+                             'This is to avoid implicit moving of nodes between compartments.')
         self.start_group()
         compi = iod.addCompartment(neti, compartment.id_, *compartment.position, *compartment.size)
         iod.setCompartmentFillColor(neti, compi, self.wx_to_tcolor(compartment.fill))
@@ -151,7 +152,7 @@ class Controller(IController):
 
     @iod_setter
     def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False):
-        assert pos.x >= 0 and pos.y >= 0
+        #assert pos.x >= 0 and pos.y >= 0
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
         # dispatch event if the call was caused by user input
         if not programmatic:
@@ -217,14 +218,14 @@ class Controller(IController):
     def add_reaction_g(self, neti: int, reaction: Reaction):
         """Try create a reaction."""
         self.start_group()
-        iod.createReaction(neti, reaction.id_)
+        iod.createReaction(neti, reaction.id_, reaction.sources, reaction.targets)
         reai = iod.getReactionIndex(neti, reaction.id_)
 
         for sidx in reaction.sources:
-            iod.addSrcNode(neti, reai, sidx, 1.0)
+            iod.setReactionSrcNodeStoich(neti, reai, sidx, 1.0)
 
         for tidx in reaction.targets:
-            iod.addDestNode(neti, reai, tidx, 1.0)
+            iod.setReactionDestNodeStoich(neti, reai, tidx, 1.0)
 
         iod.setReactionFillColorRGB(neti, reai,
                                     reaction.fill_color.Red(),
@@ -306,7 +307,7 @@ class Controller(IController):
     def get_list_of_compartments(self, neti: int) -> List[Compartment]:
         return [self.get_compartment_by_index(neti, compi)
                 for compi in iod.getListOfCompartments(neti)]
-    
+
     @iod_setter
     def rename_compartment(self, neti: int, compi: int, new_id: str):
         iod.setCompartmentID(neti, compi, new_id)
@@ -341,6 +342,9 @@ class Controller(IController):
 
     def get_compartment_of_node(self, neti: int, nodei: int) -> int:
         return iod.getCompartmentOfNode(neti, nodei)
+
+    def get_nodes_in_compartment(self, neti: int, compi: int) -> List[int]:
+        return iod.getNodesInCompartment(neti, compi)
 
     def get_node_index(self, neti: int, node_id: str) -> int:
         return iod.getNodeIndex(neti, node_id)

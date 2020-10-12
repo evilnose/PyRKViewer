@@ -1,7 +1,7 @@
 # pylint: disable=maybe-no-member
 from typing import List
 from rkviewer.canvas.data import Reaction
-from rkviewer.mvc import CompartmentIndexError, NetIndexError, NodeIndexError, NodeNotFreeError
+from rkviewer.mvc import CompartmentIndexError, NetIndexError, NodeIndexError, NodeNotFreeError, ReactionIndexError
 from rkplugin.api import Node, Vec2
 from rkplugin import api
 from test.utils import auto_compartment, auto_node, auto_reaction, close_app_context, open_app_context, run_app
@@ -90,6 +90,7 @@ class TestReaction(unittest.TestCase):
         close_app_context(self.app_handle)
 
     def test_simple_reactions(self):
+        """Simple tests for reactions."""
         rxn = auto_reaction('AB', [0], [1])
         api.add_reaction(self.neti, rxn)
         reactions = api.get_reactions(self.neti)
@@ -120,6 +121,30 @@ class TestReaction(unittest.TestCase):
         with self.assertRaises(ValueError):
             rxn = auto_reaction('empty_products', [2], [])
             api.add_reaction(self.neti, rxn)
+
+
+    def test_simple_handles(self):
+        """Simple tests for Bezier handles."""
+        rxn = auto_reaction('AB', [0], [1])
+        api.add_reaction(self.neti, rxn)
+        api.set_reaction_center_handle(0, 0, Vec2(-10, 30))
+        self.assertEqual(api.get_reaction_center_handle(0, 0), Vec2(-10, 30))
+
+        api.set_reaction_node_handle(0, 0, 0, True, Vec2(40, 50))
+        self.assertEqual(api.get_reaction_node_handle(0, 0, 0, True), Vec2(40, 50))
+
+        with self.assertRaises(NodeIndexError):
+            api.get_reaction_node_handle(0, 0, 12, True)
+
+        # test for the case where node exists but not reactant/product
+        with self.assertRaises(ValueError):
+            api.get_reaction_node_handle(0, 0, 1, True)
+
+        with self.assertRaises(ValueError):
+            api.get_reaction_node_handle(0, 0, 0, False)
+
+        with self.assertRaises(ReactionIndexError):
+            api.get_reaction_node_handle(0, 2, 0, True)
 
 
 class TestCompartment(unittest.TestCase):

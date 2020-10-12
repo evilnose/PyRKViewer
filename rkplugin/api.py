@@ -105,7 +105,7 @@ def zoom_level() -> int:
 
 def set_zoom_level(level: int, anchor: Vec2):
     """Set the zoom level of the canvas.
-    
+
     See zoom_level() for more details.
 
     Args:
@@ -501,7 +501,7 @@ def update_compartment(net_index: int, comp_index: int, id_: str = None,
     """
     old_comp = get_compartment_by_index(net_index, comp_index)
     # Validate
-    #Check ID not empty
+    # Check ID not empty
     if id_ is not None and len(id_) == 0:
         raise ValueError('id_ cannot be empty')
 
@@ -543,9 +543,26 @@ def update_compartment(net_index: int, comp_index: int, id_: str = None,
             _controller.set_compartment_size(net_index, comp_index, size)
 
 
-def update_reactant_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
+def get_reactant_stoich(net_index: int, reaction_index: int, node_index: int) -> float:
+    """Returns the stoichiometry of a reactant node.
+
+    Args:  
+        net_index: The network index
+        reaction_index: The index of the reaction.
+        node_index: The index of the node which must be a reactant of the reaction.
+
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+        NodeIndexError: If the given node index does not match any existing node.
+        ValueError: If the given node index exists but is not a reactant of the reaction.
+    """
+    return _controller.get_src_node_stoich(net_index, reaction_index, node_index)
+
+
+def set_reactant_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
     """ 
-    Updates the stoichiometry of a reactant node.
+    Set the stoichiometry of a reactant node.
 
     Args:  
         net_index: The network index
@@ -562,26 +579,9 @@ def update_reactant_stoich(net_index: int, reaction_index: int, node_index: int,
     _controller.set_src_node_stoich(net_index, reaction_index, node_index, stoich)
 
 
-def get_reactant_stoich(net_index: int, reaction_index: int, node_index: int) -> float:
-    """Returns the stoichiometry of a reactant node.
-
-    Args:  
-        net_index: The network index
-        reaction_index: The index of the reaction.
-        node_index: The index of the node which must be a reactant of the reaction.
-    
-    Raises:
-        NetIndexError:
-        ReactionIndexError:
-        NodeIndexError: If the given node index does not match any existing node.
-        ValueError: If the given node index exists but is not a reactant of the reaction.
-    """
-    return _controller.get_src_node_stoich(net_index, reaction_index, node_index)
-
-
 def get_product_stoich(net_index: int, product_index: int, node_index: int) -> float:
     """Returns the stoichiometry of a product node.
-    
+
     Args:  
         net_index: The network index.
         reaction_index: The index of the reaction.
@@ -596,9 +596,8 @@ def get_product_stoich(net_index: int, product_index: int, node_index: int) -> f
     return _controller.get_dest_node_stoich(net_index, product_index, node_index)
 
 
-def update_product_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
-    """ 
-    Updates the product's stoichiometry.
+def set_product_stoich(net_index: int, reaction_index: int, node_index: int, stoich: int):
+    """Sets the product's stoichiometry.
 
     Args:  
         net_index: The network index.
@@ -613,6 +612,83 @@ def update_product_stoich(net_index: int, reaction_index: int, node_index: int, 
         ValueError: If the given node index exists but is not a reactant of the reaction.
     """
     _controller.set_dest_node_stoich(net_index, reaction_index, node_index, stoich)
+
+
+def get_reaction_node_handle(net_index: int, reaction_index: int, node_index: int,
+                             is_source: bool) -> Vec2:
+    """Get the position of the reaction Bezier handle associated with a node.
+
+    Args:
+        net_index: The network index.
+        reaction_index: The reaction index.
+        node_index: The index of the node whose Bezier handle position to get.
+        is_source: Whether the node is a source node. If a node is both a source and a target node,
+                   it would have two Bezier handles, hence the distinction.
+
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+        NodeIndexError: If the given node index is not found
+        ValueError: If the given node is found but it is not an indicated node of the reaction.
+    """
+    if is_source:
+        return _controller.get_src_node_handle(net_index, reaction_index, node_index)
+    else:
+        return _controller.get_dest_node_handle(net_index, reaction_index, node_index)
+
+
+def set_reaction_node_handle(net_index: int, reaction_index: int, node_index: int, is_source: bool,
+                             handle_pos: Vec2):
+    """Set the position of the reaction Bezier handle associated with a node.
+
+    Args:
+        net_index: The network index.
+        reaction_index: The reaction index.
+        node_index: The index of the node whose Bezier handle to move.
+        is_source: Whether the node is a source node. If a node is both a source and a target node,
+                   it would have two Bezier handles, hence the distinction.
+        handle_pos: The new position of the Bezier handle.
+
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+        NodeIndexError: If the given node index is not found
+        ValueError: If the given node is found but it is not an indicated node of the reaction.
+    """
+    if is_source:
+        _controller.set_src_node_handle(net_index, reaction_index, node_index, handle_pos)
+    else:
+        _controller.set_dest_node_handle(net_index, reaction_index, node_index, handle_pos)
+
+
+def get_reaction_center_handle(net_index: int, reaction_index: int) -> Vec2:
+    """Get the position of the Bezier handle at the center of the given reaction.
+
+    Args:
+        net_index: The network index.
+        reaction_index: The index of the reaction whose center Bezier handle position to get.
+        handle_pos: The new position of the Bezier handle.
+
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+    """
+    return _controller.get_center_handle(net_index, reaction_index)
+
+
+def set_reaction_center_handle(net_index: int, reaction_index: int, handle_pos: Vec2):
+    """Set the position of the Bezier handle at the center of the given reaction.
+
+    Args:
+        net_index: The network index.
+        reaction_index: The index of the reaction whose center Bezier handle to move.
+        handle_pos: The new position of the Bezier handle.
+
+    Raises:
+        NetIndexError:
+        ReactionIndexError:
+    """
+    _controller.set_center_handle(net_index, reaction_index, handle_pos)
 
 
 def get_arrow_tip() -> ArrowTip:

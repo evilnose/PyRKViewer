@@ -3,10 +3,12 @@ The documentation can be found at: http://pyrkviewer.readthedocs.io/en/latest/
 
 ## Building
 The python version used is 3.7.7.
+
 ### Running locally
 * If you have `pipenv`, run `pipenv install` and then `python main.py`.
 * If not, you may use `pip` with `requirements.txt` and `requirements-dev.txt`. They are generated
 from the Pipfile and may not be up-to-date though, so check the commit history to make sure.
+
 ### Bundling an Executable with PyInstaller
 * Always run `pyinstaller rkviewer.spec` when `rkviewer.spec` is present.
 * If somehow `rkviewer.spec` went missing or you want to regenerate the build specs,
@@ -14,6 +16,7 @@ run `pyinstaller -F --windowed --add-data ext/Iodine.dll;. main.py` on Windows
 or `pyinstaller -F --windowed --add-data ext/Iodine.dll:. main.py` on Linux/Mac
 to generate a file named `main.spec`. Note that if a `main.spec` file is already 
 present **it will be overwritten**.
+
 ### Building Local Docs
 * Run `sphinx-build -b html docs\source docs\build`
 

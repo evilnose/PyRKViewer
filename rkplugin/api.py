@@ -16,6 +16,8 @@ from rkviewer.canvas.canvas import Canvas
 from rkviewer.canvas import data
 from rkviewer.canvas.state import cstate, ArrowTip
 from rkviewer import config
+import logging
+from logging import Logger
 
 Node = data.Node
 Reaction = data.Reaction
@@ -28,6 +30,7 @@ settings = config.settings
 
 _canvas: Optional[Canvas] = None
 _controller: Optional[IController] = None
+_plugin_logger = logging.getLogger('plugin')
 
 
 def init_api(canvas: Canvas, controller: IController):
@@ -52,6 +55,10 @@ def uninit_api():
 
 def cur_net_index() -> int:
     return _canvas.net_index
+
+
+def logger() -> Logger:
+    return _plugin_logger
 
 
 @contextmanager
@@ -489,15 +496,16 @@ def update_compartment(net_index: int, comp_index: int, id_: str = None,
         position: If specified, the new position of the compartment.
         size: If specified, the new size of the compartment.
 
+    Raises:
+        ValueError: If ID is empty or if any one of border_width, position, and size is out of
+                    range.
+        NetIndexError:
+        CompartmentIndexError:
+
     Note:
         This is *not* an atomic function, meaning if we failed to set one specific property, the
         previous changes to model in this function will not be undone, even after the exception
         is caught. To go around that, make one calls to update_node() for each property instead.
-
-    ValueError: If ID is empty or if any one of border_width, position, and size is out of
-                range.
-    NetIndexError:
-    CompartmentIndexError:
     """
     old_comp = get_compartment_by_index(net_index, comp_index)
     # Validate

@@ -24,21 +24,13 @@ metadata = PluginMetadata(
 class Disco(CommandPlugin):
     def __init__(self):
         """
-        Initialize the ColorSelected with no values for a Command Plugin.
-
-        Args:
-            self
-
+        Initialize the CommandPlugin with the given metadata.
         """
         super().__init__(metadata)
 
     def run(self):
         """
-        Set the nodes to a random color.
-
-        Args:
-            self
-
+        Set all nodes in the given network to a random color.
         """
         nodes = api.get_nodes(api.cur_net_index())
         rgb = random.getrandbits(24)

@@ -1,17 +1,23 @@
-"""Classes for managing plugins."""
+"""Classes for managing plugins for Canvas."""
 # pylint: disable=maybe-no-member
-import wx
-# pylint: disable=no-name-in-module
-from wx.html import HtmlWindow
-import sys
-import os
 import importlib.abc
 import importlib.util
 import inspect
-from rkviewer.events import CanvasEvent, DidAddNodeEvent, DidCommitNodePositionsEvent, DidMoveNodesEvent, DidPaintCanvasEvent, SelectionDidUpdateEvent, bind_handler
-from rkviewer.mvc import IController
-from typing import Any, Callable, List, cast
+import os
+import sys
+from typing import Any, Callable, List, Optional, cast
+
+# pylint: disable=no-name-in-module
+import wx
 from rkplugin.plugins import CommandPlugin, Plugin, PluginType, WindowedPlugin
+# pylint: disable=no-name-in-module
+from wx.html import HtmlWindow
+
+from rkviewer.events import (CanvasEvent, DidAddNodeEvent,
+                             DidCommitNodePositionsEvent, DidMoveNodesEvent,
+                             DidPaintCanvasEvent, SelectionDidUpdateEvent,
+                             bind_handler)
+from rkviewer.mvc import IController
 
 
 class PluginManager:
@@ -56,6 +62,26 @@ class PluginManager:
         return True
 
     def make_notify(self, handler_name: str):
+        """Make event notification function for plugin.
+
+        handler_name should be the name of a method defined by Plugin. This would then create a
+        callback function that goes over each plugin and call that function. This callback should
+        be bound to its associated event.
+
+        Note:
+            The callback accepts argument CanvasEvent, and it decomposes the CanvasEvent
+            into an argument list (*args) when calling the plugin functions. E.g. say we have event
+
+            >>> @dataclass
+            >>> class SomeEvent(CanvasEvent):
+            >>>     a: int
+            >>>     b: str
+
+            Then the handler function of each plugin should accept two arguments, i.e.:
+
+            >>> def on_some_event(self, a: int, b: str):
+            >>>     pass
+        """
         assert callable(getattr(Plugin, handler_name, None)), "{} is not a method defined by \
 Plugin!".format(handler_name)
 
@@ -98,7 +124,7 @@ Plugin!".format(handler_name)
                                parent: wx.Window) -> Callable[[Any], None]:
         title = windowed.metadata.name
         dialog_exists = False
-        dialog: wx.Window = None
+        dialog: Optional[wx.Window] = None
 
         def windowed_cb(_):
             nonlocal dialog_exists, dialog

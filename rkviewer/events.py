@@ -115,12 +115,32 @@ class DidResizeCompartmentsEvent(CanvasEvent):
 
 @dataclass
 class DidCommitNodePositionsEvent(CanvasEvent):
-    """Called after the node positions are commited to the controller.
+    """Dispatched after the node positions are commited to the controller.
 
     This even is emitted only after a node move action has been regsitered with the controller.
     E.g., when a user drag-moves a ndoe, only after they release the left mouse button is the action
     recorded in the undo stack.
     """
+
+
+@dataclass
+class DidMoveBezierHandleEvent(CanvasEvent):
+    """Dispatched after a Bezier handle is moved.
+
+    Attributes:
+        net_index: The network index.
+        reaction_index: The reaction index.
+        node_index: The index of the node whose Bezier handle moved, or -1 if the center handle
+                    was moved.
+        offset: The position offset.
+        direct: Whether this event is triggered directly, i.e. by the user dragging on a Bezier
+                handle. The event could be triggered *indirectly* when the user moves node(s).
+        TODO not implemented
+    """
+    net_index: int
+    reaction_index: int
+    node_index: int
+    direct: bool
 
 
 @dataclass

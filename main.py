@@ -45,7 +45,11 @@ def setup_logging():
             'detailed': {
                 'class': 'logging.Formatter',
                 'format': '%(asctime)s %(name)-15s %(levelname)-8s %(message)s'
-            }
+            },
+            'plugins': {
+                'class': 'logging.Formatter',
+                'format': '%(asctime)s %(filename)-15s %(levelname)-8s %(message)s',
+            },
         },
         'handlers': {
             'console': {
@@ -55,30 +59,40 @@ def setup_logging():
             },
             'debug': {
                 'class': 'logging.FileHandler',
-                'filename': 'rkviewer-debug.log',
+                'filename': 'rkviewer.log',
                 'mode': 'w',
                 'level': 'DEBUG',
                 'formatter': 'detailed',
             },
-            'errors': {
+            # 'errors': {
+            #     'class': 'logging.FileHandler',
+            #     'filename': 'rkviewer-errors.log',
+            #     'mode': 'w',
+            #     'level': 'ERROR',
+            #     'formatter': 'detailed',
+            # },
+            'plugin-debug': {
                 'class': 'logging.FileHandler',
-                'filename': 'rkviewer-errors.log',
+                'filename': 'rkviewer-plugins.log',
                 'mode': 'w',
-                'level': 'ERROR',
-                'formatter': 'detailed',
-            },
+                'level': 'DEBUG',
+                'formatter': 'plugins',
+            }
         },
         'loggers': {
             'controller': {
-                'handlers': ['debug', 'errors']
+                'handlers': ['debug']
             },
             'canvas': {
-                'handlers': ['debug', 'errors']
+                'handlers': ['debug']
+            },
+            'plugin': {
+                'handlers': ['plugin-debug']
             },
         },
         'root': {
             'level': 'DEBUG',
-            'handlers': ['console', 'debug', 'errors']
+            'handlers': ['console', 'debug']
         },
     }
     logging.config.dictConfig(d)
@@ -87,8 +101,8 @@ def setup_logging():
 if __name__ == '__main__':
     setup_logging()
 
-    global old_excepthook
-    old_excepthook = sys.excepthook
+    # global old_excepthook
+    # old_excepthook = sys.excepthook
     sys.excepthook = create_excepthook(sys.excepthook)
 
     logging.info('Initializing RKViewer...')

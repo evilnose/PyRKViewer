@@ -14,7 +14,7 @@ from rkplugin.plugins import CommandPlugin, Plugin, PluginType, WindowedPlugin
 from wx.html import HtmlWindow
 
 from rkviewer.events import (CanvasEvent, DidAddNodeEvent,
-                             DidCommitNodePositionsEvent, DidMoveNodesEvent,
+                             DidCommitDragEvent, DidMoveNodesEvent,
                              DidPaintCanvasEvent, SelectionDidUpdateEvent,
                              bind_handler)
 from rkviewer.mvc import IController
@@ -28,7 +28,7 @@ class PluginManager:
         self.controller = controller
         bind_handler(DidAddNodeEvent, self.make_notify('on_did_add_node'))
         bind_handler(DidMoveNodesEvent, self.make_notify('on_did_move_nodes'))
-        bind_handler(DidCommitNodePositionsEvent, self.make_notify('on_did_commit_node_positions'))
+        bind_handler(DidCommitDragEvent, self.make_notify('on_did_commit_node_positions'))
         bind_handler(SelectionDidUpdateEvent, self.make_notify('on_selection_did_change'))
         bind_handler(DidPaintCanvasEvent, self.make_notify('on_did_paint_canvas'))
 
@@ -68,27 +68,14 @@ class PluginManager:
         callback function that goes over each plugin and call that function. This callback should
         be bound to its associated event.
 
-        Note:
-            The callback accepts argument CanvasEvent, and it decomposes the CanvasEvent
-            into an argument list (*args) when calling the plugin functions. E.g. say we have event
-
-            >>> @dataclass
-            >>> class SomeEvent(CanvasEvent):
-            >>>     a: int
-            >>>     b: str
-
-            Then the handler function of each plugin should accept two arguments, i.e.:
-
-            >>> def on_some_event(self, a: int, b: str):
-            >>>     pass
+        The handler function is called with the event itself as argument.
         """
         assert callable(getattr(Plugin, handler_name, None)), "{} is not a method defined by \
 Plugin!".format(handler_name)
 
         def ret(evt: CanvasEvent):
-            args = evt.to_tuple()
             for plugin in self.plugins:
-                getattr(plugin, handler_name)(*args)
+                getattr(plugin, handler_name)(evt)
 
         return ret
 

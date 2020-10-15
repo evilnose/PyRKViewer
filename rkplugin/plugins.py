@@ -4,7 +4,7 @@ The plugin base classes that the user should subclass from when creating plugins
 
 # pylint: disable=maybe-no-member
 from inspect import isabstract
-from rkviewer.events import DidMoveNodesEvent
+from rkviewer.events import DidAddNodeEvent, DidMoveNodesEvent
 from rkviewer.canvas.geometry import Vec2
 from rkviewer.canvas.data import Node
 from typing import List
@@ -72,26 +72,19 @@ class Plugin:
         self.ptype = ptype
 
     # TODO: document the following functions when written
-    def on_did_add_node(self, node: Node):
-        """Called after a node has been added.
-        
-        Args:
-            node: A copy of the node that was added.
-        """
+    def on_did_add_node(self, evt: DidAddNodeEvent):
+        """Called after a node has been added."""
         pass
 
-    def on_did_move_nodes(self, nodes: List[Node], offset: Vec2, dragged: bool):
-        """Called after the positions of one or more nodes have changed.
-        
-        Args:
-            nodes: The list of nodes whose positions have changed.
-        """
+    def on_did_move_nodes(self, evt: DidMoveNodesEvent):
+        """Called after the positions of one or more nodes have changed."""
         pass
 
     def on_did_commit_node_positions(self):
         pass
 
     def on_did_paint_canvas(self, gc: wx.GraphicsContext):
+        # TODO modify this
         pass
 
     def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int],

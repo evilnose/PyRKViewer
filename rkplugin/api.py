@@ -34,19 +34,14 @@ _plugin_logger = logging.getLogger('plugin')
 
 
 def init_api(canvas: Canvas, controller: IController):
-    """
-    Initializes api.
-
-    Args:
-        Canvas (canvas) : On which you are working
-        ICOntroller (controller): chosen controller
-    """
+    """Initializes the API; for internal use only."""
     global _canvas, _controller
     _canvas = canvas
     _controller = controller
 
 
 def uninit_api():
+    """Uninitialize the API; for internal use only."""
     global _canvas, _controller
     _controller.clear_network(0)
     _canvas = None
@@ -54,10 +49,12 @@ def uninit_api():
 
 
 def cur_net_index() -> int:
+    """The current network index."""
     return _canvas.net_index
 
 
 def logger() -> Logger:
+    """Return the logger for plugins. Use this for logging inside plugins."""
     return _plugin_logger
 
 
@@ -310,8 +307,8 @@ def add_reaction(net_index: int, reaction: Reaction):
     The reaction indices are assigned in increasing order, regardless of deletion.
 
     Args:  
-        net_index: the index overall
-        reaction: the Reaction to add
+        net_index: The network index
+        reaction: The Reaction to add
     """
     _controller.add_reaction_g(net_index, reaction)
 
@@ -353,7 +350,7 @@ def add_compartment(net_index: int, compartment: Compartment):
     The Compartment indices are assigned in increasing order, regardless of deletion.
 
     Args:  
-        net_index: the index overall
+        net_index: The network index
         compartment: the Compartment to add
     """
     _controller.add_compartment_g(net_index, compartment)

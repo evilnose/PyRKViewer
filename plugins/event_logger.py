@@ -26,6 +26,9 @@ class EventLogger(CommandPlugin):
         """
         super().__init__(metadata)
 
+    def on_did_add_node(self, evt):
+        print(evt)
+
     def run(self):
         """
         Log something.

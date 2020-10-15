@@ -17,7 +17,7 @@ import wx
 from ..config import settings, theme
 from ..events import (
     CanvasDidUpdateEvent,
-    DidCommitNodePositionsEvent,
+    DidCommitDragEvent,
     DidPaintCanvasEvent,
     SelectionDidUpdateEvent,
     bind_handler,
@@ -168,7 +168,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)
 
-        bind_handler(DidCommitNodePositionsEvent, self.OnDidCommitNodePositions)
+        bind_handler(DidCommitDragEvent, self.OnDidCommitNodePositions)
 
         # state variables
         cstate.input_mode = InputMode.SELECT

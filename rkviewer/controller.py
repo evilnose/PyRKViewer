@@ -9,7 +9,7 @@ import logging
 
 from rkviewer.iodine import TColor
 from .utils import gchain, rgba_to_wx_colour
-from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
+from .events import DidAddNodeEvent, DidCommitDragEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
@@ -156,7 +156,7 @@ class Controller(IController):
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
         # dispatch event if the call was caused by user input
         if not programmatic:
-            post_event(DidCommitNodePositionsEvent())
+            post_event(DidCommitDragEvent())
 
     @iod_setter
     def set_node_size(self, neti: int, nodei: int, size: Vec2):

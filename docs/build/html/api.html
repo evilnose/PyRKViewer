@@ -1,0 +1,887 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>api module &mdash; Plugin Documentation 0.0.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="plugins module" href="plugins.html" />
+    <link rel="prev" title="rkplugin" href="rkpluginModules.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Plugin Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pluginsModules.html">Plugins</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="rkpluginModules.html">rkplugin</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">api module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plugins.html">plugins module</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Plugin Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="rkpluginModules.html">rkplugin</a> &raquo;</li>
+        
+      <li>api module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-api">
+<span id="api-module"></span><h1>api module<a class="headerlink" href="#module-api" title="Permalink to this headline">¶</a></h1>
+<p>API for the RKViewer GUI and model. Allows viewing and modifying the network model.</p>
+<dl class="py function">
+<dt id="api.add_compartment">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">add_compartment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">compartment</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#add_compartment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.add_compartment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a compartment.</p>
+<p>The Compartment indices are assigned in increasing order, regardless of deletion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – the index overall</p></li>
+<li><p><strong>compartment</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Compartment</span></code>) – the Compartment to add</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.add_node">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">add_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">node</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#add_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.add_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a node to the given network.</p>
+<p>The node indices are assigned in increasing order, regardless of deletion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>node</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code>) – The Node to add.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.add_reaction">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">add_reaction</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">reaction</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#add_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.add_reaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a reaction.</p>
+<p>The reaction indices are assigned in increasing order, regardless of deletion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – the index overall</p></li>
+<li><p><strong>reaction</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Reaction</span></code>) – the Reaction to add</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.canvas_scale">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">canvas_scale</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#canvas_scale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.canvas_scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the zoom scale of the canvas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.canvas_size">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">canvas_size</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#canvas_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.canvas_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the total size of canvas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Vec2</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.compartments_count">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">compartments_count</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#compartments_count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.compartments_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of compartments in the given network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.delete_compartment">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">delete_compartment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">comp_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#delete_compartment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.delete_compartment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a node with the given index in the given network.</p>
+<p>Nodes that are within this compartment are dropped to the base compartment (index -1).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>comp_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The compartment index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>CompartmentIndexError</strong> – If the given node does not exist in the network.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.delete_node">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">delete_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#delete_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.delete_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a node with the given index in the given network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>node_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The node index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>NodeIndexError</strong> – If the given node does not exist in the network.</p></li>
+<li><p><strong>NodeNotFreeError</strong> – If the given onde is part of a reaction.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.delete_reaction">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">delete_reaction</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">reaction_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#delete_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.delete_reaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a reaction with the given index in the given network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>reaction_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The reaction index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>ReactionIndexError</strong> – If the given reaction does not exist in the network.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_arrow_tip">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_arrow_tip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_arrow_tip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_arrow_tip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the current arrow tip.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrowTip</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_compartment_by_index">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_compartment_by_index</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">comp_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_compartment_by_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_compartment_by_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an index, return the compartment that it corresponds to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – The network index.</p></li>
+<li><p><strong>comp_index</strong> (<em>int</em>) – The compartment index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Compartment</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The node that corresponds to the given indices.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_compartment_of_node">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_compartment_of_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_compartment_of_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_compartment_of_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the compartment that the node is in, or -1 if it is in the base compartment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_compartments">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_compartments</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_compartments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_compartments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of all compartments in a network.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Modifying elements of this list will not update the canvas.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Compartment</span></code>]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of compartments.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_default_arrow_tip">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_default_arrow_tip</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_default_arrow_tip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_default_arrow_tip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the default arrow tip.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">ArrowTip</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_node_by_index">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_node_by_index</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_node_by_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_node_by_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an index, return the node that it corresponds to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – The network index.</p></li>
+<li><p><strong>node_index</strong> (<em>int</em>) – The node index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The node that corresponds to the given indices.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_nodes">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_nodes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of all nodes in a network.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Modifying elements of this list will not update the canvas.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code>]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of nodes.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_nodes_in_compartment">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_nodes_in_compartment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">comp_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_nodes_in_compartment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_nodes_in_compartment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the list node indices in the given compartment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_product_stoich">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_product_stoich</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">product_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_product_stoich"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_product_stoich" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the stoichiometry of a product node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>reaction_index</strong> – The index of the reaction.</p></li>
+<li><p><strong>node_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The index of the node which must be a product of the reaction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>ReactionIndexError</strong> – </p></li>
+<li><p><strong>NodeIndexError</strong> – If the given node index does not match any existing node.</p></li>
+<li><p><strong>ValueError</strong> – If the given node index exists but is not a product of the reaction.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_reactant_stoich">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_reactant_stoich</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">reaction_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_reactant_stoich"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_reactant_stoich" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the stoichiometry of a reactant node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index</p></li>
+<li><p><strong>reaction_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The index of the reaction.</p></li>
+<li><p><strong>node_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The index of the node which must be a reactant of the reaction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>ReactionIndexError</strong> – </p></li>
+<li><p><strong>NodeIndexError</strong> – If the given node index does not match any existing node.</p></li>
+<li><p><strong>ValueError</strong> – If the given node index exists but is not a reactant of the reaction.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_reaction_by_index">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_reaction_by_index</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">reaction_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_reaction_by_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_reaction_by_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an index, return the reaction that it corresponds to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<em>int</em>) – The network index.</p></li>
+<li><p><strong>reaction_index</strong> (<em>int</em>) – The reaction index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Reaction</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The reaction that corresponds to the given indices.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.get_reactions">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">get_reactions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#get_reactions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.get_reactions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of all reactions in a network.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Modifying elements of this list will not update the canvas.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Reaction</span></code>]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of reactions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.group_action">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">group_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#group_action"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.group_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Context manager for doing a group operation in the controller, for undo/redo purposes.</p>
+<p class="rubric">Examples</p>
+<p>As shown here, calls to the API within the group_action context are considered to be
+within one single group as far as undoing/redoing is concerned.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">api</span><span class="o">.</span><span class="n">group_action</span><span class="p">():</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">some_node_list</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>        <span class="n">api</span><span class="o">.</span><span class="n">update_node</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">api</span><span class="o">.</span><span class="n">update_reaction</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">api</span><span class="o">.</span><span class="n">update_node</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>  <span class="c1"># This is now a new action.</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.init_api">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">init_api</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">canvas</span></em>, <em class="sig-param"><span class="n">controller</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#init_api"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.init_api" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes api.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Canvas</strong> (<em>canvas</em>) – On which you are working</p></li>
+<li><p><strong>ICOntroller</strong> (<em>controller</em>) – chosen controller</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.node_count">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">node_count</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#node_count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.node_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of nodes in the given network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.reaction_count">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">reaction_count</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#reaction_count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.reaction_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of reactions in the given network.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.selected_node_indices">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">selected_node_indices</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#selected_node_indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.selected_node_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the set of indices of the selected nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Set</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The set of selected nodes’ indices.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.selected_nodes">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">selected_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#selected_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.selected_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the list of selected nodes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Modifying elements of this list will not update the canvas.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Node</span></code>]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The list of selected nodes.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.selected_reaction_indices">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">selected_reaction_indices</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#selected_reaction_indices"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.selected_reaction_indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the set of indices of the selected reactions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Set</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>]</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The set of selected reactions’ indices.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.set_arrow_tip">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">set_arrow_tip</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#set_arrow_tip"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.set_arrow_tip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the arrow tip to a given one.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>given ArrowTip to set to.</strong> (<em>The</em>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.set_compartment_of_node">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">set_compartment_of_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em>, <em class="sig-param"><span class="n">comp_index</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#set_compartment_of_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.set_compartment_of_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move the node to the given compartment. Set comp_index to -1 to move it to the base compartment.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.set_zoom_level">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">set_zoom_level</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">level</span></em>, <em class="sig-param"><span class="n">anchor</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#set_zoom_level"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.set_zoom_level" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the zoom level of the canvas.</p>
+<p>See zoom_level() for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>level</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The zoom level to set.</p></li>
+<li><p><strong>anchor</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">Vec2</span></code>) – A point on the window whose position will remain the same after zooming. E.g. when
+the user zooms by scrolling the mouse, the anchor is the center of the window.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_compartment">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_compartment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">comp_index</span></em>, <em class="sig-param"><span class="n">id_</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fill_color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">border_color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">border_width</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">volume</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">position</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">size</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_compartment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_compartment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update one or multiple properties of a compartment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>comp_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The compartment index of the compartment to modify.</p></li>
+<li><p><strong>id</strong> – If specified, the new ID of the node.</p></li>
+<li><p><strong>fill_color</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Colour</span></code>]) – If specified, the new fill color of the compartment.</p></li>
+<li><p><strong>border_color</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Colour</span></code>]) – If specified, the new border color of the compartment.</p></li>
+<li><p><strong>border_width</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>]) – If specified, the new border width of the compartment.</p></li>
+<li><p><strong>volume</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>]) – If specified, the new volume of the compartment.</p></li>
+<li><p><strong>position</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Vec2</span></code>]) – If specified, the new position of the compartment.</p></li>
+<li><p><strong>size</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Vec2</span></code>]) – If specified, the new size of the compartment.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is <em>not</em> an atomic function, meaning if we failed to set one specific property, the
+previous changes to model in this function will not be undone, even after the exception
+is caught. To go around that, make one calls to update_node() for each property instead.</p>
+</div>
+<dl class="simple">
+<dt>ValueError: If ID is empty or if any one of border_width, position, and size is out of</dt><dd><p>range.</p>
+</dd>
+</dl>
+<p>NetIndexError:
+CompartmentIndexError:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_node">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_node</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em>, <em class="sig-param"><span class="n">id_</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fill_color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">border_color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">border_width</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">position</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">size</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update one or multiple properties of a node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>node_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The node index of the node to modify.</p></li>
+<li><p><strong>id</strong> – If specified, the new ID of the node.</p></li>
+<li><p><strong>fill_color</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Colour</span></code>]) – If specified, the new fill color of the node.</p></li>
+<li><p><strong>border_color</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Colour</span></code>]) – If specified, the new border color of the node.</p></li>
+<li><p><strong>border_width</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>]) – If specified, the new border width of the node.</p></li>
+<li><p><strong>position</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Vec2</span></code>]) – If specified, the new position of the node.</p></li>
+<li><p><strong>size</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Vec2</span></code>]) – If specified, the new size of the node.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is <em>not</em> an atomic function, meaning if we failed to set one specific property, the
+previous changes to model in this function will not be undone, even after the exception
+is caught. To go around that, make one calls to update_node() for each property instead.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – If ID is empty or if any one of border_width, position, and size is out of
+    range.</p></li>
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>NodeIndexError</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_product_stoich">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_product_stoich</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">reaction_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em>, <em class="sig-param"><span class="n">stoich</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_product_stoich"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_product_stoich" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the product’s stoichiometry.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>reaction_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The index of the reaction.</p></li>
+<li><p><strong>node_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The index of the node which must be a product of the reaction.</p></li>
+<li><p><strong>stoich</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The new stoichiometry value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>ReactionIndexError</strong> – </p></li>
+<li><p><strong>NodeIndexError</strong> – If the given node index does not match any existing node.</p></li>
+<li><p><strong>ValueError</strong> – If the given node index exists but is not a reactant of the reaction.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_reactant_stoich">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_reactant_stoich</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">reaction_index</span></em>, <em class="sig-param"><span class="n">node_index</span></em>, <em class="sig-param"><span class="n">stoich</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_reactant_stoich"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_reactant_stoich" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the stoichiometry of a reactant node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index</p></li>
+<li><p><strong>reaction_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The index of the reaction.</p></li>
+<li><p><strong>node_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The index of the node which must be a reactant of the reaction.</p></li>
+<li><p><strong>stoich</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The new stoichiometry value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>ReactionIndexError</strong> – </p></li>
+<li><p><strong>NodeIndexError</strong> – If the given node index does not match any existing node.</p></li>
+<li><p><strong>ValueError</strong> – If the given node index exists but is not a reactant of the reaction.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.update_reaction">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">update_reaction</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">net_index</span></em>, <em class="sig-param"><span class="n">reaction_index</span></em>, <em class="sig-param"><span class="n">id_</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fill_color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">thickness</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ratelaw</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#update_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.update_reaction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update one or multiple properties of a reaction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>net_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The network index.</p></li>
+<li><p><strong>reaction_index</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>) – The reaction index of the reaction to modify.</p></li>
+<li><p><strong>id</strong> – If specified, the new ID of the reaction.</p></li>
+<li><p><strong>fill_color</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Colour</span></code>]) – If specified, the new fill color of the reaction.</p></li>
+<li><p><strong>thickness</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code>]) – If specified, the thickness of the reaction.</p></li>
+<li><p><strong>ratelaw</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]) – If specified, the rate law of the equation.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is <em>not</em> an atomic function, meaning if we failed to set one specific property, the
+previous changes to model in this function will not be undone, even after the exception
+is caught. To go around that, make one calls to update_node() for each property instead.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ValueError</strong> – If ID is empty or if thickness is less than zero.</p></li>
+<li><p><strong>NetIndexError</strong> – </p></li>
+<li><p><strong>ReactionIndexError</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.window_position">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">window_position</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#window_position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.window_position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the position of the topleft corner on the canvas.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Vec2</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.window_size">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">window_size</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#window_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.window_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the size of the window (visible part of the canvas).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Vec2</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="api.zoom_level">
+<code class="sig-prename descclassname">api.</code><code class="sig-name descname">zoom_level</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/api.html#zoom_level"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#api.zoom_level" title="Permalink to this definition">¶</a></dt>
+<dd><p>The zoom level of the canvas (Ranges from -10 to 10, with 0 being the default zoom).</p>
+<p>This is a discrete value that corresponds to the zoom slider to the bottom-right of the canvas
+window.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="plugins.html" class="btn btn-neutral float-right" title="plugins module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="rkpluginModules.html" class="btn btn-neutral float-left" title="rkplugin" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, cperena
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

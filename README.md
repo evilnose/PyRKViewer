@@ -1,5 +1,5 @@
 ## Documentation
-The documentation can be found at: https://github.com/evilnose/PyRKViewer/blob/master/docs/build/html/index.html
+The documentation can be found at: http://htmlpreview.github.com/?https://github.com/evilnose/PyRKViewer/blob/master/docs/build/html/index.html
 
 ## Building
 The python version used is 3.7.7.

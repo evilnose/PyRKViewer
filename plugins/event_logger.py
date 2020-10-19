@@ -5,11 +5,9 @@ Version 0.01: Author: Gary Geng (2020)
 """
 
 # pylint: disable=maybe-no-member
-import wx
-import random
 from rkplugin.plugins import CommandPlugin, PluginMetadata
 from rkplugin import api
-
+from rkplugin.events import DidAddNodeEvent, DidMoveBezierHandleEvent
 
 metadata = PluginMetadata(
     name='Event logger',
@@ -26,7 +24,10 @@ class EventLogger(CommandPlugin):
         """
         super().__init__(metadata)
 
-    def on_did_add_node(self, evt):
+    def on_did_add_node(self, evt: DidAddNodeEvent):
+        print(evt)
+
+    def on_did_move_bezier_handle(self, evt: DidMoveBezierHandleEvent):
         print(evt)
 
     def run(self):

@@ -4,7 +4,8 @@ The plugin base classes that the user should subclass from when creating plugins
 
 # pylint: disable=maybe-no-member
 from inspect import isabstract
-from rkviewer.events import DidAddNodeEvent, DidMoveNodesEvent
+from rkviewer.events import (DidAddNodeEvent, DidCommitDragEvent, DidMoveBezierHandleEvent,
+                             DidMoveNodesEvent, DidPaintCanvasEvent, SelectionDidUpdateEvent)
 from rkviewer.canvas.geometry import Vec2
 from rkviewer.canvas.data import Node
 from typing import List
@@ -39,7 +40,7 @@ class PluginMetadata:
 class PluginType(Enum):
     """
     Enumeration of plugin types, dictating how a plugin would appear in the application.
-    
+
     NULL: Null enumeration. There should not be a plugin instance with this type.
     COMMAND: A command plugin. See CommandPlugin for more details.
     WINDOWED: A windowed plugin. See WindowedPlugin for more details.
@@ -80,20 +81,21 @@ class Plugin:
         """Called after the positions of one or more nodes have changed."""
         pass
 
-    def on_did_commit_node_positions(self):
+    def on_did_commit_drag(self, evt: DidCommitDragEvent):
         pass
 
-    def on_did_paint_canvas(self, gc: wx.GraphicsContext):
-        # TODO modify this
+    def on_did_paint_canvas(self, evt: DidPaintCanvasEvent):
         pass
 
-    def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int],
-                                compartment_indices: List[int]):
+    def on_selection_did_change(self, evt: SelectionDidUpdateEvent):
+        pass
+
+    def on_did_move_bezier_handle(self, evt: DidMoveBezierHandleEvent):
         pass
 
     def test_func(self, evt: DidMoveNodesEvent):
         """Test function
-        
+
         Args:
             evt: Hello
         """

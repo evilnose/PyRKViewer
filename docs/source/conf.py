@@ -43,7 +43,7 @@ extensions =  [
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.inheritance_diagram',
-    'sphinx_autodoc_typehints',
+    'sphinx_autodoc_typehints'
 ]
 
 
@@ -72,4 +72,5 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+napoleon_google_docstring = True
 always_document_param_types = True

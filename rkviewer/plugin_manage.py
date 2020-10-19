@@ -14,7 +14,7 @@ from rkplugin.plugins import CommandPlugin, Plugin, PluginType, WindowedPlugin
 from wx.html import HtmlWindow
 
 from rkviewer.events import (CanvasEvent, DidAddNodeEvent,
-                             DidCommitDragEvent, DidMoveNodesEvent,
+                             DidCommitDragEvent, DidMoveBezierHandleEvent, DidMoveNodesEvent,
                              DidPaintCanvasEvent, SelectionDidUpdateEvent,
                              bind_handler)
 from rkviewer.mvc import IController
@@ -28,8 +28,9 @@ class PluginManager:
         self.controller = controller
         bind_handler(DidAddNodeEvent, self.make_notify('on_did_add_node'))
         bind_handler(DidMoveNodesEvent, self.make_notify('on_did_move_nodes'))
-        bind_handler(DidCommitDragEvent, self.make_notify('on_did_commit_node_positions'))
+        bind_handler(DidCommitDragEvent, self.make_notify('on_did_commit_drag'))
         bind_handler(SelectionDidUpdateEvent, self.make_notify('on_selection_did_change'))
+        bind_handler(DidMoveBezierHandleEvent, self.make_notify('on_did_move_bezier_handle'))
         bind_handler(DidPaintCanvasEvent, self.make_notify('on_did_paint_canvas'))
 
     # Also TODO might want a more sophisticated file system structure, including data storage and

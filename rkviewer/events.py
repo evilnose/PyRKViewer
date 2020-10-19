@@ -138,7 +138,6 @@ class DidMoveBezierHandleEvent(CanvasEvent):
         direct: Whether this event is triggered directly, i.e. by the user dragging on a Bezier
                 handle. The event could be triggered *indirectly* when the user moves node(s), or
                 when plugins move Bezier handles programmatically.
-        TODO not implemented
     """
     net_index: int
     reaction_index: int
@@ -156,7 +155,9 @@ class DidAddNodeEvent(CanvasEvent):
     Note:
         This event triggers only if the user has performed a drag operation, and not, for example,
         if the user moved a node in the edit panel.
-    TODO verify implemented
+    TODO in the documentation that this event and related ones (and DidDelete-) are emitted before
+    controller.end_group() is called. As an alternative, maybe create a call_after() function
+    similar to wxPython? it should be called in OnIdle() or Refresh()
     """
     node: Node
 
@@ -178,7 +179,6 @@ class DidAddReactionEvent(CanvasEvent):
 
     Attributes:
         reaction: The Reaction that was added.
-    TODO not implemented
     """
     reaction: Reaction
 
@@ -195,12 +195,11 @@ class DidDeleteReactionEvent(CanvasEvent):
 
 
 @dataclass
-class DidAddCompartmentsEvent(CanvasEvent):
+class DidAddCompartmentEvent(CanvasEvent):
     """Called after a compartment has been added.
 
     Attributes:
         compartment: The Compartment that was added.
-    TODO not implemented
     """
     compartment: Compartment
 

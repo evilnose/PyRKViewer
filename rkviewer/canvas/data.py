@@ -157,8 +157,10 @@ class Reaction:
             id_: Reaction ID.
             sources: List of source (reactant) nodes.
             targets: List of target (product) nodes.
-            handle_pos: List of handle positions. Refer to the identically named argument in the
-                        ReactionBezier constructor.
+            handle_positions: List of handle positions. The 0th argument stores the position of
+                              the source centroid handle, followed by the source node handle
+                              positions and the target handle positions. The order can be
+                              visualized as [src_centroid, *src_nodes, *tar_nodes].
             fill_color: Fill color of the curve.
             rate_law: The rate law string of the reaction; may not be valid.
             index: Reaction index.

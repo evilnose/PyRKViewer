@@ -1124,6 +1124,7 @@ depend on it.".format(bound_node.id_))
                 return
 
         self.controller.start_group()
+
         for index in sel_reactions_idx:
             self.controller.delete_reaction(self._net_index, index)
         for index in sel_nodes_idx:

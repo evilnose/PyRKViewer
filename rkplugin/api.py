@@ -3,6 +3,7 @@ API for the RKViewer GUI and model. Allows viewing and modifying the network mod
 """
 
 # pylint: disable=maybe-no-member
+# pylint: disable=unused-wildcard-import
 #from rkviewer.mvc import NetIndexError
 from rkviewer.canvas.geometry import Rect, within_rect
 from rkviewer.config import DEFAULT_ARROW_TIP
@@ -16,13 +17,15 @@ from rkviewer.canvas.canvas import Canvas
 from rkviewer.canvas import data
 from rkviewer.canvas.state import cstate, ArrowTip
 from rkviewer import config
+# re-export events and data "structs" TODO how will documentation work here?
+from rkviewer.canvas.data import *
 import logging
 from logging import Logger
 
-Node = data.Node
-Reaction = data.Reaction
-Compartment = data.Compartment
-Vec2 = data.Vec2
+# Node = data.Node
+# Reaction = data.Reaction
+# Compartment = data.Compartment
+# Vec2 = data.Vec2
 theme = config.theme
 settings = config.settings
 
@@ -300,7 +303,7 @@ def delete_node(net_index: int, node_index: int):
     _controller.delete_node(net_index, node_index)
 
 
-def add_reaction(net_index: int, reaction: Reaction):
+def add_reaction(net_index: int, reaction: Reaction) -> int:
     """ 
     Adds a reaction.
 
@@ -309,6 +312,9 @@ def add_reaction(net_index: int, reaction: Reaction):
     Args:  
         net_index: The network index
         reaction: The Reaction to add
+
+    Returns:
+        The index of the reaction that was added TODO do the same for nodes
     """
     _controller.add_reaction_g(net_index, reaction)
 

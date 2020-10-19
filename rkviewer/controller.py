@@ -9,7 +9,7 @@ import logging
 
 from rkviewer.iodine import TColor
 from .utils import gchain, rgba_to_wx_colour
-from .events import DidAddNodeEvent, DidCommitDragEvent, post_event
+from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidCommitDragEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
@@ -109,7 +109,7 @@ class Controller(IController):
         iod.clearNetwork(neti)
 
     @iod_setter
-    def add_node_g(self, neti: int, node: Node, programmatic: bool = False):
+    def add_node_g(self, neti: int, node: Node):
         '''
         Add node represented by the given Node variable.
 
@@ -127,8 +127,7 @@ class Controller(IController):
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
         iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
 
-        if not programmatic:
-            post_event(DidAddNodeEvent(node))
+        post_event(DidAddNodeEvent(node))
         self.end_group()
 
     def wx_to_tcolor(self, color: wx.Colour) -> TColor:
@@ -148,6 +147,7 @@ class Controller(IController):
         iod.setCompartmentOutlineColor(neti, compi, self.wx_to_tcolor(compartment.border))
         iod.setCompartmentOutlineThickness(neti, compi, compartment.border_width)
         iod.setCompartmentVolume(neti, compi, compartment.volume)
+        post_event(DidAddCompartmentEvent(compartment))
         self.end_group()
 
     @iod_setter
@@ -240,6 +240,7 @@ class Controller(IController):
 
         cpos = reaction.src_c_handle.tip
         iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
+        post_event(DidAddReactionEvent(reaction))
         self.end_group()
 
     @iod_setter

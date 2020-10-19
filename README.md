@@ -1,5 +1,5 @@
 ## Documentation
-The documentation can be found at: http://pyrkviewer.readthedocs.io/en/latest/
+The documentation can be found at: https://pyrkviewer.readthedocs.io/
 
 ## Building
 The python version used is 3.7.7.
@@ -38,6 +38,10 @@ use that Python installation for building.
 * If the text is blurry in the app bundled by `pyinstaller`, one needs to
 add an entry in the pyinstaller settings as described
 [here](https://stackoverflow.com/a/40676321)
+
+## Linux Notes
+* To install wxPython on linux, see https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html. `requirements-dev.txt` and `requirements.txt` assume the user is on Ubuntu 18.04 for readthedocs. If you have a different distro and have trouble using `requirements.txt`, just install wxPython manually using the previous link.
+* Related to the last note, if readthedocs start having trouble building wxPython, understand that it might be because readthedocs updated its distro from Ubuntu 18.04. Go to `requirements-dev.txt` and change the line above `wxPython` to look in the appropriate link.
 
 ## TODOs
 * BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip

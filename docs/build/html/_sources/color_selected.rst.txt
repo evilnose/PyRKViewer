@@ -1,0 +1,6 @@
+color\_selected module
+======================
+
+.. automodule:: color_selected
+   :members: 
+   

@@ -1,0 +1,354 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>rkplugin.plugins &mdash; Plugin Documentation 0.0.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> Plugin Documentation
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../pluginsModules.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rkpluginModules.html">rkplugin</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Plugin Documentation</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>rkplugin.plugins</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for rkplugin.plugins</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The plugin base classes that the user should subclass from when creating plugins.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># pylint: disable=maybe-no-member</span>
+<span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">isabstract</span>
+<span class="kn">from</span> <span class="nn">rkviewer.canvas.geometry</span> <span class="kn">import</span> <span class="n">Vec2</span>
+<span class="kn">from</span> <span class="nn">rkviewer.canvas.data</span> <span class="kn">import</span> <span class="n">Node</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+
+<div class="viewcode-block" id="PluginMetadata"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.PluginMetadata">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">PluginMetadata</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Metadata for the plugin.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name: The display name of the plugin.</span>
+<span class="sd">        author: The author of the plugin.</span>
+<span class="sd">        version: The version string of the plugin.</span>
+<span class="sd">        short_desc: A short description of the plugin. This is displayed as a tooltip, introduction,</span>
+<span class="sd">                    etc.</span>
+<span class="sd">        long_desc: A long, detailed description of the plugin. This is shown in the plugin details</span>
+<span class="sd">                   page, as a comprehensive description of what this plugin does. This string will</span>
+<span class="sd">                   be rendered as HTML.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">author</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">short_desc</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">long_desc</span><span class="p">:</span> <span class="nb">str</span></div>
+
+
+<div class="viewcode-block" id="PluginType"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.PluginType">[docs]</a><span class="k">class</span> <span class="nc">PluginType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Enumeration of plugin types, dictating how a plugin would appear in the application.</span>
+<span class="sd">    </span>
+<span class="sd">    NULL: Null enumeration. There should not be a plugin instance with this type.</span>
+<span class="sd">    COMMAND: A command plugin. See CommandPlugin for more details.</span>
+<span class="sd">    WINDOWED: A windowed plugin. See WindowedPlugin for more details.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">NULL</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">COMMAND</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">WINDOWED</span> <span class="o">=</span> <span class="mi">2</span></div>
+
+
+<div class="viewcode-block" id="Plugin"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.Plugin">[docs]</a><span class="k">class</span> <span class="nc">Plugin</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The base class for a Plugin. </span>
+
+<span class="sd">    The user should not directly instantiate this but rather one of its subclasses,</span>
+<span class="sd">    e.g. CommandPlugin.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">metadata</span><span class="p">:</span> <span class="n">PluginMetadata</span>
+    <span class="n">ptype</span><span class="p">:</span> <span class="n">PluginType</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="n">PluginMetadata</span><span class="p">,</span> <span class="n">ptype</span><span class="p">:</span> <span class="n">PluginType</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creating a Plugin object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            self (self): Plugin you are creating.</span>
+<span class="sd">            metadata (PluginMetadata): metadata information of plugin.</span>
+<span class="sd">            ptype (PluginType): defines the type of plugin to create.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ptype</span> <span class="o">=</span> <span class="n">ptype</span>
+
+    <span class="c1"># TODO: document the following functions when written</span>
+    <span class="k">def</span> <span class="nf">on_did_add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">on_did_move_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">offset</span><span class="p">:</span> <span class="n">Vec2</span><span class="p">,</span> <span class="n">dragged</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">on_did_commit_node_positions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">on_did_paint_canvas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gc</span><span class="p">:</span> <span class="n">wx</span><span class="o">.</span><span class="n">GraphicsContext</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">on_selection_did_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">reaction_indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                                <span class="n">compartment_indices</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="CommandPlugin"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.CommandPlugin">[docs]</a><span class="k">class</span> <span class="nc">CommandPlugin</span><span class="p">(</span><span class="n">Plugin</span><span class="p">,</span> <span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for simple plugins that is essentially one single command.</span>
+
+<span class="sd">    One may think of a CommandPlugin as (obviously) a command, or a sort of macro in the simpler</span>
+<span class="sd">    cases. The user may invoke the command defined when they click on the associated menu item</span>
+<span class="sd">    under the &quot;Plugins&quot; menu, or they may be able to use a keybaord shortcut, once that is</span>
+<span class="sd">    implemented. To subclass CommandPlugin one needs to override `run()`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="n">PluginMetadata</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a CommandPlugin.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            metadata (PluginMetadata): metadata information of plugin.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">PluginType</span><span class="o">.</span><span class="n">COMMAND</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CommandPlugin.run"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.CommandPlugin.run">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Called when the user invokes this command manually.</span>
+
+<span class="sd">        This should implement whatever action/macro that this Plugin claims to execute.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div></div>
+
+
+<div class="viewcode-block" id="WindowedPlugin"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.WindowedPlugin">[docs]</a><span class="k">class</span> <span class="nc">WindowedPlugin</span><span class="p">(</span><span class="n">Plugin</span><span class="p">,</span> <span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="n">PluginMetadata</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Base class for plugins with an associated popup window.</span>
+
+<span class="sd">        When the user clicks the menu item of this plugin under the &quot;Plugins&quot; menu, a popup dialog</span>
+<span class="sd">        is created, which may display data, and which the user may interact with. This type of</span>
+<span class="sd">        plugin is suitable to more complex or visually-based plugins, such as that utilizing a </span>
+<span class="sd">        chart or an interactive form.</span>
+
+<span class="sd">        To implement a subclass of WindowedPlugin, one needs to override the method `create_window`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            metadata (PluginMetadata): metadata information of plugin.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">PluginType</span><span class="o">.</span><span class="n">WINDOWED</span><span class="p">)</span>
+
+<div class="viewcode-block" id="WindowedPlugin.create_window"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.WindowedPlugin.create_window">[docs]</a>    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">create_window</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dialog</span><span class="p">:</span> <span class="n">wx</span><span class="o">.</span><span class="n">Window</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">wx</span><span class="o">.</span><span class="n">Window</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Called when the user requests a dialog window from the plugin.</span>
+
+<span class="sd">        For one overriding this method, they should either create or reuse a `wx.Window` instance</span>
+<span class="sd">        to display in a dialog. One likely wants to bind events to the controls inside the returned</span>
+<span class="sd">        `wx.Window` to capture user input.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="WindowedPlugin.on_will_close_window"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.WindowedPlugin.on_will_close_window">[docs]</a>    <span class="k">def</span> <span class="nf">on_will_close_window</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;TODO not implemented&quot;&quot;&quot;</span>
+        <span class="n">evt</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="WindowedPlugin.on_did_focus"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.WindowedPlugin.on_did_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_did_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;TODO not implemented&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="WindowedPlugin.on_did_unfocus"><a class="viewcode-back" href="../../plugins.html#rkplugin.plugins.WindowedPlugin.on_did_unfocus">[docs]</a>    <span class="k">def</span> <span class="nf">on_did_unfocus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;TODO not implemented&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, cperena
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

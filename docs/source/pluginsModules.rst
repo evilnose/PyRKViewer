@@ -1,5 +1,6 @@
 Plugins
 =====================
+Folder containing the plugins created.
 
 .. toctree::
    :maxdepth: 4

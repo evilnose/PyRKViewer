@@ -28,17 +28,19 @@ def close_app_context(context):
     context.__exit__(None, None, None)
 
 # convenience functions that create a Node/Reaction/Compartment with arbitrary properties.
-def auto_node(id_: str) -> Node:
+def auto_node(id_: str, neti: int) -> Node:
     return Node(id_,
+                neti,
                 pos=Vec2(550, 450),
                 size=Vec2(50, 30),
                 fill_color=wx.RED,
                 border_color=wx.GREEN,
                 border_width=2)
 
-def auto_reaction(id_: str, sources: List[int], targets: List[int]) -> Reaction:
+def auto_reaction(id_: str, neti: int, sources: List[int], targets: List[int]) -> Reaction:
     return Reaction(
         id_=id_,
+        net_index=neti,
         sources=sources,
         targets=targets,
         handle_positions=[Vec2() for _ in range(len(sources) + len(targets) + 1)],
@@ -47,9 +49,10 @@ def auto_reaction(id_: str, sources: List[int], targets: List[int]) -> Reaction:
         rate_law=''
     )
 
-def auto_compartment(id_: str) -> Compartment:
+def auto_compartment(id_: str, neti: int) -> Compartment:
     return Compartment(
         id_=id_,
+        net_index=neti,
         nodes=list(),
         position=Vec2(400, 400),
         size=Vec2(200, 200),

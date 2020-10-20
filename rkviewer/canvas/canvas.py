@@ -637,6 +637,7 @@ class Canvas(wx.ScrolledWindow):
 
                 node = Node(
                     'x',
+                    self.net_index,
                     pos=adj_pos,
                     size=size,
                     fill_color=theme['node_fill'],
@@ -741,6 +742,7 @@ class Canvas(wx.ScrolledWindow):
 
                 comp = Compartment(id_,
                                    index=self.comp_index,
+                                   net_index=self.net_index,
                                    nodes=list(),
                                    volume=1,
                                    position=pos,
@@ -1185,6 +1187,7 @@ depend on it.".format(bound_node.id_))
         centroid = compute_centroid([n.rect for n in chain(sources, targets)])
         reaction = Reaction(
             id_,
+            self.net_index,
             sources=list(self._reactant_idx),
             targets=list(self._product_idx),
             fill_color=theme['reaction_fill'],

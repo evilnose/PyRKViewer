@@ -25,10 +25,12 @@ class EventLogger(CommandPlugin):
         super().__init__(metadata)
 
     def on_did_add_node(self, evt: DidAddNodeEvent):
-        print(evt)
+        """Uncomment this line to log add node events."""
+        # print(evt)
 
     def on_did_move_bezier_handle(self, evt: DidMoveBezierHandleEvent):
-        print(evt)
+        """Uncomment this line to log move Bezier handle events."""
+        # print(evt)
 
     def run(self):
         """

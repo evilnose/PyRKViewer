@@ -1656,7 +1656,7 @@ def getReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int):
     """
     getReactionSrcNodeStoich get the SrcNode stoichiometry of Reaction
     errCode: -6: reaction index out of range,
-    -5: net index out of range, -2: id not found
+    -5: net index out of range, -7: node index not found
     """
     global stackFlag, errCode, networkDict, netSetStack, redoStack
     errCode = 0
@@ -1666,8 +1666,11 @@ def getReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int):
         r = networkDict[neti].reactions
         if reai not in networkDict[neti].reactions:
             errCode = -6
+        elif srcNodeIdx not in networkDict[neti].nodes:
+            errCode = -7
         elif srcNodeIdx not in r[reai].srcDict:
-            errCode = -2
+            raise ValueError('The given node index "{}" is not a reactant node of "{}"'.format(
+                             srcNodeIdx, reai))
         else:
             return r[reai].srcDict[srcNodeIdx].stoich
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1687,8 +1690,11 @@ def getReactionDestNodeStoich(neti: int, reai: int, destNodeIdx: int):
         r = networkDict[neti].reactions
         if reai not in networkDict[neti].reactions:
             errCode = -6
+        elif destNodeIdx not in networkDict[neti].nodes:
+            errCode = -7
         elif destNodeIdx not in r[reai].destDict:
-            errCode = -2
+            raise ValueError('The given node index "{}" is not a product node of "{}"'.format(
+                             destNodeIdx, reai))
         else:
             s = r[reai].destDict[destNodeIdx]
             return s.stoich
@@ -1699,7 +1705,7 @@ def getReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int):
     """
     getReactionSrcNodeHandlePosition get the SrcNode HandlePosition of Reaction
     errCode: -6: reaction index out of range,
-    -5: net index out of range, -2: id not found
+    -5: net index out of range, -7: node index out of range
     """
     global stackFlag, errCode, networkDict, netSetStack, redoStack
     errCode = 0
@@ -1709,8 +1715,11 @@ def getReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int):
         r = networkDict[neti].reactions
         if reai not in networkDict[neti].reactions:
             errCode = -6
+        elif srcNodeIdx not in networkDict[neti].nodes:
+            errCode = -7
         elif srcNodeIdx not in r[reai].srcDict:
-            errCode = -2
+            raise ValueError('The given node index "{}" is not a reactant node of "{}"'.format(
+                             srcNodeIdx, reai))
         else:
             return (round(r[reai].srcDict[srcNodeIdx].handleX, 2),
                     round(r[reai].srcDict[srcNodeIdx].handleY, 2))
@@ -1732,8 +1741,11 @@ def getReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int):
         r = networkDict[neti].reactions
         if reai not in networkDict[neti].reactions:
             errCode = -6
+        elif destNodeIdx not in networkDict[neti].nodes:
+            errCode = -7
         elif destNodeIdx not in r[reai].destDict:
-            errCode = -2
+            raise ValueError('The given node index "{}" is not a product node of "{}"'.format(
+                             destNodeIdx, reai))
         else:
             return (round(r[reai].destDict[destNodeIdx].handleX, 2),
                     round(r[reai].destDict[destNodeIdx].handleY, 2))
@@ -1959,9 +1971,11 @@ def setRateLaw(neti: int, reai: int, rateLaw: str):
 def setReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int, newStoich: float):
     """
     setReactionSrcNodeStoich edit Stoich by Reaction srcNodeID
-    errCode: -6: reaction index out of range,
-    -5: net index out of range
+    errCode: -6: reaction index not found,
+    -5: net index not found
+    -7: node index not found,
     -8: wrong stoich
+    raises ValueError if given node index not a dest node
     """
     global stackFlag, errCode, networkDict, netSetStack, redoStack
     errCode = 0
@@ -1971,9 +1985,11 @@ def setReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int, newStoich: f
         r = networkDict[neti].reactions
         if reai not in networkDict[neti].reactions:
             errCode = -6
+        elif srcNodeIdx not in networkDict[neti].nodes:
+            errCode = -7
         elif srcNodeIdx not in r[reai].srcDict:
-            raise ValueError('The given node index "{}" is not a reactant node of "{}"',
-                             srcNodeIdx, reai)
+            raise ValueError('The given node index "{}" is not a reactant node of "{}"'.format(
+                             srcNodeIdx, reai))
         elif newStoich <= 0.0:
             errCode = -8
         else:
@@ -1988,8 +2004,10 @@ def setReactionDestNodeStoich(neti: int, reai: int, destNodeIdx: int, newStoich:
     """
     setReactionDestNodeStoich edit Stoich by Reaction destNodeID
     errCode: -6: reaction index out of range,
-    -5: net index out of range
+    -5: net index out of range,
+    -7: node index not found,
     -8: wrong stoich
+    raises ValueError if given node index not a dest node
     """
     global stackFlag, errCode, networkDict, netSetStack, redoStack
     errCode = 0
@@ -1999,9 +2017,11 @@ def setReactionDestNodeStoich(neti: int, reai: int, destNodeIdx: int, newStoich:
         r = networkDict[neti].reactions
         if reai not in networkDict[neti].reactions:
             errCode = -6
+        elif destNodeIdx not in networkDict[neti].nodes:
+            errCode = -7
         elif destNodeIdx not in r[reai].destDict:
-            raise ValueError('The given node index "{}" is not a product node of "{}"',
-                             destNodeIdx, reai)
+            raise ValueError('The given node index "{}" is not a product node of "{}"'.format(
+                             destNodeIdx, reai))
         elif newStoich <= 0.0:
             errCode = -8
         else:
@@ -2016,7 +2036,7 @@ def setReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int, hand
     """
     setReactionSrcNodeHandlePosition edit HandlePosition by Reaction srcNodeID
     errCode: -6: reaction index out of range,
-    -5: net index out of range, -2: id not found
+    -5: net index out of range, -7: node index not found
     -12: Variable out of range
     """
     global stackFlag, errCode, networkDict, netSetStack, redoStack
@@ -2027,8 +2047,11 @@ def setReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int, hand
         r = networkDict[neti].reactions
         if reai not in networkDict[neti].reactions:
             errCode = -6
+        elif srcNodeIdx not in networkDict[neti].nodes:
+            _raiseError(-7)
         elif srcNodeIdx not in r[reai].srcDict:
-            errCode = -2
+            raise ValueError('The given node index "{}" is not a reactant node of "{}"'.format(
+                             srcNodeIdx, reai))
         else:
             _pushUndoStack()
             networkDict[neti].reactions[reai].srcDict[srcNodeIdx].handleX = handleX
@@ -2053,8 +2076,11 @@ def setReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int, ha
         r = networkDict[neti].reactions
         if reai not in networkDict[neti].reactions:
             errCode = -6
+        elif destNodeIdx not in networkDict[neti].nodes:
+            _raiseError(-7)
         elif destNodeIdx not in r[reai].destDict:
-            errCode = -2
+            raise ValueError('The given node index "{}" is not a product node of "{}"'.format(
+                             destNodeIdx, reai))
         else:
             _pushUndoStack()
             networkDict[neti].reactions[reai].destDict[destNodeIdx].handleX = handleX

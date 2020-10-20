@@ -19,9 +19,9 @@ sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Plugin Documentation'
-copyright = '2020, cperena'
-author = 'cperena'
+project = 'Plugin API for RKViewer'
+copyright = '2020, cperena, Gary Geng'
+author = 'cperena, evilnose'
 
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'
@@ -43,7 +43,7 @@ extensions =  [
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.inheritance_diagram',
-    'sphinx_autodoc_typehints',
+    'sphinx_autodoc_typehints'
 ]
 
 
@@ -71,3 +71,6 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+napoleon_google_docstring = True
+always_document_param_types = True

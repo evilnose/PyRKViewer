@@ -9,7 +9,7 @@ import logging
 
 from rkviewer.iodine import TColor
 from .utils import gchain, rgba_to_wx_colour
-from .events import DidAddNodeEvent, DidCommitNodePositionsEvent, post_event
+from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidCommitDragEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
@@ -109,7 +109,7 @@ class Controller(IController):
         iod.clearNetwork(neti)
 
     @iod_setter
-    def add_node_g(self, neti: int, node: Node, programmatic: bool = False):
+    def add_node_g(self, neti: int, node: Node) -> int:
         '''
         Add node represented by the given Node variable.
 
@@ -127,9 +127,9 @@ class Controller(IController):
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
         iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
 
-        if not programmatic:
-            post_event(DidAddNodeEvent(node))
+        post_event(DidAddNodeEvent(node))
         self.end_group()
+        return nodei
 
     def wx_to_tcolor(self, color: wx.Colour) -> TColor:
         return TColor(color.Red(), color.Green(), color.Blue(), color.Alpha())
@@ -138,7 +138,7 @@ class Controller(IController):
         return wx.Colour(color.r, color.g, color.b, color.a)
 
     @iod_setter
-    def add_compartment_g(self, neti: int, compartment: Compartment):
+    def add_compartment_g(self, neti: int, compartment: Compartment) -> int:
         if len(compartment.nodes) != 0:
             raise ValueError('The "nodes" list for a newly added compartment should be empty. '
                              'This is to avoid implicit moving of nodes between compartments.')
@@ -148,7 +148,9 @@ class Controller(IController):
         iod.setCompartmentOutlineColor(neti, compi, self.wx_to_tcolor(compartment.border))
         iod.setCompartmentOutlineThickness(neti, compi, compartment.border_width)
         iod.setCompartmentVolume(neti, compi, compartment.volume)
+        post_event(DidAddCompartmentEvent(compartment))
         self.end_group()
+        return compi
 
     @iod_setter
     def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False):
@@ -156,7 +158,7 @@ class Controller(IController):
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
         # dispatch event if the call was caused by user input
         if not programmatic:
-            post_event(DidCommitNodePositionsEvent())
+            post_event(DidCommitDragEvent())
 
     @iod_setter
     def set_node_size(self, neti: int, nodei: int, size: Vec2):
@@ -215,7 +217,7 @@ class Controller(IController):
         iod.deleteCompartment(neti, compi)
 
     @iod_setter
-    def add_reaction_g(self, neti: int, reaction: Reaction):
+    def add_reaction_g(self, neti: int, reaction: Reaction) -> int:
         """Try create a reaction."""
         self.start_group()
         iod.createReaction(neti, reaction.id_, reaction.sources, reaction.targets)
@@ -240,7 +242,9 @@ class Controller(IController):
 
         cpos = reaction.src_c_handle.tip
         iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
+        post_event(DidAddReactionEvent(reaction))
         self.end_group()
+        return reai
 
     @iod_setter
     def set_reaction_ratelaw(self, neti: int, reai: int, ratelaw: str):
@@ -366,6 +370,7 @@ class Controller(IController):
         border_color = rgba_to_wx_colour(border_rgb, border_alpha)
         return Node(
             id_,
+            neti,
             index=nodei,
             pos=Vec2(x, y),
             size=Vec2(w, h),
@@ -389,6 +394,7 @@ class Controller(IController):
         items += [self.get_dest_node_handle(neti, reai, i) for i in tindices]
 
         return Reaction(id_,
+                        neti,
                         sources=sindices,
                         targets=tindices,
                         fill_color=rgba_to_wx_colour(fill_rgb, fill_alpha),
@@ -410,6 +416,7 @@ class Controller(IController):
                            border=self.tcolor_to_wx(iod.getCompartmentOutlineColor(neti, compi)),
                            border_width=iod.getCompartmentOutlineThickness(neti, compi),
                            index=compi,
+                           net_index=neti,
                            )
 
     # get the updated list of nodes from model and update

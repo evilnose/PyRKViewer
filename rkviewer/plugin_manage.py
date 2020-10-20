@@ -1,17 +1,23 @@
-"""Classes for managing plugins."""
+"""Classes for managing plugins for Canvas."""
 # pylint: disable=maybe-no-member
-import wx
-# pylint: disable=no-name-in-module
-from wx.html import HtmlWindow
-import sys
-import os
 import importlib.abc
 import importlib.util
 import inspect
-from rkviewer.events import CanvasEvent, DidAddNodeEvent, DidCommitNodePositionsEvent, DidMoveNodesEvent, DidPaintCanvasEvent, SelectionDidUpdateEvent, bind_handler
-from rkviewer.mvc import IController
-from typing import Any, Callable, List, cast
+import os
+import sys
+from typing import Any, Callable, List, Optional, cast
+
+# pylint: disable=no-name-in-module
+import wx
 from rkplugin.plugins import CommandPlugin, Plugin, PluginType, WindowedPlugin
+# pylint: disable=no-name-in-module
+from wx.html import HtmlWindow
+
+from rkviewer.events import (CanvasEvent, DidAddNodeEvent,
+                             DidCommitDragEvent, DidMoveBezierHandleEvent, DidMoveNodesEvent,
+                             DidPaintCanvasEvent, SelectionDidUpdateEvent,
+                             bind_handler)
+from rkviewer.mvc import IController
 
 
 class PluginManager:
@@ -22,8 +28,9 @@ class PluginManager:
         self.controller = controller
         bind_handler(DidAddNodeEvent, self.make_notify('on_did_add_node'))
         bind_handler(DidMoveNodesEvent, self.make_notify('on_did_move_nodes'))
-        bind_handler(DidCommitNodePositionsEvent, self.make_notify('on_did_commit_node_positions'))
+        bind_handler(DidCommitDragEvent, self.make_notify('on_did_commit_drag'))
         bind_handler(SelectionDidUpdateEvent, self.make_notify('on_selection_did_change'))
+        bind_handler(DidMoveBezierHandleEvent, self.make_notify('on_did_move_bezier_handle'))
         bind_handler(DidPaintCanvasEvent, self.make_notify('on_did_paint_canvas'))
 
     # Also TODO might want a more sophisticated file system structure, including data storage and
@@ -56,13 +63,20 @@ class PluginManager:
         return True
 
     def make_notify(self, handler_name: str):
+        """Make event notification function for plugin.
+
+        handler_name should be the name of a method defined by Plugin. This would then create a
+        callback function that goes over each plugin and call that function. This callback should
+        be bound to its associated event.
+
+        The handler function is called with the event itself as argument.
+        """
         assert callable(getattr(Plugin, handler_name, None)), "{} is not a method defined by \
 Plugin!".format(handler_name)
 
         def ret(evt: CanvasEvent):
-            args = evt.to_tuple()
             for plugin in self.plugins:
-                getattr(plugin, handler_name)(*args)
+                getattr(plugin, handler_name)(evt)
 
         return ret
 
@@ -98,7 +112,7 @@ Plugin!".format(handler_name)
                                parent: wx.Window) -> Callable[[Any], None]:
         title = windowed.metadata.name
         dialog_exists = False
-        dialog: wx.Window = None
+        dialog: Optional[wx.Window] = None
 
         def windowed_cb(_):
             nonlocal dialog_exists, dialog

@@ -65,7 +65,7 @@ class DidMoveNodesEvent(CanvasEvent):
 
     This event may be called many times, continuously as the user drags a group of nodes. Note that
     only after the drag operation has ended, is model notified of the move for undo purposes. See
-    DidCommitNodePositionsEvent.
+    DidCommitDragEvent.
 
     Attributes:
         nodes: The nodes that were moved.
@@ -97,7 +97,7 @@ class DidResizeNodesEvent(CanvasEvent):
 
     Note:
         This event triggers only if the user has performed a drag operation, and not, for example,
-        if the user moved a node in the edit panel.
+        if the user resized a node in the edit panel.
     """
     nodes: List[Node]
     ratio: Vec2
@@ -114,13 +114,35 @@ class DidResizeCompartmentsEvent(CanvasEvent):
 
 
 @dataclass
-class DidCommitNodePositionsEvent(CanvasEvent):
-    """Called after the node positions are commited to the controller.
-
-    This even is emitted only after a node move action has been regsitered with the controller.
-    E.g., when a user drag-moves a ndoe, only after they release the left mouse button is the action
-    recorded in the undo stack.
+class DidCommitDragEvent(CanvasEvent):
+    """Dispatched after any continuously emitted dragging event has concluded.
+    
+    This is dispatched for any event that is posted in quick intervals while the mouse left
+    button is held while moving, i.e. "dragging" events. This includes: DidMoveNodesEvent,
+    DidMoveCompartmentsEvent, DidResizeNodesEvent, DidResizeCompartmentsEvent,
+    and DidResizeMoveBezierHandlesEvent. This event is emitted after the left mouse button is
+    released, the model is notified of the change, and the action is complete.
+    TODO finish implementing this
     """
+
+
+@dataclass
+class DidMoveBezierHandleEvent(CanvasEvent):
+    """Dispatched after a Bezier handle is moved.
+
+    Attributes:
+        net_index: The network index.
+        reaction_index: The reaction index.
+        node_index: The index of the node whose Bezier handle moved. -1 if the source centroid
+                    handle was moved, or -2 if the dest centroid handle was moved.
+        direct: Whether this event is triggered directly, i.e. by the user dragging on a Bezier
+                handle. The event could be triggered *indirectly* when the user moves node(s), or
+                when plugins move Bezier handles programmatically.
+    """
+    net_index: int
+    reaction_index: int
+    node_index: int
+    direct: bool
 
 
 @dataclass
@@ -133,8 +155,125 @@ class DidAddNodeEvent(CanvasEvent):
     Note:
         This event triggers only if the user has performed a drag operation, and not, for example,
         if the user moved a node in the edit panel.
+    TODO in the documentation that this event and related ones (and DidDelete-) are emitted before
+    controller.end_group() is called. As an alternative, maybe create a call_after() function
+    similar to wxPython? it should be called in OnIdle() or Refresh()
     """
     node: Node
+
+
+@dataclass
+class DidDeleteNodeEvent(CanvasEvent):
+    """Called after a node has been deleted.
+
+    Attributes:
+        index: The index of the node that was deleted.
+    TODO not implemented
+    """
+    index: int
+
+
+@dataclass
+class DidAddReactionEvent(CanvasEvent):
+    """Called after a reaction has been added.
+
+    Attributes:
+        reaction: The Reaction that was added.
+    """
+    reaction: Reaction
+
+
+@dataclass
+class DidDeleteReactionEvent(CanvasEvent):
+    """Called after a reaction has been deleted.
+
+    Attributes:
+        index: The index of the reaction that was deleted.
+    TODO not implemented
+    """
+    index: int
+
+
+@dataclass
+class DidAddCompartmentEvent(CanvasEvent):
+    """Called after a compartment has been added.
+
+    Attributes:
+        compartment: The Compartment that was added.
+    """
+    compartment: Compartment
+
+
+@dataclass
+class DidDeleteCompartmentEvent(CanvasEvent):
+    """Called after a compartment has been deleted.
+
+    Attributes:
+        index: The index of the compartment that was deleted.
+    TODO not implemented
+    """
+    index: int
+
+
+@dataclass
+class DidChangeCompartmentOfNodeEvent(CanvasEvent):
+    """Called after one or more nodes have been moved to a new compartment.
+    
+    Attributes:
+        nodes: The list of nodes that changed compartment.
+        old_compi: The old compartment index, -1 for base compartment.
+        new_compi: The new compartment index, -1 for base compartment.
+    TODO not implemented
+    """
+
+
+@dataclass
+class DidModifyNodesEvent(CanvasEvent):
+    """Called after a property of one or more nodes has been modified, excluding position or size.
+
+    For position and size events, see DidMove...Event() and DidResize...Event()
+
+    Attributes:
+        nodes: The list of nodes that were modified.
+    TODO not implemented
+    """
+    nodes: List[Node]
+
+
+@dataclass
+class DidModifyReactionEvent(CanvasEvent):
+    """Called after a property of one or more nodes has been modified, excluding position.
+
+    Attributes:
+        reactions: The list of reactions that were modified.
+    TODO not implemented
+    """
+    reactions: List[Reaction]
+
+
+@dataclass
+class DidModifyCompartmentsEvent(CanvasEvent):
+    """Called after a property of one or more compartments has been modified, excluding position or size.
+
+    For position and size events, see DidMove...Event() and DidResize...Event()
+
+    Attributes:
+        compartments: The list of compartments that were modified.
+    TODO not implemented
+    """
+    nodes: List[Compartment]
+
+
+@dataclass
+class UndoEvent(CanvasEvent):
+    """Called after an undo action is done."""
+    pass
+
+
+@dataclass
+class RedoEvent(CanvasEvent):
+    """Called after a redo action is done."""
+    pass
 
 
 @dataclass

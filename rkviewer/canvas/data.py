@@ -37,6 +37,9 @@ class Node(RectData):
         fill_color: The fill color of the node.
         border_color: The border color of the node.
         border_width: The border width of the node.
+        position: Position of the size.
+        size: Position of the size.
+        net_index: The network index of the node.
     """
     id_: str
     fill_color: wx.Colour
@@ -46,11 +49,13 @@ class Node(RectData):
     size: Vec2
     comp_idx: int
     index: int
+    net_index: int
 
     # force keyword-only arguments
-    def __init__(self, id_: str, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
+    def __init__(self, id_: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
                  border_color: wx.Colour, border_width: float, comp_idx: int = -1, index: int = -1):
         self.index = index
+        self.net_index = net_index
         self.id_ = id_
         self.position = pos
         self.size = size
@@ -143,13 +148,12 @@ class Reaction:
         fill_color: reaction fill color.
         line_thickness: Bezier curve thickness.
         rate_law: reaction rate law.
-        position: The centroid position.
-        s_position: The scaled centroid position. TODO this is sort of redundant.
         sources: The source (reactant) node indices.
         target: The target (product) node indices.
     """
 
-    def __init__(self, id_: str, *, sources: List[int], targets: List[int], handle_positions: List[Vec2], fill_color: wx.Colour,
+    def __init__(self, id_: str, net_index: int, *, sources: List[int], targets: List[int],
+                 handle_positions: List[Vec2], fill_color: wx.Colour,
                  line_thickness: float, rate_law: str, index: int = -1):
         """Constructor for a reaction.
 
@@ -157,13 +161,17 @@ class Reaction:
             id_: Reaction ID.
             sources: List of source (reactant) nodes.
             targets: List of target (product) nodes.
-            handle_pos: List of handle positions. Refer to the identically named argument in the
-                        ReactionBezier constructor.
+            handle_positions: List of handle positions. The 0th argument stores the position of
+                              the source centroid handle, followed by the source node handle
+                              positions and the target handle positions. The order can be
+                              visualized as [src_centroid, *src_nodes, *tar_nodes].
             fill_color: Fill color of the curve.
             rate_law: The rate law string of the reaction; may not be valid.
             index: Reaction index.
+            net_index: The network index of the reaction.
         """
         self.id_ = id_
+        self.net_index = net_index
         self.index = index
         self.fill_color = fill_color
         self.rate_law = rate_law
@@ -510,6 +518,7 @@ class ReactionBezier:
 @dataclass
 class Compartment(RectData):
     id_: str
+    net_index: int
     nodes: List[int]
     volume: float  #: Size (i.e. length/area/volume/...) of the container
     position: Vec2

@@ -10,6 +10,7 @@ import wx
 from typing import List
 from rkplugin.plugins import CommandPlugin, PluginMetadata, WindowedPlugin
 from rkplugin import api
+from rkplugin.events import SelectionDidUpdateEvent
 
 
 metadata = PluginMetadata(
@@ -66,18 +67,18 @@ class ColorSelected(WindowedPlugin):
             for index in api.selected_reaction_indices():
                 api.update_reaction(api.cur_net_index(), index, fill_color=color)
 
-    def on_selection_did_change(self, node_indices: List[int], reaction_indices: List[int],
-                                compartment_indices: List[int]):
+    def on_selection_did_change(self, evt: SelectionDidUpdateEvent):
         """
         Overrides base class event handler to update number of items selected.
-        
+
         Args:
             self
             node_indices(List[int]): List of node indices changed.
             reaction_indices (List[int]): List of reaction indices changed.
             compartment_indices (List[int]): List of compartment indices changed.
         """
-        self.num_selected = len(node_indices) + len(reaction_indices) + len(compartment_indices)
+        self.num_selected = len(evt.node_indices) + len(evt.reaction_indices) + len(
+            evt.compartment_indices)
         self.update_text()
 
     def update_text(self):
@@ -86,4 +87,3 @@ class ColorSelected(WindowedPlugin):
         """
         if self.text is not None:
             self.text.SetLabel('Number of items selected: {}'.format(self.num_selected))
-

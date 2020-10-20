@@ -48,12 +48,12 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def add_node_g(self, neti: int, node: Node) -> bool:
-        """Try to add the given Node to the canvas."""
+        """Try to add the given Node to the canvas. Return index of the node added."""
         pass
 
     @abc.abstractmethod
-    def add_compartment_g(self, neti: int, compartment: Compartment) -> bool:
-        """Try to add the given Compartment to the canvas."""
+    def add_compartment_g(self, neti: int, compartment: Compartment) -> int:
+        """Try to add the given Compartment to the canvas. Return index of added comp."""
         pass
 
     @abc.abstractmethod
@@ -240,7 +240,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def add_reaction_g(self, neti: int, reaction: Reaction) -> bool:
+    def add_reaction_g(self, neti: int, reaction: Reaction) -> int:
         pass
 
     @abc.abstractmethod

@@ -17,7 +17,7 @@ import wx
 from ..config import settings, theme
 from ..events import (
     CanvasDidUpdateEvent,
-    DidCommitNodePositionsEvent,
+    DidCommitDragEvent,
     DidPaintCanvasEvent,
     SelectionDidUpdateEvent,
     bind_handler,
@@ -168,7 +168,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)
 
-        bind_handler(DidCommitNodePositionsEvent, self.OnDidCommitNodePositions)
+        bind_handler(DidCommitDragEvent, self.OnDidCommitNodePositions)
 
         # state variables
         cstate.input_mode = InputMode.SELECT
@@ -637,6 +637,7 @@ class Canvas(wx.ScrolledWindow):
 
                 node = Node(
                     'x',
+                    self.net_index,
                     pos=adj_pos,
                     size=size,
                     fill_color=theme['node_fill'],
@@ -741,6 +742,7 @@ class Canvas(wx.ScrolledWindow):
 
                 comp = Compartment(id_,
                                    index=self.comp_index,
+                                   net_index=self.net_index,
                                    nodes=list(),
                                    volume=1,
                                    position=pos,
@@ -1124,6 +1126,7 @@ depend on it.".format(bound_node.id_))
                 return
 
         self.controller.start_group()
+
         for index in sel_reactions_idx:
             self.controller.delete_reaction(self._net_index, index)
         for index in sel_nodes_idx:
@@ -1184,6 +1187,7 @@ depend on it.".format(bound_node.id_))
         centroid = compute_centroid([n.rect for n in chain(sources, targets)])
         reaction = Reaction(
             id_,
+            self.net_index,
             sources=list(self._reactant_idx),
             targets=list(self._product_idx),
             fill_color=theme['reaction_fill'],

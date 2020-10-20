@@ -642,6 +642,8 @@ def compute_centroid(net_index: int, reactants: List[int], products: List[int]):
 def default_handle_positions(net_index: int, reaction_index: int):
     """Return the default Bezier handle positions for the given reaction.
 
+    See Reaction for more details on the format of this list.
+
     Args:
         net_index: The network index.
         reaction_index: The index of the reaction.

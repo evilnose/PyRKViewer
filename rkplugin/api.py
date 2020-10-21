@@ -533,7 +533,7 @@ def add_node(net_index: int, id_, fill_color: Color = None, border_color: Color 
         position = Vec2()
 
     if size is None:
-        size = Vec2(settings['min_node_width'], settings['min_node_height'])
+        size = Vec2(theme['node_width'], theme['node_height'])
 
     node = Node(
         id_,
@@ -681,7 +681,9 @@ def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[
     if line_thickness is None:
         line_thickness = theme['reaction_line_thickness']
 
+    auto_init_handles = False
     if handle_positions is None:
+        auto_init_handles = True
         handle_positions = [Vec2() for _ in range(1 + len(reactants) + len(products))]
     else:
         if len(handle_positions) != 1 + len(reactants) + len(products):
@@ -699,12 +701,13 @@ def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[
         handle_positions=handle_positions,
     )
 
+    _controller.start_group()
     reai = _controller.add_reaction_g(net_index, reaction)
     # HACK set default handle positions. This should be computed by default_handle_positions()
     # before constructing the Reaction object, but right now it only accepts a list of nodes. In
     # the future modify default_handle_positions() to accept four lists: reactant rectangles and
     # indices, and product rectangles and indices, since these are the only requisite parameters.
-    if handle_positions is None:
+    if auto_init_handles:
         handle_positions = default_handle_positions(net_index, reai)
         for (gi, nodei), pos in zip(gchain(reaction.sources, reaction.targets),
                                     handle_positions[1:]):
@@ -714,6 +717,7 @@ def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[
                 _controller.set_dest_node_handle(net_index, reai, nodei, pos)
         _controller.set_center_handle(net_index, reai, handle_positions[0])
 
+    _controller.end_group()
     return reai
 
 

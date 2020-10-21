@@ -108,7 +108,6 @@ class Controller(IController):
     def clear_network(self, neti):
         iod.clearNetwork(neti)
 
-    @iod_setter
     def add_node_g(self, neti: int, node: Node) -> int:
         '''
         Add node represented by the given Node variable.
@@ -137,7 +136,6 @@ class Controller(IController):
     def tcolor_to_wx(self, color: TColor) -> wx.Colour:
         return wx.Colour(color.r, color.g, color.b, color.a)
 
-    @iod_setter
     def add_compartment_g(self, neti: int, compartment: Compartment) -> int:
         if len(compartment.nodes) != 0:
             raise ValueError('The "nodes" list for a newly added compartment should be empty. '
@@ -216,7 +214,6 @@ class Controller(IController):
     def delete_compartment(self, neti: int, compi: int):
         iod.deleteCompartment(neti, compi)
 
-    @iod_setter
     def add_reaction_g(self, neti: int, reaction: Reaction) -> int:
         """Try create a reaction."""
         self.start_group()

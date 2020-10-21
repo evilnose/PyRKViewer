@@ -5,6 +5,7 @@ Version 0.01: Author: Gary Geng (2020)
 """
 
 # pylint: disable=maybe-no-member
+from rkviewer.canvas.geometry import Vec2
 from rkplugin.plugins import CommandPlugin, PluginMetadata
 from rkplugin import api
 from rkplugin.events import DidAddNodeEvent, DidMoveBezierHandleEvent
@@ -36,4 +37,7 @@ class EventLogger(CommandPlugin):
         """
         Log something.
         """
-        api.logger().info('run() called')
+        # api.logger().info('run() called')
+        a = api.add_node(0, 'hi', position=Vec2(50, 50))
+        b = api.add_node(0, 'hiya', position=Vec2(100, 100))
+        api.add_reaction(0, 'reaction', [a], [b])

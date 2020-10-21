@@ -45,7 +45,7 @@ class RandomNetwork(WindowedPlugin):
             dialog
         """
 
-        window = wx.Window(dialog, size=(300, 400))
+        window = wx.Panel(dialog, size=(300, 320))
 
         numSpecs = wx.StaticText(window, -1, 'Number of Species:', (20,20))
         self.numSpecsText = wx.TextCtrl(window, -1, "10", (160, 20), size=(100, -1))

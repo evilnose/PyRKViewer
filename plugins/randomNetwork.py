@@ -45,7 +45,7 @@ class RandomNetwork(WindowedPlugin):
             dialog
         """
 
-        window = wx.Panel(dialog, size=(300, 320))
+        window = wx.Window(dialog, pos=(5,100), size=(300, 320))
 
         numSpecs = wx.StaticText(window, -1, 'Number of Species:', (20,20))
         self.numSpecsText = wx.TextCtrl(window, -1, "10", (160, 20), size=(100, -1))
@@ -86,6 +86,7 @@ class RandomNetwork(WindowedPlugin):
         apply_btn = wx.Button(window, -1, 'Apply', (160, 240))
         apply_btn.Bind(wx.EVT_BUTTON, self.Apply)
 
+        window.SetPosition (wx.Point(10,10))
         return window
 
 
@@ -266,45 +267,6 @@ class RandomNetwork(WindowedPlugin):
 
             return st
 
-        # Removes boundary or orphan species from stoichiometry matrix
-        def _removeBoundaryNodes (st):
-           
-            dims = st.shape
-           
-            nSpecies = dims[0]
-            nReactions = dims[1]
-           
-            speciesIds = _np.arange (nSpecies)
-            indexes = []
-            orphanSpecies = []
-            countBoundarySpecies = 0
-            for r in range (nSpecies):
-                # Scan across the columns, count + and - coefficients
-                plusCoeff = 0; minusCoeff = 0
-                for c in range (nReactions):
-                    if st[r,c] < 0:
-                        minusCoeff = minusCoeff + 1
-                    if st[r,c] > 0:
-                        plusCoeff = plusCoeff + 1
-                if plusCoeff == 0 and minusCoeff == 0:
-                   # No reaction attached to this species
-                   orphanSpecies.append (r)
-                if plusCoeff == 0 and minusCoeff != 0:
-                   # Species is a source
-                   indexes.append (r)
-                   countBoundarySpecies = countBoundarySpecies + 1
-                if minusCoeff == 0 and plusCoeff != 0:
-                   # Species is a sink
-                   indexes.append (r)
-                   countBoundarySpecies = countBoundarySpecies + 1
-
-            floatingIds = _np.delete (speciesIds, indexes+orphanSpecies, axis=0)
-
-            boundaryIds = indexes
-            return [_np.delete (st, indexes + orphanSpecies, axis=0), floatingIds, boundaryIds]
-   
-
-
         def _getRateLaw (floatingIds, boundaryIds, reactionList, isReversible):
    
             nSpecies = reactionList[0]
@@ -346,14 +308,15 @@ class RandomNetwork(WindowedPlugin):
 
             return antStr_tot      
 
-        # Need to remove orphan nodes, ie nodes no connected to any reactions.
+        net_index = 0
+        api.clear_network(net_index)
+
         rl = _generateReactionList (self.numSpecsValue, self.numRxnsValue)
         st = _getFullStoichiometryMatrix (rl)
         antStr = _getRateLaw (st[1], st[2], rl, isReversible=True)
         numNodes = st.shape[0]
         numRxns = st.shape[1]
 
-        net_index = 0
         for i in range (numNodes):
             b_idx = api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 179, 175),
                     border_color=api.Color(255, 105, 97),
@@ -370,9 +333,9 @@ class RandomNetwork(WindowedPlugin):
                     dest.append(j)
             r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(129, 123, 255))
         
+        # Need to remove orphan nodes
         for i in range (numNodes):
             if _np.array_equal(st[i,:], _np.zeros(numRxns)):
-            #remove the node
                 api.delete_node(net_index, i)
        
 

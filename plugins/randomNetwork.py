@@ -17,11 +17,6 @@ import copy as _copy
 from dataclasses import dataclass
 
 
-@dataclass
-class TPointF:   # A 2D point
-     x : float
-     y : float
-
 
 metadata = PluginMetadata(
     name='RandomNetwork',
@@ -367,11 +362,17 @@ class RandomNetwork(WindowedPlugin):
         for i in range (numRxns):
             src = []
             dest = []
-           
+          
             for j in range(numNodes):
                 if (st.item(j,i) == -1):
                     src.append(j)  
                 if (st.item(j,i) == 1):
                     dest.append(j)
+            r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(129, 123, 255))
+        
+        for i in range (numNodes):
+            if _np.array_equal(st[i,:], _np.zeros(numRxns)):
+            #remove the node
+                api.delete_node(net_index, i)
+       
 
-            r_idx = api.add_reaction(0, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(129, 123, 255))

@@ -47,7 +47,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def add_node_g(self, neti: int, node: Node) -> bool:
+    def add_node_g(self, neti: int, node: Node) -> int:
         """Try to add the given Node to the canvas. Return index of the node added."""
         pass
 

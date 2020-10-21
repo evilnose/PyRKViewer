@@ -317,10 +317,11 @@ class RandomNetwork(WindowedPlugin):
         numNodes = st.shape[0]
         numRxns = st.shape[1]
 
+        nodeIdx = []
         for i in range (numNodes):
-            b_idx = api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 179, 175),
+            nodeIdx.append ( api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 179, 175),
                     border_color=api.Color(255, 105, 97),
-                    position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)))
+                    position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800))))
        
         for i in range (numRxns):
             src = []
@@ -328,14 +329,14 @@ class RandomNetwork(WindowedPlugin):
           
             for j in range(numNodes):
                 if (st.item(j,i) == -1):
-                    src.append(j)  
+                    src.append(nodeIdx[j])  
                 if (st.item(j,i) == 1):
-                    dest.append(j)
+                    dest.append(nodeIdx[j])
             r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(129, 123, 255))
         
         # Need to remove orphan nodes
         for i in range (numNodes):
             if _np.array_equal(st[i,:], _np.zeros(numRxns)):
-                api.delete_node(net_index, i)
+                api.delete_node(net_index, nodeIdx[i])
        
 

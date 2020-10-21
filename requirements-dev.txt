@@ -54,7 +54,7 @@ snowballstemmer==2.0.0
 
 sortedcontainers==2.2.2
 
-sphinx-autodoc-typehints==1.11.0
+sphinx-autodoc-typehints==1.11.1
 
 sphinx-rtd-theme==0.5.0
 

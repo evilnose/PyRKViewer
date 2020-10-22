@@ -20,7 +20,6 @@ from typing import (
 
 import wx
 
-from rkviewer.canvas.data import Compartment, Node, Reaction
 from rkviewer.canvas.geometry import Vec2
 
 
@@ -47,16 +46,8 @@ class SelectionDidUpdateEvent(CanvasEvent):
 
 @dataclass
 class CanvasDidUpdateEvent(CanvasEvent):
-    """Called after the canvas has been updated by the controller.
-
-    Attributes:
-        nodes: The list of nodes.
-        reactions: The list of reactions.
-        compartments: The list of compartments.
-    """
-    nodes: List[Node]
-    reactions: List[Reaction]
-    compartments: List[Compartment]
+    """Called after the canvas has been updated by the controller."""
+    pass
 
 
 @dataclass
@@ -68,11 +59,11 @@ class DidMoveNodesEvent(CanvasEvent):
     DidCommitDragEvent.
 
     Attributes:
-        nodes: The nodes that were moved.
+        node_indices: The indices of the nodes that were moved.
         offset: The position offset. If all nodes were moved by the same offset, then a single Vec2
                 is given; otherwise, a list of offsets are given, with each offset matching a node.
     """
-    nodes: List[Node]
+    node_indices: List[int]
     offset: Union[Vec2, List[Vec2]]
     dragged: bool
 
@@ -81,7 +72,7 @@ class DidMoveNodesEvent(CanvasEvent):
 class DidMoveCompartmentsEvent(CanvasEvent):
     """TODO document (same as DidMoveNodesEvent)
     """
-    compartments: List[Compartment]
+    compartment_indices: List[int]
     offset: Union[Vec2, List[Vec2]]
     dragged: bool
 
@@ -91,7 +82,7 @@ class DidResizeNodesEvent(CanvasEvent):
     """Called after the list of selected nodes has been resized.
 
     Attributes:
-        nodes: The list of resized nodes.
+        node_indices: The indices of the list of resized nodes.
         ratio: The resize ratio.
         dragged: Whether the resize operation was done by the user dragging.
 
@@ -99,7 +90,7 @@ class DidResizeNodesEvent(CanvasEvent):
         This event triggers only if the user has performed a drag operation, and not, for example,
         if the user resized a node in the edit panel.
     """
-    nodes: List[Node]
+    node_indices: List[int]
     ratio: Vec2
     dragged: bool
 
@@ -108,7 +99,7 @@ class DidResizeNodesEvent(CanvasEvent):
 class DidResizeCompartmentsEvent(CanvasEvent):
     """TODO document (same as DidResizeNodesEvent)
     """
-    compartments: List[Compartment]
+    compartment_indices: List[int]
     ratio: Union[Vec2, List[Vec2]]
     dragged: bool
 
@@ -150,7 +141,7 @@ class DidAddNodeEvent(CanvasEvent):
     """Called after a node has been added.
 
     Attributes:
-        node: The node that was added.
+        node: The index of the node that was added.
 
     Note:
         This event triggers only if the user has performed a drag operation, and not, for example,
@@ -159,18 +150,20 @@ class DidAddNodeEvent(CanvasEvent):
     controller.end_group() is called. As an alternative, maybe create a call_after() function
     similar to wxPython? it should be called in OnIdle() or Refresh()
     """
-    node: Node
-
+    node: int
 
 @dataclass
-class DidDeleteNodeEvent(CanvasEvent):
+class DidDeleteEvent(CanvasEvent):
     """Called after a node has been deleted.
 
     Attributes:
-        index: The index of the node that was deleted.
-    TODO not implemented
+        node_indices: The set of nodes (indices )that were deleted.
+        reaction_indices: The set of reactions (indices) that were deleted.
+        compartment_indices: The set of compartment (indices) that were deleted.
     """
-    index: int
+    node_indices: Set[int]
+    reaction_indices: Set[int]
+    compartment_indices: Set[int]
 
 
 @dataclass
@@ -179,17 +172,6 @@ class DidAddReactionEvent(CanvasEvent):
 
     Attributes:
         reaction: The Reaction that was added.
-    """
-    reaction: Reaction
-
-
-@dataclass
-class DidDeleteReactionEvent(CanvasEvent):
-    """Called after a reaction has been deleted.
-
-    Attributes:
-        index: The index of the reaction that was deleted.
-    TODO not implemented
     """
     index: int
 
@@ -201,17 +183,6 @@ class DidAddCompartmentEvent(CanvasEvent):
     Attributes:
         compartment: The Compartment that was added.
     """
-    compartment: Compartment
-
-
-@dataclass
-class DidDeleteCompartmentEvent(CanvasEvent):
-    """Called after a compartment has been deleted.
-
-    Attributes:
-        index: The index of the compartment that was deleted.
-    TODO not implemented
-    """
     index: int
 
 
@@ -220,11 +191,14 @@ class DidChangeCompartmentOfNodeEvent(CanvasEvent):
     """Called after one or more nodes have been moved to a new compartment.
     
     Attributes:
-        nodes: The list of nodes that changed compartment.
+        node_indices: The list of node indices that changed compartment.
         old_compi: The old compartment index, -1 for base compartment.
         new_compi: The new compartment index, -1 for base compartment.
     TODO not implemented
     """
+    node_indices: List[int]
+    old_compi: int
+    new_compi: int
 
 
 @dataclass
@@ -234,10 +208,10 @@ class DidModifyNodesEvent(CanvasEvent):
     For position and size events, see DidMove...Event() and DidResize...Event()
 
     Attributes:
-        nodes: The list of nodes that were modified.
+        nodes: The indices of the list of nodes that were modified.
     TODO not implemented
     """
-    nodes: List[Node]
+    indices: List[int]
 
 
 @dataclass
@@ -245,10 +219,10 @@ class DidModifyReactionEvent(CanvasEvent):
     """Called after a property of one or more nodes has been modified, excluding position.
 
     Attributes:
-        reactions: The list of reactions that were modified.
+        indices: The indices of the list of reactions that were modified.
     TODO not implemented
     """
-    reactions: List[Reaction]
+    indices: List[int]
 
 
 @dataclass
@@ -258,10 +232,10 @@ class DidModifyCompartmentsEvent(CanvasEvent):
     For position and size events, see DidMove...Event() and DidResize...Event()
 
     Attributes:
-        compartments: The list of compartments that were modified.
+        indices: The indices of list of compartments that were modified.
     TODO not implemented
     """
-    nodes: List[Compartment]
+    indices: List[int]
 
 
 @dataclass

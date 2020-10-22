@@ -11,7 +11,7 @@ import wx
 
 from ..config import settings, theme
 from ..events import (
-    CanvasEvent, DidMoveBezierHandleEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
+    CanvasEvent, DidChangeCompartmentOfNodeEvent, DidMoveBezierHandleEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
     DidMoveNodesEvent, bind_handler,
     post_event, unbind_handler,
 )
@@ -314,22 +314,22 @@ class ReactionElement(CanvasElement):
         """Handler for after a node has moved."""
         # If already moving (i.e. self._dirty_indices is not empty), then skip forward
         c_evt = cast(DidMoveNodesEvent, evt)
-        nodes = c_evt.nodes
+        node_indices = c_evt.node_indices
         offset = c_evt.offset
         rects = [self.canvas.node_idx_map[idx].rect for idx in chain(
             self.reaction.sources, self.reaction.targets)]
         self.bezier.nodes_moved(rects)
         if len(self._dirty_indices) == 0:
-            self._dirty_indices = {n.index for n in nodes}
+            self._dirty_indices = {idx for idx in node_indices}
             my_indices = {idx for idx in chain(
                 self.reaction.sources, self.reaction.targets)}
             self._moving_all = my_indices <= self._dirty_indices
 
         neti = 0
-        for i, node in enumerate(nodes):
+        for i, idx in enumerate(node_indices):
             for in_src in [True, False]:
-                if (node.index, in_src) in self.index_to_bz:
-                    bz = self.index_to_bz[(node.index, in_src)]
+                if (idx, in_src) in self.index_to_bz:
+                    bz = self.index_to_bz[(idx, in_src)]
                     off = offset if isinstance(offset, Vec2) else offset[i]
                     bz.handle.tip += off
                     post_event(DidMoveBezierHandleEvent(neti, self.reaction.index, bz.node_idx,
@@ -450,6 +450,9 @@ class SelectBox(CanvasElement):
                    Vec2(1, 1), Vec2(1/2, 1), Vec2(0, 1), Vec2(0, 1/2)]
 
     nodes: List[Node]
+    node_indices: List[int]
+    compartments: List[Compartment]
+    comp_indices: List[int]
     # List of nodes that are not selected, but are within selected compartments. Used only
     # for SMode.CONTAINED
     peripheral_nodes: List[Node]
@@ -525,6 +528,8 @@ class SelectBox(CanvasElement):
     def update(self, nodes: List[Node], compartments: List[Compartment]):
         self.nodes = nodes
         self.compartments = compartments
+        self.node_indices = [n.index for n in self.nodes]
+        self.comp_indices = [c.index for c in self.compartments]
 
         if len(nodes) + len(compartments) > 0:
             if len(nodes) == 1 and len(compartments) == 0:
@@ -769,8 +774,16 @@ class SelectBox(CanvasElement):
 
                 if self._special_mode == SelectBox.SMode.NODES_IN_ONE:
                     compi = self.canvas.InWhichCompartment([n.rect for n in self.nodes])
-                    for node in self.nodes:
-                        self.controller.set_compartment_of_node(self.net_index, node.index, compi)
+                    old_compi = self.nodes[0].comp_idx
+                    if compi != old_compi:
+                        for node in self.nodes:
+                            self.controller.set_compartment_of_node(
+                                self.net_index, node.index, compi)
+                        post_event(DidChangeCompartmentOfNodeEvent(
+                            node_indices=[n.index for n in self.nodes],
+                            old_compi=old_compi,
+                            new_compi=compi
+                        ))
 
                 self.controller.end_group()
         elif self._mode == SelectBox.Mode.RESIZING:
@@ -897,15 +910,15 @@ class SelectBox(CanvasElement):
 
         # STEP 6 post main events
         if len(self.nodes) != 0:
-            post_event(DidResizeNodesEvent(
-                nodes=self.nodes, ratio=inc_ratio, dragged=True))
-            post_event(DidMoveNodesEvent(nodes=self.nodes,
+            post_event(DidResizeNodesEvent(node_indices=self.node_indices, ratio=inc_ratio,
+                                           dragged=True))
+            post_event(DidMoveNodesEvent(node_indices=self.node_indices,
                                          offset=offsets[len(self.compartments):], dragged=True))
         if len(self.compartments) != 0:
             post_event(DidResizeCompartmentsEvent(
-                compartments=self.compartments, ratio=inc_ratio, dragged=True))
+                compartment_indices=self.comp_indices, ratio=inc_ratio, dragged=True))
             post_event(DidMoveCompartmentsEvent(
-                compartments=self.compartments,
+                compartment_indices=self.comp_indices,
                 offset=offsets[:len(self.compartments)], dragged=True))
 
         # STEP 7 adjust peripheral node positions so that they are inside the compartment
@@ -967,7 +980,7 @@ class SelectBox(CanvasElement):
 
         all_nodes = self.nodes + self.peripheral_nodes
         if len(all_nodes) != 0:
-            post_event(DidMoveNodesEvent(all_nodes, pos_offset, dragged=True))
+            post_event(DidMoveNodesEvent([n.index for n in all_nodes], pos_offset, dragged=True))
         if len(self.compartments) != 0:
-            post_event(DidMoveCompartmentsEvent(compartments=self.compartments,
+            post_event(DidMoveCompartmentsEvent(compartment_indices=[c.index for c in self.compartments],
                                                 offset=pos_offset, dragged=True))

@@ -17,7 +17,7 @@ import wx
 from ..config import settings, theme
 from ..events import (
     CanvasDidUpdateEvent,
-    DidCommitDragEvent,
+    DidCommitDragEvent, DidDeleteEvent,
     DidPaintCanvasEvent,
     SelectionDidUpdateEvent,
     bind_handler,
@@ -259,6 +259,10 @@ class Canvas(wx.ScrolledWindow):
     def reactions(self):
         return self._reactions
 
+    @property
+    def compartments(self):
+        return self._compartments
+
     def InputModeChanged(self, val: InputMode):
         if val == InputMode.ADD_NODES:
             self.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
@@ -426,9 +430,7 @@ class Canvas(wx.ScrolledWindow):
         self._select_box.related_elts = select_elements
         self._elements.add(self._select_box)
 
-        evt = CanvasDidUpdateEvent(nodes=self._nodes, reactions=self._reactions,
-                                   compartments=self._compartments)
-        post_event(evt)
+        post_event(CanvasDidUpdateEvent())
 
     def GetCompartment(self, comp_idx: int) -> Optional[Compartment]:
         for comp in self._compartments:
@@ -1131,13 +1133,15 @@ depend on it.".format(bound_node.id_))
                 return
 
         self.controller.start_group()
-
+        sel_comp_idx = self.sel_compartments_idx.item_copy()
         for index in sel_reactions_idx:
             self.controller.delete_reaction(self._net_index, index)
         for index in sel_nodes_idx:
             self.controller.delete_node(self._net_index, index)
-        for index in self.sel_compartments_idx.item_copy():
+        for index in sel_comp_idx:
             self.controller.delete_compartment(self._net_index, index)
+        post_event(DidDeleteEvent(node_indices=sel_nodes_idx, reaction_indices=sel_reactions_idx,
+                                  compartment_indices=sel_comp_idx))
 
         self.controller.end_group()
 

@@ -9,7 +9,7 @@ import logging
 
 from rkviewer.iodine import TColor
 from .utils import gchain, rgba_to_wx_colour
-from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidCommitDragEvent, post_event
+from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidCommitDragEvent, RedoEvent, UndoEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
@@ -85,6 +85,7 @@ class Controller(IController):
         try:
             assert self.group_depth == 0
             iod.undo()
+            post_event(UndoEvent())
         except iod.StackEmptyError:
             logging.getLogger('controller').info('Undo stack is empty')
             return False
@@ -97,6 +98,7 @@ class Controller(IController):
         try:
             assert self.group_depth == 0
             iod.redo()
+            post_event(RedoEvent())
         except iod.StackEmptyError:
             logging.getLogger('controller').info('Redo stack is empty')
             return False
@@ -126,7 +128,7 @@ class Controller(IController):
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
         iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
 
-        post_event(DidAddNodeEvent(node))
+        post_event(DidAddNodeEvent(nodei))
         self.end_group()
         return nodei
 
@@ -146,7 +148,7 @@ class Controller(IController):
         iod.setCompartmentOutlineColor(neti, compi, self.wx_to_tcolor(compartment.border))
         iod.setCompartmentOutlineThickness(neti, compi, compartment.border_width)
         iod.setCompartmentVolume(neti, compi, compartment.volume)
-        post_event(DidAddCompartmentEvent(compartment))
+        post_event(DidAddCompartmentEvent(compi))
         self.end_group()
         return compi
 
@@ -239,7 +241,7 @@ class Controller(IController):
 
         cpos = reaction.src_c_handle.tip
         iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
-        post_event(DidAddReactionEvent(reaction))
+        post_event(DidAddReactionEvent(reai))
         self.end_group()
         return reai
 

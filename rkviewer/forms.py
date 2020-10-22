@@ -578,6 +578,7 @@ class NodeForm(EditPanelForm):
             comp = self.canvas.comp_idx_map[compi]
             bounds = Rect(comp.position, comp.size)
         clamped = None
+        index_list = list(self.selected_idx)
         if len(nodes) == 1:
             [node] = nodes
             clamped = clamp_rect_pos(Rect(pos, node.size), bounds)
@@ -585,7 +586,7 @@ class NodeForm(EditPanelForm):
                 self._self_changes = True
                 node.position = clamped
                 self.controller.start_group()
-                post_event(DidMoveNodesEvent(nodes, clamped - node.position, dragged=False))
+                post_event(DidMoveNodesEvent(index_list, clamped - node.position, dragged=False))
                 self.controller.move_node(self.net_index, node.index, node.position)
                 self.controller.end_group()
         else:
@@ -596,7 +597,7 @@ class NodeForm(EditPanelForm):
                 self.controller.start_group()
                 for node in nodes:
                     node.position += offset
-                post_event(DidMoveNodesEvent(nodes, offset, dragged=False))
+                post_event(DidMoveNodesEvent(index_list, offset, dragged=False))
                 for node in nodes:
                     self.controller.move_node(self.net_index, node.index, node.position)
                 self.controller.end_group()
@@ -659,8 +660,9 @@ class NodeForm(EditPanelForm):
                 # clamp so that nodes are always within compartment/bounds
                 node.position = clamp_rect_pos(node.rect, bounds)
 
-            post_event(DidMoveNodesEvent(nodes, offsets, dragged=False))
-            post_event(DidResizeNodesEvent(nodes, ratio=ratio, dragged=False))
+            idx_list = list(self.selected_idx)
+            post_event(DidMoveNodesEvent(idx_list, offsets, dragged=False))
+            post_event(DidResizeNodesEvent(idx_list, ratio=ratio, dragged=False))
             for node in nodes:
                 self.controller.move_node(self.net_index, node.index, node.position)
                 self.controller.set_node_size(self.net_index, node.index, node.size)
@@ -1096,7 +1098,7 @@ class CompartmentForm(EditPanelForm):
             self.controller.start_group()
             for comp in comps:
                 comp.position += offset
-            post_event(DidMoveCompartmentsEvent(comps, offset, dragged=False))
+            post_event(DidMoveCompartmentsEvent(list(self.selected_idx), offset, dragged=False))
             for comp in comps:
                 self.controller.move_node(self.net_index, comp.index, comp.position)
             self.controller.end_group()
@@ -1148,8 +1150,9 @@ class CompartmentForm(EditPanelForm):
                         peripheral_nodes.append(node)
                         peripheral_offsets.append(new_pos - node.position)
 
-            post_event(DidMoveCompartmentsEvent(comps, offsets, dragged=False))
-            post_event(DidResizeCompartmentsEvent(comps, ratio, dragged=False))
+            idx_list = list(self.selected_idx)
+            post_event(DidMoveCompartmentsEvent(idx_list, offsets, dragged=False))
+            post_event(DidResizeCompartmentsEvent(idx_list, ratio, dragged=False))
             if len(peripheral_nodes) != 0:
                 post_event(DidMoveNodesEvent(peripheral_nodes, peripheral_offsets, dragged=False))
             for comp in comps:

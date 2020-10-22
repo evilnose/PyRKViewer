@@ -474,7 +474,7 @@ class SelectBox(CanvasElement):
     #: the bounding rect when dragging/resizing started
     _orig_rect: Optional[Rect]
     _bounds: Rect  #: the bounds that the bounding rect may not exceed
-    _special_mode: SelectBox.SMode
+    special_mode: SelectBox.SMode
 
     class Mode(enum.Enum):
         IDLE = 0
@@ -518,10 +518,6 @@ class SelectBox(CanvasElement):
         self._bounds = bounds
 
     @property
-    def special_mode(self):
-        return self._special_mode
-
-    @property
     def mode(self):
         return self._mode
 
@@ -546,24 +542,24 @@ class SelectBox(CanvasElement):
         selected_comps = set(c.index for c in compartments) | {-1}
         # Determine SMode
         if len(nodes) == 0:
-            self._special_mode = SelectBox.SMode.COMP_ONLY
+            self.special_mode = SelectBox.SMode.COMP_ONLY
         else:
             assoc_comps = {n.comp_idx for n in nodes}
             if len(compartments) == 0:
                 if len(assoc_comps) == 1:
                     # Nodes are in one compartment
-                    self._special_mode = SelectBox.SMode.NODES_IN_ONE
+                    self.special_mode = SelectBox.SMode.NODES_IN_ONE
                 else:
                     # Cannot possibly contain
-                    self._special_mode = SelectBox.SMode.NOT_CONTAINED
+                    self.special_mode = SelectBox.SMode.NOT_CONTAINED
             else:
                 if selected_comps >= assoc_comps:
-                    self._special_mode = SelectBox.SMode.CONTAINED
+                    self.special_mode = SelectBox.SMode.CONTAINED
                 else:
-                    self._special_mode = SelectBox.SMode.NOT_CONTAINED
+                    self.special_mode = SelectBox.SMode.NOT_CONTAINED
 
         # Compute peripheral nodes
-        if self._special_mode == SelectBox.SMode.NOT_CONTAINED:
+        if self.special_mode == SelectBox.SMode.NOT_CONTAINED:
             self.peripheral_nodes = list()
         else:
             peri_indices = set()
@@ -772,8 +768,8 @@ class SelectBox(CanvasElement):
                     self.controller.move_compartment(
                         self.net_index, comp.index, comp.position)
 
-                if self._special_mode == SelectBox.SMode.NODES_IN_ONE:
-                    compi = self.canvas.InWhichCompartment([n.rect for n in self.nodes])
+                if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
+                    compi = self.canvas.InWhichCompartment(self.nodes)
                     old_compi = self.nodes[0].comp_idx
                     if compi != old_compi:
                         for node in self.nodes:
@@ -807,13 +803,13 @@ class SelectBox(CanvasElement):
     def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
         assert self._mode != SelectBox.Mode.IDLE
         rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)
-        if self._special_mode == SelectBox.SMode.NOT_CONTAINED:
+        if self.special_mode == SelectBox.SMode.NOT_CONTAINED:
             # Return True since we still want this to appear to be dragging, just not working.
             return True
         if self._mode == SelectBox.Mode.RESIZING:
             # TODO move the orig_rpos, etc. code to update()
             bounds = self._bounds
-            if self._special_mode == SelectBox.SMode.NODES_IN_ONE:
+            if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
                 # constrain resizing to within this compartment
                 if self.nodes[0].comp_idx != -1:
                     containing_comp = self.canvas.GetCompartment(self.nodes[0].comp_idx)

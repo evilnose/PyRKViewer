@@ -130,6 +130,9 @@ class Canvas(wx.ScrolledWindow):
     _selection_dirty: bool
     node_idx_map: Dict[int, Node]  #: Maps node index to node
     comp_idx_map: Dict[int, Compartment]  #: Maps compartment index to compartment
+    sel_nodes: List[Node]  #: Current lsit of selected nodes; cached for performance
+    sel_comps: List[Compartment]  #: Current list of selected comps; cached for performance
+    drawing_drag: bool  #: See self._UpdateSelectedLists() for more details
 
     def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
         # ensure the parent's __init__ is called
@@ -238,6 +241,10 @@ class Canvas(wx.ScrolledWindow):
         self._selection_dirty = False
 
         self.SetOverlayPositions()
+        self.sel_nodes = []
+        self.sel_reactions = []
+        self.sel_comps = []
+        self.drawing_drag = False
 
     def OnWindowDestroy(self, evt):
         evt.Skip()
@@ -645,7 +652,7 @@ class Canvas(wx.ScrolledWindow):
                     fill_color=theme['node_fill'],
                     border_color=theme['node_border'],
                     border_width=theme['node_border_width'],
-                    comp_idx=self.InWhichCompartment([Rect(adj_pos, size)]),
+                    comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
                 )
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])
@@ -809,8 +816,12 @@ class Canvas(wx.ScrolledWindow):
                                       if rects_overlap(n.s_rect, self._drag_rect)]
                     selected_comps = [c for c in self._compartments
                                       if rects_overlap(c.rect * cstate.scale, self._drag_rect)]
-                    self.drag_sel_nodes_idx = set(n.index for n in selected_nodes)
-                    self.drag_sel_comp_idx = set(c.index for c in selected_comps)
+                    new_drag_sel_nodes_idx = set(n.index for n in selected_nodes)
+                    new_drag_sel_comp_idx = set(c.index for c in selected_comps)
+                    if new_drag_sel_nodes_idx != self.drag_sel_nodes_idx or new_drag_sel_comp_idx != self.drag_sel_comp_idx:
+                        self.drag_sel_nodes_idx = new_drag_sel_nodes_idx
+                        self.drag_sel_comp_idx = new_drag_sel_comp_idx
+                        self._UpdateSelectedLists()
                 elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                     pass
                 redraw = True
@@ -908,9 +919,9 @@ class Canvas(wx.ScrolledWindow):
             if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
                 size = Vec2(theme['node_width'], theme['node_height'])
                 pos = self._cursor_logical_pos - size/2
-                within_comp = self.InWhichCompartment([Rect(pos, size)])
+                within_comp = self.RectInWhichCompartment(Rect(pos, size))
             elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
-                within_comp = self.InWhichCompartment([n.rect for n in self._select_box.nodes])
+                within_comp = self.InWhichCompartment(self._select_box.nodes)
 
             # create font for nodes
             for el in self._elements:
@@ -922,26 +933,14 @@ class Canvas(wx.ScrolledWindow):
                 else:
                     el.do_paint(gc)
 
-            sel_node_idx = self.sel_nodes_idx.item_copy()
-            sel_comp_idx = self.sel_compartments_idx.item_copy()
-            orig_count = len(sel_node_idx) + len(sel_comp_idx)
-            drawing_drag = False
-            if self._drag_selecting:
-                sel_node_idx |= self.drag_sel_nodes_idx
-                sel_comp_idx |= self.drag_sel_comp_idx
-                # Flag that indicates whether there are nodes/comps not selected but within
-                # the drag-selection rectangle
-                if len(sel_node_idx) + len(sel_comp_idx) != orig_count:
-                    drawing_drag = True
-            sel_nodes = [n for n in self._nodes if n.index in sel_node_idx]
-            sel_comps = [c for c in self._compartments if c.index in sel_comp_idx]
-            sel_rects = [n.rect * cstate.scale for n in sel_nodes] + \
-                [c.rect * cstate.scale for c in sel_comps]
+            # TODO Put this in SelectionChanged
+            sel_rects = [n.rect * cstate.scale for n in self.sel_nodes] + \
+            [c.rect * cstate.scale for c in self.sel_comps]
 
             # If we are not drag-selecting, don't draw selection outlines if there is only one rect
             # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
             # documented above)
-            if len(sel_rects) > 1 or drawing_drag:
+            if len(sel_rects) > 1 or self.drawing_drag:
                 for rect in sel_rects:
                     rect = rect.aligned()
                     # Draw selection outlines
@@ -962,7 +961,7 @@ class Canvas(wx.ScrolledWindow):
                 )
 
             reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
-            for node in reactants:
+            for _ in reactants:
                 draw_reaction_outline(theme['reactant_border'], theme['react_node_padding'])
 
             products = get_nodes_by_idx(self._nodes, self._product_idx)
@@ -1062,6 +1061,21 @@ class Canvas(wx.ScrolledWindow):
             self._SelectionChanged()
             self._selection_dirty = False
 
+    def _UpdateSelectedLists(self):
+        sel_node_idx = self.sel_nodes_idx.item_copy()
+        sel_comp_idx = self.sel_compartments_idx.item_copy()
+        orig_count = len(sel_node_idx) + len(sel_comp_idx)
+        self.drawing_drag = False
+        if self._drag_selecting:
+            sel_node_idx |= self.drag_sel_nodes_idx
+            sel_comp_idx |= self.drag_sel_comp_idx
+            # Flag that indicates whether there are nodes/comps not selected but within
+            # the drag-selection rectangle
+            if len(sel_node_idx) + len(sel_comp_idx) != orig_count:
+                self.drawing_drag = True
+        self.sel_nodes = [n for n in self._nodes if n.index in sel_node_idx]
+        self.sel_comps = [c for c in self._compartments if c.index in sel_comp_idx]
+
     def _SelectionChanged(self):
         """Callback passed to observer for when the node/reaction selection has changed."""
         if self._in_selection_group:
@@ -1079,6 +1093,7 @@ class Canvas(wx.ScrolledWindow):
         post_event(SelectionDidUpdateEvent(node_indices=node_idx, reaction_indices=rxn_idx,
                                            compartment_indices=comp_idx))
         cstate.input_mode = cstate.input_mode
+        self._UpdateSelectedLists()
 
     def _UpdateSelectBoxLayer(self):
         """Helper that updates the layer of the select box, depending on what is selected."""
@@ -1092,7 +1107,7 @@ class Canvas(wx.ScrolledWindow):
         layers = max(e.layers for e in elements)
         self.ResetLayer(self._select_box, layers)
 
-    def InWhichCompartment(self, rects: List[Rect]) -> int:
+    def InWhichCompartment(self, nodes: List[Node]) -> int:
         """Return which compartment the given floating rectangles are in, or -1 if not in any.
 
         This does not return which compartment the nodes currently are in. Rather, it assumes that
@@ -1107,7 +1122,17 @@ class Canvas(wx.ScrolledWindow):
             if isinstance(el, CompartmentElt):
                 comp = cast(CompartmentElt, el).compartment
                 comp_rect = comp.rect
-                if all(comp_rect.contains(r) for r in rects):
+                if all(comp_rect.contains(n.rect) for n in nodes):
+                    return comp.index
+        return -1
+
+    def RectInWhichCompartment(self, rect: Rect) -> int:
+        """Same as InWhichCompartment but for a single rect"""
+        for el in reversed(self._elements):
+            if isinstance(el, CompartmentElt):
+                comp = cast(CompartmentElt, el).compartment
+                comp_rect = comp.rect
+                if comp_rect.contains(rect):
                     return comp.index
         return -1
 

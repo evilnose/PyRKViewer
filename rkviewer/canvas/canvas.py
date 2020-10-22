@@ -204,10 +204,6 @@ class Canvas(wx.ScrolledWindow):
         # Set a placeholder value for position; we will set it later in SetOverlayPositions().
         self._minimap = Minimap(pos=Vec2(), device_pos=Vec2(), width=200, realsize=self.realsize,
                                 window_size=Vec2(self.GetSize()), pos_callback=self.SetOriginPos)
-        minimap_pos = Vec2(self.GetSize()) - self._scroll_off - self._minimap.size
-        _, slider_height = self.zoom_slider.GetSize()
-        minimap_pos.swapped(1, minimap_pos.y - (slider_height + 10))
-        self._minimap.device_pos = minimap_pos
 
         self._overlays = [self._minimap]
 
@@ -332,7 +328,11 @@ class Canvas(wx.ScrolledWindow):
         self.zoom_slider.SetPosition(zoom_pos.to_wx_point())
 
         # do all the minimap updates here, since this is simpler and less prone to bugs
-        self._minimap.position = Vec2(*self.CalcUnscrolledPosition(*self._minimap.device_pos))
+        minimap_pos = Vec2(self.GetSize()) - self._scroll_off - self._minimap.size
+        _, slider_height = self.zoom_slider.GetSize()
+        minimap_pos = minimap_pos.swapped(1, minimap_pos.y - (slider_height + 10))
+        self._minimap.device_pos = minimap_pos
+        self._minimap.position = Vec2(self.CalcUnscrolledPosition(*minimap_pos))
         self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(0, 0)) / cstate.scale
         # TODO for windows, need to subtract scroll offset from window size. Need to test if this
         # is true for Mac and Linux, however. -Gary
@@ -721,6 +721,8 @@ class Canvas(wx.ScrolledWindow):
             # HACK once we integrate overlays (e.g. minimap) as CanvasElements, we can simply call
             # do_mouse_leave or something
             self._minimap.hovering = False
+        elif self._minimap.hovering:
+            self._minimap.hovering = False
         elif self._drag_selecting:
             self._drag_selecting = False
             if cstate.input_mode == InputMode.SELECT:
@@ -761,7 +763,10 @@ class Canvas(wx.ScrolledWindow):
             if self.dragged_element is not None:
                 self.dragged_element.do_left_up(logical_pos)
                 self.dragged_element = None
-            else:
+            elif self.hovered_element is not None:
+                self.hovered_element.do_mouse_leave(logical_pos)
+                self.hovered_element = None
+            elif evt.LeftIsDown():
                 for el in reversed(self._elements):
                     if not el.enabled:
                         continue

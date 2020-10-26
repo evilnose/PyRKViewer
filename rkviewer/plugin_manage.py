@@ -13,10 +13,15 @@ from rkplugin.plugins import CommandPlugin, Plugin, PluginType, WindowedPlugin
 # pylint: disable=no-name-in-module
 from wx.html import HtmlWindow
 
-from rkviewer.events import (CanvasEvent, DidAddNodeEvent,
-                             DidCommitDragEvent, DidMoveBezierHandleEvent, DidMoveNodesEvent,
-                             DidPaintCanvasEvent, SelectionDidUpdateEvent,
-                             bind_handler)
+from rkviewer.events import (CanvasEvent, DidAddCompartmentEvent,
+                             DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent,
+                             DidCommitDragEvent, DidDeleteEvent,
+                             DidModifyCompartmentsEvent, DidModifyNodesEvent,
+                             DidModifyReactionEvent, DidMoveBezierHandleEvent,
+                             DidMoveNodesEvent, DidPaintCanvasEvent,
+                             DidRedoEvent, DidResizeCompartmentsEvent,
+                             DidResizeNodesEvent, DidUndoEvent,
+                             SelectionDidUpdateEvent, bind_handler)
 from rkviewer.mvc import IController
 
 
@@ -28,10 +33,21 @@ class PluginManager:
         self.controller = controller
         bind_handler(DidAddNodeEvent, self.make_notify('on_did_add_node'))
         bind_handler(DidMoveNodesEvent, self.make_notify('on_did_move_nodes'))
+        bind_handler(DidResizeNodesEvent, self.make_notify('on_did_resize_nodes'))
+        bind_handler(DidAddCompartmentEvent, self.make_notify('on_did_add_compartment'))
+        bind_handler(DidResizeCompartmentsEvent, self.make_notify('on_did_resize_compartments'))
+        bind_handler(DidAddReactionEvent, self.make_notify('on_did_add_reaction'))
+        bind_handler(DidUndoEvent, self.make_notify('on_did_undo'))
+        bind_handler(DidRedoEvent, self.make_notify('on_did_redo'))
+        bind_handler(DidDeleteEvent, self.make_notify('on_did_delete'))
         bind_handler(DidCommitDragEvent, self.make_notify('on_did_commit_drag'))
+        bind_handler(DidPaintCanvasEvent, self.make_notify('on_did_paint_canvas'))
         bind_handler(SelectionDidUpdateEvent, self.make_notify('on_selection_did_change'))
         bind_handler(DidMoveBezierHandleEvent, self.make_notify('on_did_move_bezier_handle'))
-        bind_handler(DidPaintCanvasEvent, self.make_notify('on_did_paint_canvas'))
+        bind_handler(DidModifyNodesEvent, self.make_notify('on_did_modify_nodes'))
+        bind_handler(DidModifyReactionEvent, self.make_notify('on_did_modify_reactions'))
+        bind_handler(DidModifyCompartmentsEvent, self.make_notify('on_did_modify_compartments'))
+        bind_handler(DidChangeCompartmentOfNodesEvent, self.make_notify('on_did_change_compartment_of_nodes'))
 
     # Also TODO might want a more sophisticated file system structure, including data storage and
     # temp folder

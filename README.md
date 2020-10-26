@@ -28,7 +28,7 @@ e.g. `Canvas::RegisterAllChildren`.
 ## Testing and Profiling
 * To run all tests, go to project root and run `python -m unittest`.
 * To run a particular test, run e.g. `python -m unittest test.rkplugin.test_api`.
-* To profile the application, run `sphinx-build -b html docs\source docs\build`.
+* To profile the application, run `python -m cProfile -o rkviewer.stat main.py`.
 
 ## Mac Notes
 * pyinstaller and wxPython require a python built with `enable-framework` 

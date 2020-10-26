@@ -5,6 +5,7 @@ API for the RKViewer GUI and model. Allows viewing and modifying the network mod
 # pylint: disable=maybe-no-member
 #from rkviewer.mvc import NetIndexError
 from dataclasses import field, dataclass
+from rkviewer.events import DidChangeCompartmentOfNodesEvent, post_event
 from rkviewer.canvas.utils import default_handle_positions as _default_handle_positions
 from rkviewer.utils import gchain, require_kwargs_on_init
 from rkviewer.canvas.geometry import Rect, within_rect

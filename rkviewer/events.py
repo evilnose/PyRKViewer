@@ -20,7 +20,6 @@ from typing import (
 
 import wx
 
-from rkviewer.canvas.data import Compartment, Node, Reaction
 from rkviewer.canvas.geometry import Vec2
 
 
@@ -47,16 +46,8 @@ class SelectionDidUpdateEvent(CanvasEvent):
 
 @dataclass
 class CanvasDidUpdateEvent(CanvasEvent):
-    """Called after the canvas has been updated by the controller.
-
-    Attributes:
-        nodes: The list of nodes.
-        reactions: The list of reactions.
-        compartments: The list of compartments.
-    """
-    nodes: List[Node]
-    reactions: List[Reaction]
-    compartments: List[Compartment]
+    """Called after the canvas has been updated by the controller."""
+    pass
 
 
 @dataclass
@@ -68,22 +59,35 @@ class DidMoveNodesEvent(CanvasEvent):
     DidCommitDragEvent.
 
     Attributes:
-        nodes: The nodes that were moved.
+        node_indices: The indices of the nodes that were moved.
         offset: The position offset. If all nodes were moved by the same offset, then a single Vec2
                 is given; otherwise, a list of offsets are given, with each offset matching a node.
+        dragged: Whether the resize operation was done by the user dragging, and not, for exmaple,
+                 through the form.
     """
-    nodes: List[Node]
+    node_indices: List[int]
     offset: Union[Vec2, List[Vec2]]
     dragged: bool
+    by_user: bool = True
 
 
 @dataclass
 class DidMoveCompartmentsEvent(CanvasEvent):
-    """TODO document (same as DidMoveNodesEvent)
     """
-    compartments: List[Compartment]
+    Same as `DidMoveNodesEvent` but for compartments.
+
+    Attributes:
+        compartment_indices: The indices of the compartments that were moved.
+        offset: The position offset. If all compartments were moved by the same offset,
+                then a single Vec2 is given; otherwise, a list of offsets are given,
+                with each offset matching a node.
+        dragged: Whether the resize operation was done by the user dragging, and not, for exmaple,
+                 through the form.
+    """
+    compartment_indices: List[int]
     offset: Union[Vec2, List[Vec2]]
     dragged: bool
+    by_user: bool = True
 
 
 @dataclass
@@ -91,38 +95,36 @@ class DidResizeNodesEvent(CanvasEvent):
     """Called after the list of selected nodes has been resized.
 
     Attributes:
-        nodes: The list of resized nodes.
+        node_indices: The indices of the list of resized nodes.
         ratio: The resize ratio.
-        dragged: Whether the resize operation was done by the user dragging.
-
-    Note:
-        This event triggers only if the user has performed a drag operation, and not, for example,
-        if the user resized a node in the edit panel.
+        dragged: Whether the resize operation was done by the user dragging, and not, for exmaple,
+                 through the form.
     """
-    nodes: List[Node]
+    node_indices: List[int]
     ratio: Vec2
     dragged: bool
+    by_user: bool = True
 
 
 @dataclass
 class DidResizeCompartmentsEvent(CanvasEvent):
     """TODO document (same as DidResizeNodesEvent)
     """
-    compartments: List[Compartment]
+    compartment_indices: List[int]
     ratio: Union[Vec2, List[Vec2]]
     dragged: bool
+    by_user: bool = True
 
 
 @dataclass
 class DidCommitDragEvent(CanvasEvent):
     """Dispatched after any continuously emitted dragging event has concluded.
-    
+
     This is dispatched for any event that is posted in quick intervals while the mouse left
     button is held while moving, i.e. "dragging" events. This includes: DidMoveNodesEvent,
     DidMoveCompartmentsEvent, DidResizeNodesEvent, DidResizeCompartmentsEvent,
     and DidResizeMoveBezierHandlesEvent. This event is emitted after the left mouse button is
     released, the model is notified of the change, and the action is complete.
-    TODO finish implementing this
     """
 
 
@@ -135,13 +137,14 @@ class DidMoveBezierHandleEvent(CanvasEvent):
         reaction_index: The reaction index.
         node_index: The index of the node whose Bezier handle moved. -1 if the source centroid
                     handle was moved, or -2 if the dest centroid handle was moved.
-        direct: Whether this event is triggered directly, i.e. by the user dragging on a Bezier
-                handle. The event could be triggered *indirectly* when the user moves node(s), or
-                when plugins move Bezier handles programmatically.
+        direct: Automatically true when by_user is False. Otherwise, True if the handle is
+                moved by the user dragging the handle directly, and False if the handle was moved
+                by the user dragging the node associated with that handle.
     """
     net_index: int
     reaction_index: int
     node_index: int
+    by_user: bool
     direct: bool
 
 
@@ -150,7 +153,7 @@ class DidAddNodeEvent(CanvasEvent):
     """Called after a node has been added.
 
     Attributes:
-        node: The node that was added.
+        node: The index of the node that was added.
 
     Note:
         This event triggers only if the user has performed a drag operation, and not, for example,
@@ -159,18 +162,21 @@ class DidAddNodeEvent(CanvasEvent):
     controller.end_group() is called. As an alternative, maybe create a call_after() function
     similar to wxPython? it should be called in OnIdle() or Refresh()
     """
-    node: Node
+    node: int
 
 
 @dataclass
-class DidDeleteNodeEvent(CanvasEvent):
+class DidDeleteEvent(CanvasEvent):
     """Called after a node has been deleted.
 
     Attributes:
-        index: The index of the node that was deleted.
-    TODO not implemented
+        node_indices: The set of nodes (indices )that were deleted.
+        reaction_indices: The set of reactions (indices) that were deleted.
+        compartment_indices: The set of compartment (indices) that were deleted.
     """
-    index: int
+    node_indices: Set[int]
+    reaction_indices: Set[int]
+    compartment_indices: Set[int]
 
 
 @dataclass
@@ -179,17 +185,6 @@ class DidAddReactionEvent(CanvasEvent):
 
     Attributes:
         reaction: The Reaction that was added.
-    """
-    reaction: Reaction
-
-
-@dataclass
-class DidDeleteReactionEvent(CanvasEvent):
-    """Called after a reaction has been deleted.
-
-    Attributes:
-        index: The index of the reaction that was deleted.
-    TODO not implemented
     """
     index: int
 
@@ -201,30 +196,24 @@ class DidAddCompartmentEvent(CanvasEvent):
     Attributes:
         compartment: The Compartment that was added.
     """
-    compartment: Compartment
-
-
-@dataclass
-class DidDeleteCompartmentEvent(CanvasEvent):
-    """Called after a compartment has been deleted.
-
-    Attributes:
-        index: The index of the compartment that was deleted.
-    TODO not implemented
-    """
     index: int
 
 
 @dataclass
-class DidChangeCompartmentOfNodeEvent(CanvasEvent):
+class DidChangeCompartmentOfNodesEvent(CanvasEvent):
     """Called after one or more nodes have been moved to a new compartment.
-    
+
     Attributes:
-        nodes: The list of nodes that changed compartment.
+        node_indices: The list of node indices that changed compartment.
         old_compi: The old compartment index, -1 for base compartment.
         new_compi: The new compartment index, -1 for base compartment.
-    TODO not implemented
+        by_user: Whether this event was triggered directly by a user action, as opposed to by a
+                 plugin.
     """
+    node_indices: List[int]
+    old_compi: int
+    new_compi: int
+    by_user: bool = True
 
 
 @dataclass
@@ -234,10 +223,12 @@ class DidModifyNodesEvent(CanvasEvent):
     For position and size events, see DidMove...Event() and DidResize...Event()
 
     Attributes:
-        nodes: The list of nodes that were modified.
-    TODO not implemented
+        nodes: The indices of the list of nodes that were modified.
+        by_user: Whether this event was triggered directly by a user action and not, for example,
+                 by a plugin.
     """
-    nodes: List[Node]
+    indices: List[int]
+    by_user: bool = True
 
 
 @dataclass
@@ -245,10 +236,12 @@ class DidModifyReactionEvent(CanvasEvent):
     """Called after a property of one or more nodes has been modified, excluding position.
 
     Attributes:
-        reactions: The list of reactions that were modified.
-    TODO not implemented
+        indices: The indices of the list of reactions that were modified.
+        by_user: Whether this event was triggered directly by a user action and not, for example,
+                 by a plugin.
     """
-    reactions: List[Reaction]
+    indices: List[int]
+    by_user: bool = True
 
 
 @dataclass
@@ -258,22 +251,21 @@ class DidModifyCompartmentsEvent(CanvasEvent):
     For position and size events, see DidMove...Event() and DidResize...Event()
 
     Attributes:
-        compartments: The list of compartments that were modified.
-    TODO not implemented
+        indices: The indices of list of compartments that were modified.
     """
-    nodes: List[Compartment]
+    indices: List[int]
 
 
 @dataclass
-class UndoEvent(CanvasEvent):
+class DidUndoEvent(CanvasEvent):
     """Called after an undo action is done."""
-    pass
+    by_user: bool = True
 
 
 @dataclass
-class RedoEvent(CanvasEvent):
+class DidRedoEvent(CanvasEvent):
     """Called after a redo action is done."""
-    pass
+    by_user: bool = True
 
 
 @dataclass

@@ -66,9 +66,9 @@ class EditPanel(fnb.FlatNotebook):
         bind_handler(DidResizeCompartmentsEvent, self.OnDidResizeCompartments)
 
     def OnCanvasDidUpdate(self, evt):
-        self.node_form.UpdateNodes(evt.nodes)
-        self.reaction_form.UpdateReactions(evt.reactions)
-        self.comp_form.UpdateCompartments(evt.compartments)
+        self.node_form.UpdateNodes(self.canvas.nodes)
+        self.reaction_form.UpdateReactions(self.canvas.reactions)
+        self.comp_form.UpdateCompartments(self.canvas.compartments)
 
     def OnSelectionDidUpdate(self, evt):
         focused = self.GetTopLevelParent().FindFocus()

@@ -485,8 +485,7 @@ class Canvas(wx.ScrolledWindow):
 
         # adjust scroll position
         logical = Vec2(self.CalcUnscrolledPosition(anchor.to_wx_point()))
-        scaled = logical * \
-            (cstate.scale / old_scale)
+        scaled = logical * (cstate.scale / old_scale)
         newanchor = Vec2(self.CalcScrolledPosition(scaled.to_wx_point()))
         # the amount of shift needed to keep anchor at the same position
         shift = newanchor - anchor

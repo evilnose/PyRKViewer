@@ -9,9 +9,9 @@ import copy
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .config import theme, settings
-from .events import DidMoveCompartmentsEvent, DidMoveNodesEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, post_event
+from .events import DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyReactionEvent, DidMoveCompartmentsEvent, DidMoveNodesEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, post_event
 from .mvc import IController
-from .utils import change_opacity, no_rzeros, on_msw, resource_path
+from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
 from .canvas.data import Compartment, Reaction, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
@@ -550,9 +550,10 @@ class NodeForm(EditPanelForm):
             else:
                 # loop terminated fine. There is no duplicate ID
                 self._self_changes = True
-                if not self.controller.rename_node(self.net_index, nodei, new_id):
-                    # this should not happen!
-                    assert False
+                self.controller.start_group()
+                self.controller.rename_node(self.net_index, nodei, new_id)
+                post_event(DidModifyNodesEvent([nodei]))
+                self.controller.end_group()
         self._SetValidationState(True, self.id_ctrl.GetId())
 
     def _OnPosText(self, evt):
@@ -681,6 +682,7 @@ class NodeForm(EditPanelForm):
                 # we can set both the RGB and the alpha at the same time
                 self.controller.set_node_fill_rgb(self.net_index, node.index, fill)
                 self.controller.set_node_fill_alpha(self.net_index, node.index, fill.Alpha())
+        post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _OnBorderColorChanged(self, border: wx.Colour):
@@ -696,6 +698,7 @@ class NodeForm(EditPanelForm):
                 self.controller.set_node_border_rgb(self.net_index, node.index, border)
                 self.controller.set_node_border_alpha(
                     self.net_index, node.index, border.Alpha())
+        post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _FillAlphaCallback(self, alpha: float):
@@ -714,6 +717,7 @@ class NodeForm(EditPanelForm):
         self.controller.start_group()
         for node in nodes:
             self.controller.set_node_border_alpha(self.net_index, node.index, int(alpha * 255))
+        post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _BorderWidthCallback(self, width: float):
@@ -831,7 +835,10 @@ class ReactionForm(EditPanelForm):
 
             # loop terminated fine. There is no duplicate ID
             self._self_changes = True
+            self.controller.start_group()
             self.controller.rename_reaction(self.net_index, reai, new_id)
+            post_event(DidModifyReactionEvent(list(self._selected_idx)))
+            self.controller.end_group()
             self._SetValidationState(True, ctrl_id)
 
     def _StrokeWidthCallback(self, width: float):
@@ -840,6 +847,7 @@ class ReactionForm(EditPanelForm):
         self.controller.start_group()
         for rxn in reactions:
             self.controller.set_reaction_line_thickness(self.net_index, rxn.index, width)
+        post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _OnFillColorChanged(self, fill: wx.Colour):
@@ -854,6 +862,7 @@ class ReactionForm(EditPanelForm):
                 # we can set both the RGB and the alpha at the same time
                 self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
                 self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, fill.Alpha())
+        post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _FillAlphaCallback(self, alpha: float):
@@ -863,6 +872,7 @@ class ReactionForm(EditPanelForm):
         self.controller.start_group()
         for rxn in reactions:
             self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
+        post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _OnRateLawText(self, evt: wx.CommandEvent):
@@ -871,6 +881,7 @@ class ReactionForm(EditPanelForm):
             'multiple are selected'
         [reai] = self._selected_idx
         self._self_changes = True
+        post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.set_reaction_ratelaw(self.net_index, reai, ratelaw)
 
     def UpdateReactions(self, reactions: List[Reaction]):
@@ -948,14 +959,20 @@ class ReactionForm(EditPanelForm):
     def _MakeSetSrcStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self._self_changes = True
+            self.controller.start_group()
             self.controller.set_src_node_stoich(self.net_index, reai, nodei, val)
+            post_event(DidModifyReactionEvent(list(self._selected_idx)))
+            self.controller.end_group()
 
         return ret
 
     def _MakeSetDestStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
+            self.controller.start_group()
             self._self_changes = True
             self.controller.set_dest_node_stoich(self.net_index, reai, nodei, val)
+            post_event(DidModifyReactionEvent(list(self._selected_idx)))
+            self.controller.end_group()
 
         return ret
 
@@ -1072,7 +1089,10 @@ class CompartmentForm(EditPanelForm):
 
             # loop terminated fine. There is no duplicate ID
             self._self_changes = True
+            self.controller.start_group()
             self.controller.rename_compartment(self.net_index, compi, new_id)
+            post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
+            self.controller.end_group()
             self._SetValidationState(True, ctrl_id)
 
     def _OnPosText(self, evt):
@@ -1171,6 +1191,7 @@ class CompartmentForm(EditPanelForm):
         self.controller.start_group()
         for comp in comps:
             self.controller.set_compartment_volume(self.net_index, comp.index, volume)
+        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _OnFillColorChanged(self, fill: wx.Colour):
@@ -1182,6 +1203,7 @@ class CompartmentForm(EditPanelForm):
             if on_msw():
                 fill = wx.Colour(fill.GetRGB())  # remove alpha channel
             self.controller.set_compartment_fill(self.net_index, comp.index, fill)
+        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _OnBorderColorChanged(self, border: wx.Colour):
@@ -1193,6 +1215,7 @@ class CompartmentForm(EditPanelForm):
             if on_msw():
                 border = wx.Colour(border.GetRGB())  # remove alpha channel
             self.controller.set_compartment_border(self.net_index, comp.index, border)
+        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _FillAlphaCallback(self, alpha: float):
@@ -1203,6 +1226,7 @@ class CompartmentForm(EditPanelForm):
         for comp in comps:
             new_fill = change_opacity(comp.fill, int(alpha * 255))
             self.controller.set_compartment_fill(self.net_index, comp.index, new_fill)
+        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _BorderAlphaCallback(self, alpha: float):
@@ -1213,6 +1237,7 @@ class CompartmentForm(EditPanelForm):
         for comp in comps:
             new_border = change_opacity(comp.border, int(alpha * 255))
             self.controller.set_compartment_border(self.net_index, comp.index, new_border)
+        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def _BorderWidthCallback(self, width: float):
@@ -1222,6 +1247,7 @@ class CompartmentForm(EditPanelForm):
         self.controller.start_group()
         for comp in comps:
             self.controller.set_compartment_border_width(self.net_index, comp.index, width)
+        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
         self.controller.end_group()
 
     def UpdateCompartments(self, comps: List[Compartment]):

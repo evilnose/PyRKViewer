@@ -11,7 +11,7 @@ import wx
 
 from ..config import settings, theme
 from ..events import (
-    CanvasEvent, DidChangeCompartmentOfNodeEvent, DidMoveBezierHandleEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
+    CanvasEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidMoveBezierHandleEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
     DidMoveNodesEvent, bind_handler,
     post_event, unbind_handler,
 )
@@ -218,7 +218,8 @@ class BezierHandle(CanvasElement):
         self.data.tip += rel_pos / cstate.scale
         self.on_moved(self.data.tip)
         neti = 0
-        post_event(DidMoveBezierHandleEvent(neti, self.reaction.index, self.node_idx, True))
+        post_event(DidMoveBezierHandleEvent(neti, self.reaction.index,
+                                            self.node_idx, by_user=True, direct=True))
 
         return True
 
@@ -278,6 +279,7 @@ class ReactionElement(CanvasElement):
         def centroid_handle_dropped(p: Vec2):
             ctrl.start_group()
             ctrl.set_center_handle(neti, reai, reaction.src_c_handle.tip)
+            post_event(DidCommitDragEvent())
             ctrl.end_group()
 
         # TODO twins
@@ -295,9 +297,14 @@ class ReactionElement(CanvasElement):
     def make_drop_handle_func(self, ctrl: IController, neti: int, reai: int, nodei: int,
                               is_source: bool):
         if is_source:
-            return lambda p: ctrl.set_src_node_handle(neti, reai, nodei, p)
+            def ret(p):
+                ctrl.set_src_node_handle(neti, reai, nodei, p)
+                post_event(DidCommitDragEvent())
         else:
-            return lambda p: ctrl.set_dest_node_handle(neti, reai, nodei, p)
+            def ret(p):
+                ctrl.set_dest_node_handle(neti, reai, nodei, p)
+                post_event(DidCommitDragEvent())
+        return ret
 
     @property
     def selected(self) -> bool:
@@ -333,14 +340,15 @@ class ReactionElement(CanvasElement):
                     off = offset if isinstance(offset, Vec2) else offset[i]
                     bz.handle.tip += off
                     post_event(DidMoveBezierHandleEvent(neti, self.reaction.index, bz.node_idx,
-                                                        False))
+                                                        by_user=True, direct=False))
                     bz.update_curve(self.bezier.centroid)
 
         if self._moving_all and isinstance(offset, Vec2):
             # Only move src_handle_tip if moving all nodes and they are moved by the same amount.
             self.reaction.src_c_handle.tip += offset
             self.bezier.src_handle_moved()
-            post_event(DidMoveBezierHandleEvent(neti, self.reaction.index, -1, False))
+            post_event(DidMoveBezierHandleEvent(neti, self.reaction.index, -1, by_user=True,
+                                                direct=False))
 
     def commit_node_pos(self):
         """Handler for after the controller is told to move a node."""
@@ -761,8 +769,7 @@ class SelectBox(CanvasElement):
 
                 self.controller.start_group()
                 for node in chain(self.nodes, self.peripheral_nodes):
-                    self.controller.move_node(
-                        self.net_index, node.index, node.position)
+                    self.controller.move_node(self.net_index, node.index, node.position)
 
                 for comp in self.compartments:
                     self.controller.move_compartment(
@@ -775,12 +782,13 @@ class SelectBox(CanvasElement):
                         for node in self.nodes:
                             self.controller.set_compartment_of_node(
                                 self.net_index, node.index, compi)
-                        post_event(DidChangeCompartmentOfNodeEvent(
+                        post_event(DidChangeCompartmentOfNodesEvent(
                             node_indices=[n.index for n in self.nodes],
                             old_compi=old_compi,
                             new_compi=compi
                         ))
 
+                post_event(DidCommitDragEvent())
                 self.controller.end_group()
         elif self._mode == SelectBox.Mode.RESIZING:
             assert not self._did_move
@@ -793,6 +801,7 @@ class SelectBox(CanvasElement):
             for comp in self.compartments:
                 self.controller.move_compartment(self.net_index, comp.index, comp.position)
                 self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
+                post_event(DidCommitDragEvent())
             self.controller.end_group()
 
             # Need to do this in case _special_mode == NOT_CONTAINED, so that the mouse has now

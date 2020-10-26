@@ -9,7 +9,7 @@ import logging
 
 from rkviewer.iodine import TColor
 from .utils import gchain, rgba_to_wx_colour
-from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidCommitDragEvent, RedoEvent, UndoEvent, post_event
+from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidRedoEvent, DidUndoEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
@@ -85,7 +85,7 @@ class Controller(IController):
         try:
             assert self.group_depth == 0
             iod.undo()
-            post_event(UndoEvent())
+            post_event(DidUndoEvent())
         except iod.StackEmptyError:
             logging.getLogger('controller').info('Undo stack is empty')
             return False
@@ -98,7 +98,7 @@ class Controller(IController):
         try:
             assert self.group_depth == 0
             iod.redo()
-            post_event(RedoEvent())
+            post_event(DidRedoEvent())
         except iod.StackEmptyError:
             logging.getLogger('controller').info('Redo stack is empty')
             return False
@@ -153,12 +153,9 @@ class Controller(IController):
         return compi
 
     @iod_setter
-    def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False):
+    def move_node(self, neti: int, nodei: int, pos: Vec2):
         #assert pos.x >= 0 and pos.y >= 0
         iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
-        # dispatch event if the call was caused by user input
-        if not programmatic:
-            post_event(DidCommitDragEvent())
 
     @iod_setter
     def set_node_size(self, neti: int, nodei: int, size: Vec2):
@@ -341,7 +338,9 @@ class Controller(IController):
 
     @iod_setter
     def set_compartment_of_node(self, neti: int, nodei: int, compi: int):
+        self.start_group()
         iod.setCompartmentOfNode(neti, nodei, compi)
+        self.end_group()
 
     def get_compartment_of_node(self, neti: int, nodei: int) -> int:
         return iod.getCompartmentOfNode(neti, nodei)

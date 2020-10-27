@@ -241,6 +241,8 @@ class ReactionElement(CanvasElement):
     """
     reaction: Reaction
     index_to_bz: Dict[RIndex, SpeciesBezier]
+    bezier: ReactionBezier
+    bhandles: List[BezierHandle]
     moved_handler_id: int
     #: Set of indices of the nodes that have been moved, but not committed.
     _dirty_node_indices: Set[int]
@@ -263,7 +265,7 @@ class ReactionElement(CanvasElement):
         self._hovered_handle = None
         self._dirty_indices = set()
         self._moving_all = False
-        self.beziers = list()
+        self.bhandles = list()
         self._selected = False
 
         neti = canvas.net_index
@@ -274,7 +276,7 @@ class ReactionElement(CanvasElement):
             dropped_func = self.make_drop_handle_func(ctrl, neti, reai, sb.node_idx, not gi)
             el = BezierHandle(sb.handle, handle_layer,
                               bezier.make_handle_moved_func(sb), dropped_func, reaction, sb.node_idx)
-            self.beziers.append(el)
+            self.bhandles.append(el)
 
         def centroid_handle_dropped(p: Vec2):
             ctrl.start_group()
@@ -291,8 +293,8 @@ class ReactionElement(CanvasElement):
                                centroid_handle_dropped, reaction, -2)
         src_bh.twin = dest_bh
         dest_bh.twin = src_bh
-        self.beziers.append(src_bh)
-        self.beziers.append(dest_bh)
+        self.bhandles.append(src_bh)
+        self.bhandles.append(dest_bh)
 
     def make_drop_handle_func(self, ctrl: IController, neti: int, reai: int, nodei: int,
                               is_source: bool):
@@ -314,7 +316,7 @@ class ReactionElement(CanvasElement):
     def selected(self, val: bool):
         # Enable/disable Handles based on whether the curve is selected
         self._selected = val
-        for bz in self.beziers:
+        for bz in self.bhandles:
             bz.enabled = val
 
     def nodes_moved(self, evt: CanvasEvent):

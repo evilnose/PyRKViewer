@@ -100,7 +100,6 @@ class Canvas(wx.ScrolledWindow):
     _nodes: List[Node]  #: List of Node instances. This contains data needed to render them.
     # TODO move this one to top docstring
     _reactions: List[Reaction]  #: List of ReactionBezier instances.
-    _rxn_beziers: List[ReactionBezier]
     _compartments: List[Compartment]  #: List of Compartment instances
     _node_elements: List[NodeElement]
     _reaction_elements: List[ReactionElement]
@@ -144,7 +143,6 @@ class Canvas(wx.ScrolledWindow):
         self._net_index = 0
         self._nodes = list()
         self._reactions = list()
-        self._rxn_beziers = list()
         self._compartments = list()
         self._node_elements = list()
         self._reaction_elements = list()
@@ -283,8 +281,8 @@ class Canvas(wx.ScrolledWindow):
         return self._net_index
 
     def ArrowTipChanged(self):
-        for rb in self._rxn_beziers:
-            for bz in rb.dest_beziers:
+        for rea_el in self._reaction_elements:
+            for bz in rea_el.bezier.dest_beziers:
                 bz.arrow_tip_changed()
 
     def RegisterAllChildren(self, widget):
@@ -427,7 +425,7 @@ class Canvas(wx.ScrolledWindow):
             List[CanvasElement], self._reaction_elements) + cast(
                 List[CanvasElement], self._compartment_elements)
         for rxn_el in self._reaction_elements:
-            select_elements += rxn_el.beziers
+            select_elements += rxn_el.bhandles
             # Update reactions on whether they are selected
             rxn_el.selected = rxn_el.reaction.index in new_sel_reactions
         self._elements = SortedKeyList(select_elements, lambda e: e.layers)

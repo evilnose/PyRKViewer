@@ -592,6 +592,8 @@ def clearNetwork(neti: int):
         _pushUndoStack()
         networkDict[neti].nodes.clear()
         networkDict[neti].reactions.clear()
+        networkDict[neti].compartments.clear()
+        networkDict[neti] = TNetwork(networkDict[neti].id)
 
 
 def getNumberOfNodes(neti: int):

@@ -356,7 +356,7 @@ def reaction_count(net_index: int) -> int:
     return len(get_reactions(net_index))
 
 
-def get_compartments(net_index: int) -> List[Compartment]:
+def get_compartments(net_index: int) -> List[CompartmentData]:
     """ 
     Returns the list of all compartments in a network.
 
@@ -366,7 +366,7 @@ def get_compartments(net_index: int) -> List[Compartment]:
     Returns:
         The list of compartments.
     """
-    return _controller.get_list_of_compartments(net_index)
+    return [_translate_compartment(c) for c in _controller.get_list_of_compartments(net_index)]
 
 
 def compartments_count(net_index: int) -> int:
@@ -514,7 +514,9 @@ def delete_compartment(net_index: int, comp_index: int):
     _controller.delete_compartment(net_index, comp_index)
 
 
-def add_compartment(net_index: int, compartment: Compartment) -> int:
+def add_compartment(net_index: int, id_: str, fill_color: Color = None, border_color: Color = None,
+                    border_width: float = None, position: Vec2 = None, size: Vec2 = None,
+                    volume: float = None, nodes: List[int] = None) -> int:
     """ 
     Adds a compartment. TODO modify this after add_node() and add_reaction().
 
@@ -527,10 +529,43 @@ def add_compartment(net_index: int, compartment: Compartment) -> int:
     Returns:
         The index of the compartment that was added.
     """
+    if fill_color is None:
+        fill_color = _to_color(theme['comp_fill'])
+
+    if border_color is None:
+        border_color = _to_color(theme['comp_border'])
+
+    if border_width is None:
+        border_width = theme['comp_border_width']
+
+    if position is None:
+        position = Vec2()
+
+    if size is None:
+        size = Vec2(settings['min_comp_width'], settings['min_comp_height'])
+
+    if volume is None:
+        volume = 1
+
+    if nodes is None:
+        nodes = list()
+
+    compartment = Compartment(
+        id_=id_,
+        net_index=net_index,
+        nodes=nodes,
+        volume=volume,
+        position=position,
+        size=size,
+        fill=_to_wxcolour(fill_color),
+        border=_to_wxcolour(border_color),
+        border_width=border_width,
+        index=-1
+    )
     return _controller.add_compartment_g(net_index, compartment)
 
 
-def add_node(net_index: int, id_, fill_color: Color = None, border_color: Color = None,
+def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: Color = None,
              border_width: float = None, position: Vec2 = None, size: Vec2 = None) -> int:
     """Adds a node to the given network.
 

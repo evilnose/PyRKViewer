@@ -40,14 +40,7 @@ class TestNode(unittest.TestCase):
 
     def test_update_nodes(self):
         with run_app():
-            node = Node('Charles',
-                        self.neti,
-                        pos=Vec2(50, 50),
-                        size=Vec2(50, 30),
-                        fill_color=wx.RED,
-                        border_color=wx.GREEN,
-                        border_width=4)
-            api.add_node(self.neti, node)
+            api.add_node(self.neti, id_="Eric")
             api.update_node(self.neti, 0, 'James')
             nodes = api.get_nodes(self.neti)
             self.assertEqual(len(nodes), 1)
@@ -150,7 +143,7 @@ class TestCompartment(unittest.TestCase):
 
     def test_simple_compartments(self):
         self.assertEqual(api.get_nodes_in_compartment(self.neti, -1), [0, 1, 2])
-        api.add_compartment(self.neti, auto_compartment('c_1', self.neti))
+        api.add_compartment(self.neti, id_="c_1")
         api.set_compartment_of_node(self.neti, 0, 0)
         api.set_compartment_of_node(self.neti, 1, 0)
         self.assertEqual(api.get_nodes_in_compartment(self.neti, 0), [0, 1])

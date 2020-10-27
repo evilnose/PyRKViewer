@@ -437,6 +437,8 @@ class Canvas(wx.ScrolledWindow):
         self._select_box.related_elts = select_elements
         self._elements.add(self._select_box)
 
+        self._UpdateSelectedLists()
+
         post_event(CanvasDidUpdateEvent())
 
     def GetCompartment(self, comp_idx: int) -> Optional[Compartment]:
@@ -949,7 +951,7 @@ class Canvas(wx.ScrolledWindow):
                               border_width=theme['select_outline_width'])
 
             # Draw reactant and product marker outlines
-            def draw_reaction_outline(color: wx.Colour, padding: int):
+            def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):
                 draw_rect(
                     gc,
                     padded_rect(node.s_rect.aligned(), padding),
@@ -960,14 +962,14 @@ class Canvas(wx.ScrolledWindow):
                 )
 
             reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
-            for _ in reactants:
-                draw_reaction_outline(theme['reactant_border'], theme['react_node_padding'])
+            for node in reactants:
+                draw_reaction_outline(node, theme['reactant_border'], theme['react_node_padding'])
 
             products = get_nodes_by_idx(self._nodes, self._product_idx)
             for node in products:
                 pad = theme['react_node_border_width'] + \
                     3 if node.index in self._reactant_idx else 0
-                draw_reaction_outline(theme['product_border'], pad + theme['react_node_padding'])
+                draw_reaction_outline(node, theme['product_border'], pad + theme['react_node_padding'])
 
             # Draw drag-selection rect
             if self._drag_selecting:

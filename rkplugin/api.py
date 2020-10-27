@@ -2,6 +2,7 @@
 API for the RKViewer GUI and model. Allows viewing and modifying the network model.
 """
 
+from __future__ import annotations
 # pylint: disable=maybe-no-member
 #from rkviewer.mvc import NetIndexError
 from dataclasses import field, dataclass
@@ -40,13 +41,39 @@ _controller: Optional[IController] = None
 _plugin_logger = logging.getLogger('plugin')
 
 
-@dataclass(frozen=True)
 class Color:
     """RGBA Color. Each of R, G, B, A ranges from 0-255."""
-    r: int
-    g: int
-    b: int
-    alpha: int = 255
+    _r: int
+    _g: int
+    _b: int
+    _alpha: int = 255
+
+    def __init__(self, r, g, b, alpha=255):
+        self._r = r
+        self._g = g
+        self._b = b
+        self._alpha = alpha
+
+    @property
+    def r(self):
+        return self._r
+
+    @property
+    def g(self):
+        return self._g
+
+    @property
+    def b(self):
+        return self._b
+
+    @property
+    def alpha(self):
+        return self._alpha
+
+    @classmethod
+    def from_rgb(cls, val: int) -> Color:
+        """Create color from RGB hex value: #00BBGGRR"""
+        return Color((val >> 0) & 255, (val >> 8) & 255, (val >> 16) & 255)
 
 
 @require_kwargs_on_init
@@ -148,7 +175,7 @@ def _to_color(color: wx.Colour) -> Color:
     return Color(color.Red(), color.Green(), color.Blue(), color.Alpha())
 
 
-def _to_wxcolor(color: Color) -> wx.Colour:
+def _to_wxcolour(color: Color) -> wx.Colour:
     return wx.Colour(color.r, color.g, color.b, color.alpha)
 
 
@@ -539,8 +566,8 @@ def add_node(net_index: int, id_, fill_color: Color = None, border_color: Color 
     node = Node(
         id_,
         net_index,
-        fill_color=_to_wxcolor(fill_color),
-        border_color=_to_wxcolor(border_color),
+        fill_color=_to_wxcolour(fill_color),
+        border_color=_to_wxcolour(border_color),
         border_width=border_width,
         pos=position,
         size=size,
@@ -610,10 +637,10 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Co
         if id_ is not None:
             _controller.rename_node(net_index, node_index, id_)
         if fill_color is not None:
-            _controller.set_node_fill_rgb(net_index, node_index, _to_wxcolor(fill_color))
+            _controller.set_node_fill_rgb(net_index, node_index, _to_wxcolour(fill_color))
             _controller.set_node_fill_alpha(net_index, node_index, fill_color.alpha)
         if border_color is not None:
-            _controller.set_node_border_rgb(net_index, node_index, _to_wxcolor(border_color))
+            _controller.set_node_border_rgb(net_index, node_index, _to_wxcolour(border_color))
             _controller.set_node_border_alpha(net_index, node_index, border_color.alpha)
         if border_width is not None:
             _controller.set_node_border_width(net_index, node_index, border_width)
@@ -696,7 +723,7 @@ def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[
         net_index,
         sources=reactants,
         targets=products,
-        fill_color=_to_wxcolor(fill_color),
+        fill_color=_to_wxcolour(fill_color),
         line_thickness=line_thickness,
         rate_law=rate_law,
         handle_positions=handle_positions,
@@ -755,7 +782,7 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
         if id_ is not None:
             _controller.rename_reaction(net_index, reaction_index, id_)
         if fill_color is not None:
-            _controller.set_reaction_fill_rgb(net_index, reaction_index, _to_wxcolor(fill_color))
+            _controller.set_reaction_fill_rgb(net_index, reaction_index, _to_wxcolour(fill_color))
             _controller.set_reaction_fill_alpha(net_index, reaction_index, fill_color.alpha)
         if thickness is not None:
             _controller.set_reaction_line_thickness(net_index, reaction_index, thickness)
@@ -823,9 +850,9 @@ def update_compartment(net_index: int, comp_index: int, id_: str = None,
         if id_ is not None:
             _controller.rename_compartment(net_index, comp_index, id_)
         if fill_color is not None:
-            _controller.set_compartment_fill(net_index, comp_index, _to_wxcolor(fill_color))
+            _controller.set_compartment_fill(net_index, comp_index, _to_wxcolour(fill_color))
         if border_color is not None:
-            _controller.set_compartment_border(net_index, comp_index, _to_wxcolor(border_color))
+            _controller.set_compartment_border(net_index, comp_index, _to_wxcolour(border_color))
         if border_width is not None:
             _controller.set_compartment_border_width(net_index, comp_index, border_width)
         if volume is not None:

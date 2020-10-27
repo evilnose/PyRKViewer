@@ -6,6 +6,7 @@ Version 0.01: Author: Gary Geng (2020)
 """
 
 # pylint: disable=maybe-no-member
+from rkplugin.api import Color
 import wx
 from typing import List
 from rkplugin.plugins import CommandPlugin, PluginMetadata, WindowedPlugin
@@ -55,7 +56,8 @@ class ColorSelected(WindowedPlugin):
         """
         Callback for the color picker control; sets the color of every node/reaction selected.
         """
-        color = evt.GetColour()
+        wxcolor = evt.GetColour()
+        color = Color.from_rgb(wxcolor.GetRGB())
 
         # start group action context for undo purposes
         with api.group_action():

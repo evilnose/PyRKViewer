@@ -6,6 +6,7 @@ Version 0.01: Author: Gary Geng (2020)
 """
 
 # pylint: disable=maybe-no-member
+from rkplugin.api import Color
 import wx
 import random
 from rkplugin.plugins import CommandPlugin, PluginMetadata
@@ -34,6 +35,6 @@ class Disco(CommandPlugin):
         """
         nodes = api.get_nodes(api.cur_net_index())
         rgb = random.getrandbits(24)
-        color = wx.Colour(rgb)
+        color = Color.from_rgb(rgb)
         for node in nodes:
             api.update_node(api.cur_net_index(), node.index, fill_color=color, border_color=color)

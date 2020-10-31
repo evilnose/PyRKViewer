@@ -15,8 +15,9 @@ from .mvc import (IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexErro
 import copy
 from dataclasses import dataclass, field
 import json
-from typing import Dict, Set, Tuple, List
+from typing import DefaultDict, Dict, MutableSet, Set, Tuple, List, cast
 from enum import Enum
+from collections import defaultdict
 
 
 class TNode(object):
@@ -60,7 +61,9 @@ class TNetwork:
     nodes: Dict[int, TNode]
     reactions: Dict[int, TReaction]
     compartments: Dict[int, TCompartment]
-    baseNodes: Set[int]  # Set of node indices not in any compartment
+    baseNodes: Set[int]  #: Set of node indices not in any compartment
+    srcMap: DefaultDict[int, MutableSet[int]]  #: Map nodes to reactions of which it is a source
+    destMap: DefaultDict[int, MutableSet[int]]  #: Map nodes to reactions of which it is a target
     lastNodeIdx: int
     lastReactionIdx: int
     lastCompartmentIdx: int
@@ -72,6 +75,8 @@ class TNetwork:
         self.reactions = dict()
         self.compartments = dict()
         self.baseNodes = set()
+        self.srcMap = defaultdict(set)
+        self.destMap = defaultdict(set)
         self.lastNodeIdx = 0
         self.lastReactionIdx = 0
         self.lastCompartmentIdx = 0
@@ -83,6 +88,13 @@ class TNetwork:
 
     def addReaction(self, rea: TReaction):
         self.reactions[self.lastReactionIdx] = rea
+
+        # update nodeToReactions
+        for src in rea.srcDict:
+            self.srcMap[src].add(self.lastReactionIdx)
+        for dest in rea.destDict:
+            self.destMap[dest].add(self.lastReactionIdx)
+
         self.lastReactionIdx += 1
 
     def addCompartment(self, comp: TCompartment) -> int:
@@ -90,16 +102,6 @@ class TNetwork:
         self.compartments[ind] = comp
         self.lastCompartmentIdx += 1
         return ind
-
-    def getFreenodes(self) -> Set[int]:
-        """
-        get list of nodes not in any existed reactions
-        """
-        reaNodeSet = set()
-        for reaction in self.reactions.values():
-            reaNodeSet |= set(reaction.srcDict.keys()) | set(reaction.destDict.keys())
-
-        return set(ni for ni in self.nodes.keys() if ni not in reaNodeSet)
 
 
 class TReaction(object):
@@ -476,6 +478,11 @@ def _getNode(neti: int, nodei: int) -> TNode:
         _raiseError(-7)
     return net.nodes[nodei]
 
+def _getReaction(neti: int, reai: int) -> TReaction:
+    net = _getNetwork(neti)
+    if reai not in net.reactions:
+        _raiseError(-6)
+    return net.reactions[reai]
 
 def _getCompartment(neti: int, compi: int) -> TCompartment:
     global errCode
@@ -551,7 +558,6 @@ def deleteNode(neti: int, nodei: int):
     -5: net index out of range
     """
     global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = -4
     if neti not in networkDict:
         errCode = -5
     else:
@@ -559,8 +565,8 @@ def deleteNode(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            s = n.getFreenodes()
-            if nodei in s:
+            # validate that node is not part of a reaction
+            if len(n.srcMap[nodei]) == 0 and len(n.destMap[nodei]) == 0:
                 errCode = 0
                 _pushUndoStack()
                 networkDict[neti] = n
@@ -572,6 +578,8 @@ def deleteNode(neti: int, nodei: int):
                     n.compartments[compi].node_indices.remove(nodei)
                 del n.nodes[nodei]
                 return
+            else:
+                errCode = -4
 
     assert errCode < 0
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -590,9 +598,9 @@ def clearNetwork(neti: int):
         raise ExceptionDict[errCode](errorDict[errCode])
     else:
         _pushUndoStack()
-        networkDict[neti].nodes.clear()
-        networkDict[neti].reactions.clear()
-        networkDict[neti].compartments.clear()
+        # networkDict[neti].nodes.clear()
+        # networkDict[neti].reactions.clear()
+        # networkDict[neti].compartments.clear()
         networkDict[neti] = TNetwork(networkDict[neti].id)
 
 
@@ -659,6 +667,26 @@ def getListOfNodeIDs(neti: int) -> List[str]:
         errCode = -5
         raise ExceptionDict[errCode](errorDict[errCode])
     return [n.id for n in networkDict[neti].nodes.values()]
+
+
+def getListOfNodeIndices(neti: int) -> Set[int]:
+    return cast(Set[int], _getNetwork(neti).nodes.keys())
+
+
+def getListOfReactionIndices(neti: int) -> Set[int]:
+    return cast(Set[int], _getNetwork(neti).reactions.keys())
+
+
+def getListOfCompartmentIndices(neti: int) -> Set[int]:
+    return cast(Set[int], _getNetwork(neti).compartments.keys())
+
+
+def getSrcReactions(neti: int, nodei: int) -> Set[int]:
+    return set(_getNetwork(neti).srcMap[nodei])
+
+
+def getDestReactions(neti: int, nodei: int) -> Set[int]:
+    return set(_getNetwork(neti).destMap[nodei])
 
 
 def getNodeCoordinateAndSize(neti: int, nodei: int):
@@ -1465,6 +1493,12 @@ def deleteReaction(neti: int, reai: int):
             errCode = -6
         else:
             _pushUndoStack()
+            net = _getNetwork(neti)
+            reaction = _getReaction(neti, reai)
+            for src in reaction.srcDict:
+                net.srcMap[src].remove(reai)
+            for dest in reaction.destDict:
+                net.destMap[dest].remove(reai)
             del networkDict[neti].reactions[reai]
             return
 
@@ -1485,7 +1519,10 @@ def clearReactions(neti: int):
         raise ExceptionDict[errCode](errorDict[errCode])
     else:
         _pushUndoStack()
-        networkDict[neti].reactions.clear()
+        net = _getNetwork(neti)
+        net.reactions.clear()
+        net.srcMap.clear()
+        net.destMap.clear()
 
 
 def getNumberOfReactions(neti: int):

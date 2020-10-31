@@ -15,7 +15,7 @@ import wx
 import copy
 from contextlib import contextmanager
 from rkviewer.mvc import IController
-from typing import List, Optional, Set, Tuple
+from typing import KeysView, List, Optional, Set, Tuple
 from rkviewer.controller import Controller
 from rkviewer.canvas.canvas import Canvas
 from rkviewer.canvas import data
@@ -316,6 +316,21 @@ def _translate_compartment(compartment: Compartment) -> CompartmentData:
     )
 
 
+def get_node_indices(net_index: int) -> Set[int]:
+    """Get the set of node indices (immutable)."""
+    return _controller.get_node_indices(net_index)
+
+
+def get_reaction_indices(net_index: int) -> Set[int]:
+    """Get the set of reaction indices (immutable)."""
+    return _controller.get_reaction_indices(net_index)
+
+
+def get_compartment_indices(net_index: int) -> Set[int]:
+    """Get the set of compartment indices (immutable)."""
+    return _controller.get_compartment_indices(net_index)
+
+
 def get_nodes(net_index: int) -> List[NodeData]:
     """ 
     Returns the list of all nodes in a network.
@@ -356,7 +371,7 @@ def reaction_count(net_index: int) -> int:
     return len(get_reactions(net_index))
 
 
-def get_compartments(net_index: int) -> List[Compartment]:
+def get_compartments(net_index: int) -> List[CompartmentData]:
     """ 
     Returns the list of all compartments in a network.
 
@@ -366,7 +381,7 @@ def get_compartments(net_index: int) -> List[Compartment]:
     Returns:
         The list of compartments.
     """
-    return _controller.get_list_of_compartments(net_index)
+    return [_translate_compartment(c) for c in _controller.get_list_of_compartments(net_index)]
 
 
 def compartments_count(net_index: int) -> int:
@@ -514,7 +529,9 @@ def delete_compartment(net_index: int, comp_index: int):
     _controller.delete_compartment(net_index, comp_index)
 
 
-def add_compartment(net_index: int, compartment: Compartment) -> int:
+def add_compartment(net_index: int, id_: str, fill_color: Color = None, border_color: Color = None,
+                    border_width: float = None, position: Vec2 = None, size: Vec2 = None,
+                    volume: float = None, nodes: List[int] = None) -> int:
     """ 
     Adds a compartment. TODO modify this after add_node() and add_reaction().
 
@@ -527,10 +544,43 @@ def add_compartment(net_index: int, compartment: Compartment) -> int:
     Returns:
         The index of the compartment that was added.
     """
+    if fill_color is None:
+        fill_color = _to_color(theme['comp_fill'])
+
+    if border_color is None:
+        border_color = _to_color(theme['comp_border'])
+
+    if border_width is None:
+        border_width = theme['comp_border_width']
+
+    if position is None:
+        position = Vec2()
+
+    if size is None:
+        size = Vec2(settings['min_comp_width'], settings['min_comp_height'])
+
+    if volume is None:
+        volume = 1
+
+    if nodes is None:
+        nodes = list()
+
+    compartment = Compartment(
+        id_=id_,
+        net_index=net_index,
+        nodes=nodes,
+        volume=volume,
+        position=position,
+        size=size,
+        fill=_to_wxcolour(fill_color),
+        border=_to_wxcolour(border_color),
+        border_width=border_width,
+        index=-1
+    )
     return _controller.add_compartment_g(net_index, compartment)
 
 
-def add_node(net_index: int, id_, fill_color: Color = None, border_color: Color = None,
+def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: Color = None,
              border_width: float = None, position: Vec2 = None, size: Vec2 = None) -> int:
     """Adds a node to the given network.
 
@@ -573,6 +623,16 @@ def add_node(net_index: int, id_, fill_color: Color = None, border_color: Color 
         size=size,
     )
     return _controller.add_node_g(net_index, node)
+
+
+def move_node(net_index: int, node_index: int, position: Vec2):
+    """Change the position of a node."""
+    _controller.move_node(net_index, node_index, position)
+
+
+def resize_node(net_index: int, node_index: int, size: Vec2):
+    """Change the size of a node."""
+    _controller.set_node_size(net_index, node_index, size)
 
 
 # TODO add "cosmetic" versions of these functions, where changes made to controller are not added
@@ -667,7 +727,7 @@ def compute_centroid(net_index: int, reactants: List[int], products: List[int]):
     return data.compute_centroid(s_rects + t_rects)
 
 
-def default_handle_positions(net_index: int, reaction_index: int):
+def default_handle_positions(net_index: int, reaction_index: int) -> List[Vec2]:
     """Return the default Bezier handle positions for the given reaction.
 
     See Reaction for more details on the format of this list.
@@ -680,6 +740,17 @@ def default_handle_positions(net_index: int, reaction_index: int):
     sources = [_controller.get_node_by_index(net_index, nodei) for nodei in rxn.sources]
     targets = [_controller.get_node_by_index(net_index, nodei) for nodei in rxn.targets]
     return _default_handle_positions(rxn.centroid, sources, targets)
+
+
+def _set_handle_positions(reaction: Reaction, handle_positions: List[Vec2]):
+    """Helper to set handle positions."""
+    for (gi, nodei), pos in zip(gchain(reaction.sources, reaction.targets),
+                                handle_positions[1:]):
+        if gi == 0:
+            _controller.set_src_node_handle(reaction.net_index, reaction.index, nodei, pos)
+        else:
+            _controller.set_dest_node_handle(reaction.net_index, reaction.index, nodei, pos)
+    _controller.set_center_handle(reaction.net_index, reaction.index, handle_positions[0])
 
 
 def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[int],
@@ -737,20 +808,16 @@ def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[
     # indices, and product rectangles and indices, since these are the only requisite parameters.
     if auto_init_handles:
         handle_positions = default_handle_positions(net_index, reai)
-        for (gi, nodei), pos in zip(gchain(reaction.sources, reaction.targets),
-                                    handle_positions[1:]):
-            if gi == 0:
-                _controller.set_src_node_handle(net_index, reai, nodei, pos)
-            else:
-                _controller.set_dest_node_handle(net_index, reai, nodei, pos)
-        _controller.set_center_handle(net_index, reai, handle_positions[0])
+        reaction.index = reai
+        _set_handle_positions(reaction, handle_positions)
 
     _controller.end_group()
     return reai
 
 
 def update_reaction(net_index: int, reaction_index: int, id_: str = None,
-                    fill_color: Color = None, thickness: float = None, ratelaw: str = None):
+                    fill_color: Color = None, thickness: float = None, ratelaw: str = None,
+                    handle_positions: List[Vec2] = None):
     """
     Update one or multiple properties of a reaction.
 
@@ -760,7 +827,9 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
         id_: If specified, the new ID of the reaction.
         fill_color: If specified, the new fill color of the reaction.
         thickness: If specified, the thickness of the reaction.
-        ratelaw: If specified, the rate law of the equation.
+        ratelaw: If specified, the rate law of the reaction.
+        handle_positions: If specified, the list of handles of the reaction. See add_reaction() for
+                          details on the format.
 
     Note:
         This is *not* an atomic function, meaning if we failed to set one specific property, the
@@ -772,7 +841,8 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
         NetIndexError:
         ReactionIndexError:
     """
-    # TODO get old reaction
+    # The reaction to update. Will fail here if it does not exist.
+    reaction = _controller.get_reaction_by_index(net_index, reaction_index)
     # Validate
     # Check ID not empty
     if id_ is not None and len(id_) == 0:
@@ -788,6 +858,57 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
             _controller.set_reaction_line_thickness(net_index, reaction_index, thickness)
         if ratelaw is not None:
             _controller.set_reaction_ratelaw(net_index, reaction_index, ratelaw)
+        if handle_positions is not None:
+            _set_handle_positions(reaction, handle_positions)
+    
+
+def get_selected_node_indices(net_index: int) -> Set[int]:
+    """Return the set of selected node indices."""
+    return _canvas.sel_nodes_idx.item_copy()
+    
+
+def get_selected_reaction_indices() -> Set[int]:
+    """Return the set of selected reaction indices."""
+    return _canvas.sel_reactions_idx.item_copy()
+    
+
+def get_selected_compartment_indices() -> Set[int]:
+    """Return the set of selected compartment indices."""
+    return _canvas.sel_compartments_idx.item_copy()
+
+
+def get_reactions_as_reactant(net_index: int, node_index: int) -> Set[int]:
+    """Get the set of reactions (indices) of which this node is a reactant."""
+    return _controller.get_reactions_as_reactant(net_index, node_index)
+
+
+def get_reactions_as_product(net_index: int, node_index: int) -> Set[int]:
+    """Get the set of reactions (indices) of which this node is a product."""
+    return _controller.get_reactions_as_product(net_index, node_index)
+
+
+def is_reactant(net_index: int, node_index: int, reaction_index: int) -> bool:
+    """Return whether the given node is a reactant of the given reaction.
+    
+    This runs linearly to number of reactants of the given reaction. If your reaction
+    is very very large, then construct a set from its reactants and test for membership manually.
+
+    TODO:
+        This can be implemented to run in constant time by implementing an iodine function
+        that tests reaction_index in network.srcMap[node_index].
+    """
+    reaction = _controller.get_reaction_by_index(net_index, reaction_index)
+    return node_index in reaction.sources
+
+
+def is_product(net_index: int, node_index: int, reaction_index: int) -> bool:
+    """Return whether the given node is a product of the given reaction.
+    
+    This runs linearly to the number of products of the given reaction. If your reaction
+    is very very large, then construct a set from its products and test for membership manually.
+    """
+    reaction = _controller.get_reaction_by_index(net_index, reaction_index)
+    return node_index in reaction.targets
 
 
 def update_compartment(net_index: int, comp_index: int, id_: str = None,

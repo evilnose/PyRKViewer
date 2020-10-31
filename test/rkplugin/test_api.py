@@ -105,6 +105,20 @@ class TestReaction(unittest.TestCase):
         with self.assertRaises(ValueError):
             api.add_reaction(self.neti, 'empty_products', [2], [])
 
+    def test_reverse(self):
+        api.add_reaction(self.neti, 'AB', [0], [1])
+        self.assertTrue(api.is_reactant(self.neti, 0, 0))
+        self.assertFalse(api.is_reactant(self.neti, 1, 0))
+        self.assertFalse(api.is_product(self.neti, 0, 0))
+        self.assertTrue(api.is_product(self.neti, 1, 0))
+        self.assertFalse(api.is_reactant(self.neti, 2, 0))
+        self.assertFalse(api.is_product(self.neti, 2, 0))
+
+        api.add_reaction(self.neti, 'AC', [0], [2])
+        self.assertEqual(api.get_reactions_as_reactant(self.neti, 0), {0, 1})
+        self.assertEqual(api.get_reactions_as_product(self.neti, 0), set())
+        self.assertEqual(api.get_reactions_as_product(self.neti, 2), {1})
+
     def test_simple_handles(self):
         """Simple tests for Bezier handles."""
         api.add_reaction(self.neti, 'AB', [0], [1])

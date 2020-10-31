@@ -89,7 +89,6 @@ class RandomNetwork(WindowedPlugin):
         window.SetPosition (wx.Point(10,10))
         return window
 
-
     def OnText_numSpecs(self, evt):
         update = evt.GetString()
         if update != '':
@@ -346,4 +345,3 @@ class RandomNetwork(WindowedPlugin):
                 if _np.array_equal(st[i,:], _np.zeros(numRxns)):
                     api.delete_node(net_index, nodeIdx[i])
        
-

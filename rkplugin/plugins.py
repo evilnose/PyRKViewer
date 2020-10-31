@@ -8,7 +8,7 @@ from rkviewer.events import (DidAddCompartmentEvent, DidAddNodeEvent, DidAddReac
                              DidMoveNodesEvent, DidPaintCanvasEvent, DidRedoEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, SelectionDidUpdateEvent, DidUndoEvent)
 from rkviewer.canvas.geometry import Vec2
 from rkviewer.canvas.data import Node
-from typing import List
+from typing import List, Optional
 import wx
 import abc
 from dataclasses import dataclass
@@ -152,16 +152,12 @@ class CommandPlugin(Plugin, abc.ABC):
     cases. The user may invoke the command defined when they click on the associated menu item
     under the "Plugins" menu, or they may be able to use a keybaord shortcut, once that is
     implemented. To subclass CommandPlugin one needs to override `run()`.
+
+    Attributes:
+        metadata (PluginMetadata): metadata information of plugin.
     """
 
     def __init__(self, metadata: PluginMetadata):
-        """
-        Create a CommandPlugin.
-
-        Args:
-            metadata (PluginMetadata): metadata information of plugin.
-        """
-
         super().__init__(metadata, PluginType.COMMAND)
 
     @abc.abstractmethod
@@ -174,20 +170,24 @@ class CommandPlugin(Plugin, abc.ABC):
 
 
 class WindowedPlugin(Plugin, abc.ABC):
+    """Base class for plugins with an associated popup window.
+
+    When the user clicks the menu item of this plugin under the "Plugins" menu, a popup dialog
+    is created, which may display data, and which the user may interact with. This type of
+    plugin is suitable to more complex or visually-based plugins, such as that utilizing a 
+    chart or an interactive form.
+
+    To implement a subclass of WindowedPlugin, one needs to override the method `create_window`.
+
+    Attributes:
+        dialog: The popup dialog window that this plugin is in.
+        metadata: metadata information of plugin.
+    """
+    dialog: Optional[wx.Dialog]
+
     def __init__(self, metadata: PluginMetadata):
-        """Base class for plugins with an associated popup window.
-
-        When the user clicks the menu item of this plugin under the "Plugins" menu, a popup dialog
-        is created, which may display data, and which the user may interact with. This type of
-        plugin is suitable to more complex or visually-based plugins, such as that utilizing a 
-        chart or an interactive form.
-
-        To implement a subclass of WindowedPlugin, one needs to override the method `create_window`.
-
-        Args:
-            metadata (PluginMetadata): metadata information of plugin.
-        """
         super().__init__(metadata, PluginType.WINDOWED)
+        self.dialog = None
 
     @abc.abstractmethod
     def create_window(self, dialog: wx.Window) -> wx.Window:
@@ -196,6 +196,14 @@ class WindowedPlugin(Plugin, abc.ABC):
         For one overriding this method, they should either create or reuse a `wx.Window` instance
         to display in a dialog. One likely wants to bind events to the controls inside the returned
         `wx.Window` to capture user input.
+        """
+        pass
+
+    def on_did_create_dialog(self):
+        """Called after the parent dialog has been created and initialized.
+
+        Here you may change the position, style, etc. of the dialog by accessing the `self.dialog`
+        member.
         """
         pass
 

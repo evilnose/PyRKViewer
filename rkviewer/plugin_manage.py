@@ -137,11 +137,15 @@ Plugin!".format(handler_name)
                 dialog = wx.Dialog(parent, title=title)
                 dialog_exists = True
                 window = windowed.create_window(dialog)
+                windowed.dialog = dialog  # Set the related dialog
+
                 sizer = wx.BoxSizer(wx.VERTICAL)
                 sizer.Add(window)
                 dialog.SetSize(window.GetSize())
                 dialog.SetSizer(sizer)
                 dialog.Centre()
+
+                windowed.on_did_create_dialog()
                 dialog.Show()
 
                 def close_cb(e):

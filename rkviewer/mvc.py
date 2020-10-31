@@ -1,7 +1,7 @@
 # pylint: disable=maybe-no-member
 import wx
 import abc
-from typing import List, Optional
+from typing import List, Optional, Set
 from .canvas.geometry import Vec2
 from .canvas.data import Compartment, Node, Reaction
 
@@ -171,8 +171,28 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def get_reactions_as_reactant(self, neti: int, nodei: int) -> Set[int]:
+        pass
+
+    @abc.abstractmethod
+    def get_reactions_as_product(self, neti: int, nodei: int) -> Set[int]:
+        pass
+
+    @abc.abstractmethod
     def get_list_of_node_ids(self, neti: int) -> List[str]:
         """Try getting the list of node IDs"""
+        pass
+
+    @abc.abstractmethod
+    def get_node_indices(self, neti: int) -> Set[int]:
+        pass
+
+    @abc.abstractmethod
+    def get_reaction_indices(self, neti: int) -> Set[int]:
+        pass
+
+    @abc.abstractmethod
+    def get_compartment_indices(self, neti: int) -> Set[int]:
         pass
 
     @abc.abstractmethod

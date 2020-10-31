@@ -33,7 +33,6 @@ class DesignerWindow(wx.Window):
         Args: 
             parent: The parent window.
             arrow_tip: ArrowTip object defining the arrow tip used.
-
         """
         dim = Vec2(22, 16)
         self.csize = 20
@@ -131,7 +130,7 @@ class DesignerWindow(wx.Window):
         the grid.
 
         Args: 
-            point (vect2): The cursor position relative to the window.
+            point: The cursor position relative to the window.
 
         Returns:
             Vec2 : projected point for landing.
@@ -197,7 +196,7 @@ class DesignerWindow(wx.Window):
             gc: The Graphics context to modify.
             points: The points to be drawn, in counterclockwise order, with the last point being
                     the tip.
-            radius (float): The radius of the points.
+            radius: The radius of the points.
         """
         gc.SetPen(wx.Pen(wx.BLACK, 2))
         gc.SetBrush(wx.Brush(wx.BLACK, wx.BRUSHSTYLE_FDIAGONAL_HATCH))
@@ -240,9 +239,9 @@ class DesignerWindow(wx.Window):
         Drawing a single point.
 
         Args: 
-            gc (wx.GraphixContext): Graphics context to modify.
-            point (Vect2): Point to be drawn.
-            radius (float): Radius of the point.
+            gc: Graphics context to modify.
+            point: Point to be drawn.
+            radius: Radius of the point.
         """
         gc.DrawEllipse(*(point - Vec2.repeat(radius / 2)), radius, radius)
 

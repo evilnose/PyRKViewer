@@ -290,6 +290,21 @@ class Controller(IController):
     def get_list_of_node_ids(self, neti: int) -> List[str]:
         return iod.getListOfNodeIDs(neti)
 
+    def get_reactions_as_reactant(self, neti: int, nodei: int) -> Set[int]:
+        return iod.getSrcReactions(neti, nodei)
+
+    def get_reactions_as_product(self, neti: int, nodei: int) -> Set[int]:
+        return iod.getDestReactions(neti, nodei)
+
+    def get_node_indices(self, neti: int) -> Set[int]:
+        return iod.getListOfNodeIndices(neti)
+
+    def get_reaction_indices(self, neti: int) -> Set[int]:
+        return iod.getListOfReactionIndices(neti)
+
+    def get_compartment_indices(self, neti: int) -> Set[int]:
+        return iod.getListOfCompartmentIndices(neti)
+
     def get_list_of_nodes(self, neti: int) -> List[Node]:
         nodes = list()
         for id_ in iod.getListOfNodeIDs(neti):

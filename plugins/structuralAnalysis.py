@@ -1,8 +1,6 @@
 """
 Do the structural analysis.
-
 Version 0.01: Author: Jin Xu (2020)
-
 """
 
 
@@ -31,10 +29,8 @@ class StructuralAnalysis(WindowedPlugin):
     def __init__(self):
         """
         Initialize the StructuralAnalysis Plugin.
-
         Args:
             self
-
         """
         
         super().__init__(metadata)
@@ -55,12 +51,6 @@ class StructuralAnalysis(WindowedPlugin):
 
         panel3 = wx.Panel(topPanel, -1, size=(400,500))
        
-
-        wx.StaticText(panel1, -1, 'Get random network', (20,30))
-
-        Network_btn = wx.Button(panel1, -1, 'Network', (20, 60))
-        Network_btn.Bind(wx.EVT_BUTTON, self.Network)
-
         wx.StaticText(panel1, -1, 'Generate stoichiometry matrix (left)', (20,130))
         wx.StaticText(panel1, -1, 'and conserved moities (right)', (20, 150))
 
@@ -116,41 +106,12 @@ class StructuralAnalysis(WindowedPlugin):
         self.dialog.SetPosition((240, 250))
 
 
-    def Network(self, evt):
-        """
-        Handler for the "Network" button. get the random network.
-        """
-        netIn = 0
-        numNodes = api.node_count(netIn)
-        allNodes = api.get_nodes(netIn)
-        largest_node_index = 0
-        for i in range(numNodes):
-            if allNodes[i].index > largest_node_index:
-                largest_node_index = allNodes[i].index
-        row = largest_node_index + 1
-        numReactions = api.reaction_count(netIn)
-        col = numReactions
-        self.st = _np.zeros((row, col))
-        allReactions = api.get_reactions(netIn)       
-        for i in range(numReactions):
-            for j in range(len(allReactions[i].sources)):
-                #print(allReactions[i].sources[j])
-                for m in range(row):
-                    if allReactions[i].sources[j] == m:
-                        self.st.itemset((m, i), -1)
-            for j in range(len(allReactions[i].targets)):
-                #print(allReactions[i].targets[j])
-                for m in range(row):
-                    if allReactions[i].targets[j] == m:
-                        self.st.itemset((m,i), 1)
-
     def Compute(self, evt):
         """
         Handler for the "Compute" button.
+        Get the network on canvas.
         Calculate the Stoichiometry Matrix and Conservation Matrix for the randon network.
-
         """
-
         def nullspace(A, atol=1e-13, rtol=0):
             A = _np.atleast_2d(A)
             u, s, vh = _np.linalg.svd(A)
@@ -219,21 +180,50 @@ class StructuralAnalysis(WindowedPlugin):
                     break; 
             return (A, pivots_pos, row_exchanges)
 
+        netIn = 0
+        numNodes = api.node_count(netIn)
         
-        stt = _np.transpose (self.st)
-        m = _np.transpose (nullspace (stt)) 
-        moi_mat = rref (m)[0]
-        #print(moi_mat)
+        if numNodes == 0:
+            wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
+        else:
+            allNodes = api.get_nodes(netIn)
+            largest_node_index = 0
+            for i in range(numNodes):
+                if allNodes[i].index > largest_node_index:
+                    largest_node_index = allNodes[i].index
+            row = largest_node_index + 1
+            numReactions = api.reaction_count(netIn)
+            #print("numReactions:", numReactions)
+            col = numReactions
+            self.st = _np.zeros((row, col))
+            allReactions = api.get_reactions(netIn)
+            for i in range(numReactions):
+                for j in range(len(allReactions[i].sources)):
+                    #print(allReactions[i].sources[j])
+                    for m in range(row):
+                        if allReactions[i].sources[j] == m:
+                            self.st.itemset((m, i), -1)
+                for j in range(len(allReactions[i].targets)):
+                    #print(allReactions[i].targets[j])
+                    for m in range(row):
+                        if allReactions[i].targets[j] == m:
+                            self.st.itemset((m,i), 1)
 
 
-        for row in range(self.st.shape[0]):
-            for col in range(self.st.shape[1]):
-                self.grid_st.SetCellValue(row, col,"%d" % self.st.item(row,col))
+            stt = _np.transpose (self.st)
+            m = _np.transpose (nullspace (stt)) 
+            moi_mat = rref (m)[0]
+            #print(moi_mat)
 
 
-        for row in range(moi_mat.shape[0]):
-            for col in range(moi_mat.shape[1]):
-                self.grid_moi.SetCellValue(row, col,"%d" % moi_mat.item(row,col))
+            for row in range(self.st.shape[0]):
+                for col in range(self.st.shape[1]):
+                    self.grid_st.SetCellValue(row, col,"%d" % self.st.item(row,col))
+
+
+            for row in range(moi_mat.shape[0]):
+                for col in range(moi_mat.shape[1]):
+                    self.grid_moi.SetCellValue(row, col,"%d" % moi_mat.item(row,col))
 
 
 
@@ -292,4 +282,3 @@ class StructuralAnalysis(WindowedPlugin):
             #for index in api.selected_node_indices():
             for index in self.index_list:
                 api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
-

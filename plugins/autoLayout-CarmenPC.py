@@ -49,16 +49,10 @@ class AutoLayoutTemp(WindowedPlugin):
         window = wx.Panel(dialog, pos=(5,100), size=(400, 320))
 
         MaxIter = wx.StaticText(window, -1, 'Maximum Number of Iterations', (20 , 20))
-        self.MaxIterText = wx.TextCtrl(window, -1, "215", (280, 20), size=(100, -1))
+        self.MaxIterText = wx.TextCtrl(window, -1, "20", (280, 20), size=(100, -1))
         self.MaxIterText.SetInsertionPoint(0)
         self.MaxIterText.Bind(wx.EVT_TEXT, self.OnText_MaxIter)
         self.MaxIterValue = int(self.MaxIterText.GetValue())
-
-        k = wx.StaticText(window, -1, 'k (float > 0)', (20 , 50))
-        self.kText = wx.TextCtrl(window, -1, "0.5", (280, 50), size=(100, -1))
-        self.kText.SetInsertionPoint(0)
-        self.kText.Bind(wx.EVT_TEXT, self.OnText_k)
-        self.kValue = float(self.kText.GetValue())
 
         gravity = wx.StaticText(window, -1, 'gravity (integer > 0)', (20 , 90))
         self.gravityText = wx.TextCtrl(window, -1, "10", (280, 90), size=(100, -1))
@@ -155,9 +149,9 @@ class AutoLayoutTemp(WindowedPlugin):
 
         def check_bounds(newX, newY, width, length, k) -> Vec2:
             if newX >= width:
-                newX = (random.randrange(0, math.trunc(length/4)))
+                newX = width - (random.randrange(0, math.trunc(length/4)))
             if newY >= length:
-                newY = (random.randrange(0, math.floor(length/4)))
+                newY = length - (random.randrange(0, math.floor(length/4)))
             if newX <= 0:
                 newX = random.randrange(0, math.floor(width/4))
                 #newX = 0 + (k + uniform(0, width/4))
@@ -193,7 +187,7 @@ class AutoLayoutTemp(WindowedPlugin):
             width = canvas.x
             length = canvas.y
             area = width*length
-            k = math.sqrt(area / numNodes)*0.0001 * 5
+            k = 120
             print(k)
             maxIter = math.trunc(100* math.log(numNodes + 2))
             tempinit = (1000 * math.log(numReactions + 2))
@@ -210,40 +204,34 @@ class AutoLayoutTemp(WindowedPlugin):
             
             # at node index keep its displacement
             Disp = dict()
-            # displacement of centroids, index = reaction index
-            CentDisp = []
-            
 
             with api.group_action():
                 for its in range(0, maxIter):
                     tempcurr = tempinit * math.pow(e, -alpha * time)
                     time = time + tIncrement
 
-                    for t in allNodes:
-                        Disp[t.index] = Vec2(0,0)
+                    for f in allNodes:
+                        Disp[f.index] = Vec2(0,0)
 
                     # Repulsive forces
                     for i in range(0, numNodes):
                         v = allNodes[i] 
                         vIndex = v.index
+                        
                         for j in range(0, numNodes):
                             u = allNodes[j] 
                             uIndex = u.index
+                            print(uIndex)
                             if (i != j):
                                 delta = Vec2(v.position.x - u.position.x, v.position.y - u.position.y)
                                 d = distance(delta)
                                 if d == 0:
-                                    newPos = Vec2(math.trunc (random()*700), math.trunc (random()*600))
-                                    n = add(v.position, newPos)
-                                    #m = minus(u.position, newPos)
-                                    n = check_bounds(n.x, n.y, width, length, k)
-                                    api.move_node(0, vIndex, n)
-                                    #api.move_node(0, uIndex, m)
+                                    d = 0.001
                                 else:
-                                    vDeg = api.get_node_degree(0, vIndex)
-                                    uDeg = api.get_node_degree(0, uIndex)
-                                    adjustk = (k * math.log(vDeg + uDeg + 2))
-                                    newDisp= Vec2(float(delta.x/d * rF(adjustk, d)), float(delta.y/d * rF(adjustk, d)))
+                                    #vDeg = api.get_node_degree(0, vIndex)
+                                    #uDeg = api.get_node_degree(0, uIndex)
+                                    #adjustk = (k * math.log(vDeg + uDeg + 2))
+                                    newDisp = Vec2(float(delta.x/d * rF(k, d)), float(delta.y/d * rF(k, d)))
                                     Disp[vIndex] = add(Disp[vIndex], newDisp)
                                     Disp[uIndex] = minus(Disp[uIndex], newDisp)
                     
@@ -267,6 +255,7 @@ class AutoLayoutTemp(WindowedPlugin):
                                 #CentDisp[r] = add(CentDisp[r], newCent)
                     
                     # Magnetism
+                    '''
                     if (useMagnetism):
                         for r in curs:
                             cc = curs[r]
@@ -280,7 +269,7 @@ class AutoLayoutTemp(WindowedPlugin):
                                     u = api.get_node_by_index(0, c2)
                                     uIndex = u.index
                                     uType = api.node_type(0, uIndex, r)
-                                    if (v != u and vType == uType and vDegree <= 1):
+                                    if (v != u and vType == uType and vType >= 0):
                                         delta = Vec2(v.position.x - u.position.x, v.position.y - u.position.y)
                                         d = distance(delta)
                                         if d != 0:
@@ -293,6 +282,7 @@ class AutoLayoutTemp(WindowedPlugin):
                                             Disp[vIndex] = minus(Disp[vIndex], newDisp)
                                             Disp[uIndex] = add(Disp[uIndex], newDisp) 
 
+                    '''
                     '''
                     # Gravity NOT READY
                     if (gravity > 5):
@@ -322,14 +312,16 @@ class AutoLayoutTemp(WindowedPlugin):
                                 newY = float(math.floor(newY/k) * k)
 
                             finalPos = Vec2(newX, newY)
-                            for g in allNodes:
+                            '''for g in allNodes:
                                 if ((a != g) and finalPos == g.position):
                                     shift = Vec2(math.trunc (random()*700), math.trunc (random()*600))
                                     finalPos = add(finalPos, shift)
                             newX = finalPos.x
                             newY = finalPos.y
+                            '''
                             if (useBoundary):
                                 finalPos = check_bounds(newX, newY, width, length, k)
+                        
                         api.move_node(0, aInd, finalPos)
                                 
                 for r in api.get_reactions(0):

@@ -21,7 +21,7 @@ from dataclasses import dataclass
 metadata = PluginMetadata(
     name='StructuralAnalysis',
     author='Jin Xu',
-    version='0.0.1',
+    version='0.1',
     short_desc='Structural Analysis.',
     long_desc='Do the Structural Analysis.'
 )
@@ -66,6 +66,7 @@ class StructuralAnalysis(WindowedPlugin):
         """
         topPanel = wx.Panel(dialog, pos=(0,0), size=(700, 500))
 
+        # Create two panels size by side
         panel1 = wx.Panel(topPanel, -1, pos=(0,100), size=(200,100))
         panel2 = wx.Panel(topPanel, -1, pos=(100,100),size=(450,100))
 
@@ -75,17 +76,21 @@ class StructuralAnalysis(WindowedPlugin):
         
         topPanel.SetSizer(sizer)
 
+        # Add a notebook to the second panel
         nb = wx.Notebook(panel2)
 
+        # Create the tabs
         self.tab1 = TabOne(nb)
         self.tab2 = TabTwo(nb)
         nb.AddPage(self.tab1, "Stoichiometry")
         nb.AddPage(self.tab2, "Moiety Conservation Laws")
 
+        # Make sure the second panel fills the right side. 
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
         panel2.SetSizer(sizer)
 
+      
         Compute_btn = wx.Button(panel1, -1, 'Compute Conservation Laws', (20, 20))
         Compute_btn.Bind(wx.EVT_BUTTON, self.Compute)
         wx.StaticText(panel1, -1, 'Stoichiometry matrix (left)', (20,50))

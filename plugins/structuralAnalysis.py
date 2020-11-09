@@ -1,3 +1,5 @@
+
+
 """
 Do the structural analysis.
 Version 0.01: Author: Jin Xu (2020)
@@ -24,6 +26,25 @@ metadata = PluginMetadata(
     long_desc='Do the Structural Analysis.'
 )
 
+class TabOne(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent, wx.EXPAND|wx.ALL)
+        self.grid_st = gridlib.Grid(self)
+        self.grid_st.CreateGrid(20,20)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.grid_st, 1, wx.EXPAND)
+        self.SetSizer(sizer)
+
+class TabTwo(wx.Panel):
+    def __init__(self, parent):
+        wx.Panel.__init__(self, parent, wx.EXPAND|wx.ALL)
+        self.grid_moi = gridlib.Grid(self)
+        self.grid_moi.CreateGrid(20,20)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.grid_moi, 1, wx.EXPAND)
+        self.SetSizer(sizer)
 
 class StructuralAnalysis(WindowedPlugin):
     def __init__(self):
@@ -43,14 +64,27 @@ class StructuralAnalysis(WindowedPlugin):
             self
             dialog
         """
-        topPanel = wx.Window(dialog, pos=(0,0), size=(1000, 500))
+        topPanel = wx.Panel(dialog, pos=(0,0), size=(700, 500))
 
-        panel1 = wx.Panel(topPanel, -1, pos=(0,0), size=(250, 500))
+        panel1 = wx.Panel(topPanel, -1, pos=(0,100), size=(200,100))
+        panel2 = wx.Panel(topPanel, -1, pos=(100,100),size=(450,100))
 
-        panel2 = wx.Panel(topPanel, -1, size=(340,400))
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(panel1,0,wx.EXPAND|wx.ALL,border=10)
+        sizer.Add(panel2,0,wx.EXPAND|wx.ALL,border=10)
+        
+        topPanel.SetSizer(sizer)
 
-        panel3 = wx.Panel(topPanel, -1, size=(400,500))
+        nb = wx.Notebook(panel2)
 
+        self.tab1 = TabOne(nb)
+        self.tab2 = TabTwo(nb)
+        nb.AddPage(self.tab1, "Stoichiometry")
+        nb.AddPage(self.tab2, "Moiety Conservation Laws")
+
+        sizer = wx.BoxSizer()
+        sizer.Add(nb, 1, wx.EXPAND)
+        panel2.SetSizer(sizer)
 
         Compute_btn = wx.Button(panel1, -1, 'Compute Conservation Laws', (20, 20))
         Compute_btn.Bind(wx.EVT_BUTTON, self.Compute)
@@ -67,46 +101,6 @@ class StructuralAnalysis(WindowedPlugin):
         Picker = wx.ColourPickerCtrl(panel1, pos=(20,220))
         Picker.Bind(wx.EVT_COLOURPICKER_CHANGED, self.color_callback)
 
-        wx.StaticText(panel2, -1, 'Stoichiometry', (5, 5))
-        wx.StaticText(panel3, -1, 'Conservation', (5, 5))
-
-        self.grid_st = gridlib.Grid(panel2)
-        self.grid_st.CreateGrid(20,20)
-
-        
-        for i in range(20):
-            self.grid_st.SetColLabelValue(i, "")
-        for i in range(20):
-            self.grid_st.SetRowLabelValue(i, "")
-
-
-        self.grid_moi = gridlib.Grid(panel3)
-        self.grid_moi.CreateGrid(20,20)
-        for i in range(20):
-            self.grid_moi.SetColLabelValue(i, "")
-        for i in range(20):
-            self.grid_moi.SetRowLabelValue(i, "")
-        
-
-        sizer_v = wx.BoxSizer(wx.VERTICAL)
-        sizer_v_2 = wx.BoxSizer(wx.VERTICAL)
-       
-        sizer_v.Add(self.grid_st,  1, wx.EXPAND, 1)
-        sizer_v_2.Add(self.grid_moi, 1, wx.EXPAND, 1)
-
-        
-
-        panel2.SetSizer(sizer_v)
-        panel3.SetSizer(sizer_v_2)
-
-        sizer_h = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_h.Add(panel1,0,wx.EXPAND|wx.ALL,border=10)
-        sizer_h.Add(panel2,0,wx.EXPAND|wx.ALL,border=10)
-        sizer_h.Add(panel3,0,wx.EXPAND|wx.ALL,border=10)
-
-        topPanel.SetSizer(sizer_h)
-
-        topPanel.SetPosition (wx.Point(10,10))
         return topPanel
 
     def on_did_create_dialog(self):
@@ -120,7 +114,7 @@ class StructuralAnalysis(WindowedPlugin):
         Get the network on canvas.
         Calculate the Stoichiometry Matrix and Conservation Matrix for the randon network.
         """
-        
+
         def nullspace(A, atol=1e-13, rtol=0):  
             A = _np.atleast_2d(A)
             u, s, vh = _np.linalg.svd(A)
@@ -223,28 +217,26 @@ class StructuralAnalysis(WindowedPlugin):
                         moi_mat.itemset((i,j), 0.)
 
             for i in range(self.st.shape[1]):
-                self.grid_st.SetColLabelValue(i, "J" + str(i))
+                self.tab1.grid_st.SetColLabelValue(i, "J" + str(i))
             for i in range(self.st.shape[0]):
-                self.grid_st.SetRowLabelValue(i, id + "_" + str(i))
+                self.tab1.grid_st.SetRowLabelValue(i, id + "_" + str(i))
             
             for row in range(self.st.shape[0]):
                 for col in range(self.st.shape[1]):
-                    self.grid_st.SetCellValue(row, col,"%d" % self.st.item(row,col))
-
-
+                    self.tab1.grid_st.SetCellValue(row, col,"%d" % self.st.item(row,col))
 
             for i in range(moi_mat.shape[1]):
-                self.grid_moi.SetColLabelValue(i, id + "_" + str(i))
+                self.tab2.grid_moi.SetColLabelValue(i, id + "_" + str(i))
 
             CSUM_id = 0
             for i in range(moi_mat.shape[0]):
                 if _np.array_equal(moi_mat[i,:], _np.zeros(moi_mat.shape[1])):
                     CSUM_id = CSUM_id
                 else:
-                    self.grid_moi.SetRowLabelValue(CSUM_id, "CSUM" + str(CSUM_id))     
+                    self.tab2.grid_moi.SetRowLabelValue(CSUM_id, "CSUM" + str(CSUM_id))    
 
                     for j in range(moi_mat.shape[1]):
-                        self.grid_moi.SetCellValue(CSUM_id, j, format (moi_mat[i][j], ".2f"))
+                        self.tab2.grid_moi.SetCellValue(CSUM_id, j, format (moi_mat[i][j], ".2f"))#
 
                     CSUM_id += 1 
 
@@ -253,11 +245,11 @@ class StructuralAnalysis(WindowedPlugin):
         """
         Get whatever cells are currently selected
         """
-        cells = self.grid_moi.GetSelectedCells()
+        cells = self.tab2.grid_moi.GetSelectedCells()
         if not cells:
-            if self.grid_moi.GetSelectionBlockTopLeft():
-                top_left = self.grid_moi.GetSelectionBlockTopLeft()[0]
-                bottom_right = self.grid_moi.GetSelectionBlockBottomRight()[0]
+            if self.tab2.grid_moi.GetSelectionBlockTopLeft():
+                top_left = self.tab2.grid_moi.GetSelectionBlockTopLeft()[0]
+                bottom_right = self.tab2.grid_moi.GetSelectionBlockBottomRight()[0]
                 self.printSelectedCells(top_left, bottom_right)
             #else:
             #    print (self.currentlySelectedCell)
@@ -284,11 +276,11 @@ class StructuralAnalysis(WindowedPlugin):
         self.index_list = []
         for cell in cells:
             row, col = cell
-            value = self.grid_moi.GetCellValue(row,col)
+            value = self.tab2.grid_moi.GetCellValue(row,col)
             #print(value)
             if value != "0.00" and value != "+0.00" and value != "-0.00" and value !="":
                 self.index_list.append(int(col))
-        #print("selected nodes:", self.index_list)
+            #print("selected nodes:", self.index_list)
 
 
     def color_callback(self, evt):
@@ -308,3 +300,6 @@ class StructuralAnalysis(WindowedPlugin):
                     api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
             except:
                 wx.MessageBox("Please select a row and press the 'Highlight Conservation Law' button", "Message", wx.OK | wx.ICON_INFORMATION)
+
+
+  

@@ -50,43 +50,51 @@ class StructuralAnalysis(WindowedPlugin):
         panel2 = wx.Panel(topPanel, -1, size=(340,400))
 
         panel3 = wx.Panel(topPanel, -1, size=(400,500))
-       
-        wx.StaticText(panel1, -1, 'Generate stoichiometry matrix (left)', (20,130))
-        wx.StaticText(panel1, -1, 'and conserved moities (right)', (20, 150))
 
-        Compute_btn = wx.Button(panel1, -1, 'Compute', (20, 180))
+
+        Compute_btn = wx.Button(panel1, -1, 'Compute Conservation Laws', (20, 20))
         Compute_btn.Bind(wx.EVT_BUTTON, self.Compute)
+        wx.StaticText(panel1, -1, 'Stoichiometry matrix (left)', (20,50))
+        wx.StaticText(panel1, -1, 'Conservation matrix (right)', (20, 70))
 
-        wx.StaticText(panel1, -1, 'Visualize the selected conserved moities', (20,250))
-        wx.StaticText(panel1, -1, 'by selecting the entire row and color', (20, 270))
+        wx.StaticText(panel1, -1, 'Select a row:', (20,120))
 
-        Picker = wx.ColourPickerCtrl(panel1, pos=(150,300))
+        Enter_Btn = wx.Button(panel1, -1, 'Highlight Conservation Law', (20, 140))
+        Enter_Btn.Bind(wx.EVT_BUTTON, self.onGetSelection)
+
+        wx.StaticText(panel1, -1, 'Highlight Color:', (20, 200))
+
+        Picker = wx.ColourPickerCtrl(panel1, pos=(20,220))
         Picker.Bind(wx.EVT_COLOURPICKER_CHANGED, self.color_callback)
 
-        Enter_Btn = wx.Button(panel1, -1, 'Enter CSUM', (20, 300))
-        Enter_Btn.Bind(wx.EVT_BUTTON, self.onGetSelection)
+        wx.StaticText(panel2, -1, 'Stoichiometry', (5, 5))
+        wx.StaticText(panel3, -1, 'Conservation', (5, 5))
 
         self.grid_st = gridlib.Grid(panel2)
         self.grid_st.CreateGrid(20,20)
+
+        
         for i in range(20):
-            self.grid_st.SetColLabelValue(i, "J" + str(i))
+            self.grid_st.SetColLabelValue(i, "")
         for i in range(20):
-            self.grid_st.SetRowLabelValue(i, "S" + str(i))
+            self.grid_st.SetRowLabelValue(i, "")
 
 
         self.grid_moi = gridlib.Grid(panel3)
         self.grid_moi.CreateGrid(20,20)
         for i in range(20):
-            self.grid_moi.SetColLabelValue(i, "S" + str(i))
+            self.grid_moi.SetColLabelValue(i, "")
         for i in range(20):
-            self.grid_moi.SetRowLabelValue(i, "CSUM" + str(i)) 
+            self.grid_moi.SetRowLabelValue(i, "")
         
 
         sizer_v = wx.BoxSizer(wx.VERTICAL)
         sizer_v_2 = wx.BoxSizer(wx.VERTICAL)
        
         sizer_v.Add(self.grid_st,  1, wx.EXPAND, 1)
-        sizer_v_2.Add(self.grid_moi, 1, wx.EXPAND|wx.ALL, 1)
+        sizer_v_2.Add(self.grid_moi, 1, wx.EXPAND, 1)
+
+        
 
         panel2.SetSizer(sizer_v)
         panel3.SetSizer(sizer_v_2)
@@ -112,13 +120,15 @@ class StructuralAnalysis(WindowedPlugin):
         Get the network on canvas.
         Calculate the Stoichiometry Matrix and Conservation Matrix for the randon network.
         """
-        def nullspace(A, atol=1e-13, rtol=0):
+        
+        def nullspace(A, atol=1e-13, rtol=0):  
             A = _np.atleast_2d(A)
             u, s, vh = _np.linalg.svd(A)
             tol = max(atol, rtol * s[0])
             nnz = (s >= tol).sum()
             ns = vh[nnz:].conj().T
             return ns
+
 
         def rref(B, tol=1e-8, debug=False):
             A = B.copy()
@@ -127,21 +137,17 @@ class StructuralAnalysis(WindowedPlugin):
             pivots_pos = []
             row_exchanges = _np.arange(rows)
             for c in range(cols):
-                if debug: 
-                    print ("Now at row", r, "and col", c, "with matrix:")
-                    print (A)
+                if debug: print ("Now at row", r, "and col", c, "with matrix:"); print (A)
 
                 ## Find the pivot row:
                 pivot = _np.argmax (_np.abs (A[r:rows,c])) + r
                 m = _np.abs(A[pivot, c])
-                if debug: 
-                    print ("Found pivot", m, "in row", pivot)
+                if debug: print ("Found pivot", m, "in row", pivot)
                 if m <= tol:
                     ## Skip column c, making sure the approximately zero terms are
                     ## actually zero.
                     A[r:rows, c] = _np.zeros(rows-r)
-                    if debug: 
-                        print ("All elements at and below (", r, ",", c, ") are zero.. moving on..")
+                    if debug: print ("All elements at and below (", r, ",", c, ") are zero.. moving on..")
                 else:
                     ## keep track of bound variables
                     pivots_pos.append((r,c))
@@ -150,10 +156,8 @@ class StructuralAnalysis(WindowedPlugin):
                         ## Swap current row and pivot row
                         A[[pivot, r], c:cols] = A[[r, pivot], c:cols]
                         row_exchanges[[pivot,r]] = row_exchanges[[r,pivot]]
-        
-                        if debug: 
-                            print ("Swap row", r, "with row", pivot, "Now:") 
-                            print (A)
+       
+                        if debug: print ("Swap row", r, "with row", pivot, "Now:"); print (A)
 
                     ## Normalize pivot row
                     A[r, c:cols] = A[r, c:cols] / A[r, c];
@@ -164,21 +168,18 @@ class StructuralAnalysis(WindowedPlugin):
                     if r > 0:
                         ridx_above = _np.arange(r)
                         A[ridx_above, c:cols] = A[ridx_above, c:cols] - _np.outer(v, A[ridx_above, c]).T
-                        if debug: 
-                            print ("Elimination above performed:")
-                            print (A)
+                        if debug: print ("Elimination above performed:"); print (A)
                     ## Below (after row r):
                     if r < rows-1:
                         ridx_below = _np.arange(r+1,rows)
                         A[ridx_below, c:cols] = A[ridx_below, c:cols] - _np.outer(v, A[ridx_below, c]).T
-                        if debug: 
-                            print ("Elimination below performed:")
-                            print (A)
+                        if debug: print ("Elimination below performed:"); print (A)
                     r += 1
                 ## Check if done
                 if r == rows:
-                    break; 
+                    break;
             return (A, pivots_pos, row_exchanges)
+
 
         netIn = 0
         numNodes = api.node_count(netIn)
@@ -187,6 +188,8 @@ class StructuralAnalysis(WindowedPlugin):
             wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
+            id = allNodes[0].id_[0:-2]
+            
             largest_node_index = 0
             for i in range(numNodes):
                 if allNodes[i].index > largest_node_index:
@@ -211,20 +214,39 @@ class StructuralAnalysis(WindowedPlugin):
 
 
             stt = _np.transpose (self.st)
-            m = _np.transpose (nullspace (stt)) 
+            m = _np.transpose (nullspace (stt))
             moi_mat = rref (m)[0]
-            #print(moi_mat)
+            # set all the values of non-existing nodes to zero
+            for i in range(moi_mat.shape[0]):
+                for j in range(moi_mat.shape[1]):
+                    if _np.array_equal(self.st[j,:], _np.zeros(self.st.shape[1])):
+                        moi_mat.itemset((i,j), 0.)
 
-
+            for i in range(self.st.shape[1]):
+                self.grid_st.SetColLabelValue(i, "J" + str(i))
+            for i in range(self.st.shape[0]):
+                self.grid_st.SetRowLabelValue(i, id + "_" + str(i))
+            
             for row in range(self.st.shape[0]):
                 for col in range(self.st.shape[1]):
                     self.grid_st.SetCellValue(row, col,"%d" % self.st.item(row,col))
 
 
-            for row in range(moi_mat.shape[0]):
-                for col in range(moi_mat.shape[1]):
-                    self.grid_moi.SetCellValue(row, col,"%d" % moi_mat.item(row,col))
 
+            for i in range(moi_mat.shape[1]):
+                self.grid_moi.SetColLabelValue(i, id + "_" + str(i))
+
+            CSUM_id = 0
+            for i in range(moi_mat.shape[0]):
+                if _np.array_equal(moi_mat[i,:], _np.zeros(moi_mat.shape[1])):
+                    CSUM_id = CSUM_id
+                else:
+                    self.grid_moi.SetRowLabelValue(CSUM_id, "CSUM" + str(CSUM_id))     
+
+                    for j in range(moi_mat.shape[1]):
+                        self.grid_moi.SetCellValue(CSUM_id, j, format (moi_mat[i][j], ".2f"))
+
+                    CSUM_id += 1 
 
 
     def onGetSelection(self, event):
@@ -240,7 +262,7 @@ class StructuralAnalysis(WindowedPlugin):
             #else:
             #    print (self.currentlySelectedCell)
         else:
-            print (cells)
+            print("no cells are selected")
 
 
     def printSelectedCells(self, top_left, bottom_right):
@@ -263,7 +285,8 @@ class StructuralAnalysis(WindowedPlugin):
         for cell in cells:
             row, col = cell
             value = self.grid_moi.GetCellValue(row,col)
-            if value != "0" and value !="":
+            #print(value)
+            if value != "0.00" and value != "+0.00" and value != "-0.00" and value !="":
                 self.index_list.append(int(col))
         #print("selected nodes:", self.index_list)
 
@@ -280,5 +303,8 @@ class StructuralAnalysis(WindowedPlugin):
         with api.group_action():
             # color selected nodes
             #for index in api.selected_node_indices():
-            for index in self.index_list:
-                api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
+            try:
+                for index in self.index_list:
+                    api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
+            except:
+                wx.MessageBox("Please select a row and press the 'Highlight Conservation Law' button", "Message", wx.OK | wx.ICON_INFORMATION)

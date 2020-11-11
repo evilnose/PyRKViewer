@@ -31,6 +31,10 @@ class TabOne(wx.Panel):
         wx.Panel.__init__(self, parent, wx.EXPAND|wx.ALL)
         self.grid_st = gridlib.Grid(self)
         self.grid_st.CreateGrid(20,20)
+        for i in range(20):
+            self.grid_st.SetColLabelValue(i, "")
+        for i in range(20):
+            self.grid_st.SetRowLabelValue(i, "")
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.grid_st, 1, wx.EXPAND)
@@ -41,6 +45,10 @@ class TabTwo(wx.Panel):
         wx.Panel.__init__(self, parent, wx.EXPAND|wx.ALL)
         self.grid_moi = gridlib.Grid(self)
         self.grid_moi.CreateGrid(20,20)
+        for i in range(20):
+            self.grid_moi.SetColLabelValue(i, "")
+        for i in range(20): 
+            self.grid_moi.SetRowLabelValue(i, "")
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.grid_moi, 1, wx.EXPAND)
@@ -89,22 +97,20 @@ class StructuralAnalysis(WindowedPlugin):
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
         panel2.SetSizer(sizer)
-
       
-        Compute_btn = wx.Button(panel1, -1, 'Compute Conservation Laws', (20, 20))
+        Compute_btn = wx.Button(panel1, -1, 'Compute Conservation Laws', (20,20))
         Compute_btn.Bind(wx.EVT_BUTTON, self.Compute)
-        wx.StaticText(panel1, -1, 'Stoichiometry matrix (left)', (20,50))
-        wx.StaticText(panel1, -1, 'Conservation matrix (right)', (20, 70))
 
-        wx.StaticText(panel1, -1, 'Select a row:', (20,120))
+        wx.StaticText(panel1, -1, 'Select a row from the table of', (20,100))
+        wx.StaticText(panel1, -1, 'Moiety Conservation Laws', (20,120))
+        wx.StaticText(panel1, -1, 'and pick a color:', (20,140))
 
-        Enter_Btn = wx.Button(panel1, -1, 'Highlight Conservation Law', (20, 140))
-        Enter_Btn.Bind(wx.EVT_BUTTON, self.onGetSelection)
-
-        wx.StaticText(panel1, -1, 'Highlight Color:', (20, 200))
-
-        Picker = wx.ColourPickerCtrl(panel1, pos=(20,220))
+        Picker = wx.ColourPickerCtrl(panel1, pos=(20,160))
         Picker.Bind(wx.EVT_COLOURPICKER_CHANGED, self.color_callback)
+
+        wx.StaticText(panel1, -1, 'Unhighlight the nodes:', (20,240))
+        Clear_Btn = wx.Button(panel1, -1, 'Clear', (20,260))
+        Clear_Btn.Bind(wx.EVT_BUTTON, self.unhighlight)
 
         return topPanel
 
@@ -119,6 +125,7 @@ class StructuralAnalysis(WindowedPlugin):
         Get the network on canvas.
         Calculate the Stoichiometry Matrix and Conservation Matrix for the randon network.
         """
+        self.index_list=[]
 
         def nullspace(A, atol=1e-13, rtol=0):  
             A = _np.atleast_2d(A)
@@ -188,6 +195,7 @@ class StructuralAnalysis(WindowedPlugin):
         else:
             allNodes = api.get_nodes(netIn)
             id = allNodes[0].id_[0:-2]
+            self.default_color = allNodes[0].fill_color
             
             largest_node_index = 0
             for i in range(numNodes):
@@ -235,7 +243,9 @@ class StructuralAnalysis(WindowedPlugin):
 
             CSUM_id = 0
             for i in range(moi_mat.shape[0]):
-                if _np.array_equal(moi_mat[i,:], _np.zeros(moi_mat.shape[1])):
+                a = moi_mat[i,:]
+                a = [0 if a_ < 0.005 else a_ for a_ in a] # some elements are very small
+                if _np.array_equal(a, _np.zeros(moi_mat.shape[1])): # delete the row if all the elements are zero
                     CSUM_id = CSUM_id
                 else:
                     self.tab2.grid_moi.SetRowLabelValue(CSUM_id, "CSUM" + str(CSUM_id))    
@@ -244,22 +254,6 @@ class StructuralAnalysis(WindowedPlugin):
                         self.tab2.grid_moi.SetCellValue(CSUM_id, j, format (moi_mat[i][j], ".2f"))#
 
                     CSUM_id += 1 
-
-
-    def onGetSelection(self, event):
-        """
-        Get whatever cells are currently selected
-        """
-        cells = self.tab2.grid_moi.GetSelectedCells()
-        if not cells:
-            if self.tab2.grid_moi.GetSelectionBlockTopLeft():
-                top_left = self.tab2.grid_moi.GetSelectionBlockTopLeft()[0]
-                bottom_right = self.tab2.grid_moi.GetSelectionBlockBottomRight()[0]
-                self.printSelectedCells(top_left, bottom_right)
-            #else:
-            #    print (self.currentlySelectedCell)
-        else:
-            print("no cells are selected")
 
 
     def printSelectedCells(self, top_left, bottom_right):
@@ -289,12 +283,48 @@ class StructuralAnalysis(WindowedPlugin):
 
 
     def color_callback(self, evt):
+                   
+        """
+        Get whatever cells are currently selected
+        """
+
+        cells = self.tab2.grid_moi.GetSelectedCells()
+        if not cells:
+            if self.tab2.grid_moi.GetSelectionBlockTopLeft():
+                top_left = self.tab2.grid_moi.GetSelectionBlockTopLeft()[0]
+                bottom_right = self.tab2.grid_moi.GetSelectionBlockBottomRight()[0]
+                self.printSelectedCells(top_left, bottom_right)
+            #else:
+            #    print (self.currentlySelectedCell)
+        else:
+            print("no cells are selected")
+
+        
         """
         Callback for the color picker control; sets the color of every node/reaction selected.
         """
+
         wxcolor = evt.GetColour()
         color = Color.from_rgb(wxcolor.GetRGB())
 
+        # start group action context for undo purposes
+        with api.group_action():
+            # color selected nodes
+            #for index in api.selected_node_indices():
+            if len(self.index_list) == 0:
+                wx.MessageBox("Please select a row", "Message", wx.OK | wx.ICON_INFORMATION)
+            try:
+                for index in self.index_list:
+                    api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
+            except:
+                wx.MessageBox("Please select a row", "Message", wx.OK | wx.ICON_INFORMATION)
+
+
+    def unhighlight(self, evt):
+
+        """
+        Callback for the color picker control; sets the color of every node/reaction selected.
+        """
         
         # start group action context for undo purposes
         with api.group_action():
@@ -302,9 +332,9 @@ class StructuralAnalysis(WindowedPlugin):
             #for index in api.selected_node_indices():
             try:
                 for index in self.index_list:
-                    api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
+                    api.update_node(api.cur_net_index(), index, fill_color=self.default_color, border_color=self.default_color)
             except:
-                wx.MessageBox("Please select a row and press the 'Highlight Conservation Law' button", "Message", wx.OK | wx.ICON_INFORMATION)
+                wx.MessageBox("There is no highlighted nodes", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
   

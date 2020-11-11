@@ -312,12 +312,12 @@ class StructuralAnalysis(WindowedPlugin):
             # color selected nodes
             #for index in api.selected_node_indices():
             if len(self.index_list) == 0:
-                wx.MessageBox("Please select a row", "Message", wx.OK | wx.ICON_INFORMATION)
+                wx.MessageBox("Please select a row and pick a color again", "Message", wx.OK | wx.ICON_INFORMATION)
             try:
                 for index in self.index_list:
                     api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
             except:
-                wx.MessageBox("Please select a row", "Message", wx.OK | wx.ICON_INFORMATION)
+                wx.MessageBox("Please select a row and pick a color again", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
     def unhighlight(self, evt):

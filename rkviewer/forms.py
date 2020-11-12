@@ -8,8 +8,10 @@ from abc import abstractmethod
 import copy
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
-from .config import theme, settings
-from .events import DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyReactionEvent, DidMoveCompartmentsEvent, DidMoveNodesEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, post_event
+from .config import get_theme, get_setting
+from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyReactionEvent,
+                     DidMoveCompartmentsEvent, DidMoveNodesEvent, DidResizeCompartmentsEvent,
+                     DidResizeNodesEvent, post_event)
 from .mvc import IController
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
@@ -153,9 +155,9 @@ class EditPanelForm(ScrolledPanel):
         width = self.GetSize()[0]
         right_width = (width - VGAP * 3 - MORE_LEFT_PADDING - MORE_RIGHT_PADDING -
                        self._info_length) * 0.7
-        sizer.Add(right_width, 0, wx.GBPosition(0, 2), wx.GBSpan(1, 1))
-        sizer.AddGrowableCol(0, 0.3)
-        sizer.AddGrowableCol(1, 0.7)
+        sizer.Add(int(right_width), 0, wx.GBPosition(0, 2), wx.GBSpan(1, 1))
+        sizer.AddGrowableCol(0, 3)
+        sizer.AddGrowableCol(1, 7)
 
         sizer.Add(self._title, wx.GBPosition(1, 0), wx.GBSpan(1, 5), flag=wx.ALIGN_CENTER)
         self._AppendSpacer(sizer, 0)
@@ -615,8 +617,8 @@ class NodeForm(EditPanelForm):
             return
 
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        min_width = settings['min_node_width']
-        min_height = settings['min_node_height']
+        min_width = get_setting('min_node_width')
+        min_height = get_setting('min_node_height')
         size = Vec2(wh)
         # limit size to be smaller than the compartment
         compi = nodes[0].comp_idx
@@ -734,7 +736,7 @@ class NodeForm(EditPanelForm):
         self._self_changes = False
         assert len(self._selected_idx) != 0
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        prec = settings['decimal_precision']
+        prec = get_setting('decimal_precision')
         id_text: str
         fill: wx.Colour
         fill_alpha: Optional[int]
@@ -996,7 +998,7 @@ class ReactionForm(EditPanelForm):
         fill_alpha: Optional[int]
         ratelaw_text: str
 
-        prec = settings['decimal_precision']
+        prec = get_setting('decimal_precision')
 
         if len(self._selected_idx) == 1:
             [reaction] = reactions

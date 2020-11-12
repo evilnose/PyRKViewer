@@ -12,7 +12,4 @@ Welcome to RKViewer's Plugin API documentation!
 
    pluginsModules
    rkpluginModules
-
-   
-
-
+   config

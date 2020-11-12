@@ -1,6 +1,6 @@
 """Classes for storing and managing data for graph elements."""
-# pylint: disable=maybe-no-member
 from __future__ import annotations
+# pylint: disable=maybe-no-member
 from dataclasses import dataclass
 import wx
 import copy
@@ -11,7 +11,7 @@ from scipy.special import comb
 from typing import Callable, Container, List, Optional, Sequence, Tuple
 from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segments_intersect
 from .state import cstate
-from ..config import settings, theme
+from ..config import get_setting, get_theme
 from ..utils import gchain, pairwise
 
 
@@ -205,7 +205,7 @@ class Reaction:
 
 def paint_handle(gc: wx.GraphicsContext, base: Vec2, handle: Vec2, hovering: bool):
     """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
-    c = theme['highlighted_handle_color'] if hovering else theme['handle_color']
+    c = get_theme('highlighted_handle_color') if hovering else get_theme('handle_color')
     brush = wx.Brush(c)
     pen = gc.CreatePen(wx.GraphicsPenInfo(c))
 
@@ -384,7 +384,7 @@ class SpeciesBezier:
         rxn_color: wx.Colour
         # Draw bezier curve
         if selected:
-            rxn_color = theme['selected_reaction_fill']
+            rxn_color = get_theme('selected_reaction_fill')
         else:
             rxn_color = fill
 
@@ -407,7 +407,7 @@ class SpeciesBezier:
 
         # Draw arrow tip
         if not self.is_source:
-            color = theme['handle_color'] if selected else fill
+            color = get_theme('handle_color') if selected else fill
             self.paint_arrow_tip(gc, color)
 
     def paint_arrow_tip(self, gc: wx.GraphicsContext, fill: wx.Colour):
@@ -486,7 +486,7 @@ class ReactionBezier:
 
         pos is the logical position of the mouse (and not multiplied by any scale).
         """
-        if (pos - self.centroid).norm_sq <= settings['reaction_radius'] ** 2:
+        if (pos - self.centroid).norm_sq <= get_theme('reaction_radius') ** 2:
             return True
         return any(bz.is_on_curve(pos) for bz in chain(self.src_beziers, self.dest_beziers))
 

@@ -53,8 +53,8 @@ class DesignerWindow(wx.Window):
             self.begin_points.append(wx.Point2D(c, 0))
             self.end_points.append(wx.Point2D(c, size.y - 1))
 
-        self.handle_c = api.theme['handle_color']
-        self.hl_handle_c = api.theme['highlighted_handle_color']
+        self.handle_c = api.get_theme('handle_color')
+        self.hl_handle_c = api.get_theme('highlighted_handle_color')
         self.handle_pen = wx.Pen(self.handle_c)
         self.hl_handle_pen = wx.Pen(self.hl_handle_c)
         self.handle_brush = wx.Brush(self.handle_c)

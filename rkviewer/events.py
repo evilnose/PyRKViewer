@@ -3,8 +3,8 @@
 These events may later be used within a plugin system, where plugins are allowed to bind their own
 handlers to these events.
 """
-# pylint: disable=maybe-no-member
 from __future__ import annotations
+# pylint: disable=maybe-no-member
 from collections import defaultdict
 from dataclasses import dataclass, fields, is_dataclass
 from typing import (

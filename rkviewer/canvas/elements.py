@@ -1,7 +1,6 @@
 from __future__ import annotations
 # pylint: disable=maybe-no-member
 from abc import abstractmethod
-import bisect
 import enum
 from functools import partial
 from itertools import chain
@@ -9,7 +8,7 @@ from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set,
 
 import wx
 
-from ..config import settings, theme
+from ..config import get_setting, get_theme
 from ..events import (
     CanvasEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidMoveBezierHandleEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
     DidMoveNodesEvent, bind_handler,
@@ -181,7 +180,7 @@ class BezierHandle(CanvasElement):
     def do_paint(self, gc: wx.GraphicsContext):
         """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
         assert self.data.base is not None
-        c = theme['highlighted_handle_color'] if self.hovering else theme['handle_color']
+        c = get_theme('highlighted_handle_color') if self.hovering else get_theme('handle_color')
         brush = wx.Brush(c)
         pen = gc.CreatePen(wx.GraphicsPenInfo(c))
 
@@ -386,12 +385,12 @@ class ReactionElement(CanvasElement):
         self.bezier.do_paint(gc, self.reaction.fill_color, self.selected)
 
         # draw centroid
-        color = theme['handle_color'] if self.selected else self.reaction.fill_color
+        color = get_theme('handle_color') if self.selected else self.reaction.fill_color
         pen = wx.Pen(color)
         brush = wx.Brush(color)
         gc.SetPen(pen)
         gc.SetBrush(brush)
-        radius = settings['reaction_radius'] * cstate.scale
+        radius = get_theme('reaction_radius') * cstate.scale
         center = self.bezier.centroid * cstate.scale - Vec2.repeat(radius)
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
 
@@ -540,9 +539,9 @@ class SelectBox(CanvasElement):
         if len(nodes) + len(compartments) > 0:
             if len(nodes) == 1 and len(compartments) == 0:
                 # If only one node is selected, reduce padding
-                self._padding = theme['select_outline_padding']
+                self._padding = get_theme('select_outline_padding')
             else:
-                self._padding = theme['select_box_padding']
+                self._padding = get_theme('select_box_padding')
             # Align bounding box if only one node is selected, see NodeElement::do_paint for
             # explanations. Note that self._padding should be an integer
             self._padding = int_round(self._padding)
@@ -599,7 +598,7 @@ class SelectBox(CanvasElement):
                    pos + size, pos + Vec2(size.x / 2, size.y),
                    pos + Vec2(0, size.y), pos + Vec2(0, size.y / 2)]
         centers = [pos + size.elem_mul(m) for m in SelectBox.HANDLE_MULT]
-        side = theme['select_handle_length']
+        side = get_theme('select_handle_length')
         return [Rect(c - Vec2.repeat(side/2), Vec2.repeat(side)) for c in centers]
 
     def _resize_handle_pos(self, n: int):
@@ -653,16 +652,16 @@ class SelectBox(CanvasElement):
 
     def do_paint(self, gc: wx.GraphicsContext):
         if len(self.nodes) + len(self.compartments) > 0:
-            outline_width = max(even_round(theme['select_outline_width']), 2)
+            outline_width = max(even_round(get_theme('select_outline_width')), 2)
             pos, size = self.outline_rect().as_tuple()
 
             # draw main outline
-            draw_rect(gc, Rect(pos, size), border=theme['handle_color'],
+            draw_rect(gc, Rect(pos, size), border=get_theme('handle_color'),
                       border_width=outline_width)
 
             for handle_rect in self._resize_handle_rects():
                 # convert to device position for drawing
-                draw_rect(gc, handle_rect, fill=theme['handle_color'])
+                draw_rect(gc, handle_rect, fill=get_theme('handle_color'))
 
     def map_rel_pos(self, positions: Iterable[Vec2]) -> List[Vec2]:
         temp = [p * cstate.scale - self._orig_rect.position - Vec2.repeat(self._padding)
@@ -736,14 +735,14 @@ class SelectBox(CanvasElement):
         if len(self.nodes) != 0:
             min_width = min(n.size.x for n in self.nodes)
             min_height = min(n.size.y for n in self.nodes)
-            node_min_ratio = Vec2(settings['min_node_width'] / min_width,
-                                  settings['min_node_height'] / min_height)
+            node_min_ratio = Vec2(get_setting('min_node_width') / min_width,
+                                  get_setting('min_node_height') / min_height)
 
         if len(self.compartments) != 0:
             min_comp_width = min(c.size.x for c in self.compartments)
             min_comp_height = min(c.size.y for c in self.compartments)
-            comp_min_ratio = Vec2(settings['min_comp_width'] / min_comp_width,
-                                  settings['min_comp_height'] / min_comp_height)
+            comp_min_ratio = Vec2(get_setting('min_comp_width') / min_comp_width,
+                                  get_setting('min_comp_height') / min_comp_height)
             for node in self.peripheral_nodes:
                 comp = self.canvas.comp_idx_map[node.comp_idx]
                 ratio = node.size.elem_div(comp.size)

@@ -6,6 +6,9 @@ import logging.config
 import traceback
 from rkviewer.view import View
 from rkviewer.controller import Controller
+# Import rkplugin stuff for PyInstaller to include the file in the bundle. For some reason, it's
+# only necessary to do so for rkplugin.events but not other rkplugin files.
+import rkplugin.events
 
 
 class ExceptionDialog(wx.MessageDialog):

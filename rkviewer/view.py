@@ -1,23 +1,35 @@
 """The main View class and associated widgets.
 """
-from rkviewer.canvas.geometry import get_bounding_rect
-import rkviewer
-from rkplugin.api import init_api
-from rkviewer.plugin_manage import PluginManager
+import os
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Tuple
+import json
+
 # pylint: disable=maybe-no-member
+# pylint: disable=no-name-in-module
 import wx
 import wx.lib.agw.flatnotebook as fnb
-import wx.lib.agw.shortcuteditor as sedit
-from typing import Callable, List, Dict, Any, Tuple
-from .events import DidMoveCompartmentsEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveNodesEvent, bind_handler, CanvasDidUpdateEvent, \
-    SelectionDidUpdateEvent
+from commentjson.commentjson import JSONLibraryException
+from rkplugin.api import init_api
+# import wx.lib.agw.shortcuteditor as sedit
+from wx.adv import NotificationMessage
+
+import rkviewer
+from rkviewer.canvas.geometry import get_bounding_rect
+from rkviewer.plugin_manage import PluginManager
+
 from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
-from .canvas.state import cstate, InputMode
-from .config import settings, theme
+from .canvas.state import InputMode, cstate
+from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, config_dir, get_default_raw_settings, get_setting, get_theme,
+                     load_settings, pop_settings_err, settings_path, default_settings_path)
+from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
+                     DidMoveNodesEvent, DidResizeCompartmentsEvent,
+                     DidResizeNodesEvent, SelectionDidUpdateEvent,
+                     bind_handler)
 from .forms import CompartmentForm, NodeForm, ReactionForm
 from .mvc import IController, IView
-from .utils import ButtonGroup, get_path
+from .utils import ButtonGroup, get_bundled_path, on_msw, start_file
 
 
 class EditPanel(fnb.FlatNotebook):
@@ -117,7 +129,8 @@ class EditPanel(fnb.FlatNotebook):
                 comp_index = i
                 break
         if need_update_comps or need_update_nodes:
-            self.comp_form.UpdateSelection(evt.compartment_indices, nodes_selected=should_show_nodes)
+            self.comp_form.UpdateSelection(evt.compartment_indices,
+                                           nodes_selected=should_show_nodes)
         if should_show_comps:
             if comp_index == -1:
                 self.AddPage(self.comp_form, 'Compartments')
@@ -237,7 +250,6 @@ class ModePanel(wx.Panel):
 class MainPanel(wx.Panel):
     """The main panel, which is the only chlid of the root Frame."""
     controller: IController
-    theme: Dict[str, Any]
     canvas: Canvas
     mode_panel: ModePanel
     toolbar: Toolbar
@@ -246,46 +258,46 @@ class MainPanel(wx.Panel):
     def __init__(self, parent, controller: IController):
         # ensure the parent's __init__ is called
         super().__init__(parent, style=wx.CLIP_CHILDREN)
-        self.SetBackgroundColour(theme['overall_bg'])
+        self.SetBackgroundColour(get_theme('overall_bg'))
         self.controller = controller
 
         self.canvas = Canvas(self.controller, self,
-                             size=(theme['canvas_width'],
-                                   theme['canvas_height']),
-                             realsize=(4 * theme['canvas_width'],
-                                       4 * theme['canvas_height']),
+                             size=(get_theme('canvas_width'),
+                                   get_theme('canvas_height')),
+                             realsize=(4 * get_theme('canvas_width'),
+                                       4 * get_theme('canvas_height')),
                              )
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()
-        self.canvas.SetBackgroundColour(theme['canvas_outside_bg'])
+        self.canvas.SetBackgroundColour(get_theme('canvas_outside_bg'))
 
         def set_input_mode(ident): cstate.input_mode = ident
 
         # create a panel in the frame
         self.mode_panel = ModePanel(self,
-                                    size=(theme['mode_panel_width'],
-                                          theme['canvas_height']),
+                                    size=(get_theme('mode_panel_width'),
+                                          get_theme('canvas_height')),
                                     toggle_callback=set_input_mode,
                                     canvas=self.canvas,
                                     )
-        self.mode_panel.SetBackgroundColour(theme['toolbar_bg'])
+        self.mode_panel.SetBackgroundColour(get_theme('toolbar_bg'))
 
-        toolbar_width = theme['canvas_width'] + \
-            theme['edit_panel_width'] + theme['vgap']
+        toolbar_width = get_theme('canvas_width') + \
+            get_theme('edit_panel_width') + get_theme('vgap')
         self.toolbar = Toolbar(self, controller,
-                               size=(toolbar_width, theme['toolbar_height']),
+                               size=(toolbar_width, get_theme('toolbar_height')),
                                zoom_callback=self.canvas.ZoomCenter,
                                edit_panel_callback=self.ToggleEditPanel)
-        self.toolbar.SetBackgroundColour(theme['toolbar_bg'])
+        self.toolbar.SetBackgroundColour(get_theme('toolbar_bg'))
 
         self.edit_panel = EditPanel(self, self.canvas, self.controller,
-                                    size=(theme['edit_panel_width'],
-                                          theme['canvas_height']))
-        self.edit_panel.SetBackgroundColour(theme['toolbar_bg'])
+                                    size=(get_theme('edit_panel_width'),
+                                          get_theme('canvas_height')))
+        self.edit_panel.SetBackgroundColour(get_theme('toolbar_bg'))
 
         # and create a sizer to manage the layout of child widgets
-        sizer = wx.GridBagSizer(vgap=theme['vgap'], hgap=theme['hgap'])
+        sizer = wx.GridBagSizer(vgap=get_theme('vgap'), hgap=get_theme('hgap'))
 
         sizer.Add(self.toolbar, wx.GBPosition(0, 1),
                   wx.GBSpan(1, 2), flag=wx.EXPAND)
@@ -345,11 +357,11 @@ class MainFrame(wx.Frame):
     def __init__(self, controller: IController, manager: PluginManager, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
                          wx.WS_EX_PROCESS_UI_UPDATES, **kw)
-
+        load_settings()
         self.manager = manager
-        status_fields = settings['status_fields']
+        status_fields = get_setting('status_fields')
         assert status_fields is not None
-        self.CreateStatusBar(len(settings['status_fields']))
+        self.CreateStatusBar(len(get_setting('status_fields')))
         self.SetStatusWidths([width for _, width in status_fields])
         self.main_panel = MainPanel(self, controller)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -362,6 +374,10 @@ class MainFrame(wx.Frame):
 
         self.menu_events = list()
         file_menu = wx.Menu()
+        self.AddMenuItem(file_menu, '&Edit Settings', 'Edit settings', lambda _: self.EditSettings(),
+                         entries)
+        self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings', lambda _: self.ReloadSettings(),
+                         entries)
         self.AddMenuItem(file_menu, 'E&xit', 'Exit application', lambda _: self.Close(), entries,
                          id_=wx.ID_EXIT)
 
@@ -419,6 +435,8 @@ class MainFrame(wx.Frame):
         help_menu = wx.Menu()
         self.AddMenuItem(help_menu, '&About...',
                          'Show about dialog', self.ShowAbout, entries)
+        self.AddMenuItem(help_menu, '&Default settings...', 'View default settings',
+                         lambda _: self.ShowDefaultSettings(), entries)
 
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')
@@ -454,6 +472,66 @@ class MainFrame(wx.Frame):
         item = menu.Append(id_, '{}\t{}'.format(text, shortcut), help_text)
         self.Bind(wx.EVT_MENU, callback, item)
         self.menu_events.append((callback, item))
+
+    def ReloadSettings(self):
+        load_settings()
+        err = pop_settings_err()
+        if err is None:
+            # msg = NotificationMessage('Settings reloaded', 'Some changes may not be applied until the application is restarted.')
+            # msg.Show()
+            pass
+        else:
+            if isinstance(err, JSONLibraryException):
+                message = 'Failed when parsing settings.json.\n\n'
+                message += err.message
+            else:
+                message = 'Invalid settings in settings.json.\n\n'
+                message += str(err)
+            message += str(err)
+            self.main_panel.canvas.ShowWarningDialog(message)
+        
+    def CreateConfigDir(self):
+        """Create the configuration directory if it does not already exist."""
+        try:
+            Path(config_dir).mkdir(parents=True, exist_ok=True)
+            return True
+        except FileExistsError:
+            self.main_panel.canvas.ShowWarningDialog('Could not create RKViewer configuration '
+                                                     'directory. A file already exists at path '
+                                                     '{}.'.format(config_dir))
+            return False
+
+    def EditSettings(self):
+        """Open the preferences file for editing."""
+        if not self.CreateConfigDir():
+            return
+
+        if not os.path.exists(settings_path):
+            # TODO prepopulate file with help text, i.e link to docs about schema
+            with open(settings_path, 'w') as fp:
+                fp.write(INIT_SETTING_TEXT)
+        else:
+            if not os.path.isfile(settings_path):
+                self.main_panel.canvas.ShowWarningDialog('Could not open settings file since '
+                                                         'a directory already exists at path '
+                                                         '{}.'.format(settings_path))
+                return
+        start_file(settings_path)
+
+    def ShowDefaultSettings(self):
+        if not self.CreateConfigDir():
+            return
+
+        if os.path.exists(default_settings_path) and not os.path.isfile(default_settings_path):
+            self.main_panel.canvas.ShowWarningDialog('Could not open default settings file '
+                                                        'since a directory already exists at path '
+                                                        '{}.'.format(default_settings_path))
+            return
+        # TODO prepopulate file with help text, i.e link to docs about schema
+        json_str = json.dumps(get_default_raw_settings(), indent=4, sort_keys=True)
+        with open(default_settings_path, 'w') as fp:
+            fp.write(DEFAULT_SETTING_FMT.format(json_str))
+        start_file(default_settings_path)
 
     def ManagePlugins(self, evt):
         # TODO create special empty page that says "No plugins loaded"

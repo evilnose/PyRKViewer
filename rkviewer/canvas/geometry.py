@@ -149,6 +149,10 @@ class Vec2:
 
     def reduce2(self, op: Callable[[TNum, TNum], Any], other: Vec2) -> Vec2:
         return Vec2(op(self.x, other.x), op(self.y, other.y))
+    
+    def as_int(self) -> Vec2:
+        """Convert each element to integers using `int()`"""
+        return self.map(int)
 
     @property
     def norm(self) -> TNum:

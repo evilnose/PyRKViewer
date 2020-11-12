@@ -11,7 +11,7 @@ import wx
 from typing import List
 from rkplugin.plugins import CommandPlugin, PluginMetadata, WindowedPlugin
 from rkplugin import api
-from rkplugin.events import SelectionDidUpdateEvent
+# from rkplugin.events import SelectionDidUpdateEvent
 
 
 metadata = PluginMetadata(
@@ -69,7 +69,7 @@ class ColorSelected(WindowedPlugin):
             for index in api.selected_reaction_indices():
                 api.update_reaction(api.cur_net_index(), index, fill_color=color)
 
-    def on_selection_did_change(self, evt: SelectionDidUpdateEvent):
+    def on_selection_did_change(self, evt):
         """
         Overrides base class event handler to update number of items selected.
 

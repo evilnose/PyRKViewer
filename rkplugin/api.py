@@ -2,9 +2,9 @@
 API for the RKViewer GUI and model. Allows viewing and modifying the network model.
 """
 
-from __future__ import annotations
 # pylint: disable=maybe-no-member
 #from rkviewer.mvc import NetIndexError
+from __future__ import annotations
 from dataclasses import field, dataclass
 from rkviewer.events import DidChangeCompartmentOfNodesEvent, post_event
 from rkviewer.canvas.utils import default_handle_positions as _default_handle_positions
@@ -20,19 +20,12 @@ from rkviewer.controller import Controller
 from rkviewer.canvas.canvas import Canvas
 from rkviewer.canvas import data
 from rkviewer.canvas.state import cstate, ArrowTip
-from rkviewer import config
+from rkviewer.config import get_setting, get_theme
 # re-export events and data "structs" TODO how will documentation work here?
 from rkviewer.canvas.data import Node, Reaction, Compartment, Vec2
 from rkviewer.canvas import data
 import logging
 from logging import Logger
-
-# Node = data.Node
-# Reaction = data.Reaction
-# Compartment = data.Compartment
-# Vec2 = data.Vec2
-theme = config.theme
-settings = config.settings
 
 # TODO allow modification of theme and setting in the GUI
 
@@ -545,19 +538,19 @@ def add_compartment(net_index: int, id_: str, fill_color: Color = None, border_c
         The index of the compartment that was added.
     """
     if fill_color is None:
-        fill_color = _to_color(theme['comp_fill'])
+        fill_color = _to_color(get_theme('comp_fill'))
 
     if border_color is None:
-        border_color = _to_color(theme['comp_border'])
+        border_color = _to_color(get_theme('comp_border'))
 
     if border_width is None:
-        border_width = theme['comp_border_width']
+        border_width = get_theme('comp_border_width')
 
     if position is None:
         position = Vec2()
 
     if size is None:
-        size = Vec2(settings['min_comp_width'], settings['min_comp_height'])
+        size = Vec2(get_setting('min_comp_width'), get_setting('min_comp_height'))
 
     if volume is None:
         volume = 1
@@ -599,19 +592,19 @@ def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: C
         The index of the node that was added.
     """
     if fill_color is None:
-        fill_color = _to_color(theme['node_fill'])
+        fill_color = _to_color(get_theme('node_fill'))
 
     if border_color is None:
-        border_color = _to_color(theme['node_border'])
+        border_color = _to_color(get_theme('node_border'))
 
     if border_width is None:
-        border_width = theme['node_border_width']
+        border_width = get_theme('node_border_width')
 
     if position is None:
         position = Vec2()
 
     if size is None:
-        size = Vec2(theme['node_width'], theme['node_height'])
+        size = Vec2(get_theme('node_width'), get_theme('node_height'))
 
     node = Node(
         id_,
@@ -775,10 +768,10 @@ def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[
         The index of the reaction that was added.
     """
     if fill_color is None:
-        fill_color = _to_color(theme['reaction_fill'])
+        fill_color = _to_color(get_theme('reaction_fill'))
 
     if line_thickness is None:
-        line_thickness = theme['reaction_line_thickness']
+        line_thickness = get_theme('reaction_line_thickness')
 
     auto_init_handles = False
     if handle_positions is None:

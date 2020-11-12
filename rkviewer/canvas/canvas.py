@@ -6,15 +6,16 @@ import copy
 from itertools import chain
 import logging
 from logging import Logger
-from threading import Thread
 import time
 import typing
 from typing import Collection, DefaultDict, Dict, List, Optional, Set, Tuple, Union, cast
+from commentjson.commentjson import JSONLibraryException
+from marshmallow.exceptions import ValidationError
 
 from sortedcontainers import SortedKeyList
 import wx
 
-from ..config import settings, theme
+from ..config import get_setting, get_theme, pop_settings_err
 from ..events import (
     CanvasDidUpdateEvent,
     DidCommitDragEvent, DidDeleteEvent,
@@ -137,6 +138,15 @@ class Canvas(wx.ScrolledWindow):
         # ensure the parent's __init__ is called
         super().__init__(*args, style=wx.DEFAULT_FRAME_STYLE & ~wx.MAXIMIZE_BOX ^ wx.RESIZE_BORDER,
                          **kw)
+        err = pop_settings_err()
+        if err is not None:
+            if isinstance(err, JSONLibraryException):
+                message = 'Failed when parsing settings.json. Using default settings instead.\n\n'
+                message += err.message
+            else:
+                message = 'Invalid settings in settings.json. Using default settings instead.\n\n'
+                message += str(err)
+            self.ShowWarningDialog(message)
 
         init_bezier()
         self.controller = controller
@@ -199,7 +209,7 @@ class Canvas(wx.ScrolledWindow):
 
         self.zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM, size=(200, 25))
         self.zoom_slider.SetRange(Canvas.MIN_ZOOM_LEVEL, Canvas.MAX_ZOOM_LEVEL)
-        self.zoom_slider.SetBackgroundColour(theme['zoom_slider_bg'])
+        self.zoom_slider.SetBackgroundColour(get_theme('zoom_slider_bg'))
         self.Bind(wx.EVT_SLIDER, self.OnSlider)
 
         # Set a placeholder value for position; we will set it later in SetOverlayPositions().
@@ -217,7 +227,7 @@ class Canvas(wx.ScrolledWindow):
         self._status_bar = self.GetTopLevelParent().GetStatusBar()
         assert self._status_bar is not None, "Need to create status bar before creating canvas!"
 
-        status_fields = settings['status_fields']
+        status_fields = get_setting('status_fields')
         assert status_fields is not None
         self._reverse_status = {name: i for i, (name, _) in enumerate(status_fields)}
 
@@ -307,7 +317,7 @@ class Canvas(wx.ScrolledWindow):
             self.RegisterAllChildren(child)
 
     def _GetReactionCenterRect(self, s_pos: Vec2) -> Rect:
-        size = Vec2.repeat(theme['reaction_center_size']) * cstate.scale
+        size = Vec2.repeat(get_theme('reaction_center_size')) * cstate.scale
         return Rect(s_pos - size / 2, size)
 
     def _InWhichOverlay(self, device_pos: Vec2) -> Optional[CanvasOverlay]:
@@ -341,7 +351,7 @@ class Canvas(wx.ScrolledWindow):
         _, slider_height = self.zoom_slider.GetSize()
         minimap_pos = minimap_pos.swapped(1, minimap_pos.y - (slider_height + 10))
         self._minimap.device_pos = minimap_pos
-        self._minimap.position = Vec2(self.CalcUnscrolledPosition(*minimap_pos))
+        self._minimap.position = Vec2(self.CalcUnscrolledPosition(*minimap_pos.as_int()))
         self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(0, 0)) / cstate.scale
         # TODO for windows, need to subtract scroll offset from window size. Need to test if this
         # is true for Mac and Linux, however. -Gary
@@ -638,7 +648,7 @@ class Canvas(wx.ScrolledWindow):
                     self.drag_sel_nodes_idx = set()
                     self.drag_sel_comp_idx = set()
             elif cstate.input_mode == InputMode.ADD_NODES:
-                size = Vec2(theme['node_width'], theme['node_height'])
+                size = Vec2(get_theme('node_width'), get_theme('node_height'))
 
                 unscaled_pos = logical_pos / cstate.scale
                 adj_pos = unscaled_pos - size / 2
@@ -648,9 +658,9 @@ class Canvas(wx.ScrolledWindow):
                     self.net_index,
                     pos=adj_pos,
                     size=size,
-                    fill_color=theme['node_fill'],
-                    border_color=theme['node_border'],
-                    border_width=theme['node_border_width'],
+                    fill_color=get_theme('node_fill'),
+                    border_color=get_theme('node_border'),
+                    border_width=get_theme('node_border_width'),
                     comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
                 )
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
@@ -743,8 +753,8 @@ class Canvas(wx.ScrolledWindow):
 
                 size = self._drag_rect.size / cstate.scale
                 # make sure the compartment is at least of some size
-                adj_size = Vec2(max(size.x, settings['min_comp_width']),
-                                max(size.y, settings['min_comp_height']))
+                adj_size = Vec2(max(size.x, get_setting('min_comp_width')),
+                                max(size.y, get_setting('min_comp_height')))
                 # compute position
                 size_diff = adj_size - self._drag_rect.size
                 # center position if drag_rect size has been adjusted
@@ -757,9 +767,9 @@ class Canvas(wx.ScrolledWindow):
                                    volume=1,
                                    position=pos,
                                    size=adj_size,
-                                   fill=theme['comp_fill'],
-                                   border=theme['comp_border'],
-                                   border_width=theme['comp_border_width'],
+                                   fill=get_theme('comp_fill'),
+                                   border=get_theme('comp_border'),
+                                   border_width=get_theme('comp_border_width'),
                                    )
                 # clip position
                 comp.position = clamp_rect_pos(comp.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
@@ -910,13 +920,13 @@ class Canvas(wx.ScrolledWindow):
             draw_rect(
                 gc,
                 Rect(Vec2(), self.realsize * cstate.scale),
-                fill=theme['canvas_bg'],
+                fill=get_theme('canvas_bg'),
             )
 
             # Draw nodes
             within_comp = None
             if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
-                size = Vec2(theme['node_width'], theme['node_height'])
+                size = Vec2(get_theme('node_width'), get_theme('node_height'))
                 pos = self._cursor_logical_pos - size/2
                 within_comp = self.RectInWhichCompartment(Rect(pos, size))
             elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
@@ -943,10 +953,10 @@ class Canvas(wx.ScrolledWindow):
                 for rect in sel_rects:
                     rect = rect.aligned()
                     # Draw selection outlines
-                    rect = padded_rect(rect, theme['select_outline_padding'])
+                    rect = padded_rect(rect, get_theme('select_outline_padding'))
                     # draw rect
-                    draw_rect(gc, rect, border=theme['handle_color'],
-                              border_width=theme['select_outline_width'])
+                    draw_rect(gc, rect, border=get_theme('handle_color'),
+                              border_width=get_theme('select_outline_width'))
 
             # Draw reactant and product marker outlines
             def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):
@@ -955,19 +965,19 @@ class Canvas(wx.ScrolledWindow):
                     padded_rect(node.s_rect.aligned(), padding),
                     fill=None,
                     border=color,
-                    border_width=max(even_round(theme['react_node_border_width']), 2),
+                    border_width=max(even_round(get_theme('react_node_border_width')), 2),
                     border_style=wx.PENSTYLE_LONG_DASH,
                 )
 
             reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
             for node in reactants:
-                draw_reaction_outline(node, theme['reactant_border'], theme['react_node_padding'])
+                draw_reaction_outline(node, get_theme('reactant_border'), get_theme('react_node_padding'))
 
             products = get_nodes_by_idx(self._nodes, self._product_idx)
             for node in products:
-                pad = theme['react_node_border_width'] + \
+                pad = get_theme('react_node_border_width') + \
                     3 if node.index in self._reactant_idx else 0
-                draw_reaction_outline(node, theme['product_border'], pad + theme['react_node_padding'])
+                draw_reaction_outline(node, get_theme('product_border'), pad + get_theme('react_node_padding'))
 
             # Draw drag-selection rect
             if self._drag_selecting:
@@ -975,13 +985,13 @@ class Canvas(wx.ScrolledWindow):
                 border: Optional[wx.Colour]
                 bwidth: int
                 if cstate.input_mode == InputMode.SELECT:
-                    fill = theme['drag_fill']
-                    border = theme['drag_border']
-                    bwidth = theme['drag_border_width']
+                    fill = get_theme('drag_fill')
+                    border = get_theme('drag_border')
+                    bwidth = get_theme('drag_border_width')
                 elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
-                    fill = opacity_mul(theme['comp_fill'], 0.3)
-                    border = opacity_mul(theme['comp_border'], 0.3)
-                    bwidth = theme['comp_border_width']
+                    fill = opacity_mul(get_theme('comp_fill'), 0.3)
+                    border = opacity_mul(get_theme('comp_border'), 0.3)
+                    bwidth = get_theme('comp_border_width')
                 else:
                     assert False, "Should not be _drag_selecting in any other input mode."
 
@@ -1223,8 +1233,8 @@ depend on it.".format(bound_node.id_))
             self.net_index,
             sources=list(self._reactant_idx),
             targets=list(self._product_idx),
-            fill_color=theme['reaction_fill'],
-            line_thickness=theme['reaction_line_thickness'],
+            fill_color=get_theme('reaction_fill'),
+            line_thickness=get_theme('reaction_line_thickness'),
             rate_law='',
             handle_positions=default_handle_positions(centroid, sources, targets)
         )
@@ -1265,5 +1275,5 @@ depend on it.".format(bound_node.id_))
                                      for id_ in pasted_ids})
         self.controller.end_group()  # calls UpdateMultiSelect in a moment
 
-    def ShowWarningDialog(self, msg: str):
-        wx.MessageBox(msg, 'Warning', wx.OK | wx.ICON_WARNING)
+    def ShowWarningDialog(self, msg: str, caption='Warning'):
+        wx.MessageBox(msg, caption, wx.OK | wx.ICON_WARNING)

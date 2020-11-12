@@ -9,12 +9,15 @@ tuna = "*"
 Sphinx="*"
 sphinx_rtd_theme="*"
 sphinx-autodoc-typehints="*"
+autopep8 = "*"
 
 [packages]
 wxpython = "==4.1.0"
 numpy = "*"
 scipy = "*"
 sortedcontainers = "*"
+marshmallow = "*"
+commentjson = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"

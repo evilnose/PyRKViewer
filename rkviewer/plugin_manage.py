@@ -47,7 +47,8 @@ class PluginManager:
         bind_handler(DidModifyNodesEvent, self.make_notify('on_did_modify_nodes'))
         bind_handler(DidModifyReactionEvent, self.make_notify('on_did_modify_reactions'))
         bind_handler(DidModifyCompartmentsEvent, self.make_notify('on_did_modify_compartments'))
-        bind_handler(DidChangeCompartmentOfNodesEvent, self.make_notify('on_did_change_compartment_of_nodes'))
+        bind_handler(DidChangeCompartmentOfNodesEvent,
+                     self.make_notify('on_did_change_compartment_of_nodes'))
 
     # Also TODO might want a more sophisticated file system structure, including data storage and
     # temp folder
@@ -137,6 +138,9 @@ Plugin!".format(handler_name)
                 dialog = wx.Dialog(parent, title=title)
                 dialog_exists = True
                 window = windowed.create_window(dialog)
+                if window is None or not isinstance(window, wx.Window):
+                    raise ValueError('create_window() of plugin {} did not return wx.Window '
+                                     'type!'.format(windowed.metadata.name))
                 windowed.dialog = dialog  # Set the related dialog
 
                 sizer = wx.BoxSizer(wx.VERTICAL)

@@ -3,6 +3,8 @@
 import wx
 from itertools import tee
 import os
+import platform
+import subprocess
 import sys
 from typing import Any, Callable, Dict, Iterable, List, Tuple, Type, TypeVar
 from dataclasses import is_dataclass
@@ -42,8 +44,16 @@ def on_msw() -> bool:
     return os.name == 'nt'
 
 
-def get_path(relative_path):
-    """Get absolute path to resource, works for dev and PyInstaller."""
+def get_local_path(relative_path):
+    """Get path relative to the executable, or the working dir if not bundled."""
+    return os.path.abspath(relative_path)
+
+
+def get_bundled_path(relative_path):
+    """Given a path relative to the application bundle, return the absolute path.
+    
+    Specifically for files bundled with the application, e.g. resources.
+    """
     if hasattr(sys, '_MEIPASS'):
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = getattr(sys, '_MEIPASS')
@@ -54,7 +64,18 @@ def get_path(relative_path):
 
 
 def resource_path(relative_path):
-    return get_path(os.path.join('resources', relative_path))
+    """Get absolute path to resource, works for dev and PyInstaller."""
+    return get_bundled_path(os.path.join('resources', relative_path))
+
+
+def start_file(abs_path: str):
+    # Tell OS to open the file for editing. From https://stackoverflow.com/a/435669/9171534
+    if platform.system() == 'Darwin':       # macOS
+        subprocess.call(('open', abs_path))
+    elif platform.system() == 'Windows':    # Windows
+        os.startfile(abs_path)
+    else:                                   # linux variants
+        subprocess.call(('xdg-open', abs.path))
 
 
 def pairwise(iterable: Iterable) -> Iterable:

@@ -63,6 +63,7 @@ class StructuralAnalysis(WindowedPlugin):
         """
         
         super().__init__(metadata)
+        self.index_list=[]
 
 
     def create_window(self, dialog):
@@ -125,7 +126,7 @@ class StructuralAnalysis(WindowedPlugin):
         Get the network on canvas.
         Calculate the Stoichiometry Matrix and Conservation Matrix for the randon network.
         """
-        self.index_list=[]
+        #self.index_list=[]
 
         def nullspace(A, atol=1e-13, rtol=0):  
             A = _np.atleast_2d(A)
@@ -272,7 +273,7 @@ class StructuralAnalysis(WindowedPlugin):
             for row in rows
             for col in cols])
             
-        self.index_list = []
+        #self.index_list = []
         for cell in cells:
             row, col = cell
             value = self.tab2.grid_moi.GetCellValue(row,col)
@@ -311,6 +312,7 @@ class StructuralAnalysis(WindowedPlugin):
         with api.group_action():
             # color selected nodes
             #for index in api.selected_node_indices():
+
             if len(self.index_list) == 0:
                 wx.MessageBox("Please select a row and pick a color again", "Message", wx.OK | wx.ICON_INFORMATION)
             try:

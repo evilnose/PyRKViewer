@@ -344,7 +344,7 @@ def node_count(net_index: int) -> int:
     return len(get_nodes(net_index))
 
 
-def get_reactions(net_index: int) -> List[Reaction]:
+def get_reactions(net_index: int) -> List[ReactionData]:
     """ 
     Returns the list of all reactions in a network.
 
@@ -354,7 +354,7 @@ def get_reactions(net_index: int) -> List[Reaction]:
     Returns:
         The list of reactions.
     """
-    return _controller.get_list_of_reactions(net_index)
+    return [_translate_reaction(r) for r in _controller.get_list_of_reactions(net_index)]
 
 
 def reaction_count(net_index: int) -> int:
@@ -623,6 +623,11 @@ def move_node(net_index: int, node_index: int, position: Vec2):
     _controller.move_node(net_index, node_index, position)
 
 
+def move_compartment(net_index: int, comp_index: int, position: Vec2):
+    """Change the position of a compartment."""
+    _controller.move_compartment(net_index, comp_index, position)
+
+
 def resize_node(net_index: int, node_index: int, size: Vec2):
     """Change the size of a node."""
     _controller.set_node_size(net_index, node_index, size)
@@ -737,13 +742,14 @@ def default_handle_positions(net_index: int, reaction_index: int) -> List[Vec2]:
 
 def _set_handle_positions(reaction: Reaction, handle_positions: List[Vec2]):
     """Helper to set handle positions."""
+    assert len(handle_positions) == len(reaction.sources) + len(reaction.targets) + 1
+    _controller.set_center_handle(reaction.net_index, reaction.index, handle_positions[0])
     for (gi, nodei), pos in zip(gchain(reaction.sources, reaction.targets),
                                 handle_positions[1:]):
         if gi == 0:
             _controller.set_src_node_handle(reaction.net_index, reaction.index, nodei, pos)
         else:
             _controller.set_dest_node_handle(reaction.net_index, reaction.index, nodei, pos)
-    _controller.set_center_handle(reaction.net_index, reaction.index, handle_positions[0])
 
 
 def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[int],
@@ -1150,5 +1156,46 @@ def set_arrow_tip(value: ArrowTip):
     _canvas.ArrowTipChanged()
     # TODO save to settings; pending https://github.com/evilnose/PyRKViewer/issues/16
 
-def translate_network(net_index: int, offset: float):
-    pass
+
+def get_network_bounds(net_index: int):
+    """Return the rectangular bounds of a network."""
+    # NOTE currently hardcoded
+    return _canvas.realsize
+
+
+def translate_network(net_index: int, offset: Vec2, check_bounds: bool = True) -> bool:
+    """Translate the given network by a fixed amount.
+
+    Args:
+        net_index: The network index.
+        offset: The offset to shift the network.
+        check_bounds: If True, check to ensure that everything will be within bounds after the
+                      shift. Defaults to True, and this is recommended unless you have already
+                      performed that check yourself.
+    """
+    nodes = get_nodes(net_index)
+    comps = get_compartments(net_index)
+    if check_bounds:
+        bounds = get_network_bounds(net_index)
+        for node in nodes:
+            newpos = node.position + offset
+            if newpos.x < 0 or newpos.y < 0 or newpos.x + node.size.x >= bounds.x or \
+                newpos.y + node.size.y >= bounds.y:
+                return False
+        for comp in comps:
+            newpos = comp.position + offset
+            if newpos.x < 0 or newpos.y < 0 or newpos.x + comp.size.x >= bounds.x or \
+                newpos.y + comp.size.y >= bounds.y:
+                return False
+
+    with group_action():
+        for node in nodes:
+            move_node(net_index, node.index, node.position + offset)
+        for comp in comps:
+            move_compartment(net_index, comp.index, comp.position + offset)
+        for reaction in _controller.get_list_of_reactions(net_index):
+            handles = reaction.handles
+            new_handle_pos = [reaction.src_c_handle.tip + offset] + [h.tip + offset for h in handles]
+            update_reaction(net_index, reaction.index, handle_positions=new_handle_pos)
+
+    return True

@@ -29,6 +29,9 @@ class EventLogger(CommandPlugin):
         """Uncomment this line to log add node events."""
         # print(evt)
 
+    def on_did_move_nodes(self, evt):
+        pass
+
     def on_did_move_bezier_handle(self, evt: DidMoveBezierHandleEvent):
         """Uncomment this line to log move Bezier handle events."""
         # print(evt)
@@ -38,6 +41,4 @@ class EventLogger(CommandPlugin):
         Log something.
         """
         # api.logger().info('run() called')
-        a = api.add_node(0, 'hi', position=Vec2(50, 50))
-        b = api.add_node(0, 'hiya', position=Vec2(100, 100))
-        api.add_reaction(0, 'reaction', [a], [b])
+        api.translate_network(0, Vec2(50, 50))

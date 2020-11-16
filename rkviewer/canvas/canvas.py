@@ -18,7 +18,7 @@ import wx
 from ..config import get_setting, get_theme, pop_settings_err
 from ..events import (
     CanvasDidUpdateEvent,
-    DidCommitDragEvent, DidDeleteEvent,
+    DidCommitDragEvent, DidDeleteEvent, DidMoveNodesEvent,
     DidPaintCanvasEvent,
     SelectionDidUpdateEvent,
     bind_handler,
@@ -180,7 +180,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)
 
-        bind_handler(DidCommitDragEvent, self.OnDidCommitNodePositions)
+        bind_handler(DidCommitDragEvent, lambda _: self.OnDidCommitNodePositions())
 
         # state variables
         cstate.input_mode = InputMode.SELECT
@@ -1053,7 +1053,8 @@ class Canvas(wx.ScrolledWindow):
         finally:
             evt.Skip()
 
-    def OnDidCommitNodePositions(self, _):
+    def OnDidCommitNodePositions(self):
+        """Update reaction Bezier handles after nodes are dragged."""
         for elt in self._reaction_elements:
             elt.commit_node_pos()
 

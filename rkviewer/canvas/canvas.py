@@ -92,6 +92,7 @@ class Canvas(wx.ScrolledWindow):
     sel_compartments_idx: SetSubject
     drag_sel_nodes_idx: Set[int]
     hovered_element: Optional[CanvasElement]
+    dragged_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
     reaction_map: DefaultDict[int, Set[int]]
     logger: Logger
@@ -315,10 +316,6 @@ class Canvas(wx.ScrolledWindow):
 
         for child in widget.GetChildren():
             self.RegisterAllChildren(child)
-
-    def _GetReactionCenterRect(self, s_pos: Vec2) -> Rect:
-        size = Vec2.repeat(get_theme('reaction_center_size')) * cstate.scale
-        return Rect(s_pos - size / 2, size)
 
     def _InWhichOverlay(self, device_pos: Vec2) -> Optional[CanvasOverlay]:
         """If position is within an overlay, return that overlay; otherwise return None.

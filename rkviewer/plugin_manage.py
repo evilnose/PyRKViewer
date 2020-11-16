@@ -92,8 +92,10 @@ class PluginManager:
 Plugin!".format(handler_name)
 
         def ret(evt: CanvasEvent):
+            self.controller.start_group()
             for plugin in self.plugins:
                 getattr(plugin, handler_name)(evt)
+            self.controller.end_group()
 
         return ret
 

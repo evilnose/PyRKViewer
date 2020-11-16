@@ -1,11 +1,9 @@
 """Configuration parameters.
 """
 # pylint: disable=maybe-no-member
-from typing import Any, Dict, Mapping
-
+from typing import Any
 from commentjson.commentjson import JSONLibraryException
 from rkviewer.utils import get_local_path
-from scipy.special.orthogonal import roots_hermite
 import wx
 import os
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError
@@ -65,7 +63,45 @@ class ThemeSchema(Schema):
     """Schema for the overall theme, i.e. appearance, of the application.
 
     Attributes:
-        overall_bg: The overall background of the application.
+        overall_bg: Overall background color of the application.
+        canvas_bg: Background color of the canvas.
+        toolbar_bg: Background color of the toolbar.
+        canvas_width: Starting (and minimum) width of the canvas.
+        canvas_height: Starting (and minimum) height of the canvas.
+        vgap: Vertical gap between toolbars and canvas.
+        hgap: Horizontal gap between toolbars and canvas.
+        canvas_outside_bg: Background color of the part outside of the bounds of canvas.
+        mode_panel_width: Width of the mode selection panel.
+        node_fill: Default node fill color.
+        node_border: Default node border color.
+        node_width: Default node width.
+        node_height: Default node height.
+        node_border_width: Default node border width.
+        node_font_size: Default font size of the node.
+        node_font_color: Default font color of the node.
+        select_outline_width: Width of the selection outlines (i.e. outline around each selected
+                              item).
+        select_outline_padding: Padding of the selection outlines.
+        handle_color: Color of the Reaction Bezier curves.
+        highlighted_handle_color: Color of the Reaction Bezier curves when the cursor hovers over it
+        select_box_padding: Padding of the selection rectangle (i.e. the large rectangle that
+                            encompasses all the selected items).
+        select_handle_length: Side length of the squares one uses to resize nodes/compartments.
+        zoom_slider_bg: Background color of the zoom slider.
+        drag_fill: The fill color of the drag selection rectangle.
+        drag_border: The border color of the drag selection rectangle.
+        drag_border_width: The border width of the drag selection rectangle.
+        react_node_padding: The outline padding for nodes prepped as reactants or products.
+        react_node_border_width: The border width for nodes prepped as reactants or products.
+        reactant_border: The outline color for nodes prepped as reactants.
+        product_border: The outline color for nodes prepped as products.
+        reaction_fill: The default fill color of reaction curves.
+        reaction_line_thickness: The default thickness of reaction curves.
+        selected_reaction_fill: The fill color of selected reaction curves.
+        comp_fill: The default fill color of compartments.
+        comp_border: The default border color of compartments.
+        comp_border_width: The default border width of compartments.
+        reaction_radius: The radius of the reaction centroid circles.
 
     TODO more documentation under attributes and link to this document in Help or settings.json
     """
@@ -110,7 +146,6 @@ class ThemeSchema(Schema):
     react_node_border_width = Pixel(missing=3)
     reactant_border = Color(missing=wx.Colour(255, 100, 100))
     product_border = Color(missing=wx.Colour(0, 214, 125))
-    reaction_center_size = Pixel(missing=10)
     reaction_fill = Color(missing=wx.Colour(0, 0, 0))
     reaction_line_thickness = Pixel(missing=2)
     selected_reaction_fill = Color(missing=wx.Colour(0, 140, 255))

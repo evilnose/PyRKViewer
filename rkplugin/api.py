@@ -1149,3 +1149,6 @@ def set_arrow_tip(value: ArrowTip):
     cstate.arrow_tip = value.clone()
     _canvas.ArrowTipChanged()
     # TODO save to settings; pending https://github.com/evilnose/PyRKViewer/issues/16
+
+def translate_network(net_index: int, offset: float):
+    pass

@@ -42,16 +42,16 @@ class AutoLayout(WindowedPlugin):
         # TODO: k, gravity, useMagnetism, useBoundary, useGrid
         window = wx.Panel(dialog, pos=(5,100), size=(300, 300))
 
-        apply_btn = wx.Button(window, -1, 'Align Left', (20, 90))
+        apply_btn = wx.Button(window, -1, 'Align Left', (30, 10))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignLeft)
 
-        apply_btn = wx.Button(window, -1, 'Align Right', (50, 90))
+        apply_btn = wx.Button(window, -1, 'Align Right', (30, 40))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignRight)
 
-        apply_btn = wx.Button(window, -1, 'Align Center', (80, 90))
+        apply_btn = wx.Button(window, -1, 'Align Center', (30, 70))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignCenter)
 
-        apply_btn = wx.Button(window, -1, 'Grid', (110, 90))
+        apply_btn = wx.Button(window, -1, 'Grid', (30, 100))
         apply_btn.Bind(wx.EVT_BUTTON, self.Grid)
 
         window.SetPosition (wx.Point(10,10))
@@ -59,7 +59,7 @@ class AutoLayout(WindowedPlugin):
     
     def findMinX(self, l):
         '''
-        FInd the left-most node's x position
+        Find the left-most node's x position
         Args:
             self
             l: the list of indices of the selected nodes
@@ -74,7 +74,7 @@ class AutoLayout(WindowedPlugin):
 
     def findMaxX(self, l):
         '''
-        FInd the right-most node's x position
+        Find the right-most node's x position
         Args:
             self
             l: the list of indices of the selected nodes
@@ -95,7 +95,7 @@ class AutoLayout(WindowedPlugin):
             evt
         '''
         with api.group_action():
-            s = api.get_selected_node_indices #TODO: 2 of these
+            s = api.get_selected_node_indices(0) #TODO: 2 of these
             xpos = self.findMinX(s)
             for a in s:
                 cur = api.get_node_by_index(0, a)
@@ -112,7 +112,7 @@ class AutoLayout(WindowedPlugin):
             evt
         '''
         with api.group_action():
-            s = api.get_selected_node_indices #TODO: 2 of these
+            s = api.get_selected_node_indices(0) #TODO: 2 of these
             xpos = self.findMaxX(s)
             for a in s:
                 cur = api.get_node_by_index(0, a)
@@ -128,7 +128,7 @@ class AutoLayout(WindowedPlugin):
             evt
         '''
         with api.group_action():
-            s = api.get_selected_node_indices #TODO: 2 of these
+            s = api.get_selected_node_indices(0) #TODO: 2 of these
             xMin = self.findMinX(s)
             xMax = self.findMaxX(s)
             xpos = math.floor((xMax + xMin)/2)
@@ -145,10 +145,10 @@ class AutoLayout(WindowedPlugin):
             self
             evt
         '''
-        s = api.get_selected_node_indices
+        s = api.get_selected_node_indices(0)
         x = 40; y = 40; count = 1
         for a in s:
-            api.update_node (0, a, position=Vec2(x, y))
+            api.update_node(0, a, position=Vec2(x, y))
             x = x + 100
             if count % 5 == 0:
                y = y + 100

@@ -768,29 +768,7 @@ class SelectBox(CanvasElement):
             if self._did_move:
                 self._did_move = False
 
-                self.controller.start_group()
-                for node in chain(self.nodes, self.peripheral_nodes):
-                    self.controller.move_node(self.net_index, node.index, node.position)
-
-                for comp in self.compartments:
-                    self.controller.move_compartment(
-                        self.net_index, comp.index, comp.position)
-
-                if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
-                    compi = self.canvas.InWhichCompartment(self.nodes)
-                    old_compi = self.nodes[0].comp_idx
-                    if compi != old_compi:
-                        for node in self.nodes:
-                            self.controller.set_compartment_of_node(
-                                self.net_index, node.index, compi)
-                        post_event(DidChangeCompartmentOfNodesEvent(
-                            node_indices=[n.index for n in self.nodes],
-                            old_compi=old_compi,
-                            new_compi=compi
-                        ))
-
-                post_event(DidCommitDragEvent())
-                self.controller.end_group()
+                self._commit_move()
         elif self._mode == SelectBox.Mode.RESIZING:
             assert not self._did_move
             self.controller.start_group()
@@ -972,8 +950,7 @@ class SelectBox(CanvasElement):
         elif max_y > lim_botright.y:
             offset += Vec2(0, lim_botright.y - max_y)
 
-        self.bounding_rect.position = (
-            pos + offset + self._drag_rel) / cstate.scale
+        self.bounding_rect.position = (pos + offset + self._drag_rel) / cstate.scale
         # The actual amount moved by the rects
         pos_offset = (new_positions[0] + offset) / cstate.scale - rect_data[0].position
         for rdata, np in zip(rect_data, new_positions):
@@ -990,3 +967,38 @@ class SelectBox(CanvasElement):
         if len(self.compartments) != 0:
             post_event(DidMoveCompartmentsEvent(compartment_indices=[c.index for c in self.compartments],
                                                 offset=pos_offset, dragged=True))
+    
+    def move_offset(self, offset: Vec2):
+        rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)
+        pos = self.bounding_rect.position
+        rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes]
+        rel_comp_pos = [c.position * cstate.scale - pos for c in self.compartments]
+        rel_positions = rel_comp_pos + rel_node_pos
+
+        self._move(pos + offset, rect_data, rel_positions)
+        self._commit_move()
+
+    def _commit_move(self):
+        self.controller.start_group()
+        for node in chain(self.nodes, self.peripheral_nodes):
+            self.controller.move_node(self.net_index, node.index, node.position)
+
+        for comp in self.compartments:
+            self.controller.move_compartment(
+                self.net_index, comp.index, comp.position)
+
+        if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
+            compi = self.canvas.InWhichCompartment(self.nodes)
+            old_compi = self.nodes[0].comp_idx
+            if compi != old_compi:
+                for node in self.nodes:
+                    self.controller.set_compartment_of_node(
+                        self.net_index, node.index, compi)
+                post_event(DidChangeCompartmentOfNodesEvent(
+                    node_indices=[n.index for n in self.nodes],
+                    old_compi=old_compi,
+                    new_compi=compi
+                ))
+
+        post_event(DidCommitDragEvent())
+        self.controller.end_group()

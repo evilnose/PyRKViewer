@@ -84,6 +84,7 @@ class Canvas(wx.ScrolledWindow):
     HANDLE_LAYER = 11
     DRAGGED_NODE_LAYER = 12
     MILLIS_PER_REFRESH = 16  # serves as framerate cap
+    KEY_MOVE_PIXELS = 1  # Number of pixels to move when the user presses an arrow key.
 
     controller: IController
     realsize: Vec2
@@ -178,7 +179,8 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnWindowDestroy)
         self.Bind(wx.EVT_IDLE, self.OnIdle)
-        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)  # Don't erase background
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
 
         bind_handler(DidCommitDragEvent, lambda _: self.OnDidCommitNodePositions())
 
@@ -262,6 +264,26 @@ class Canvas(wx.ScrolledWindow):
         if not self.LazyRefresh():
             # Not processed; request more
             evt.RequestMore()
+    
+    def OnChar(self, evt):
+        keycode = evt.GetKeyCode()
+
+        offset: Vec2
+        if keycode == wx.WXK_LEFT:
+            offset = Vec2(-1, 0)
+        elif keycode == wx.WXK_RIGHT:
+            offset = Vec2(1, 0)
+        elif keycode == wx.WXK_UP:
+            offset = Vec2(0, -1)
+        elif keycode == wx.WXK_DOWN:
+            offset = Vec2(0, 1)
+        else:
+            evt.Skip()
+            return
+        
+        offset *= Canvas.KEY_MOVE_PIXELS
+        if self._select_box is not None:
+            self._select_box.move_offset(offset)
 
     @property
     def select_box(self):

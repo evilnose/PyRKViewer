@@ -96,7 +96,7 @@ class RandomNetwork(WindowedPlugin):
         self.probBiBiValue = float(self.probBiBiText.GetValue())
 
         randomSeed = wx.StaticText(window, -1, 'Random seed:', (20,210))
-        randomSeed = wx.StaticText(window, -1, '0 means seed setup', (20,230))
+        randomSeed = wx.StaticText(window, -1, '0 means no seed setup', (20,230))
         self.randomSeedText = wx.TextCtrl(window, -1, str(DefaultValues.randomSeed), (160, 210), size=(100, -1))
         self.randomSeedText.SetInsertionPoint(0)
         self.randomSeedText.Bind(wx.EVT_TEXT, self.OnText_randomSeed)

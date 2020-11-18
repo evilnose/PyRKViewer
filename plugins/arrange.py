@@ -42,7 +42,12 @@ class AutoLayout(WindowedPlugin):
         # TODO: k, gravity, useMagnetism, useBoundary, useGrid
         window = wx.Panel(dialog, pos=(5,100), size=(300, 300))
 
-        apply_btn = wx.Button(window, -1, 'Align Left', (30, 10))
+        import os
+        path = os.path.realpath(__file__)
+        path = os.path.dirname(os.path.abspath(path))
+        s = os.path.join (path + '\\AlignLeft.png')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 10), size=(30,30), bitmap=bmp)
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignLeft)
 
         apply_btn = wx.Button(window, -1, 'Align Right', (30, 40))

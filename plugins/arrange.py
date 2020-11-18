@@ -12,6 +12,7 @@ from rkplugin.api import Node, Vec2, Reaction
 import math
 from dataclasses import field
 from typing import List
+import os
 
 metadata = PluginMetadata(
     name='Rearrange Selected Nodes',
@@ -40,23 +41,32 @@ class AutoLayout(WindowedPlugin):
             dialog
         '''
         # TODO: k, gravity, useMagnetism, useBoundary, useGrid
-        window = wx.Panel(dialog, pos=(5,100), size=(300, 300))
+        window = wx.Panel(dialog, pos=(5,100), size=(300, 400))
 
-        import os
         path = os.path.realpath(__file__)
         path = os.path.dirname(os.path.abspath(path))
         s = os.path.join (path + '\\AlignLeft.png')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 10), size=(30,30), bitmap=bmp)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 10), size=(60,60), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Left', (100, 40))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignLeft)
 
-        apply_btn = wx.Button(window, -1, 'Align Right', (30, 40))
+        s = os.path.join (path + '\\AlignLeft.png')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 80), size=(60,60), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Right', (100, 110))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignRight)
 
-        apply_btn = wx.Button(window, -1, 'Align Center', (30, 70))
+        s = os.path.join (path + '\\AlignLeft.png')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 150), size=(60,60), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Center', (100, 180))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignCenter)
 
-        apply_btn = wx.Button(window, -1, 'Grid', (30, 100))
+        s = os.path.join (path + '\\AlignLeft.png')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 220), size=(60,60), bitmap=bmp)
+        wx.StaticText(window, -1, 'Grid', (100, 250))
         apply_btn.Bind(wx.EVT_BUTTON, self.Grid)
 
         window.SetPosition (wx.Point(10,10))
@@ -154,8 +164,21 @@ class AutoLayout(WindowedPlugin):
         x = 40; y = 40; count = 1
         for a in s:
             api.update_node(0, a, position=Vec2(x, y))
-            x = x + 100
+            x = x + 200
             if count % 5 == 0:
-               y = y + 100
+               y = y + 200
                x = 40
             count = count + 1
+
+        for r in api.get_reactions(0):
+            handles = api.default_handle_positions(0, r.index) # centroid, sources, target
+            sources = r.sources
+            targets = r.targets
+            api.set_reaction_center_handle(0, r.index, handles[0])
+            count = 1
+            for s in sources:
+                api.set_reaction_node_handle(0, r.index, s, True, handles[count])
+                count += 1
+            for t in targets:
+                api.set_reaction_node_handle(0, r.index, t, False, handles[count])
+                count += 1

@@ -77,7 +77,14 @@ class Plugin:
         pass
 
     def on_did_move_nodes(self, evt: DidMoveNodesEvent):
-        """Called after nodes are moved."""
+        """Called as nodes are moved.
+        
+        Note:
+            This is called many times, continuously as the ndoes are being moved. Therefore, you
+            should not call any API functions that would modify the state of the model (including
+            api.group_action()), as otherwise you would have registered hundreds of actions in
+            the undo/redo stack.
+        """
         pass
 
     def on_did_resize_nodes(self, evt: DidResizeNodesEvent):
@@ -93,7 +100,11 @@ class Plugin:
         pass
 
     def on_did_move_compartments(self, evt: DidMoveCompartmentsEvent):
-        """Called after compartments are moved."""
+        """Called as compartments are moved.
+        
+        Note:
+            See on_did_move_nodes() for cautious notes on usage.
+        """
         pass
 
     def on_did_add_reaction(self, evt: DidAddReactionEvent):
@@ -125,7 +136,11 @@ class Plugin:
         pass
 
     def on_did_move_bezier_handle(self, evt: DidMoveBezierHandleEvent):
-        """Called as the Bezier handles are being moved."""
+        """Called as the Bezier handles are being moved.
+        
+        Note:
+            See on_did_move_nodes() for cautious notes on usage.
+        """
         pass
 
     def on_did_modify_nodes(self, evt: DidModifyNodesEvent):

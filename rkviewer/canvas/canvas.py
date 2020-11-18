@@ -18,7 +18,7 @@ import wx
 from ..config import get_setting, get_theme, pop_settings_err
 from ..events import (
     CanvasDidUpdateEvent,
-    DidCommitDragEvent, DidDeleteEvent,
+    DidCommitDragEvent, DidDeleteEvent, DidMoveNodesEvent,
     DidPaintCanvasEvent,
     SelectionDidUpdateEvent,
     bind_handler,
@@ -92,6 +92,7 @@ class Canvas(wx.ScrolledWindow):
     sel_compartments_idx: SetSubject
     drag_sel_nodes_idx: Set[int]
     hovered_element: Optional[CanvasElement]
+    dragged_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
     reaction_map: DefaultDict[int, Set[int]]
     logger: Logger
@@ -179,7 +180,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)
 
-        bind_handler(DidCommitDragEvent, self.OnDidCommitNodePositions)
+        bind_handler(DidCommitDragEvent, lambda _: self.OnDidCommitNodePositions())
 
         # state variables
         cstate.input_mode = InputMode.SELECT
@@ -315,10 +316,6 @@ class Canvas(wx.ScrolledWindow):
 
         for child in widget.GetChildren():
             self.RegisterAllChildren(child)
-
-    def _GetReactionCenterRect(self, s_pos: Vec2) -> Rect:
-        size = Vec2.repeat(get_theme('reaction_center_size')) * cstate.scale
-        return Rect(s_pos - size / 2, size)
 
     def _InWhichOverlay(self, device_pos: Vec2) -> Optional[CanvasOverlay]:
         """If position is within an overlay, return that overlay; otherwise return None.
@@ -1056,7 +1053,8 @@ class Canvas(wx.ScrolledWindow):
         finally:
             evt.Skip()
 
-    def OnDidCommitNodePositions(self, _):
+    def OnDidCommitNodePositions(self):
+        """Update reaction Bezier handles after nodes are dragged."""
         for elt in self._reaction_elements:
             elt.commit_node_pos()
 

@@ -20,43 +20,50 @@ from enum import Enum
 from collections import defaultdict
 
 
+class TColor(object):
+    r: int
+    g: int
+    b: int
+    a: int
+
+    def __init__(self, r: int, g: int, b: int, a: int = 255):
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
+
+
+class TFont:
+    pointSize: int
+    family: str  # TODO change to enum
+    style: str
+    weight: str
+    name: str
+    color: TColor
+    def __init__(self):
+        self.pointSize = 20
+        self.family = "default"
+        self.style = "normal"
+        self.weight = "default"
+        self.name = ""
+        self.color = TColor(0, 0, 0, 255)
+
+
+@dataclass
 class TNode(object):
     id: str
     x: float
     y: float
     w: float
     h: float
-    compi: int
-    fillColor: TColor
-    outlineColor: TColor
-    outlineThickness: float
-    fontPointSize: int
-    fontFamily: str  # TODO change to enum
-    fontStyle: str
-    fontWeight: str
-    fontName: str
-    fontColor: TColor
-
-    def __init__(self, nodeID: str, x: float, y: float, w: float, h: float, compi: int = -1):
-        self.id = nodeID
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.compi = compi
-        self.fillColor = TColor(255, 150, 80, 255)
-        self.outlineColor = TColor(255, 100, 80, 255)
-        self.outlineThickness = 3.0
-        self.fontPointSize = 20
-        self.fontFamily = "default"
-        self.fontStyle = "normal"
-        self.fontWeight = "default"
-        self.fontName = ""
-        self.fontColor = TColor(0, 0, 0, 255)
+    compi: int = -1
+    fillColor: TColor = TColor(255, 150, 80, 255)
+    outlineColor: TColor = TColor(255, 100, 80, 255)
+    outlineThickness: float = 3
+    font: TFont = TFont()
 
 
 class TNetwork:
-    magicIDentifier: str
     id: str
     nodes: Dict[int, TNode]
     reactions: Dict[int, TReaction]
@@ -69,7 +76,6 @@ class TNetwork:
     lastCompartmentIdx: int
 
     def __init__(self, netID: str):
-        self.magicIDentifier = "NM01"
         self.id = netID
         self.nodes = dict()
         self.reactions = dict()
@@ -134,19 +140,6 @@ class TSpeciesNode:
         self.stoich = stoich
         self.handleX = 0.0
         self.handleY = 0.0
-
-
-class TColor(object):
-    r: int
-    g: int
-    b: int
-    h: int
-
-    def __init__(self, r: int, g: int, b: int, a: int):
-        self.r = r
-        self.g = g
-        self.b = b
-        self.a = a
 
 
 @dataclass
@@ -882,7 +875,7 @@ def getNodeFontPointSize(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].fontPointSize
+            return n.nodes[nodei].font.pointSize
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -902,7 +895,7 @@ def getNodeFontFamily(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].fontFamily
+            return n.nodes[nodei].font.family
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -922,7 +915,7 @@ def getNodeFontStyle(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].fontStyle
+            return n.nodes[nodei].font.style
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -942,7 +935,7 @@ def getNodeFontWeight(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].fontWeight
+            return n.nodes[nodei].font.weight
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -962,7 +955,7 @@ def getNodeFontName(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].fontName
+            return n.nodes[nodei].font.name
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -982,9 +975,9 @@ def getNodeFontColor(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return (n.nodes[nodei].fontColor.r, n.nodes[nodei].fontColor.g,
-                    n.nodes[nodei].fontColor.b,
-                    float(n.nodes[nodei].fontColor.a)/255)
+            return (n.nodes[nodei].font.color.r, n.nodes[nodei].font.color.g,
+                    n.nodes[nodei].font.color.b,
+                    float(n.nodes[nodei].font.color.a)/255)
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1005,9 +998,9 @@ def getNodeFontColorRGB(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            color1 = n.nodes[nodei].fontColor.r
-            color1 = (color1 << 8) | n.nodes[nodei].fontColor.g
-            color1 = (color1 << 8) | n.nodes[nodei].fontColor.b
+            color1 = n.nodes[nodei].font.color.r
+            color1 = (color1 << 8) | n.nodes[nodei].font.color.g
+            color1 = (color1 << 8) | n.nodes[nodei].font.color.b
             return color1
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1029,7 +1022,7 @@ def getNodeFontColorAlpha(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return float(n.nodes[nodei].fontColor.a)/255
+            return float(n.nodes[nodei].font.color.a)/255
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1260,7 +1253,7 @@ def setNodeFontPointSize(neti: int, nodei: int, fontPointSize: int):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].fontPointSize = fontPointSize
+            n.nodes[nodei].font.pointSize = fontPointSize
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1286,7 +1279,7 @@ def setNodeFontFamily(neti: int, nodei: int, fontFamily: str):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].fontFamily = fontFamily
+            n.nodes[nodei].font.family = fontFamily
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1312,7 +1305,7 @@ def setNodeFontStyle(neti: int, nodei: int, fontStyle: str):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].fontStyle = fontStyle
+            n.nodes[nodei].font.style = fontStyle
             return
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1337,7 +1330,7 @@ def setNodeFontWeight(neti: int, nodei: int, fontWeight: str):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].fontWeight = fontWeight
+            n.nodes[nodei].font.weight = fontWeight
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1360,7 +1353,7 @@ def setNodeFontName(neti: int, nodei: int, fontName: str):
             errCode = -7
         else:
             _pushUndoStack()
-            n.nodes[nodei].fontName = fontName
+            n.nodes[nodei].font.name = fontName
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1385,9 +1378,9 @@ def setNodeFontColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].fontColor.r = r
-            n.nodes[nodei].fontColor.g = g
-            n.nodes[nodei].fontColor.b = b
+            n.nodes[nodei].font.color.r = r
+            n.nodes[nodei].font.color.g = g
+            n.nodes[nodei].font.color.b = b
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1412,7 +1405,7 @@ def setNodeFontColorAlpha(neti: int, nodei: int, a: float):
             errCode = -12
         else:
             _pushUndoStack()
-            networkDict[neti].nodes[nodei].fontColor.a = int(a*255)
+            networkDict[neti].nodes[nodei].font.color.a = int(a*255)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])

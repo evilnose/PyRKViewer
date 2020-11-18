@@ -161,10 +161,10 @@ class Reaction:
             id_: Reaction ID.
             sources: List of source (reactant) nodes.
             targets: List of target (product) nodes.
-            handle_positions: List of handle positions. The 0th argument stores the position of
-                              the source centroid handle, followed by the source node handle
-                              positions and the target handle positions. The order can be
-                              visualized as [src_centroid, *src_nodes, *tar_nodes].
+            handle: List of HandleData structs for reactant nodes and product nodes. This is in the
+                    same order as sources and targets, i.e. [*sources, *targets].
+            src_c_handle: HandleData struct for the source centroid handle.
+            dest_c_handle: HandleData struct for the dest centroid handle.
             fill_color: Fill color of the curve.
             rate_law: The rate law string of the reaction; may not be valid.
             index: Reaction index.

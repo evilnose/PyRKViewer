@@ -1052,7 +1052,7 @@ def setNodeID(neti: int, nodei: int, newID: str):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def setNodeCoordinate(neti: int, nodei: int, x: float, y: float):
+def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCoordinates: bool):
     """
     setNodeCoordinate setNodeCoordinate
     errCode: -7: node index out of range
@@ -1061,13 +1061,18 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float):
     """
     global stackFlag, errCode, networkDict, netSetStack, redoStack
     errCode = 0
+
+    if allowNegativeCoordinates:
+        lowerLimit = -1E6
+    else: lowerLimit = 0
+
     if neti not in networkDict:
         errCode = -5
     else:
         n = networkDict[neti]
         if nodei not in n.nodes:
             errCode = -7
-        elif x < 0 or y < 0:
+        elif x < lowerLimit or y < lowerLimit:
             errCode = -12
         else:
             _pushUndoStack()

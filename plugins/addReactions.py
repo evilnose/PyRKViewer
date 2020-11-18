@@ -26,17 +26,6 @@ metadata = PluginMetadata(
     long_desc='Display a random network.'
 )
 
-@dataclass
-class DefaultValues:
-    maxSpecies = 15
-    maxReactions = 20
-    probUniUniValue = 1
-    probUniBiValue = 0
-    probBiUniValue = 0
-    probBiBiValue = 0
-    randomSeed = 130
-
-
 class RandomNetwork(WindowedPlugin):
     def __init__(self):
         """
@@ -47,7 +36,6 @@ class RandomNetwork(WindowedPlugin):
 
         """
         super().__init__(metadata)
-        
 
     def create_window(self, dialog):
         """
@@ -60,123 +48,82 @@ class RandomNetwork(WindowedPlugin):
         window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
 
         numSpecs = wx.StaticText(window, -1, 'Number of Species:', (20,20))
-        self.numSpecsText = wx.TextCtrl(window, -1, str(DefaultValues.maxSpecies), (160, 20), size=(100, -1))
+        self.numSpecsText = wx.TextCtrl(window, -1, "10", (160, 20), size=(100, -1))
         self.numSpecsText.SetInsertionPoint(0)
         self.numSpecsText.Bind(wx.EVT_TEXT, self.OnText_numSpecs)
         self.numSpecsValue = int(self.numSpecsText.GetValue())
        
         numRxns = wx.StaticText(window, -1, 'Number of Reactions:', (20,50))
-        self.numRxnsText = wx.TextCtrl(window, -1, str(DefaultValues.maxReactions), (160, 50), size=(100, -1))
+        self.numRxnsText = wx.TextCtrl(window, -1, "8", (160, 50), size=(100, -1))
         self.numRxnsText.SetInsertionPoint(0)
         self.numRxnsText.Bind(wx.EVT_TEXT, self.OnText_numRxns)
         self.numRxnsValue = int(self.numRxnsText.GetValue())  
  
         probUniUni = wx.StaticText(window, -1, 'Probability of UniUni:', (20,90))      
-        self.probUniUniText = wx.TextCtrl(window, -1, str(DefaultValues.probUniUniValue), (160, 90), size=(100, -1))
+        self.probUniUniText = wx.TextCtrl(window, -1, "0.25", (160, 90), size=(100, -1))
         self.probUniUniText.SetInsertionPoint(0)
         self.probUniUniText.Bind(wx.EVT_TEXT, self.OnText_UniUni)
         self.probUniUniValue = float(self.probUniUniText.GetValue())        
  
         probBiUni = wx.StaticText(window, -1, 'Probability of BiUni:', (20,120))
-        self.probBiUniText = wx.TextCtrl(window, -1, str(DefaultValues.probBiUniValue), (160, 120), size=(100, -1))
+        self.probBiUniText = wx.TextCtrl(window, -1, "0.25", (160, 120), size=(100, -1))
         self.probBiUniText.SetInsertionPoint(0)
         self.probBiUniText.Bind(wx.EVT_TEXT, self.OnText_BiUni)
         self.probBiUniValue = float(self.probBiUniText.GetValue())
 
         probUniBi = wx.StaticText(window, -1, 'Probability of UniBi:', (20,150))
-        self.probUniBiText = wx.TextCtrl(window, -1, str(DefaultValues.probUniBiValue), (160, 150), size=(100, -1))
+        self.probUniBiText = wx.TextCtrl(window, -1, "0.25", (160, 150), size=(100, -1))
         self.probUniBiText.SetInsertionPoint(0)
         self.probUniBiText.Bind(wx.EVT_TEXT, self.OnText_UniBi)
         self.probUniBiValue = float(self.probUniBiText.GetValue())
 
         probBiBi = wx.StaticText(window, -1, 'Probability of BiBi:', (20,180))
-        self.probBiBiText = wx.TextCtrl(window, -1, str(DefaultValues.probBiBiValue), (160, 180), size=(100, -1))
+        self.probBiBiText = wx.TextCtrl(window, -1, "0.25", (160, 180), size=(100, -1))
         self.probBiBiText.SetInsertionPoint(0)
         self.probBiBiText.Bind(wx.EVT_TEXT, self.OnText_BiBi)
         self.probBiBiValue = float(self.probBiBiText.GetValue())
-
-        randomSeed = wx.StaticText(window, -1, 'Random seed:', (20,210))
-        randomSeed = wx.StaticText(window, -1, '0 means no seed setup', (20,230))
-        self.randomSeedText = wx.TextCtrl(window, -1, str(DefaultValues.randomSeed), (160, 210), size=(100, -1))
-        self.randomSeedText.SetInsertionPoint(0)
-        self.randomSeedText.Bind(wx.EVT_TEXT, self.OnText_randomSeed)
-        self.randomSeedValue = float(self.randomSeedText.GetValue())
  
-        apply_btn = wx.Button(window, -1, 'Apply', (160, 250))
+        apply_btn = wx.Button(window, -1, 'Apply', (160, 240))
         apply_btn.Bind(wx.EVT_BUTTON, self.Apply)
 
+        window.SetPosition (wx.Point(10,10))
         return window
-
 
     def OnText_numSpecs(self, evt):
         update = evt.GetString()
         if update != '':
-            try:
-                self.numSpecsValue = int(self.numSpecsText.GetValue())
-            except:
-                wx.MessageBox("Please enter an integer for the number of species.", "Message", wx.OK | wx.ICON_INFORMATION)
-
+            self.numSpecsValue = int(self.numSpecsText.GetValue())
 
     def OnText_numRxns(self, evt):
         update = evt.GetString()
         if update != '':
-            try:
-                self.numRxnsValue = int(self.numRxnsText.GetValue())
-            except:
-                wx.MessageBox("Please enter an integer for the number of reactions.", "Message", wx.OK | wx.ICON_INFORMATION)
-
+            self.numRxnsValue = int(self.numRxnsText.GetValue())
  
     def OnText_UniUni(self, evt):
         update = evt.GetString()
         if update != '':
-            try:
-                self.probUniUniValue = float(self.probUniUniText.GetValue())
-            except:
-                wx.MessageBox("Please enter a floating point number for the probability of UniUni.", "Message", wx.OK | wx.ICON_INFORMATION)
-
+            self.probUniUniValue = float(self.probUniUniText.GetValue())
 
     def OnText_BiUni(self, evt):
         update = evt.GetString()
         if update != '':
-            #DefaultValues.probBiUniValue = float(self.probBiUniText.GetValue())
-            try:
-                self.probBiUniValue = float(self.probBiUniText.GetValue())
-            except:
-                wx.MessageBox("Please enter a floating point number for the probability of BiUni.", "Message", wx.OK | wx.ICON_INFORMATION)
+            self.probBiUniValue = float(self.probBiUniText.GetValue())
 
     def OnText_UniBi(self, evt):
         update = evt.GetString()
         if update != '':
-            try:
-                self.probUniBiValue = float(self.probUniBiText.GetValue())
-            except:
-                wx.MessageBox("Please enter a floating point number for the probability of UniBi.", "Message", wx.OK | wx.ICON_INFORMATION)
-
+            self.probUniBiValue = float(self.probUniBiText.GetValue())
 
     def OnText_BiBi(self, evt):
         update = evt.GetString()
         if update != '':
-            try:
-                self.probBiBiValue = float(self.probBiBiText.GetValue())
-            except:
-                wx.MessageBox("Please enter a floating point number for the probability of BiBi.", "Message", wx.OK | wx.ICON_INFORMATION)
-
-    def OnText_randomSeed(self, evt):
-        update = evt.GetString()
-        if update != '':
-            try:
-                self.randomSeedValue = float(self.randomSeedText.GetValue())
-            except:
-                wx.MessageBox("Please enter a valid random seed other than zero.", "Message", wx.OK | wx.ICON_INFORMATION)
+            self.probBiBiValue = float(self.probBiBiText.GetValue())
 
 
     def Apply(self, evt):
         """
         Handler for the "apply" button. apply the random network.
         """
-        if self.randomSeedValue != 0:
-            _random.seed(self.randomSeedValue)
-
         class _TReactionType:
             UNIUNI = 0
             BIUNI = 1
@@ -360,35 +307,41 @@ class RandomNetwork(WindowedPlugin):
 
             return antStr_tot      
 
-        net_index = 0
-        api.clear_network(net_index)
+        test_prob = self.probUniUniValue + self.probBiUniValue + self.probUniBiValue + self.probBiBiValue
 
-        rl = _generateReactionList (self.numSpecsValue, self.numRxnsValue)
-        st = _getFullStoichiometryMatrix (rl)
-        antStr = _getRateLaw (st[1], st[2], rl, isReversible=True)
-        numNodes = st.shape[0]
-        numRxns = st.shape[1]
 
-        nodeIdx = []
-        for i in range (numNodes):
-            nodeIdx.append ( api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 179, 175),
-                    border_color=api.Color(255, 105, 97),
-                    position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800))))
+        if test_prob != 1:
+            wx.MessageBox("The sum of probabilities should be one!", "Message", wx.OK | wx.ICON_INFORMATION)
+
+        else:
+            net_index = 0
+            api.clear_network(net_index)
+
+            rl = _generateReactionList (self.numSpecsValue, self.numRxnsValue)
+            st = _getFullStoichiometryMatrix (rl)
+            antStr = _getRateLaw (st[1], st[2], rl, isReversible=True)
+            numNodes = st.shape[0]
+            numRxns = st.shape[1]
+
+            nodeIdx = []
+            for i in range (numNodes):
+                nodeIdx.append ( api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 179, 175),
+                        border_color=api.Color(255, 105, 97),
+                        position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800))))
        
-        for i in range (numRxns):
-            src = []
-            dest = []
+            for i in range (numRxns):
+                src = []
+                dest = []
           
-            for j in range(numNodes):
-                if (st.item(j,i) == -1):
-                    src.append(nodeIdx[j])  
-                if (st.item(j,i) == 1):
-                    dest.append(nodeIdx[j])
-            r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(129, 123, 255))
+                for j in range(numNodes):
+                    if (st.item(j,i) == -1):
+                        src.append(nodeIdx[j])  
+                    if (st.item(j,i) == 1):
+                        dest.append(nodeIdx[j])
+                r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(129, 123, 255))
         
-        # Need to remove orphan nodes
-        for i in range (numNodes):
-            if _np.array_equal(st[i,:], _np.zeros(numRxns)):
-                api.delete_node(net_index, nodeIdx[i])
+            # Need to remove orphan nodes
+            for i in range (numNodes):
+                if _np.array_equal(st[i,:], _np.zeros(numRxns)):
+                    api.delete_node(net_index, nodeIdx[i])
        
-

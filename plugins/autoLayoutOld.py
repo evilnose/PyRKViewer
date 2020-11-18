@@ -16,7 +16,7 @@ from dataclasses import field
 from typing import List
 
 metadata = PluginMetadata(
-    name='AutoLayout',
+    name='AutoLayoutOld',
     author='Carmen Perena, Herbert M Sauro',
     version='0.0.1',
     short_desc='Auto Layout.',

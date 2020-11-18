@@ -153,9 +153,9 @@ class Controller(IController):
         return compi
 
     @iod_setter
-    def move_node(self, neti: int, nodei: int, pos: Vec2):
+    def move_node(self, neti: int, nodei: int, pos: Vec2, allowNegativeCoordinates: bool=False):
         #assert pos.x >= 0 and pos.y >= 0
-        iod.setNodeCoordinate(neti, nodei, pos.x, pos.y)
+        iod.setNodeCoordinate(neti, nodei, pos.x, pos.y, allowNegativeCoordinates)
 
     @iod_setter
     def set_node_size(self, neti: int, nodei: int, size: Vec2):

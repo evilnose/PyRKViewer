@@ -20,10 +20,11 @@ from dataclasses import dataclass
 metadata = PluginMetadata(
     name='Autolayout',
     author='Carmen and Herbert M Sauro',
-    version='0.5.0',
+    version='0.5.1',
     short_desc='Auto Layout.',
     long_desc='Rearrange a random network into a neat auto layout'
 )
+
 @dataclass
 class TNode:
     x : float = 0.0
@@ -39,6 +40,8 @@ class AutoLayoutTemp(WindowedPlugin):
             self
         '''
         super().__init__(metadata)
+
+
     def create_window(self, dialog):
         '''
         Create a window with several inputs and buttons.
@@ -243,7 +246,7 @@ class AutoLayoutTemp(WindowedPlugin):
                            else:
                               f2 = dy
                            pos = Vec2 (v.position.x + dx/dist*f1, v.position.y + dy/dist*f2)
-                           api.move_node(0, v.index, pos)
+                           api.move_node(0, v.index, pos, True)
                     
                     wx.Yield()
                     

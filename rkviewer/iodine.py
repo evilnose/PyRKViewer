@@ -1063,7 +1063,7 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
     errCode = 0
 
     if allowNegativeCoordinates:
-        lowerLimit = -1E6
+        lowerLimit = -1E12
     else: lowerLimit = 0
 
     if neti not in networkDict:

@@ -34,7 +34,7 @@ class DefaultValues:
     probUniBiValue = 0.25
     probBiUniValue = 0.25
     probBiBiValue = 0.25
-
+    randomSeed = 0
 
 
 class RandomNetwork(WindowedPlugin):
@@ -47,6 +47,7 @@ class RandomNetwork(WindowedPlugin):
 
         """
         super().__init__(metadata)
+        
 
     def create_window(self, dialog):
         """
@@ -93,8 +94,15 @@ class RandomNetwork(WindowedPlugin):
         self.probBiBiText.SetInsertionPoint(0)
         self.probBiBiText.Bind(wx.EVT_TEXT, self.OnText_BiBi)
         self.probBiBiValue = float(self.probBiBiText.GetValue())
+
+        randomSeed = wx.StaticText(window, -1, 'Random seed:', (20,210))
+        randomSeed = wx.StaticText(window, -1, '0 means seed setup', (20,230))
+        self.randomSeedText = wx.TextCtrl(window, -1, str(DefaultValues.randomSeed), (160, 210), size=(100, -1))
+        self.randomSeedText.SetInsertionPoint(0)
+        self.randomSeedText.Bind(wx.EVT_TEXT, self.OnText_randomSeed)
+        self.randomSeedValue = float(self.randomSeedText.GetValue())
  
-        apply_btn = wx.Button(window, -1, 'Apply', (160, 240))
+        apply_btn = wx.Button(window, -1, 'Apply', (160, 250))
         apply_btn.Bind(wx.EVT_BUTTON, self.Apply)
 
         return window
@@ -103,38 +111,72 @@ class RandomNetwork(WindowedPlugin):
     def OnText_numSpecs(self, evt):
         update = evt.GetString()
         if update != '':
-            self.numSpecsValue = int(self.numSpecsText.GetValue())
+            try:
+                self.numSpecsValue = int(self.numSpecsText.GetValue())
+            except:
+                wx.MessageBox("Please enter an integer for the number of species.", "Message", wx.OK | wx.ICON_INFORMATION)
+
 
     def OnText_numRxns(self, evt):
         update = evt.GetString()
         if update != '':
-            self.numRxnsValue = int(self.numRxnsText.GetValue())
+            try:
+                self.numRxnsValue = int(self.numRxnsText.GetValue())
+            except:
+                wx.MessageBox("Please enter an integer for the number of reactions.", "Message", wx.OK | wx.ICON_INFORMATION)
+
  
     def OnText_UniUni(self, evt):
         update = evt.GetString()
         if update != '':
-            self.probUniUniValue = float(self.probUniUniText.GetValue())
+            try:
+                self.probUniUniValue = float(self.probUniUniText.GetValue())
+            except:
+                wx.MessageBox("Please enter a floating point number for the probability of UniUni.", "Message", wx.OK | wx.ICON_INFORMATION)
+
 
     def OnText_BiUni(self, evt):
         update = evt.GetString()
         if update != '':
-            DefaultValues.probBiUniValue = float(self.probBiUniText.GetValue())
+            #DefaultValues.probBiUniValue = float(self.probBiUniText.GetValue())
+            try:
+                self.probBiUniValue = float(self.probBiUniText.GetValue())
+            except:
+                wx.MessageBox("Please enter a floating point number for the probability of BiUni.", "Message", wx.OK | wx.ICON_INFORMATION)
 
     def OnText_UniBi(self, evt):
         update = evt.GetString()
         if update != '':
-            self.probUniBiValue = float(self.probUniBiText.GetValue())
+            try:
+                self.probUniBiValue = float(self.probUniBiText.GetValue())
+            except:
+                wx.MessageBox("Please enter a floating point number for the probability of UniBi.", "Message", wx.OK | wx.ICON_INFORMATION)
+
 
     def OnText_BiBi(self, evt):
         update = evt.GetString()
         if update != '':
-            self.probBiBiValue = float(self.probBiBiText.GetValue())
+            try:
+                self.probBiBiValue = float(self.probBiBiText.GetValue())
+            except:
+                wx.MessageBox("Please enter a floating point number for the probability of BiBi.", "Message", wx.OK | wx.ICON_INFORMATION)
+
+    def OnText_randomSeed(self, evt):
+        update = evt.GetString()
+        if update != '':
+            try:
+                self.randomSeedValue = float(self.randomSeedText.GetValue())
+            except:
+                wx.MessageBox("Please enter a valid random seed other than zero.", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
     def Apply(self, evt):
         """
         Handler for the "apply" button. apply the random network.
         """
+        if self.randomSeedValue != 0:
+            _random.seed(self.randomSeedValue)
+
         class _TReactionType:
             UNIUNI = 0
             BIUNI = 1
@@ -144,11 +186,11 @@ class RandomNetwork(WindowedPlugin):
         def _pickReactionType():
 
             rt = _random.random()
-            if rt < DefaultValues.probUniUniValue:
+            if rt < self.probUniUniValue:
                 return _TReactionType.UNIUNI
-            elif rt < DefaultValues.probUniUniValue + DefaultValues.probBiUniValue:
+            elif rt < self.probUniUniValue + self.probBiUniValue:
                 return _TReactionType.BIUNI
-            elif rt < DefaultValues.probUniUniValue + DefaultValues.probBiUniValue + DefaultValues.probUniBiValue:
+            elif rt < self.probUniUniValue + self.probBiUniValue + self.probUniBiValue:
                 return _TReactionType.UNIBI
             else:
                 return _TReactionType.BIBI

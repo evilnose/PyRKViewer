@@ -20,7 +20,7 @@ from dataclasses import dataclass
 metadata = PluginMetadata(
     name='Autolayout',
     author='Carmen and Herbert M Sauro',
-    version='0.5.0',
+    version='0.5.1',
     short_desc='Auto Layout.',
     long_desc='Rearrange a random network into a neat auto layout'
 )

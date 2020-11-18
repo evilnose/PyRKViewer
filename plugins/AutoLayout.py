@@ -18,9 +18,9 @@ import random
 from dataclasses import dataclass
 
 metadata = PluginMetadata(
-    name='NewAutolayout_New',
+    name='Autolayout',
     author='Carmen and Herbert M Sauro',
-    version='0.0.1',
+    version='0.5.0',
     short_desc='Auto Layout.',
     long_desc='Rearrange a random network into a neat auto layout'
 )

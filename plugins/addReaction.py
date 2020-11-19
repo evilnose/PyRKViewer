@@ -36,9 +36,9 @@ class AddReaction(WindowedPlugin):
             self
         """
         
-        super().__init__(metadata)
-        self.count_rct = 0      
+        super().__init__(metadata)   
         self.node_idx_list = []
+        self.count_rct = 0
 
     def create_window(self, dialog):
         """
@@ -71,6 +71,8 @@ class AddReaction(WindowedPlugin):
         BiBi_btn.Bind(wx.EVT_BUTTON, self.BiBi)
 
         window.SetPosition (wx.Point(10,10))
+
+        self.count_rct =  api.reaction_count(0)
         return window
 
     def on_did_create_dialog(self):
@@ -116,9 +118,6 @@ class AddReaction(WindowedPlugin):
                     src.append(self.node_idx_list[i])
                 for i in range(1,2):
                     dest.append(self.node_idx_list[i])
-                
-                #print(src)
-                #print(dest)
 
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1

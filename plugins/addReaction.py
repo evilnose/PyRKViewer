@@ -87,11 +87,10 @@ class AddReaction(WindowedPlugin):
             reaction_indices (List[int]): List of reaction indices changed.
             compartment_indices (List[int]): List of compartment indices changed.
         """
-        self.node_clicked = list(evt.node_indices)
-        try:
-            self.node_idx_list.append(self.node_clicked[0])
-        except:
-                wx.MessageBox("Error: No nodes are selected.", "Message", wx.OK | wx.ICON_INFORMATION)        
+        node_clicked = list(evt.node_indices)
+
+        if len(node_clicked) != 0:
+            self.node_idx_list.append(node_clicked[0])
 
     def restart_node_idx(self, evt):
         try:

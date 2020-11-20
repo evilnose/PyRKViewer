@@ -1297,13 +1297,14 @@ depend on it.".format(bound_node.id_))
             node.position += Vec2.repeat(20)
             pasted_ids.add(node.id_)
             self._nodes.append(node)  # add this for the event handlers to see
-            self.controller.start_group()
             self.controller.add_node_g(self._net_index, node)
-            self.controller.end_group()
 
-        self.sel_nodes_idx.set_item({self.controller.get_node_index(self._net_index, id_)
-                                     for id_ in pasted_ids})
         self.controller.end_group()  # calls UpdateMultiSelect in a moment
+        # update selection *after* end_group(), so as to make sure the canvas is property reset
+        # and updated. For example, if it is not, then the ID of some nodes may be 0 as they are
+        # uninitialized.
+        self.sel_nodes_idx.set_item({self.controller.get_node_index(self._net_index, id_)
+                                        for id_ in pasted_ids})
 
     def ShowWarningDialog(self, msg: str, caption='Warning'):
         wx.MessageBox(msg, caption, wx.OK | wx.ICON_WARNING)

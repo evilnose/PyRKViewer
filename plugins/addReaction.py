@@ -36,8 +36,9 @@ class AddReaction(WindowedPlugin):
             self
         """
         
-        super().__init__(metadata)
-        self.count_rct = 0      
+        super().__init__(metadata)   
+        self.node_idx_list = []
+        self.count_rct = 0
 
     def create_window(self, dialog):
         """
@@ -48,21 +49,30 @@ class AddReaction(WindowedPlugin):
         """
         window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
  
-        wx.StaticText(window, -1, 'Create different types of reactions', (50,10))
+        wx.StaticText(window, -1, '1.Refresh before clicking nodes to add each reaction.', (5,10))
 
-        UniUni_btn = wx.Button(window, -1, 'UniUni', (100, 50))
+        SelectNodes_btn = wx.Button(window, -1, 'Refresh', (50, 40))
+        SelectNodes_btn.Bind(wx.EVT_BUTTON, self.restart_node_idx)
+
+        wx.StaticText(window, -1, '2.Click nodes for each reaction.', (5,90))
+
+        wx.StaticText(window, -1, '3.Create different types of reactions.', (5,130))
+
+        UniUni_btn = wx.Button(window, -1, 'UniUni', (50, 170))
         UniUni_btn.Bind(wx.EVT_BUTTON, self.UniUni)
 
-        BiUni_btn = wx.Button(window, -1, 'BiUni', (100, 110))
+        BiUni_btn = wx.Button(window, -1, 'BiUni', (150, 170))
         BiUni_btn.Bind(wx.EVT_BUTTON, self.BiUni)
 
-        UniBi_btn = wx.Button(window, -1, 'UniBi', (100, 170))
+        UniBi_btn = wx.Button(window, -1, 'UniBi', (50, 230))
         UniBi_btn.Bind(wx.EVT_BUTTON, self.UniBi)
 
-        BiBi_btn = wx.Button(window, -1, 'BiBi', (100, 230))
+        BiBi_btn = wx.Button(window, -1, 'BiBi', (150, 230))
         BiBi_btn.Bind(wx.EVT_BUTTON, self.BiBi)
 
         window.SetPosition (wx.Point(10,10))
+
+        self.count_rct =  api.reaction_count(0)
         return window
 
     def on_did_create_dialog(self):
@@ -70,33 +80,49 @@ class AddReaction(WindowedPlugin):
         self.dialog.SetPosition((240, 250))
 
 
+    def on_selection_did_change(self, evt):
+        """
+        Overrides base class event handler to update number of items selected.
+        Args:
+            self
+            node_indices(List[int]): List of node indices changed.
+            reaction_indices (List[int]): List of reaction indices changed.
+            compartment_indices (List[int]): List of compartment indices changed.
+        """
+        node_clicked = list(evt.node_indices)
+
+        if len(node_clicked) != 0:
+            self.node_idx_list.append(node_clicked[0])
+
+    def restart_node_idx(self, evt):
+        try:
+            self.node_idx_list = []
+        except:
+            wx.MessageBox("Error: Can not refresh.", "Message", wx.OK | wx.ICON_INFORMATION)
 
     def UniUni(self, evt):
 
         """
         Handler for the "UniUni" button. add a UniUni reaction.
         """
-        node_idx = []
         src = []
         dest = []
+
+        #print(self.node_clicked)
+        #print(self.node_idx_list)
 
         # start group action context for undo purposes
         with api.group_action():
             try: 
-                for index in api.selected_node_indices():
-                    node_idx.append(index)
+                for i in range(1):
+                    src.append(self.node_idx_list[i])
+                for i in range(1,2):
+                    dest.append(self.node_idx_list[i])
 
-                src = _random.sample(node_idx, 1)
-                for i in range(len(src)):
-                    node_idx.remove(src[i])
-                dest = _random.sample(node_idx, 1)
-                    #node = api.get_node_by_index(0, index) #netindex = 0
-                    #print(node.index)
-                    #api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1
             except:
-                wx.MessageBox("Error: try to select more than two nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
+                wx.MessageBox("Error: try to click more than two nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
     def BiUni(self, evt):
@@ -104,71 +130,62 @@ class AddReaction(WindowedPlugin):
         """
         Handler for the "BiUni" button. add a BiUni reaction.
         """
-        node_idx = []
         src = []
         dest = []
 
         # start group action context for undo purposes
         with api.group_action():
             try: 
-                for index in api.selected_node_indices():
-                    node_idx.append(index)
-                src = _random.sample(node_idx, 2)
-                for i in range(len(src)):
-                    node_idx.remove(src[i])
-                dest = _random.sample(node_idx, 1)
+                for i in range(2):
+                    src.append(self.node_idx_list[i])
+                for i in range(2,3):
+                    dest.append(self.node_idx_list[i])
+
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1
             except:
-                wx.MessageBox("Error: try to select more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
+                wx.MessageBox("Error: try to click more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
 
     def UniBi(self, evt):
 
         """
         Handler for the "UniBi" button. add a UniBi reaction.
         """
-        node_idx = []
         src = []
         dest = []
 
         # start group action context for undo purposes
         with api.group_action():
             try: 
-                for index in api.selected_node_indices():
-                    node_idx.append(index)
+                for i in range(1):
+                    src.append(self.node_idx_list[i])
+                for i in range(1,3):
+                    dest.append(self.node_idx_list[i])
 
-                src = _random.sample(node_idx, 1)
-                for i in range(len(src)):
-                    node_idx.remove(src[i])
-                dest = _random.sample(node_idx, 2)
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1
             except:
-                wx.MessageBox("Error: try to select more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
+                wx.MessageBox("Error: try to click more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
 
     def BiBi(self, evt):
 
         """
         Handler for the "UniBi" button. add a UniBi reaction.
         """
-        node_idx = []
         src = []
         dest = []
 
         # start group action context for undo purposes
         with api.group_action():
             try: 
-                for index in api.selected_node_indices():
-                    node_idx.append(index)
-
-                src = _random.sample(node_idx, 2)
-                for i in range(len(src)):
-                    node_idx.remove(src[i])
-                dest = _random.sample(node_idx, 2)
+                for i in range(2):
+                    src.append(self.node_idx_list[i])
+                for i in range(2,4):
+                    dest.append(self.node_idx_list[i])
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1
             except:
-                wx.MessageBox("Error: try to select more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
+                wx.MessageBox("Error: try to click more than four nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
     
 
   

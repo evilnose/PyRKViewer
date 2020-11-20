@@ -16,8 +16,8 @@ from dataclasses import field
 from typing import List
 
 metadata = PluginMetadata(
-    name='AutoLayout',
-    author='Jin Xu, Herbert M Sauro',
+    name='AutoLayoutOld',
+    author='Carmen Perena, Herbert M Sauro',
     version='0.0.1',
     short_desc='Auto Layout.',
     long_desc='Rearrange a random network into a neat auto layout'

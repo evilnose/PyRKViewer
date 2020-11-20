@@ -625,9 +625,9 @@ def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: C
     return _controller.add_node_g(net_index, node)
 
 
-def move_node(net_index: int, node_index: int, position: Vec2):
+def move_node(net_index: int, node_index: int, position: Vec2, allowNegativeCoordinates: bool=False):
     """Change the position of a node."""
-    _controller.move_node(net_index, node_index, position)
+    _controller.move_node(net_index, node_index, position, allowNegativeCoordinates)
 
 
 def move_compartment(net_index: int, comp_index: int, position: Vec2):

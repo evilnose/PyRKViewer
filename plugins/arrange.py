@@ -41,33 +41,65 @@ class AutoLayout(WindowedPlugin):
             dialog
         '''
         # TODO: k, gravity, useMagnetism, useBoundary, useGrid
-        window = wx.Panel(dialog, pos=(5,100), size=(300, 400))
+        window = wx.Panel(dialog, pos=(5,100), size=(270, 570))
 
         path = os.path.realpath(__file__)
         path = os.path.dirname(os.path.abspath(path))
-        s = os.path.join (path + '\\AlignLeft.png')
+        s = os.path.join (path + '\\alignLeft_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 10), size=(60,60), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Left', (100, 40))
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 10), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Left', (80, 20))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignLeft)
 
-        s = os.path.join (path + '\\AlignLeft.png')
+        s = os.path.join (path + '\\alignRight_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 80), size=(60,60), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Right', (100, 110))
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 60), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Right', (80, 70))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignRight)
 
-        s = os.path.join (path + '\\AlignLeft.png')
+        s = os.path.join (path + '\\alignVertCenter_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 150), size=(60,60), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Center', (100, 180))
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 110), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Center', (80, 120))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignCenter)
 
-        s = os.path.join (path + '\\AlignLeft.png')
+        path = os.path.realpath(__file__)
+        path = os.path.dirname(os.path.abspath(path))
+        s = os.path.join (path + '\\alignTop_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 220), size=(60,60), bitmap=bmp)
-        wx.StaticText(window, -1, 'Grid', (100, 250))
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 160), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Top', (80, 170))
+        apply_btn.Bind(wx.EVT_BUTTON, self.AlignTop)
+
+        s = os.path.join (path + '\\alignBottom_XP.bmp')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 210), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Bottom', (80, 220))
+        apply_btn.Bind(wx.EVT_BUTTON, self.AlignBottom)
+
+        s = os.path.join (path + '\\alignHorizCenter_XP.bmp')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 260), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Middle', (80, 270))
+        apply_btn.Bind(wx.EVT_BUTTON, self.AlignMiddle)
+
+        s = os.path.join (path + '\\alignOnGrid_XP.bmp')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 310), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Grid', (80, 320))
         apply_btn.Bind(wx.EVT_BUTTON, self.Grid)
+
+        s = os.path.join (path + '\\alignHorizEqually_XP.bmp')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 360), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Arrange Horizontally', (80, 370))
+        apply_btn.Bind(wx.EVT_BUTTON, self.distributeHorizontally)
+
+        s = os.path.join (path + '\\alignVertEqually_XP.bmp')
+        bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
+        apply_btn = wx.BitmapButton(window, -1, pos=(30, 410), size=(40,40), bitmap=bmp)
+        wx.StaticText(window, -1, 'Arrange Vertically', (80, 420))
+        apply_btn.Bind(wx.EVT_BUTTON, self.distributeVertically)
 
         window.SetPosition (wx.Point(10,10))
         return window
@@ -102,6 +134,52 @@ class AutoLayout(WindowedPlugin):
                     xpos = newX
         return xpos
 
+    def findMinY(self, l):
+        '''
+        Find the left-most node's x position
+        Args:
+            self
+            l: the list of indices of the selected nodes
+        '''
+        ypos = api.get_node_by_index(0, 0).position.y
+        for a in l:
+            cur = api.get_node_by_index(0, a)
+            newY = cur.position.y
+            if(newY < ypos):
+                ypos = newY
+        return ypos
+
+    def findMaxY(self, l):
+        '''
+        Find the right-most node's x position
+        Args:
+            self
+            l: the list of indices of the selected nodes
+        '''
+        ypos = api.get_node_by_index(0, 0).position.y
+        for a in l:
+                cur = api.get_node_by_index(0, a)
+                newY = cur.position.y
+                if(newY > ypos):
+                    ypos = newY
+        return ypos
+
+    def setDefaultHandles(self):
+        with api.group_action():
+            for r in api.get_reactions(0):
+                handles = api.default_handle_positions(0, r.index) # centroid, sources, target
+                sources = r.sources
+                targets = r.targets
+                api.set_reaction_center_handle(0, r.index, handles[0])
+                count = 1
+                for s in sources:
+                    api.set_reaction_node_handle(0, r.index, s, True, handles[count])
+                    count += 1
+                for t in targets:
+                    api.set_reaction_node_handle(0, r.index, t, False, handles[count])
+                    count += 1
+
+
     def AlignLeft(self, evt):
         '''
         Align selected nodes to the left-most node's x position
@@ -117,8 +195,8 @@ class AutoLayout(WindowedPlugin):
                 y = cur.position.y
                 newPos = Vec2(xpos, y)
                 api.move_node(0, a, newPos)
+            self.setDefaultHandles()
 
-      
     def AlignRight(self, evt):
         '''
         Align selected nodes to the right-most node's x position
@@ -134,6 +212,7 @@ class AutoLayout(WindowedPlugin):
                 y = cur.position.y
                 newPos = Vec2(xpos, y)
                 api.move_node(0, a, newPos)
+            self.setDefaultHandles()
 
     def AlignCenter(self, evt): # TODO: would the average make more sense?
         '''
@@ -152,6 +231,7 @@ class AutoLayout(WindowedPlugin):
                 y = cur.position.y
                 newPos = Vec2(xpos, y)
                 api.move_node(0, a, newPos)
+            self.setDefaultHandles()
 
     def Grid(self, evt):
         '''
@@ -160,25 +240,96 @@ class AutoLayout(WindowedPlugin):
             self
             evt
         '''
-        s = api.get_selected_node_indices(0)
-        x = 40; y = 40; count = 1
-        for a in s:
-            api.update_node(0, a, position=Vec2(x, y))
-            x = x + 200
-            if count % 5 == 0:
-               y = y + 200
-               x = 40
-            count = count + 1
-
-        for r in api.get_reactions(0):
-            handles = api.default_handle_positions(0, r.index) # centroid, sources, target
-            sources = r.sources
-            targets = r.targets
-            api.set_reaction_center_handle(0, r.index, handles[0])
+        with api.group_action():
+            s = api.get_selected_node_indices(0)
+            x = 40
+            y = 40
             count = 1
-            for s in sources:
-                api.set_reaction_node_handle(0, r.index, s, True, handles[count])
-                count += 1
-            for t in targets:
-                api.set_reaction_node_handle(0, r.index, t, False, handles[count])
-                count += 1
+            for a in s:
+                api.move_node(0, a, position=Vec2(x, y))
+                x = x + 130
+                if count % 5 == 0:
+                    y = y + 130
+                    x = 40
+                count = count + 1
+            self.setDefaultHandles()              
+
+    def AlignTop(self, evt):
+        '''
+        Align selected nodes to the left-most node's x position
+        Args:
+            self
+            evt
+        '''
+        with api.group_action():
+            s = api.get_selected_node_indices(0) #TODO: 2 of these
+            ypos = self.findMinY(s)
+            for a in s:
+                cur = api.get_node_by_index(0, a)
+                x = cur.position.x
+                newPos = Vec2(x, ypos)
+                api.move_node(0, a, newPos)
+            self.setDefaultHandles()
+
+      
+    def AlignBottom(self, evt):
+        '''
+        Align selected nodes to the right-most node's x position
+        Args:
+            self
+            evt
+        '''
+        with api.group_action():
+            s = api.get_selected_node_indices(0) #TODO: 2 of these
+            ypos = self.findMaxY(s)
+            for a in s:
+                cur = api.get_node_by_index(0, a)
+                x = cur.position.x
+                newPos = Vec2(x, ypos)
+                api.move_node(0, a, newPos)
+            self.setDefaultHandles()
+
+    def AlignMiddle(self, evt): # TODO: would the average make more sense?
+        '''
+        Align selected nodes to the relative center of the x positions of the nodes
+        Args:
+            self
+            evt
+        '''
+        with api.group_action():
+            s = api.get_selected_node_indices(0) #TODO: 2 of these
+            yMin = self.findMinY(s)
+            yMax = self.findMaxY(s)
+            ypos = math.floor((yMax + yMin)/2)
+            for a in s:
+                cur = api.get_node_by_index(0, a)
+                x = cur.position.x
+                newPos = Vec2(x, ypos)
+                api.move_node(0, a, newPos)
+            self.setDefaultHandles()
+
+    def distributeHorizontally(self, evt):
+        with api.group_action():
+            s = api.get_selected_node_indices(0) #TODO: 2 of these
+            yMin = self.findMinY(s)
+            yMax = self.findMaxY(s)
+            ypos = math.floor((yMax + yMin)/2)
+            x = 40
+            for a in s:
+                newPos = Vec2(x, ypos)
+                api.move_node(0, a, newPos)
+                x = x + 130
+            self.setDefaultHandles()
+
+    def distributeVertically(self, evt):
+        with api.group_action():
+            s = api.get_selected_node_indices(0) #TODO: 2 of these
+            xMin = self.findMinX(s)
+            xMax = self.findMaxX(s)
+            xpos = math.floor((xMax + xMin)/2)
+            y = 40
+            for a in s:
+                newPos = Vec2(xpos, y)
+                api.move_node(0, a, newPos)
+                y = y + 130
+            self.setDefaultHandles()

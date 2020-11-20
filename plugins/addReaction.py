@@ -121,6 +121,7 @@ class AddReaction(WindowedPlugin):
 
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1
+                self.node_idx_list = []
             except:
                 wx.MessageBox("Error: try to click more than two nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
 
@@ -143,6 +144,7 @@ class AddReaction(WindowedPlugin):
 
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1
+                self.node_idx_list = []
             except:
                 wx.MessageBox("Error: try to click more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
 
@@ -164,6 +166,7 @@ class AddReaction(WindowedPlugin):
 
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1
+                self.node_idx_list = []
             except:
                 wx.MessageBox("Error: try to click more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
 
@@ -184,6 +187,7 @@ class AddReaction(WindowedPlugin):
                     dest.append(self.node_idx_list[i])
                 r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
                 self.count_rct += 1
+                self.node_idx_list = []
             except:
                 wx.MessageBox("Error: try to click more than four nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
     

@@ -275,6 +275,15 @@ class IController(abc.ABC):
     def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:
         pass
 
+    @abc.abstractmethod
+    def update_view(self):
+        """Immediately update the view with using latest model."""
+        pass
+
+    @abc.abstractmethod
+    def save_as_json(self):
+        pass #TODO
+
 
 class IView(abc.ABC):
     """The inteface class for a controller

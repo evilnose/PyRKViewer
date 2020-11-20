@@ -6,6 +6,7 @@ API for the RKViewer GUI and model. Allows viewing and modifying the network mod
 #from rkviewer.mvc import NetIndexError
 from __future__ import annotations
 from dataclasses import field, dataclass
+from rkviewer.canvas.canvas import Canvas
 from rkviewer.events import DidChangeCompartmentOfNodesEvent, post_event
 from rkviewer.canvas.utils import default_handle_positions as _default_handle_positions
 from rkviewer.utils import gchain, require_kwargs_on_init
@@ -16,8 +17,6 @@ import copy
 from contextlib import contextmanager
 from rkviewer.mvc import IController
 from typing import KeysView, List, Optional, Set, Tuple
-from rkviewer.controller import Controller
-from rkviewer.canvas.canvas import Canvas
 from rkviewer.canvas import data
 from rkviewer.canvas.state import cstate, ArrowTip
 from rkviewer.config import get_setting, get_theme
@@ -29,9 +28,17 @@ from logging import Logger
 
 # TODO allow modification of theme and setting in the GUI
 
-_canvas: Optional[Canvas] = None
+_canvas: Optional[_canvas] = None
 _controller: Optional[IController] = None
 _plugin_logger = logging.getLogger('plugin')
+
+
+def get_canvas() -> Optional[Canvas]:
+    return _canvas
+
+
+def get_controller() -> Optional[IController]:
+    return _controller
 
 
 class Color:
@@ -204,7 +211,7 @@ def logger() -> Logger:
 
 @contextmanager
 def group_action():
-    """Context manager for doing a group operation in the controller, for undo/redo purposes.
+    """Context manager for doing a group operation in the _controller, for undo/redo purposes.
 
     Examples:
         As shown here, calls to the API within the group_action context are considered to be
@@ -223,36 +230,36 @@ def group_action():
 
 
 def canvas_size() -> Vec2:
-    """Return the total size of canvas."""
+    """Return the total size of _canvas."""
     return _canvas.realsize
 
 
 def window_size() -> Vec2:
-    """Return the size of the window (visible part of the canvas)."""
+    """Return the size of the window (visible part of the _canvas)."""
     return Vec2(_canvas.GetSize())
 
 
 def window_position() -> Vec2:
-    """Return the position of the topleft corner on the canvas."""
+    """Return the position of the topleft corner on the _canvas."""
     return Vec2(_canvas.CalcUnscrolledPosition(0, 0))
 
 
 def canvas_scale() -> float:
-    """Return the zoom scale of the canvas."""
+    """Return the zoom scale of the _canvas."""
     return cstate.scale
 
 
 def zoom_level() -> int:
-    """The zoom level of the canvas (Ranges from -10 to 10, with 0 being the default zoom).
+    """The zoom level of the _canvas (Ranges from -10 to 10, with 0 being the default zoom).
 
-    This is a discrete value that corresponds to the zoom slider to the bottom-right of the canvas
+    This is a discrete value that corresponds to the zoom slider to the bottom-right of the _canvas
     window.
     """
     return _canvas.zoom_level
 
 
 def set_zoom_level(level: int, anchor: Vec2):
-    """Set the zoom level of the canvas.
+    """Set the zoom level of the _canvas.
 
     See zoom_level() for more details.
 
@@ -329,7 +336,7 @@ def get_nodes(net_index: int) -> List[NodeData]:
     Returns the list of all nodes in a network.
 
     Note:
-        Modifying elements of this list will not update the canvas.
+        Modifying elements of this list will not update the _canvas.
 
     Returns:
         The list of nodes.
@@ -349,7 +356,7 @@ def get_reactions(net_index: int) -> List[ReactionData]:
     Returns the list of all reactions in a network.
 
     Note:
-        Modifying elements of this list will not update the canvas.
+        Modifying elements of this list will not update the _canvas.
 
     Returns:
         The list of reactions.
@@ -369,7 +376,7 @@ def get_compartments(net_index: int) -> List[CompartmentData]:
     Returns the list of all compartments in a network.
 
     Note:
-        Modifying elements of this list will not update the canvas.
+        Modifying elements of this list will not update the _canvas.
 
     Returns:
         The list of compartments.
@@ -406,7 +413,7 @@ def selected_nodes() -> List[NodeData]:
     Returns the list of selected nodes.
 
     Note:
-        Modifying elements of this list will not update the canvas.
+        Modifying elements of this list will not update the _canvas.
 
     Returns:
         The list of selected nodes.
@@ -633,8 +640,8 @@ def resize_node(net_index: int, node_index: int, size: Vec2):
     _controller.set_node_size(net_index, node_index, size)
 
 
-# TODO add "cosmetic" versions of these functions, where changes made to controller are not added
-# to the history stack. This requires controller to have "programmatic group" feature, i.e. actions
+# TODO add "cosmetic" versions of these functions, where changes made to _controller are not added
+# to the history stack. This requires _controller to have "programmatic group" feature, i.e. actions
 # performed inside such groups are not recorded. programmatic groups nested within group operations
 # should be ignored.
 def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Color = None,
@@ -689,7 +696,7 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Co
         botright = pos + sz
         if botright.x > _canvas.realsize.x or botright.y > _canvas.realsize.y:
             raise ValueError('Invalid position and size combination ({} and {}): bottom right '
-                             'corner exceed canvas boundary {}', pos, sz, _canvas.realsize)
+                             'corner exceed _canvas boundary {}', pos, sz, _canvas.realsize)
 
     with group_action():
         if id_ is not None:
@@ -964,7 +971,7 @@ def update_compartment(net_index: int, comp_index: int, id_: str = None,
         botright = pos + sz
         if botright.x > _canvas.realsize.x or botright.y > _canvas.realsize.y:
             raise ValueError('Invalid position and size combination ({} and {}): bottom right '
-                             'corner exceed canvas boundary {}', pos, sz, _canvas.realsize)
+                             'corner exceed _canvas boundary {}', pos, sz, _canvas.realsize)
 
     with group_action():
         if id_ is not None:
@@ -1161,6 +1168,12 @@ def get_network_bounds(net_index: int):
     """Return the rectangular bounds of a network."""
     # NOTE currently hardcoded
     return _canvas.realsize
+
+
+def update_canvas():
+    """Update the canvas immediately. Useful if you want to redraw before a group action ends.
+    """
+    _controller.update_view()
 
 
 def translate_network(net_index: int, offset: Vec2, check_bounds: bool = True) -> bool:

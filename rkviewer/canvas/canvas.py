@@ -107,6 +107,7 @@ class Canvas(wx.ScrolledWindow):
     _node_elements: List[NodeElement]
     _reaction_elements: List[ReactionElement]
     _compartment_elements: List[CompartmentElt]
+    _plugin_elements: Set[CanvasElement]
     _elements: SortedKeyList
     _zoom_level: int  #: The current zoom level. See SetZoomLevel() for more detail.
     #: The zoom scale. This always corresponds one-to-one with zoom_level. See property for detail.
@@ -161,6 +162,7 @@ class Canvas(wx.ScrolledWindow):
         self._compartment_elements = list()
         # TODO document below
         self._elements = SortedKeyList(key=lambda e: e.layers)
+        self._plugin_elements = set()
         self.hovered_element = None
         self.dragged_element = None
         self.reaction_map = defaultdict(set)
@@ -264,7 +266,7 @@ class Canvas(wx.ScrolledWindow):
         if not self.LazyRefresh():
             # Not processed; request more
             evt.RequestMore()
-    
+
     def OnChar(self, evt):
         keycode = evt.GetKeyCode()
 
@@ -280,7 +282,7 @@ class Canvas(wx.ScrolledWindow):
         else:
             evt.Skip()
             return
-        
+
         offset *= Canvas.KEY_MOVE_PIXELS
         if self._select_box is not None:
             self._select_box.move_offset(offset)
@@ -399,7 +401,8 @@ class Canvas(wx.ScrolledWindow):
         """Update the list of nodes and apply the current scale."""
         # destroy old elements
         for elt in self._elements:
-            elt.destroy()
+            if elt not in self._plugin_elements:
+                elt.destroy()
 
         # cull removed indices
         node_idx = {n.index for n in nodes}
@@ -450,6 +453,7 @@ class Canvas(wx.ScrolledWindow):
             # Make sure reaction is displayed above its top-most node
             self._reaction_elements.append(self.CreateReactionElement(rxn, top_layer + [1]))
 
+        # Initialize elements list
         select_elements = cast(List[CanvasElement], self._node_elements) + cast(
             List[CanvasElement], self._reaction_elements) + cast(
                 List[CanvasElement], self._compartment_elements)
@@ -457,6 +461,10 @@ class Canvas(wx.ScrolledWindow):
             select_elements += rxn_el.bhandles
             # Update reactions on whether they are selected
             rxn_el.selected = rxn_el.reaction.index in new_sel_reactions
+
+        for plugin_el in self._plugin_elements:
+            select_elements.append(plugin_el)
+
         self._elements = SortedKeyList(select_elements, lambda e: e.layers)
         self._select_box.update(self.GetSelectedNodes(),
                                 [c for c in self._compartments if self.sel_compartments_idx.contains(c.index)])
@@ -963,7 +971,7 @@ class Canvas(wx.ScrolledWindow):
 
             # TODO Put this in SelectionChanged
             sel_rects = [n.rect * cstate.scale for n in self.sel_nodes] + \
-            [c.rect * cstate.scale for c in self.sel_comps]
+                [c.rect * cstate.scale for c in self.sel_comps]
 
             # If we are not drag-selecting, don't draw selection outlines if there is only one rect
             # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
@@ -990,13 +998,15 @@ class Canvas(wx.ScrolledWindow):
 
             reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
             for node in reactants:
-                draw_reaction_outline(node, get_theme('reactant_border'), get_theme('react_node_padding'))
+                draw_reaction_outline(node, get_theme('reactant_border'),
+                                      get_theme('react_node_padding'))
 
             products = get_nodes_by_idx(self._nodes, self._product_idx)
             for node in products:
                 pad = get_theme('react_node_border_width') + \
                     3 if node.index in self._reactant_idx else 0
-                draw_reaction_outline(node, get_theme('product_border'), pad + get_theme('react_node_padding'))
+                draw_reaction_outline(node, get_theme('product_border'),
+                                      pad + get_theme('react_node_padding'))
 
             # Draw drag-selection rect
             if self._drag_selecting:
@@ -1297,3 +1307,14 @@ depend on it.".format(bound_node.id_))
 
     def ShowWarningDialog(self, msg: str, caption='Warning'):
         wx.MessageBox(msg, caption, wx.OK | wx.ICON_WARNING)
+
+    def AddPluginElement(self, net_index: int, element: CanvasElement):
+        # TODO currently not accounting for net_index
+        self._plugin_elements.add(element)
+        self._elements.add(element)
+
+    def RemovePluginElement(self, net_index: int, element: CanvasElement):
+        if element not in self._plugin_elements:
+            raise ValueError("Tried to remove an element that is not on canvas.")
+        self._plugin_elements.remove(element)
+        self._elements.remove(element)

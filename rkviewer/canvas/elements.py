@@ -37,7 +37,9 @@ class CanvasElement:
     """Base class for an element positioned on the canvas.
 
     Attributes:
-        layer: The layer number of this element.
+        layers: The layer(s) number of this element.
+        enabled: Whether the element is enabled.
+        destroyed: Whether the object was destroyed (if this is True then you shouldn't use this)
     """
     layers: List[int]
     enabled: bool
@@ -65,7 +67,11 @@ class CanvasElement:
 
     @abstractmethod
     def do_paint(self, gc: wx.GraphicsContext):
-        """Paint the shape onto the given GraphicsContext."""
+        """Paint the shape onto the given GraphicsContext.
+        
+        This draws onto the scrolled canvas, i.e. the position of the drawn item will respond to
+        scrolling, so you don't need to account for that.
+        """
         pass
 
     def do_mouse_enter(self, logical_pos: Vec2) -> bool:

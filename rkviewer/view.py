@@ -368,6 +368,8 @@ class MainFrame(wx.Frame):
         sizer.Add(self.main_panel, 1, wx.EXPAND)
 
         canvas = self.main_panel.canvas
+        self.controller = controller
+        self.canvas = canvas
 
         entries = list()
         menu_bar = wx.MenuBar()
@@ -378,6 +380,9 @@ class MainFrame(wx.Frame):
                          entries)
         self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings', lambda _: self.ReloadSettings(),
                          entries)
+        file_menu.AppendSeparator()
+        self.AddMenuItem(file_menu, '&Save As .pkl...', 'Save current network as .pkl file',
+                         lambda _: self.SaveAsJson(), entries)
         self.AddMenuItem(file_menu, 'E&xit', 'Exit application', lambda _: self.Close(), entries,
                          id_=wx.ID_EXIT)
 
@@ -507,7 +512,6 @@ class MainFrame(wx.Frame):
             return
 
         if not os.path.exists(settings_path):
-            # TODO prepopulate file with help text, i.e link to docs about schema
             with open(settings_path, 'w') as fp:
                 fp.write(INIT_SETTING_TEXT)
         else:
@@ -532,6 +536,21 @@ class MainFrame(wx.Frame):
         with open(default_settings_path, 'w') as fp:
             fp.write(DEFAULT_SETTING_FMT.format(json_str))
         start_file(default_settings_path)
+
+    def SaveAsJson(self):
+        with wx.FileDialog(self, "Save JSON file", wildcard="JSON files (*.json)|*.json",
+                    style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return     # the user changed their mind
+
+            # save the current contents in the file
+            pathname = fileDialog.GetPath()
+            try:
+                with open(pathname, 'w') as file:
+                    self.controller.save_as_json()
+            except IOError:
+                wx.LogError("Cannot save current data in file '%s'." % pathname)
 
     def ManagePlugins(self, evt):
         # TODO create special empty page that says "No plugins loaded"

@@ -430,7 +430,15 @@ class Controller(IController):
                            border_width=iod.getCompartmentOutlineThickness(neti, compi),
                            index=compi,
                            net_index=neti,
-                           )
+                           )    
+
+    def update_view(self):
+        """Immediately update the view with using latest model."""
+        return self._update_view()
+    
+    def save_as_json(self):
+        assert False, "Not implemented"
+        pass
 
     # get the updated list of nodes from model and update
 

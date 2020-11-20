@@ -72,6 +72,13 @@ class Plugin:
         self.metadata = metadata
         self.ptype = ptype
 
+    def get_settings_schema(self):
+        """Return the setting schema for this plugin.
+
+        TODO document
+        """
+        return None
+
     def on_did_add_node(self, evt: DidAddNodeEvent):
         """Called after a node is added."""
         pass

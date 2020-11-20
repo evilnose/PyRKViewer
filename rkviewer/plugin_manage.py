@@ -6,6 +6,7 @@ import inspect
 import os
 import sys
 from typing import Any, Callable, List, Optional, cast
+from marshmallow.schema import Schema
 
 # pylint: disable=no-name-in-module
 import wx
@@ -13,6 +14,7 @@ from rkplugin.plugins import CommandPlugin, Plugin, PluginType, WindowedPlugin
 # pylint: disable=no-name-in-module
 from wx.html import HtmlWindow
 
+from rkviewer.config import add_plugin_schema
 from rkviewer.events import (CanvasEvent, DidAddCompartmentEvent,
                              DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent,
                              DidCommitDragEvent, DidDeleteEvent,
@@ -77,6 +79,16 @@ class PluginManager:
             plugin_classes += cur_classes
 
         self.plugins = [cls() for cls in plugin_classes]
+
+        # Duplicate names
+        if len(set(p.metadata.name for p in self.plugins)) < len(self.plugins):
+            pass  # TODO fail when there is duplicate name.
+
+        # load schema
+        for plugin in self.plugins:
+            schema = plugin.get_settings_schema()
+            if isinstance(schema, Schema):
+                add_plugin_schema(plugin.metadata.name, schema)
         return True
 
     def make_notify(self, handler_name: str):

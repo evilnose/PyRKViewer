@@ -1,8 +1,6 @@
-
-
 """
 Add different reactions.
-Version 0.01: Author: Jin Xu (2020)
+Version 0.01: Author: Jin Xu and Herbert Sauro (2020)
 """
 
 
@@ -20,7 +18,7 @@ from dataclasses import dataclass
 
 metadata = PluginMetadata(
     name='AddReaction',
-    author='Jin Xu',
+    author='Jin Xu and Herbert Sauro',
     version='0.01',
     short_desc='Add Reactions.',
     long_desc='Add different reactions.'
@@ -35,10 +33,14 @@ class AddReaction(WindowedPlugin):
         Args:
             self
         """
-        
-        super().__init__(metadata)   
-        self.node_idx_list = []
-        self.count_rct = 0
+       
+        super().__init__(metadata)
+        self.uniuniState = False
+        self.biuniState = False
+        self.unibiState = False
+        self.bibiState = False
+        self.src = []
+        self.dest = []
 
     def create_window(self, dialog):
         """
@@ -47,38 +49,54 @@ class AddReaction(WindowedPlugin):
             self
             dialog
         """
-        window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
+        window = wx.Panel(dialog, pos=(5,100), size=(150, 190))
  
-        wx.StaticText(window, -1, '1.Refresh before clicking nodes to add each reaction.', (5,10))
+        wx.StaticText(window, -1, 'Select reaction type', (15,10))
+        wx.StaticText(window, -1, 'then select nodes:', (15,25))
 
-        SelectNodes_btn = wx.Button(window, -1, 'Refresh', (50, 40))
-        SelectNodes_btn.Bind(wx.EVT_BUTTON, self.restart_node_idx)
+        self.UniUni_btn = wx.ToggleButton(window, -1, 'UniUni', (36, 22+25), size=(62,22))
+        self.UniUni_btn.Bind(wx.EVT_TOGGLEBUTTON, self.UniUni)
 
-        wx.StaticText(window, -1, '2.Click nodes for each reaction.', (5,90))
+        self.BiUni_btn = wx.ToggleButton(window, -1, 'BiUni', (36, 47+25), size=(62,22))
+        self.BiUni_btn.Bind(wx.EVT_TOGGLEBUTTON, self.BiUni)
 
-        wx.StaticText(window, -1, '3.Create different types of reactions.', (5,130))
+        self.UniBi_btn = wx.ToggleButton(window, -1, 'UniBi', (36, 72+25), size=(62,22))
+        self.UniBi_btn.Bind(wx.EVT_TOGGLEBUTTON, self.UniBi)
 
-        UniUni_btn = wx.Button(window, -1, 'UniUni', (50, 170))
-        UniUni_btn.Bind(wx.EVT_BUTTON, self.UniUni)
-
-        BiUni_btn = wx.Button(window, -1, 'BiUni', (150, 170))
-        BiUni_btn.Bind(wx.EVT_BUTTON, self.BiUni)
-
-        UniBi_btn = wx.Button(window, -1, 'UniBi', (50, 230))
-        UniBi_btn.Bind(wx.EVT_BUTTON, self.UniBi)
-
-        BiBi_btn = wx.Button(window, -1, 'BiBi', (150, 230))
-        BiBi_btn.Bind(wx.EVT_BUTTON, self.BiBi)
+        self.BiBi_btn = wx.ToggleButton(window, -1, 'BiBi', (36, 97+25), size=(62,22))
+        self.BiBi_btn.Bind(wx.EVT_TOGGLEBUTTON, self.BiBi)
 
         window.SetPosition (wx.Point(10,10))
-
-        self.count_rct =  api.reaction_count(0)
         return window
 
     def on_did_create_dialog(self):
         # Set position of popup window to top-left corner of screen
         self.dialog.SetPosition((240, 250))
 
+
+    def getUniqueName(self, base: str, names: list) -> str:
+        increment = 0
+        # keep incrementing until you find a unique Id
+        while True:
+            suffix = '_{}'.format(increment)
+
+            cur_id = base + suffix
+
+            if cur_id in names:
+                increment += 1
+                continue
+            else:
+                # loop finished normally; done
+                return cur_id
+
+    def addReaction (self, src, dest):
+        # Common to all reactions
+        names = []
+        # Get a unique reaction name
+        for r in api.get_reactions (0):
+            names.append (r.id_)          
+        reactionId = self.getUniqueName('reaction', names)
+        r_idx = api.add_reaction(0, reactionId, src, dest, fill_color=api.Color(129, 123, 255))
 
     def on_selection_did_change(self, evt):
         """
@@ -89,103 +107,152 @@ class AddReaction(WindowedPlugin):
             reaction_indices (List[int]): List of reaction indices changed.
             compartment_indices (List[int]): List of compartment indices changed.
         """
-        node_clicked = list(evt.node_indices)
+        if len (list(evt.node_indices)) == 0:
+           self.src = []
+           self.dest = []
+           return
 
-        if len(node_clicked) != 0:
-            self.node_idx_list.append(node_clicked[0])
+        if (not self.uniuniState) and (not self.biuniState) and \
+              (not self.unibiState) and (not self.bibiState):
+           return
 
-    def restart_node_idx(self, evt):
+        self.node_clicked = list(evt.node_indices)
+       
         try:
-            self.node_idx_list = []
+            if self.uniuniState:
+               if len(self.src) == 0:
+                  self.src.append (self.node_clicked[0])
+                  return
+
+               if len (self.dest) == 0:
+                  self.dest.append (self.node_clicked[0])
+                  self.addReaction (self.src, self.dest)
+                  return
+
+            if self.biuniState:
+               if len(self.src) == 0:
+                  self.src.append (self.node_clicked[0])
+                  return
+
+               if len (self.src) == 1:
+                  self.src.append (self.node_clicked[0])
+                  return
+
+               if (len (self.src) <= 2) and len (self.dest) == 0:
+                  self.dest.append (self.node_clicked[0])
+                  self.addReaction (self.src, self.dest)
+                  return          
+
+            if self.unibiState:
+               if len(self.src) == 0:
+                  self.src.append (self.node_clicked[0])
+                  return
+
+               if len (self.dest) == 0:
+                  self.dest.append (self.node_clicked[0])
+                  return
+               
+               if (len (self.src) <= 1) and len (self.dest) == 1:
+                  self.dest.append (self.node_clicked[0])
+                  self.addReaction (self.src, self.dest)
+                  return
+
+            if self.bibiState:
+               if len(self.src) == 0:
+                  self.src.append (self.node_clicked[0])
+                  return
+
+               if len (self.src) == 1:
+                  self.src.append (self.node_clicked[0])
+                  return
+
+               if len (self.dest) == 0:
+                  self.dest.append (self.node_clicked[0])
+                  return
+
+               if (len (self.src) <= 2) and len (self.dest) == 1:
+                  self.dest.append (self.node_clicked[0])
+                  self.addReaction (self.src, self.dest)
+                  return
         except:
-            wx.MessageBox("Error: Can not refresh.", "Message", wx.OK | wx.ICON_INFORMATION)
+           pass #wx.MessageBox("Error: Try again", "Message", wx.OK | wx.ICON_INFORMATION)
 
     def UniUni(self, evt):
-
         """
         Handler for the "UniUni" button. add a UniUni reaction.
         """
-        src = []
-        dest = []
-
-        #print(self.node_clicked)
-        #print(self.node_idx_list)
-
-        # start group action context for undo purposes
-        with api.group_action():
-            try: 
-                for i in range(1):
-                    src.append(self.node_idx_list[i])
-                for i in range(1,2):
-                    dest.append(self.node_idx_list[i])
-
-                r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
-                self.count_rct += 1
-            except:
-                wx.MessageBox("Error: try to click more than two nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
-
+        state = evt.GetEventObject().GetValue()
+        if state == True:  
+           self.src = []
+           self.dest = []
+           # This code is to make the buttons work as a radionbutton
+           self.uniuniState = True
+           self.biuniState = False
+           self.unibiState = False
+           self.bibiState = False
+           self.BiUni_btn.SetValue (False)
+           self.UniBi_btn.SetValue (False)
+           self.BiBi_btn.SetValue (False)            
+        else:
+           self.uniuniState = False
 
     def BiUni(self, evt):
-
         """
         Handler for the "BiUni" button. add a BiUni reaction.
         """
-        src = []
-        dest = []
+        state = evt.GetEventObject().GetValue()
+        if state == True:  
+           self.src = []
+           self.dest = []
 
-        # start group action context for undo purposes
-        with api.group_action():
-            try: 
-                for i in range(2):
-                    src.append(self.node_idx_list[i])
-                for i in range(2,3):
-                    dest.append(self.node_idx_list[i])
+           # This code is to make the buttons work as a radionbutton
+           self.uniuniState = False
+           self.biuniState = True
+           self.unibiState = False
+           self.bibiState = False  
+           self.UniUni_btn.SetValue (False)          
+           self.UniBi_btn.SetValue (False)
+           self.BiBi_btn.SetValue (False)  
+        else:
+           self.biuniState = False
 
-                r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
-                self.count_rct += 1
-            except:
-                wx.MessageBox("Error: try to click more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
 
     def UniBi(self, evt):
-
         """
         Handler for the "UniBi" button. add a UniBi reaction.
         """
-        src = []
-        dest = []
+        state = evt.GetEventObject().GetValue()
+        if state == True:  
+           self.src = []
+           self.dest = []
 
-        # start group action context for undo purposes
-        with api.group_action():
-            try: 
-                for i in range(1):
-                    src.append(self.node_idx_list[i])
-                for i in range(1,3):
-                    dest.append(self.node_idx_list[i])
-
-                r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
-                self.count_rct += 1
-            except:
-                wx.MessageBox("Error: try to click more than three nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
+           # This code is to make the buttons work as a radionbutton          
+           self.uniuniState = False
+           self.biuniState = False
+           self.unibiState = True
+           self.bibiState = False  
+           self.UniUni_btn.SetValue (False)          
+           self.BiUni_btn.SetValue (False)
+           self.BiBi_btn.SetValue (False)                        
+        else:
+           self.unibiState = False
 
     def BiBi(self, evt):
-
         """
         Handler for the "UniBi" button. add a UniBi reaction.
         """
-        src = []
-        dest = []
+        state = evt.GetEventObject().GetValue()
+        if state == True:  
+           self.src = []
+           self.dest = []
 
-        # start group action context for undo purposes
-        with api.group_action():
-            try: 
-                for i in range(2):
-                    src.append(self.node_idx_list[i])
-                for i in range(2,4):
-                    dest.append(self.node_idx_list[i])
-                r_idx = api.add_reaction(0, 'reaction_{}'.format(self.count_rct), src, dest, fill_color=api.Color(129, 123, 255))
-                self.count_rct += 1
-            except:
-                wx.MessageBox("Error: try to click more than four nodes.", "Message", wx.OK | wx.ICON_INFORMATION)
-    
-
-  
+           # This code is to make the buttons work as a radionbutton
+           self.uniuniState = False
+           self.biuniState = False
+           self.unibiState = False
+           self.bibiState = True
+           self.UniUni_btn.SetValue (False)          
+           self.BiUni_btn.SetValue (False)
+           self.UniBi_btn.SetValue (False)                        
+        else:
+           self.bibiState = False

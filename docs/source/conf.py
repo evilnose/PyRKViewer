@@ -14,13 +14,13 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath("../.."))
 sys.path.insert(0, os.path.abspath("../../plugins"))
-sys.path.insert(0, os.path.abspath("../../rkplugin"))
+# sys.path.insert(0, os.path.abspath("../../rkplugin"))
 
 # -- Project information -----------------------------------------------------
 
 project = 'Plugin API for RKViewer'
-copyright = '2020, cperena, Gary Geng'
-author = 'cperena, evilnose'
+copyright = '2020, Gary Geng, Carmen Pereña, Herbert Sauro, Jin Xu'
+author = 'Gary Geng, Carmen Pereña, Herbert Sauro, Jin Xu'
 
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'

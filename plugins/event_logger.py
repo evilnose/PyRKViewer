@@ -3,12 +3,15 @@ Log events for debugging.
 
 Version 0.01: Author: Gary Geng (2020)
 """
+import wx
 
 # pylint: disable=maybe-no-member
 from rkviewer.canvas.geometry import Vec2
 from rkplugin.plugins import CommandPlugin, PluginMetadata
 from rkplugin import api
+from rkplugin.api import Rect, Vec2
 from rkplugin.events import DidAddNodeEvent, DidMoveBezierHandleEvent
+from rkplugin.canvas import CanvasElement, add_element, draw_rect
 
 metadata = PluginMetadata(
     name='Event logger',
@@ -17,6 +20,14 @@ metadata = PluginMetadata(
     short_desc='Log events.',
     long_desc='Log all events that are handled by plugins.'
 )
+
+
+class SomeElement(CanvasElement):
+    def __init__(self):
+        super().__init__(30)
+
+    def do_paint(self, gc: wx.GraphicsContext):
+        draw_rect(gc, Rect(Vec2(0, 0), Vec2(100, 100)), fill=wx.BLUE)
 
 
 class EventLogger(CommandPlugin):
@@ -41,4 +52,6 @@ class EventLogger(CommandPlugin):
         Log something.
         """
         # api.logger().info('run() called')
-        api.translate_network(0, Vec2(50, 50))
+        # api.translate_network(0, Vec2(50, 50))
+        add_element(0, SomeElement())
+

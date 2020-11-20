@@ -277,4 +277,7 @@ def get_setting(setting_attr) -> Any:
 def get_theme(theme_attr) -> Any:
     global _theme
     return _theme[theme_attr]
-# dumped_config = root_schema.dump(default_config)
+
+
+def add_plugin_schema(name: str, schema: Schema):
+    pass

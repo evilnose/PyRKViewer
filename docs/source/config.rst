@@ -3,7 +3,7 @@ Configuration and settings
 
 .. currentmodule:: rkviewer.config
 
-.. autoclass:: rkviewer.config.ThemeSchema
-   :members:
+.. automodule:: rkviewer.config
+   :members: 
 
    

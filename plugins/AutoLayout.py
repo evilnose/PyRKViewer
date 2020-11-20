@@ -175,12 +175,49 @@ class AutoLayoutTemp(WindowedPlugin):
                           self.displacement[nodeIndexV].dx += (dx/dist)*repulsiveF
                           self.displacement[nodeIndexV].dy += (dy/dist)*repulsiveF
             
+                # Compute Attractive forces
+                ''' # The following doesn't seem to work
+                for reaction in self.listOfReactions:
+                    src = reaction.sources
+                    dest = reaction.targets
+                    
+                    for n in src:
+
+                        node = api.get_node_by_index (0, n)
+
+                        dx = node.position.x - reaction.centroid.x
+                        dy = node.position.y - reaction.centroid.y
+                        distance = math.sqrt(dx*dx + dy*dy)
+                        if distance > 0: 
+                           attractiveF = distance * distance / k
+                           ddx = dx*attractiveF/dist
+                           ddy = dy*attractiveF/dist
+                           self.displacement[n].dx -= ddx
+                           self.displacement[n].dy -= ddy
+              
+                    for n in dest:
+
+                        node = api.get_node_by_index (0, n)
+
+                        dx = reaction.centroid.x - node.position.x
+                        dy = reaction.centroid.y - node.position.y
+                        distance = math.sqrt(dx*dx + dy*dy)
+                        if distance > 0: 
+                           attractiveF = distance * distance / k
+                           ddx = dx*attractiveF/dist
+                           ddy = dy*attractiveF/dist
+                           self.displacement[n].dx -= ddx
+                           self.displacement[n].dy -= ddy
+            '''
+              
             # calculate attractive forces
             for reaction in self.listOfReactions:
                 srcNodeIndex = reaction.sources[0]
                 destNodeIndex = reaction.targets[0]
+
                 srcNode = api.get_node_by_index (0, srcNodeIndex)
                 destNode = api.get_node_by_index (0, destNodeIndex)
+
                 dx = srcNode.position.x - destNode.position.x
                 dy = srcNode.position.y - destNode.position.y
                 dist = math.sqrt(dx*dx+dy*dy)

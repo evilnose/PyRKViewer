@@ -73,6 +73,12 @@ class AddReaction(WindowedPlugin):
         # Set position of popup window to top-left corner of screen
         self.dialog.SetPosition((240, 250))
 
+    def on_will_close_window(self, evt):
+        self.uniuniState = False
+        self.biuniState = False
+        self.unibiState = False
+        self.bibiState = False
+        evt.Skip()
 
     def getUniqueName(self, base: str, names: list) -> str:
         increment = 0

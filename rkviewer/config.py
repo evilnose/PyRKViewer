@@ -18,6 +18,51 @@ settings_path = os.path.join(config_dir, 'settings.json')
 default_settings_path = os.path.join(config_dir, '.default-settings.json')
 
 
+class AppSettings:
+
+   # Default positions
+
+   def __init__(self):
+       self.position = wx.Point (0,0)
+       self.size = wx.Size (1366,737)
+       self.displaySize = wx.DisplaySize() 
+       # Find the center poistion of the frame
+       self.position.x = self.displaySize[0] / 2 - self.size.x / 2
+       self.position.y = self.displaySize[1] / 2 - self.size.y / 2
+
+   def load_appSettings(self):
+       sp = wx.StandardPaths.Get()
+       configDir = sp.GetUserConfigDir()
+       if not os.path.exists(os.path.join(configDir, 'rkViewer')):
+            os.mkdir(os.path.join(configDir, 'rkViewer'))
+       fileName = os.path.join(configDir, 'rkViewer', 'appSettings.ini')
+       if not os.path.exists (fileName):
+          # leave with defaults intact.  
+          return 
+        
+       config = wx.FileConfig(localFilename=fileName) 
+       config.SetPath ('PositionAndSize')
+       self.position.x = config.ReadInt ('frame_position_x', self.position.x)       
+       self.position.y = config.ReadInt ('frame_position_y', self.position.y)       
+       self.size.x = config.ReadInt ('frame_size_w', self.size.x)       
+       self.size.y = config.ReadInt ('frame_size_h', self.size.y)       
+
+   def save_appSettings(self):
+       sp = wx.StandardPaths.Get()
+       configDir = sp.GetUserConfigDir()
+       if not os.path.exists(os.path.join(configDir, 'rkViewer')):
+            os.mkdir(os.path.join(configDir, 'rkViewer'))
+       fileName = os.path.join(configDir, 'rkViewer', 'appSettings.ini')
+       if os.path.exists(fileName):
+           os.remove (fileName)
+       config = wx.FileConfig(localFilename=fileName) 
+       config.SetPath ('PositionAndSize')
+       config.WriteInt ('frame_position_x', self.position.x)
+       config.WriteInt ('frame_position_y', self.position.y)
+       config.WriteInt ('frame_size_w', self.size.x)
+       config.WriteInt ('frame_size_h', self.size.y)
+
+
 class Color(fields.Field):
     """Field that represents an RGBA color.
     
@@ -221,7 +266,6 @@ def validate_schema(schema):
 _settings = BUILTIN_SETTINGS
 _theme = None
 _settings_err = None  
-
 
 def load_settings():
     """Reload all settings from the default settings path.

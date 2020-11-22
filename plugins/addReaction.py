@@ -74,11 +74,7 @@ class AddReaction(WindowedPlugin):
         self.dialog.SetPosition((240, 250))
 
     def on_will_close_window(self, evt):
-        self.uniuniState = False
-        self.biuniState = False
-        self.unibiState = False
-        self.bibiState = False
-        evt.Skip()
+        print ("***** Window Closed *****") 
 
     def getUniqueName(self, base: str, names: list) -> str:
         increment = 0
@@ -96,7 +92,7 @@ class AddReaction(WindowedPlugin):
                 return cur_id
 
     def addReaction (self, src, dest):
-        # Common to all reactions
+        # THis method is callde for all reactions
         names = []
         # Get a unique reaction name
         for r in api.get_reactions (0):

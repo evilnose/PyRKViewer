@@ -30,6 +30,7 @@ from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
 from .forms import CompartmentForm, NodeForm, ReactionForm
 from .mvc import IController, IView
 from .utils import ButtonGroup, get_bundled_path, on_msw, start_file
+from rkviewer.config import AppSettings
 
 
 class EditPanel(fnb.FlatNotebook):
@@ -281,6 +282,7 @@ class MainPanel(wx.Panel):
                                     toggle_callback=set_input_mode,
                                     canvas=self.canvas,
                                     )
+
         self.mode_panel.SetBackgroundColour(get_theme('toolbar_bg'))
 
         toolbar_width = get_theme('canvas_width') + \
@@ -311,6 +313,7 @@ class MainPanel(wx.Panel):
 
         # Set the sizer and *prevent the user from resizing it to a smaller size
         self.SetSizerAndFit(sizer)
+
 
     def ToggleEditPanel(self, evt):
         sizer = self.GetSizer()
@@ -358,6 +361,9 @@ class MainFrame(wx.Frame):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
                          wx.WS_EX_PROCESS_UI_UPDATES, **kw)
         load_settings()
+        self.appSettings = AppSettings()
+        self.appSettings.load_appSettings()
+
         self.manager = manager
         status_fields = get_setting('status_fields')
         assert status_fields is not None
@@ -459,9 +465,23 @@ class MainFrame(wx.Frame):
 
         self.OverrideAccelTable(self)
 
+        self.Bind(wx.EVT_CLOSE, self.OnCloseExit)
+
         # set sizer at the end, after adding the menus.
         self.SetSizerAndFit(sizer)
-        self.Center()
+        
+        self.SetSize (self.appSettings.size)
+        self.SetPosition (self.appSettings.position)
+        self.Layout()
+
+
+    # Any thing we need to do when the app closes can be included here
+    def OnCloseExit (self, evt):
+        self.appSettings.size = self.GetSize()
+        self.appSettings.position = self.Position
+        self.appSettings.save_appSettings()
+        self.Destroy()
+    
 
     def AddMenuItem(self, menu: wx.Menu, text: str, help_text: str, callback: Callable,
                     entries: List, key: Tuple[Any, int] = None, id_: int = None):

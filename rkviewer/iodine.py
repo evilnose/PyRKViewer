@@ -19,7 +19,7 @@ from typing import DefaultDict, Dict, MutableSet, Set, Tuple, List, cast
 from enum import Enum
 from collections import defaultdict
 
-
+   
 class TColor(object):
     r: int
     g: int
@@ -56,6 +56,7 @@ class TNode(object):
     y: float
     w: float
     h: float
+    floatingNode : bool  # If false it means the node is a boundary node
     compi: int = -1
     fillColor: TColor = TColor(255, 150, 80, 255)
     outlineColor: TColor = TColor(255, 100, 80, 255)
@@ -493,7 +494,7 @@ def _pushUndoStack():
         netSetStack.push(networkDict)
 
 
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float):
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode : bool):
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -514,7 +515,7 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float):
             return
 
         _pushUndoStack()
-        newNode = TNode(nodeID, x, y, w, h)
+        newNode = TNode(nodeID, x, y, w, h, floatingNode)
         n.addNode(newNode)
         networkDict[neti] = n
     finally:
@@ -653,6 +654,22 @@ def getNodeID(neti: int, nodei: int):
             return n.nodes[nodei].id
 
     raise ExceptionDict[errCode](errorDict[errCode])
+
+def IsFloatingSpecies (neti : int, nodei : int):
+    if neti not in networkDict:
+        errCode = -5    
+    if n.nodes[nodei].floatingNode:
+       return True
+    else:
+       return False
+
+def IsBoundarygSpecies (neti : int, nodei : int):
+    if neti not in networkDict:
+        errCode = -5    
+    if n.nodes[nodei].floatingNode:
+       return False
+    else:
+       return True
 
 
 def getListOfNodeIDs(neti: int) -> List[str]:
@@ -1050,6 +1067,26 @@ def setNodeID(neti: int, nodei: int, newID: str):
                 net.nodes[nodei].id = newID
                 return
     raise ExceptionDict[errCode](errorDict[errCode])
+
+def setNodeFloatingStatus (neti : int, nodei : int):
+    errCode = 0 
+    if neti not in networkDict:
+       errCode = -5
+    net = networkDict[neti] 
+    if nodei not in net.nodes.keys():
+       errCode = -7
+    else:
+        net.nodes[nodei].id = True
+
+def setNodeBoundaryStatus (neti : int, nodei : int):
+    errCode = 0 
+    if neti not in networkDict:
+       errCode = -5
+    net = networkDict[neti] 
+    if nodei not in net.nodes.keys():
+       errCode = -7
+    else:
+        net.nodes[nodei].id = False
 
 
 def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCoordinates: bool):

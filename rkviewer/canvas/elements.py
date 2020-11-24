@@ -140,10 +140,10 @@ class NodeElement(CanvasElement):
 
         # draw text
         tw, th, _, _ = gc.GetFullTextExtent(
-            self.node.id_)  # optimize by caching?
+            self.node.id)  # optimize by caching?
         tx = (width - tw) / 2
         ty = (height - th) / 2
-        gc.DrawText(self.node.id_, self.node.s_position.x +
+        gc.DrawText(self.node.id, self.node.s_position.x +
                     tx, self.node.s_position.y + ty)
 
     def do_left_down(self, _: Vec2):

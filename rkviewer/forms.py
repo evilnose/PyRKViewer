@@ -121,8 +121,8 @@ class EditPanelForm(ScrolledPanel):
             self.UpdateAllFields()
 
         # clear validation errors
-        for id_ in self.badges.keys():
-            self._SetValidationState(True, id_)
+        for id in self.badges.keys():
+            self._SetValidationState(True, id)
         self._self_changes = False
 
     def InitLayout(self):
@@ -553,7 +553,7 @@ class NodeForm(EditPanelForm):
             return
         else:
             for node in self._nodes:
-                if node.id_ == new_id:
+                if node.id == new_id:
                     self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
             else:
@@ -777,14 +777,14 @@ class NodeForm(EditPanelForm):
         if len(self._selected_idx) == 1:
             [node] = nodes
             self.id_ctrl.Enable(True)
-            id_text = node.id_
+            id_text = node.id
             fill = node.fill_color
             fill_alpha = node.fill_color.Alpha()
             border = node.border_color
             border_alpha = node.border_color.Alpha()
         else:
             self.id_ctrl.Enable(False)
-            id_text = '; '.join(sorted(list(n.id_ for n in nodes)))
+            id_text = '; '.join(sorted(list(n.id for n in nodes)))
 
             fill, fill_alpha = self._GetMultiColor(list(n.fill_color for n in nodes))
             border, border_alpha = self._GetMultiColor(list(n.border_color for n in nodes))
@@ -1006,20 +1006,20 @@ class ReactionForm(EditPanelForm):
 
     def _GetSrcStoichs(self, reai: int):
         ids = self.controller.get_list_of_src_indices(self.net_index, reai)
-        return [StoichInfo(id_, self.controller.get_src_node_stoich(self.net_index, reai, id_))
-                for id_ in ids]
+        return [StoichInfo(id, self.controller.get_src_node_stoich(self.net_index, reai, id))
+                for id in ids]
 
     def _GetDestStoichs(self, reai: int):
         ids = self.controller.get_list_of_dest_indices(self.net_index, reai)
-        return [StoichInfo(id_, self.controller.get_dest_node_stoich(self.net_index, reai, id_))
-                for id_ in ids]
+        return [StoichInfo(id, self.controller.get_dest_node_stoich(self.net_index, reai, id))
+                for id in ids]
 
     def UpdateAllFields(self):
         """Update all reaction fields from current data."""
         self._self_changes = False
         assert len(self._selected_idx) != 0
         reactions = [r for r in self._reactions if r.index in self._selected_idx]
-        id_text = '; '.join(sorted(list(r.id_ for r in reactions)))
+        id_text = '; '.join(sorted(list(r.id for r in reactions)))
         fill: wx.Colour
         fill_alpha: Optional[int]
         ratelaw_text: str
@@ -1309,7 +1309,7 @@ class CompartmentForm(EditPanelForm):
         assert len(comps) == len(self.selected_idx)
         prec = 2
 
-        id_text = '; '.join([c.id_ for c in comps])
+        id_text = '; '.join([c.id for c in comps])
         fill: wx.Colour
         fill_alpha: Optional[int]
         border: wx.Colour

@@ -33,7 +33,7 @@ class Node(RectData):
     Attributes:
         index: The index of the node. If this node has not yet been added to the NOM, this takes on
                the value of -1.
-        id_: The ID of the node.
+        id: The ID of the node.
         fill_color: The fill color of the node.
         border_color: The border color of the node.
         border_width: The border width of the node.
@@ -41,7 +41,7 @@ class Node(RectData):
         size: Position of the size.
         net_index: The network index of the node.
     """
-    id_: str
+    id: str
     fill_color: wx.Colour
     border_color: wx.Colour
     border_width: float
@@ -53,11 +53,11 @@ class Node(RectData):
     floatingNode: bool
 
     # force keyword-only arguments
-    def __init__(self, id_: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
+    def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
                  border_color: wx.Colour, border_width: float, comp_idx: int = -1, floatingNode : bool = True, index: int = -1):
         self.index = index
         self.net_index = net_index
-        self.id_ = id_
+        self.id = id
         self.position = pos
         self.size = size
         self.fill_color = fill_color
@@ -100,10 +100,10 @@ class Node(RectData):
         return Rect(self.position, self.size)
 
     def __repr__(self):
-        return 'Node(index={}, id="{}")'.format(self.index, self.id_)
+        return 'Node(index={}, id="{}")'.format(self.index, self.id)
 
     def props_equal(self, other: Node):
-        return self.id_ == other.id_ and self.position == other.position and \
+        return self.id == other.id and self.position == other.position and \
             self.size == other.size and self.border_width == other.border_width and \
             self.border_color.GetRGB() == other.border_color.GetRGB() and \
             self.fill_color.GetRGB() == other.fill_color.GetRGB()
@@ -145,7 +145,7 @@ class Reaction:
     """Class that keeps track of data for a reaction as well as its Bezier curve.
 
     Attributes:
-        id_: reaction ID.
+        id: reaction ID.
         index: reaction index.
         fill_color: reaction fill color.
         line_thickness: Bezier curve thickness.
@@ -154,13 +154,13 @@ class Reaction:
         target: The target (product) node indices.
     """
 
-    def __init__(self, id_: str, net_index: int, *, sources: List[int], targets: List[int],
+    def __init__(self, id: str, net_index: int, *, sources: List[int], targets: List[int],
                  handle_positions: List[Vec2], fill_color: wx.Colour,
                  line_thickness: float, rate_law: str, index: int = -1):
         """Constructor for a reaction.
 
         Args:
-            id_: Reaction ID.
+            id: Reaction ID.
             sources: List of source (reactant) nodes.
             targets: List of target (product) nodes.
             handle: List of HandleData structs for reactant nodes and product nodes. This is in the
@@ -172,7 +172,7 @@ class Reaction:
             index: Reaction index.
             net_index: The network index of the reaction.
         """
-        self.id_ = id_
+        self.id = id
         self.net_index = net_index
         self.index = index
         self.fill_color = fill_color
@@ -519,7 +519,7 @@ class ReactionBezier:
 
 @dataclass
 class Compartment(RectData):
-    id_: str
+    id: str
     net_index: int
     nodes: List[int]
     volume: float  #: Size (i.e. length/area/volume/...) of the container

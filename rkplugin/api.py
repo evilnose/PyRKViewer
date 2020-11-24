@@ -85,7 +85,7 @@ class NodeData:
         index: node index. Despite the name, this is the value that acts as the constant
                identifier for nodes. ID, on the other hand, may be modified. If this is -1, it
                means that this Node is not currently part of a network.
-        id_: Node ID. Note: NOT constant; see `index` for constant identifiers.
+        id: Node ID. Note: NOT constant; see `index` for constant identifiers.
         net_index: The index of the network that this node is in.
         position: The top-left position of the node bounding box as (x, y).
         size: The size of the node bounding box as (w, h).
@@ -94,9 +94,10 @@ class NodeData:
         border_width: The border width of the node.
         comp_idx: The index of the compartment that this node is in, or -1 if it is in the base
                   compartment.
+        floatingNode: Set true if you want the node to have floating status or false for boundary status (default is floating)
     """
     # TODO add fields; possibly use @dataclass
-    id_: str = field()
+    id: str = field()
     net_index: int = field()
     position: Vec2 = field()
     size: Vec2 = field()
@@ -105,6 +106,7 @@ class NodeData:
     border_width: float = field()
     comp_idx: int = field(default=-1)
     index: int = field(default=-1)
+    floatingNode: bool = field(default=True)
 
     @property
     def bounding_rect(self) -> Rect:
@@ -127,7 +129,7 @@ class ReactionData:
         sources: The source (reactant) node indices.
         targets: The target (product) node indices.
     """
-    id_: str = field()
+    id: str = field()
     net_index: int = field()
     fill_color: Color = field()
     line_thickness: float = field()
@@ -149,7 +151,7 @@ class CompartmentData:
     Attributes:
         index: Compartment index. Despite the name, this is the value that acts as the constant
                identifier for compartments. ID, on the other hand, may be modified.
-        id_: Compartment ID. Note: NOT constant; see `index` for constant identifiers.
+        id: Compartment ID. Note: NOT constant; see `index` for constant identifiers.
         net_index: The index of the network that this is in.
         nodes: Indices for nodes that are within this compartment.
         volume: Size (i.e. length/area/volume/...) of the container, for simulation purposes.
@@ -160,7 +162,7 @@ class CompartmentData:
         border_width: The border width of the compartment.
     """
     index: int = field()
-    id_: str = field()
+    id: str = field()
     net_index: int = field()
     nodes: List[int] = field()
     volume: float = field()
@@ -274,7 +276,7 @@ def set_zoom_level(level: int, anchor: Vec2):
 def _translate_node(node: Node) -> NodeData:
     """Translate Node (internal data structure for rkviewer) to NodeData (for API)"""
     return NodeData(
-        id_=node.id_,
+        id=node.id,
         net_index=node.net_index,
         position=node.position,
         size=node.size,
@@ -283,13 +285,14 @@ def _translate_node(node: Node) -> NodeData:
         border_width=node.border_width,
         comp_idx=node.comp_idx,
         index=node.index,
+        floatingNode=node.floatingNode,
     )
 
 
 def _translate_reaction(reaction: Reaction) -> ReactionData:
     """Translate Reaction (internal data structure for rkviewer) to ReactionData (for API)"""
     return ReactionData(
-        id_=reaction.id_,
+        id=reaction.id_,
         net_index=reaction.net_index,
         fill_color=_to_color(reaction.fill_color),
         line_thickness=reaction.thickness,
@@ -581,7 +584,7 @@ def add_compartment(net_index: int, id_: str, fill_color: Color = None, border_c
 
 
 def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: Color = None,
-             border_width: float = None, position: Vec2 = None, size: Vec2 = None) -> int:
+             border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode : bool = True) -> int:
     """Adds a node to the given network.
 
     The node indices are assigned in increasing order, regardless of deletion.
@@ -621,6 +624,7 @@ def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: C
         border_width=border_width,
         pos=position,
         size=size,
+        floatingNode=floatingNode,
     )
     return _controller.add_node_g(net_index, node)
 
@@ -646,7 +650,7 @@ def resize_node(net_index: int, node_index: int, size: Vec2):
 # should be ignored.
 def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Color = None,
                 border_color: Color = None, border_width: float = None, position: Vec2 = None,
-                size: Vec2 = None):
+                size: Vec2 = None, floatingNode: bool = True):
     """
     Update one or multiple properties of a node.
 
@@ -674,8 +678,8 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Co
     old_node = get_node_by_index(net_index, node_index)
     # Validate
     # Check ID not empty
-    if id_ is not None and len(id_) == 0:
-        raise ValueError('id_ cannot be empty')
+    if id is not None and len(id) == 0:
+        raise ValueError('id cannot be empty')
 
     # # Check border at least 0
     # if border_width is not None and border_width < 0:
@@ -699,8 +703,8 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Co
                              'corner exceed _canvas boundary {}', pos, sz, _canvas.realsize)
 
     with group_action():
-        if id_ is not None:
-            _controller.rename_node(net_index, node_index, id_)
+        if id is not None:
+            _controller.rename_node(net_index, node_index, id)
         if fill_color is not None:
             _controller.set_node_fill_rgb(net_index, node_index, _to_wxcolour(fill_color))
             _controller.set_node_fill_alpha(net_index, node_index, fill_color.alpha)
@@ -713,6 +717,8 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Co
             _controller.move_node(net_index, node_index, position)
         if size is not None:
             _controller.set_node_size(net_index, node_index, size)
+        if floatingNode is not None:
+            _controller.set_node_floating_status (net_index, node_index, floatingNode)
 
 
 def compute_centroid(net_index: int, reactants: List[int], products: List[int]):
@@ -851,12 +857,12 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
     reaction = _controller.get_reaction_by_index(net_index, reaction_index)
     # Validate
     # Check ID not empty
-    if id_ is not None and len(id_) == 0:
-        raise ValueError('id_ cannot be empty')
+    if id is not None and len(id) == 0:
+        raise ValueError('id cannot be empty')
 
     with group_action():
-        if id_ is not None:
-            _controller.rename_reaction(net_index, reaction_index, id_)
+        if id is not None:
+            _controller.rename_reaction(net_index, reaction_index, id)
         if fill_color is not None:
             _controller.set_reaction_fill_rgb(net_index, reaction_index, _to_wxcolour(fill_color))
             _controller.set_reaction_fill_alpha(net_index, reaction_index, fill_color.alpha)
@@ -949,8 +955,8 @@ def update_compartment(net_index: int, comp_index: int, id_: str = None,
     old_comp = get_compartment_by_index(net_index, comp_index)
     # Validate
     # Check ID not empty
-    if id_ is not None and len(id_) == 0:
-        raise ValueError('id_ cannot be empty')
+    if id is not None and len(id) == 0:
+        raise ValueError('id cannot be empty')
 
     # # Check border at least 0
     # if border_width is not None and border_width < 0:
@@ -974,8 +980,8 @@ def update_compartment(net_index: int, comp_index: int, id_: str = None,
                              'corner exceed _canvas boundary {}', pos, sz, _canvas.realsize)
 
     with group_action():
-        if id_ is not None:
-            _controller.rename_compartment(net_index, comp_index, id_)
+        if id is not None:
+            _controller.rename_compartment(net_index, comp_index, id)
         if fill_color is not None:
             _controller.set_compartment_fill(net_index, comp_index, _to_wxcolour(fill_color))
         if border_color is not None:

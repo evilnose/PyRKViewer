@@ -440,6 +440,7 @@ class NodeForm(EditPanelForm):
     border_ctrl: wx.ColourPickerCtrl
     border_alpha_ctrl: Optional[wx.TextCtrl]
     border_width_ctrl: wx.TextCtrl
+    nodeStatusDropDown : wx.ComboBox
     _nodes: List[Node]  #: current list of nodes in canvas.
     _selected_idx: Set[int]  #: current list of selected indices in canvas.
     _bounding_rect: Optional[Rect]  #: the exact bounding rectangle of the selected nodes
@@ -506,6 +507,7 @@ class NodeForm(EditPanelForm):
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
         self.ExternalUpdate()
 
+
     def CreateControls(self, sizer: wx.GridSizer):
         self.id_ctrl = wx.TextCtrl(self)
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
@@ -534,6 +536,11 @@ class NodeForm(EditPanelForm):
         border_callback = self._MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
                                                       self._BorderWidthCallback, (1, 100))
         self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
+
+        states = ['Floating Node', 'Boundary Node'] 
+        self.nodeStatusDropDown = wx.ComboBox (self, choices=states)
+        self._AppendControl (sizer, 'Node Status', self.nodeStatusDropDown )
+        self.nodeStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeStatusChoice)
 
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -672,6 +679,23 @@ class NodeForm(EditPanelForm):
             self.controller.end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
+    # ####
+    def  OnNodeStatusChoice (self, evt):    
+        """Callback for the change node status, floating or boundary."""
+        status = self.nodeStatusDropDown.GetValue()
+        if status == 'Floating Node':
+           floatingStatus = True
+        else:
+           floatingStatus = False 
+
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        self._self_changes = True
+        self.controller.start_group()
+        for node in nodes:
+            self.controller.set_node_floating_status(self.net_index, node.index, floatingStatus)
+        post_event(DidModifyNodesEvent(list(self._selected_idx)))
+        self.controller.end_group()
+
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
@@ -779,6 +803,8 @@ class NodeForm(EditPanelForm):
             self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
 
         self.border_width_ctrl.ChangeValue(border_width)
+
+        self.nodeStatusDropDown.SetValue('Floating Node')
 
 
 @dataclass

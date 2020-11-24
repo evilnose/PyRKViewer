@@ -655,17 +655,21 @@ def getNodeID(neti: int, nodei: int):
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
-def IsFloatingSpecies (neti : int, nodei : int):
+def IsFloatingNode (neti : int, nodei : int):
+    errCode = 0
     if neti not in networkDict:
         errCode = -5    
+    n = networkDict[neti]
     if n.nodes[nodei].floatingNode:
        return True
     else:
        return False
 
-def IsBoundarygSpecies (neti : int, nodei : int):
+def IsBoundarygNode (neti : int, nodei : int):
+    errCode = 0
     if neti not in networkDict:
         errCode = -5    
+    n = networkDict[neti]        
     if n.nodes[nodei].floatingNode:
        return False
     else:
@@ -1145,6 +1149,28 @@ def setNodeSize(neti: int, nodei: int, w: float, h: float):
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
+
+def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
+    """
+    setNodeFloatingStatus setNodeFloatingStatus
+    errCode: -7: node index out of range
+    -5: net index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        n = networkDict[neti]
+        if nodei not in n.nodes:
+            errCode = -7
+        else:
+            _pushUndoStack()
+            n.nodes[nodei].floatingNode = floatingStatus
+            return
+
+    raise ExceptionDict[errCode](errorDict[errCode])
 
 def setNodeFillColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     """

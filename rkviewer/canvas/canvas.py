@@ -689,6 +689,7 @@ class Canvas(wx.ScrolledWindow):
                     border_color=get_theme('node_border'),
                     border_width=get_theme('node_border_width'),
                     comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
+                    floatingNode = True,
                 )
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])

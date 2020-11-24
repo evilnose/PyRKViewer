@@ -117,7 +117,7 @@ class Controller(IController):
         The 'g' suffix indicates that this operation creates its own group
         '''
         self.start_group()
-        iod.addNode(neti, node.id_, node.position.x, node.position.y, node.size.x, node.size.y)
+        iod.addNode(neti, node.id_, node.position.x, node.position.y, node.size.x, node.size.y, True) # True = floating species
         nodei = iod.getNodeIndex(neti, node.id_)
         iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
         iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
@@ -164,6 +164,10 @@ class Controller(IController):
     @iod_setter
     def rename_node(self, neti: int, nodei: int, new_id: str):
         iod.setNodeID(neti, nodei, new_id)
+
+    @iod_setter
+    def set_node_floating_status(self, neti: int, nodei: int, floatingStatus: bool):
+        iod.setNodeFloatingStatus (neti, nodei, floatingStatus)
 
     @iod_setter
     def set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour):
@@ -391,6 +395,7 @@ class Controller(IController):
             border_color=border_color,
             border_width=iod.getNodeOutlineThickness(neti, nodei),
             comp_idx=iod.getCompartmentOfNode(neti, nodei),
+            floatingNode=iod.IsFloatingNode (neti, nodei),
         )
 
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:

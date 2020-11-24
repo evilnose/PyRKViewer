@@ -65,7 +65,7 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
     gc.SetBrush(brush)
 
     # draw rect
-    gc.DrawRectangle(x, y, width, height)
+    gc.DrawRoundedRectangle(x, y, width, height, 6)
 
 
 """Classes for the observer-Subject interface. See https://en.wikipedia.org/wiki/Observer_pattern

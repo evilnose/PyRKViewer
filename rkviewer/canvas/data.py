@@ -50,10 +50,11 @@ class Node(RectData):
     comp_idx: int
     index: int
     net_index: int
+    floatingNode: bool
 
     # force keyword-only arguments
     def __init__(self, id_: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, index: int = -1):
+                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, floatingNode : bool = True, index: int = -1):
         self.index = index
         self.net_index = net_index
         self.id_ = id_
@@ -63,6 +64,7 @@ class Node(RectData):
         self.border_color = border_color
         self.border_width = border_width
         self.comp_idx = comp_idx
+        self.floatingNode = floatingNode
 
     @property
     def s_position(self):

@@ -1215,6 +1215,17 @@ depend on it.".format(bound_node.id_))
             self.sel_reactions_idx.set_item({r.index for r in self._reactions})
             self.sel_compartments_idx.set_item({c.index for c in self._compartments})
         self.LazyRefresh()
+    
+    #Jin_edit
+    def SelectAllNodes(self):
+        with self._SelectGroupEvent():
+            self.sel_nodes_idx.set_item({n.index for n in self._nodes})
+        self.LazyRefresh()
+
+    def SelectAllReactions(self):
+        with self._SelectGroupEvent():
+            self.sel_reactions_idx.set_item({r.index for r in self._reactions})
+        self.LazyRefresh()
 
     def ClearCurrentSelection(self):
         """Clear the current highest level of selection.

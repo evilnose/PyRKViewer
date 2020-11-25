@@ -538,8 +538,8 @@ class NodeForm(EditPanelForm):
         self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
 
         states = ['Floating Node', 'Boundary Node'] 
-        self.nodeStatusDropDown = wx.ComboBox (self, choices=states)
-        self._AppendControl (sizer, 'Node Status', self.nodeStatusDropDown )
+        self.nodeStatusDropDown = wx.ComboBox(self, choices=states, style=wx.CB_READONLY)
+        self._AppendControl(sizer, 'Node Status', self.nodeStatusDropDown)
         self.nodeStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeStatusChoice)
 
     def _OnIdText(self, evt):

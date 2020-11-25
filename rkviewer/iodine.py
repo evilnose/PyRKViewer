@@ -65,7 +65,7 @@ class TNode:
     id: str
     position: Vec2
     rectSize: Vec2
-    floatingNode : bool  # If false it means the node is a boundary node
+    floating : bool  # If false it means the node is a boundary node
     compi: int = -1
     fillColor: TColor = TColor(255, 150, 80, 255)
     outlineColor: TColor = TColor(255, 100, 80, 255)
@@ -181,7 +181,7 @@ class TStack:
         return self.items.pop()
 
 
-class TNetworkDict(dict):
+class TNetworkDict(Dict[int, TNetwork]):
     def __init__(self):
         super().__init__()
         self.lastNetIndex = 0
@@ -681,7 +681,7 @@ def IsFloatingNode (neti : int, nodei : int):
     if neti not in networkDict:
         errCode = -5    
     n = networkDict[neti]
-    if n.nodes[nodei].floatingNode:
+    if n.nodes[nodei].floating:
        return True
     else:
        return False
@@ -691,7 +691,7 @@ def IsBoundarygNode (neti : int, nodei : int):
     if neti not in networkDict:
         errCode = -5    
     n = networkDict[neti]        
-    if n.nodes[nodei].floatingNode:
+    if n.nodes[nodei].floating:
        return False
     else:
        return True
@@ -1167,7 +1167,7 @@ def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
             errCode = -7
         else:
             _pushUndoStack()
-            n.nodes[nodei].floatingNode = floatingStatus
+            n.nodes[nodei].floating = floatingStatus
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -2574,7 +2574,7 @@ class NodeSchema(Schema):
     # h = fields.Float(validate=validate.Range(min=get_setting('min_node_height')))
     position = Dim2()
     rectSize = Dim2()
-    floatingNode = fields.Bool()
+    floating = fields.Bool()
     compartment = fields.Int()
     fillColor = Color()
     outlineColor = Color()

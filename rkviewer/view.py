@@ -387,8 +387,10 @@ class MainFrame(wx.Frame):
         self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings', lambda _: self.ReloadSettings(),
                          entries)
         file_menu.AppendSeparator()
-        self.AddMenuItem(file_menu, '&Save As .pkl...', 'Save current network as .pkl file',
+        self.AddMenuItem(file_menu, '&Save as .json...', 'Save current network as JSON',
                          lambda _: self.SaveAsJson(), entries)
+        self.AddMenuItem(file_menu, '&Load from .json...', 'Load network from JSON',
+                         lambda _: self.LoadFromJson(), entries)
         self.AddMenuItem(file_menu, 'E&xit', 'Exit application', lambda _: self.Close(), entries,
                          id_=wx.ID_EXIT)
 
@@ -581,15 +583,33 @@ class MainFrame(wx.Frame):
                     style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
 
             if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return     # the user changed their mind
+                return  # the user changed their mind
 
             # save the current contents in the file
             pathname = fileDialog.GetPath()
             try:
+                net_index = 0
+                net_json = self.controller.dump_network(net_index)
                 with open(pathname, 'w') as file:
-                    self.controller.save_as_json()
+                    json.dump(net_json, file)
             except IOError:
-                wx.LogError("Cannot save current data in file '%s'." % pathname)
+                wx.LogError("Cannot save current data in file '{}'.".format(pathname))
+
+    def LoadFromJson(self):
+        with wx.FileDialog(self, "Load JSON file", wildcard="JSON files (*.json)|*.json",
+                    style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return  # the user changed their mind
+
+            # save the current contents in the file
+            pathname = fileDialog.GetPath()
+            try:
+                with open(pathname, 'r') as file:
+                    net_json = json.load(file)
+                # TODO save previous network
+                net_index = self.controller.load_network(net_json)
+            except IOError:
+                wx.LogError("Cannot load network from file '{}'.".format(pathname))
 
     def ManagePlugins(self, evt):
         # TODO create special empty page that says "No plugins loaded"

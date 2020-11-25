@@ -545,7 +545,12 @@ class MainFrame(wx.Frame):
                                                          'a directory already exists at path '
                                                          '{}.'.format(settings_path))
                 return
-        start_file(settings_path)
+
+        # If we're running windows use notepad
+        if os.name == 'nt':
+           os.system("notepad " + settings_path)
+        else:
+           start_file(settings_path)
 
     def ShowDefaultSettings(self):
         if not self.CreateConfigDir():
@@ -560,7 +565,12 @@ class MainFrame(wx.Frame):
         json_str = json.dumps(get_default_raw_settings(), indent=4, sort_keys=True)
         with open(default_settings_path, 'w') as fp:
             fp.write(DEFAULT_SETTING_FMT.format(json_str))
-        start_file(default_settings_path)
+
+        # If we're running windows use notepad
+        if os.name == 'nt':
+           os.system("notepad " + default_settings_path)
+        else:
+           start_file(default_settings_path)            
 
     def SaveAsJson(self):
         with wx.FileDialog(self, "Save JSON file", wildcard="JSON files (*.json)|*.json",

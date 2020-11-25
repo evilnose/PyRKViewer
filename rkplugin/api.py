@@ -121,7 +121,7 @@ class ReactionData:
     Attributes:
         index: reaction index. Despite the name, this is the value that acts as the constant
                identifier for reactions. ID, on the other hand, may be modified.
-        id_: Reaction ID. Note: NOT constant; see `index` for constant identifiers.
+        id: Reaction ID. Note: NOT constant; see `index` for constant identifiers.
         net_index: The index of the network that this node is in.
         fill_color: reaction fill color.
         line_thickness: Bezier curve thickness.
@@ -292,7 +292,7 @@ def _translate_node(node: Node) -> NodeData:
 def _translate_reaction(reaction: Reaction) -> ReactionData:
     """Translate Reaction (internal data structure for rkviewer) to ReactionData (for API)"""
     return ReactionData(
-        id=reaction.id_,
+        id=reaction.id,
         net_index=reaction.net_index,
         fill_color=_to_color(reaction.fill_color),
         line_thickness=reaction.thickness,
@@ -306,7 +306,7 @@ def _translate_reaction(reaction: Reaction) -> ReactionData:
 def _translate_compartment(compartment: Compartment) -> CompartmentData:
     """Translate Reaction (internal data structure for rkviewer) to ReactionData (for API)"""
     return CompartmentData(
-        id_=compartment.id_,
+        id=compartment.id,
         net_index=compartment.net_index,
         nodes = compartment.nodes,
         position=compartment.position,
@@ -532,7 +532,7 @@ def delete_compartment(net_index: int, comp_index: int):
     _controller.delete_compartment(net_index, comp_index)
 
 
-def add_compartment(net_index: int, id_: str, fill_color: Color = None, border_color: Color = None,
+def add_compartment(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
                     border_width: float = None, position: Vec2 = None, size: Vec2 = None,
                     volume: float = None, nodes: List[int] = None) -> int:
     """ 
@@ -569,7 +569,7 @@ def add_compartment(net_index: int, id_: str, fill_color: Color = None, border_c
         nodes = list()
 
     compartment = Compartment(
-        id_=id_,
+        id=id,
         net_index=net_index,
         nodes=nodes,
         volume=volume,
@@ -583,7 +583,7 @@ def add_compartment(net_index: int, id_: str, fill_color: Color = None, border_c
     return _controller.add_compartment_g(net_index, compartment)
 
 
-def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: Color = None,
+def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
              border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode : bool = True) -> int:
     """Adds a node to the given network.
 
@@ -591,7 +591,7 @@ def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: C
 
     Args:  
         net_index: The network index.
-        id_: The ID of the node.
+        id: The ID of the node.
         fill_color: The fill color of the node, or leave as None to use current theme.
         border_color: The border color of the node, or leave as None to use current theme.
         border_width: The border width of the node, or leave as None to use current theme.
@@ -617,7 +617,7 @@ def add_node(net_index: int, id_: str, fill_color: Color = None, border_color: C
         size = Vec2(get_theme('node_width'), get_theme('node_height'))
 
     node = Node(
-        id_,
+        id,
         net_index,
         fill_color=_to_wxcolour(fill_color),
         border_color=_to_wxcolour(border_color),
@@ -648,7 +648,7 @@ def resize_node(net_index: int, node_index: int, size: Vec2):
 # to the history stack. This requires _controller to have "programmatic group" feature, i.e. actions
 # performed inside such groups are not recorded. programmatic groups nested within group operations
 # should be ignored.
-def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Color = None,
+def update_node(net_index: int, node_index: int, id: str = None, fill_color: Color = None,
                 border_color: Color = None, border_width: float = None, position: Vec2 = None,
                 size: Vec2 = None, floatingNode: bool = True):
     """
@@ -657,7 +657,7 @@ def update_node(net_index: int, node_index: int, id_: str = None, fill_color: Co
     Args:
         net_index: The network index.
         node_index: The node index of the node to modify.
-        id_: If specified, the new ID of the node.
+        id: If specified, the new ID of the node.
         fill_color: If specified, the new fill color of the node.
         border_color: If specified, the new border color of the node.
         border_width: If specified, the new border width of the node.
@@ -765,7 +765,7 @@ def _set_handle_positions(reaction: Reaction, handle_positions: List[Vec2]):
             _controller.set_dest_node_handle(reaction.net_index, reaction.index, nodei, pos)
 
 
-def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[int],
+def add_reaction(net_index: int, id: str, reactants: List[int], products: List[int],
                  fill_color: Color = None, line_thickness: float = None,
                  rate_law: str = '', handle_positions: List[Vec2] = None) -> int:
     """ 
@@ -802,7 +802,7 @@ def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[
                              'len(products)')
 
     reaction = Reaction(
-        id_,
+        id,
         net_index,
         sources=reactants,
         targets=products,
@@ -827,7 +827,7 @@ def add_reaction(net_index: int, id_: str, reactants: List[int], products: List[
     return reai
 
 
-def update_reaction(net_index: int, reaction_index: int, id_: str = None,
+def update_reaction(net_index: int, reaction_index: int, id: str = None,
                     fill_color: Color = None, thickness: float = None, ratelaw: str = None,
                     handle_positions: List[Vec2] = None):
     """
@@ -836,7 +836,7 @@ def update_reaction(net_index: int, reaction_index: int, id_: str = None,
     Args:
         net_index: The network index.
         reaction_index: The reaction index of the reaction to modify.
-        id_: If specified, the new ID of the reaction.
+        id: If specified, the new ID of the reaction.
         fill_color: If specified, the new fill color of the reaction.
         thickness: If specified, the thickness of the reaction.
         ratelaw: If specified, the rate law of the reaction.
@@ -923,7 +923,7 @@ def is_product(net_index: int, node_index: int, reaction_index: int) -> bool:
     return node_index in reaction.targets
 
 
-def update_compartment(net_index: int, comp_index: int, id_: str = None,
+def update_compartment(net_index: int, comp_index: int, id: str = None,
                        fill_color: Color = None, border_color: Color = None,
                        border_width: float = None, volume: float = None,
                        position: Vec2 = None, size: Vec2 = None):
@@ -933,7 +933,7 @@ def update_compartment(net_index: int, comp_index: int, id_: str = None,
     Args:
         net_index: The network index.
         comp_index: The compartment index of the compartment to modify.
-        id_: If specified, the new ID of the node.
+        id: If specified, the new ID of the node.
         fill_color: If specified, the new fill color of the compartment.
         border_color: If specified, the new border color of the compartment.
         border_width: If specified, the new border width of the compartment.

@@ -117,8 +117,8 @@ class Controller(IController):
         The 'g' suffix indicates that this operation creates its own group
         '''
         self.start_group()
-        iod.addNode(neti, node.id_, node.position.x, node.position.y, node.size.x, node.size.y)
-        nodei = iod.getNodeIndex(neti, node.id_)
+        iod.addNode(neti, node.id, node.position.x, node.position.y, node.size.x, node.size.y, True) # True = floating species
+        nodei = iod.getNodeIndex(neti, node.id)
         iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
         iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
                                 node.fill_color.Green(), node.fill_color.Blue())
@@ -143,7 +143,7 @@ class Controller(IController):
             raise ValueError('The "nodes" list for a newly added compartment should be empty. '
                              'This is to avoid implicit moving of nodes between compartments.')
         self.start_group()
-        compi = iod.addCompartment(neti, compartment.id_, *compartment.position, *compartment.size)
+        compi = iod.addCompartment(neti, compartment.id, *compartment.position, *compartment.size)
         iod.setCompartmentFillColor(neti, compi, self.wx_to_tcolor(compartment.fill))
         iod.setCompartmentOutlineColor(neti, compi, self.wx_to_tcolor(compartment.border))
         iod.setCompartmentOutlineThickness(neti, compi, compartment.border_width)
@@ -164,6 +164,10 @@ class Controller(IController):
     @iod_setter
     def rename_node(self, neti: int, nodei: int, new_id: str):
         iod.setNodeID(neti, nodei, new_id)
+
+    @iod_setter
+    def set_node_floating_status(self, neti: int, nodei: int, floatingStatus: bool):
+        iod.setNodeFloatingStatus (neti, nodei, floatingStatus)
 
     @iod_setter
     def set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour):
@@ -216,8 +220,8 @@ class Controller(IController):
     def add_reaction_g(self, neti: int, reaction: Reaction) -> int:
         """Try create a reaction."""
         self.start_group()
-        iod.createReaction(neti, reaction.id_, reaction.sources, reaction.targets)
-        reai = iod.getReactionIndex(neti, reaction.id_)
+        iod.createReaction(neti, reaction.id, reaction.sources, reaction.targets)
+        reai = iod.getReactionIndex(neti, reaction.id)
 
         for sidx in reaction.sources:
             iod.setReactionSrcNodeStoich(neti, reai, sidx, 1.0)
@@ -307,15 +311,15 @@ class Controller(IController):
 
     def get_list_of_nodes(self, neti: int) -> List[Node]:
         nodes = list()
-        for id_ in iod.getListOfNodeIDs(neti):
-            nodei = iod.getNodeIndex(neti, id_)
+        for id in iod.getListOfNodeIDs(neti):
+            nodei = iod.getNodeIndex(neti, id)
             nodes.append(self.get_node_by_index(neti, nodei))
         return nodes
 
     def get_list_of_reactions(self, neti: int) -> List[Reaction]:
         reactions = list()
-        for id_ in iod.getListOfReactionIDs(neti):
-            reai = iod.getReactionIndex(neti, id_)
+        for id in iod.getListOfReactionIDs(neti):
+            reai = iod.getReactionIndex(neti, id)
             reactions.append(self.get_reaction_by_index(neti, reai))
         return reactions
 
@@ -373,7 +377,7 @@ class Controller(IController):
         return iod.getReactionIndex(neti, rxn_id)
 
     def get_node_by_index(self, neti: int, nodei: int) -> Node:
-        id_ = iod.getNodeID(neti, nodei)
+        id = iod.getNodeID(neti, nodei)
         x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)
         fill_alpha = iod.getNodeFillColorAlpha(neti, nodei)
         fill_rgb = iod.getNodeFillColorRGB(neti, nodei)
@@ -382,7 +386,7 @@ class Controller(IController):
         border_rgb = iod.getNodeOutlineColorRGB(neti, nodei)
         border_color = rgba_to_wx_colour(border_rgb, border_alpha)
         return Node(
-            id_,
+            id,
             neti,
             index=nodei,
             pos=Vec2(x, y),
@@ -391,10 +395,11 @@ class Controller(IController):
             border_color=border_color,
             border_width=iod.getNodeOutlineThickness(neti, nodei),
             comp_idx=iod.getCompartmentOfNode(neti, nodei),
+            floatingNode=iod.IsFloatingNode (neti, nodei),
         )
 
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:
-        id_ = iod.getReactionID(neti, reai)
+        id = iod.getReactionID(neti, reai)
         sindices = iod.getListOfReactionSrcNodes(neti, reai)
         tindices = iod.getListOfReactionDestNodes(neti, reai)
         fill_rgb = iod.getReactionFillColorRGB(neti, reai)
@@ -406,7 +411,7 @@ class Controller(IController):
         items += [self.get_src_node_handle(neti, reai, i) for i in sindices]
         items += [self.get_dest_node_handle(neti, reai, i) for i in tindices]
 
-        return Reaction(id_,
+        return Reaction(id,
                         neti,
                         sources=sindices,
                         targets=tindices,
@@ -418,9 +423,9 @@ class Controller(IController):
                         )
 
     def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:
-        id_ = iod.getCompartmentID(neti, compi)
+        id = iod.getCompartmentID(neti, compi)
 
-        return Compartment(id_,
+        return Compartment(id,
                            nodes=iod.getNodesInCompartment(neti, compi),
                            volume=iod.getCompartmentVolume(neti, compi),
                            position=Vec2(iod.getCompartmentPosition(neti, compi)),

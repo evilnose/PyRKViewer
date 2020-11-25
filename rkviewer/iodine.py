@@ -514,7 +514,7 @@ def _pushUndoStack():
         netSetStack.push(networkDict)
 
 
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float):
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode : bool):
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -674,6 +674,26 @@ def getNodeID(neti: int, nodei: int):
             return n.nodes[nodei].id
 
     raise ExceptionDict[errCode](errorDict[errCode])
+
+def IsFloatingNode (neti : int, nodei : int):
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5    
+    n = networkDict[neti]
+    if n.nodes[nodei].floatingNode:
+       return True
+    else:
+       return False
+
+def IsBoundarygNode (neti : int, nodei : int):
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5    
+    n = networkDict[neti]        
+    if n.nodes[nodei].floatingNode:
+       return False
+    else:
+       return True
 
 
 def getListOfNodeIDs(neti: int) -> List[str]:
@@ -1072,6 +1092,26 @@ def setNodeID(neti: int, nodei: int, newID: str):
                 return
     raise ExceptionDict[errCode](errorDict[errCode])
 
+def setNodeFloatingStatus (neti : int, nodei : int):
+    errCode = 0 
+    if neti not in networkDict:
+       errCode = -5
+    net = networkDict[neti] 
+    if nodei not in net.nodes.keys():
+       errCode = -7
+    else:
+        net.nodes[nodei].id = True
+
+def setNodeBoundaryStatus (neti : int, nodei : int):
+    errCode = 0 
+    if neti not in networkDict:
+       errCode = -5
+    net = networkDict[neti] 
+    if nodei not in net.nodes.keys():
+       errCode = -7
+    else:
+        net.nodes[nodei].id = False
+
 
 def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCoordinates: bool = False):
     """
@@ -1128,6 +1168,28 @@ def setNodeSize(neti: int, nodei: int, w: float, h: float):
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
+
+def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
+    """
+    setNodeFloatingStatus setNodeFloatingStatus
+    errCode: -7: node index out of range
+    -5: net index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        n = networkDict[neti]
+        if nodei not in n.nodes:
+            errCode = -7
+        else:
+            _pushUndoStack()
+            n.nodes[nodei].floatingNode = floatingStatus
+            return
+
+    raise ExceptionDict[errCode](errorDict[errCode])
 
 def setNodeFillColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     """

@@ -384,8 +384,8 @@ class Canvas(wx.ScrolledWindow):
         return NodeElement(node, self, layers)
 
     def CreateReactionElement(self, rxn: Reaction, layers: List[int]) -> ReactionElement:
-        snodes = [self.node_idx_map[id_] for id_ in rxn.sources]
-        tnodes = [self.node_idx_map[id_] for id_ in rxn.targets]
+        snodes = [self.node_idx_map[id] for id in rxn.sources]
+        tnodes = [self.node_idx_map[id] for id in rxn.targets]
         rb = ReactionBezier(rxn, snodes, tnodes)
         return ReactionElement(rxn, rb, self, layers, Canvas.HANDLE_LAYER)
 
@@ -689,15 +689,16 @@ class Canvas(wx.ScrolledWindow):
                     border_color=get_theme('node_border'),
                     border_width=get_theme('node_border_width'),
                     comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
+                    floatingNode = True,
                 )
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
-                node.id_ = self._GetUniqueName(node.id_, [n.id_ for n in self._nodes])
+                node.id = self._GetUniqueName(node.id, [n.id for n in self._nodes])
 
                 self.controller.start_group()
                 self.controller.add_node_g(self._net_index, node)
                 self.controller.end_group()
 
-                index = self.controller.get_node_index(self._net_index, node.id_)
+                index = self.controller.get_node_index(self._net_index, node.id)
                 with self._SelectGroupEvent():
                     self.sel_nodes_idx.set_item({index})
                     self.sel_reactions_idx.set_item(set())
@@ -776,7 +777,7 @@ class Canvas(wx.ScrolledWindow):
                 self.drag_sel_nodes_idx = set()
                 self.drag_sel_comp_idx = set()
             elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
-                id_ = self._GetUniqueName('c', [c.id_ for c in self._compartments])
+                id = self._GetUniqueName('c', [c.id for c in self._compartments])
 
                 size = self._drag_rect.size / cstate.scale
                 # make sure the compartment is at least of some size
@@ -787,7 +788,7 @@ class Canvas(wx.ScrolledWindow):
                 # center position if drag_rect size has been adjusted
                 pos = self._drag_rect.position / cstate.scale - size_diff / 2
 
-                comp = Compartment(id_,
+                comp = Compartment(id,
                                    index=self.comp_index,
                                    net_index=self.net_index,
                                    nodes=list(),
@@ -1191,9 +1192,9 @@ class Canvas(wx.ScrolledWindow):
 
                 assert bound_node is not None
                 self.ShowWarningDialog("Could not delete node '{}', as one or more reactions \
-depend on it.".format(bound_node.id_))
+depend on it.".format(bound_node.id))
                 self.logger.warning("Tried and failed to delete bound node '{}' with index '{}'"
-                                    .format(bound_node.id_, node_idx))
+                                    .format(bound_node.id, node_idx))
                 return
 
         self.controller.start_group()
@@ -1214,6 +1215,17 @@ depend on it.".format(bound_node.id_))
             self.sel_nodes_idx.set_item({n.index for n in self._nodes})
             self.sel_reactions_idx.set_item({r.index for r in self._reactions})
             self.sel_compartments_idx.set_item({c.index for c in self._compartments})
+        self.LazyRefresh()
+    
+    #Jin_edit
+    def SelectAllNodes(self):
+        with self._SelectGroupEvent():
+            self.sel_nodes_idx.set_item({n.index for n in self._nodes})
+        self.LazyRefresh()
+
+    def SelectAllReactions(self):
+        with self._SelectGroupEvent():
+            self.sel_reactions_idx.set_item({r.index for r in self._reactions})
         self.LazyRefresh()
 
     def ClearCurrentSelection(self):
@@ -1241,7 +1253,7 @@ depend on it.".format(bound_node.id_))
         self._product_idx = self.sel_nodes_idx.item_copy()
         self.LazyRefresh()
 
-    def CreateReactionFromMarked(self, id_='r'):
+    def CreateReactionFromMarked(self, id='r'):
         if len(self._reactant_idx) == 0:
             self.ShowWarningDialog('Could not create reaction: no reactants selected!')
             return
@@ -1254,12 +1266,12 @@ depend on it.".format(bound_node.id_))
                                    'identical.')
             return
 
-        id_ = self._GetUniqueName(id_, [r.id_ for r in self._reactions])
+        id = self._GetUniqueName(id, [r.id for r in self._reactions])
         sources = get_nodes_by_idx(self._nodes, self._reactant_idx)
         targets = get_nodes_by_idx(self._nodes, self._product_idx)
         centroid = compute_centroid([n.rect for n in chain(sources, targets)])
         reaction = Reaction(
-            id_,
+            id,
             self.net_index,
             sources=list(self._reactant_idx),
             targets=list(self._product_idx),
@@ -1275,7 +1287,7 @@ depend on it.".format(bound_node.id_))
             self.sel_nodes_idx.set_item(set())
             self.sel_compartments_idx.set_item(set())
             self.sel_reactions_idx.set_item(
-                {self.controller.get_reaction_index(self._net_index, id_)})
+                {self.controller.get_reaction_index(self._net_index, id)})
         self.LazyRefresh()
 
     def CopySelected(self):
@@ -1288,14 +1300,14 @@ depend on it.".format(bound_node.id_))
 
     def Paste(self):
         pasted_ids = set()
-        all_ids = {n.id_ for n in self._nodes}
+        all_ids = {n.id for n in self._nodes}
 
         self.controller.start_group()
         # get unique IDs
         for node in self._copied_nodes:
-            node.id_ = self._GetUniqueName(node.id_, pasted_ids, all_ids)
+            node.id = self._GetUniqueName(node.id, pasted_ids, all_ids)
             node.position += Vec2.repeat(20)
-            pasted_ids.add(node.id_)
+            pasted_ids.add(node.id)
             self._nodes.append(node)  # add this for the event handlers to see
             self.controller.add_node_g(self._net_index, node)
 
@@ -1303,8 +1315,8 @@ depend on it.".format(bound_node.id_))
         # update selection *after* end_group(), so as to make sure the canvas is property reset
         # and updated. For example, if it is not, then the ID of some nodes may be 0 as they are
         # uninitialized.
-        self.sel_nodes_idx.set_item({self.controller.get_node_index(self._net_index, id_)
-                                        for id_ in pasted_ids})
+        self.sel_nodes_idx.set_item({self.controller.get_node_index(self._net_index, id)
+                                        for id in pasted_ids})
 
     def ShowWarningDialog(self, msg: str, caption='Warning'):
         wx.MessageBox(msg, caption, wx.OK | wx.ICON_WARNING)

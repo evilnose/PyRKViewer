@@ -121,8 +121,8 @@ class EditPanelForm(ScrolledPanel):
             self.UpdateAllFields()
 
         # clear validation errors
-        for id_ in self.badges.keys():
-            self._SetValidationState(True, id_)
+        for id in self.badges.keys():
+            self._SetValidationState(True, id)
         self._self_changes = False
 
     def InitLayout(self):
@@ -440,6 +440,7 @@ class NodeForm(EditPanelForm):
     border_ctrl: wx.ColourPickerCtrl
     border_alpha_ctrl: Optional[wx.TextCtrl]
     border_width_ctrl: wx.TextCtrl
+    nodeStatusDropDown : wx.ComboBox
     _nodes: List[Node]  #: current list of nodes in canvas.
     _selected_idx: Set[int]  #: current list of selected indices in canvas.
     _bounding_rect: Optional[Rect]  #: the exact bounding rectangle of the selected nodes
@@ -506,6 +507,7 @@ class NodeForm(EditPanelForm):
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
         self.ExternalUpdate()
 
+
     def CreateControls(self, sizer: wx.GridSizer):
         self.id_ctrl = wx.TextCtrl(self)
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
@@ -535,6 +537,11 @@ class NodeForm(EditPanelForm):
                                                       self._BorderWidthCallback, (1, 100))
         self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
 
+        states = ['Floating Node', 'Boundary Node'] 
+        self.nodeStatusDropDown = wx.ComboBox (self, choices=states)
+        self._AppendControl (sizer, 'Node Status', self.nodeStatusDropDown )
+        self.nodeStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeStatusChoice)
+
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
@@ -546,7 +553,7 @@ class NodeForm(EditPanelForm):
             return
         else:
             for node in self._nodes:
-                if node.id_ == new_id:
+                if node.id == new_id:
                     self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
             else:
@@ -672,6 +679,23 @@ class NodeForm(EditPanelForm):
             self.controller.end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
+    # ####
+    def  OnNodeStatusChoice (self, evt):    
+        """Callback for the change node status, floating or boundary."""
+        status = self.nodeStatusDropDown.GetValue()
+        if status == 'Floating Node':
+           floatingStatus = True
+        else:
+           floatingStatus = False 
+
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        self._self_changes = True
+        self.controller.start_group()
+        for node in nodes:
+            self.controller.set_node_floating_status(self.net_index, node.index, floatingStatus)
+        post_event(DidModifyNodesEvent(list(self._selected_idx)))
+        self.controller.end_group()
+
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
@@ -753,14 +777,14 @@ class NodeForm(EditPanelForm):
         if len(self._selected_idx) == 1:
             [node] = nodes
             self.id_ctrl.Enable(True)
-            id_text = node.id_
+            id_text = node.id
             fill = node.fill_color
             fill_alpha = node.fill_color.Alpha()
             border = node.border_color
             border_alpha = node.border_color.Alpha()
         else:
             self.id_ctrl.Enable(False)
-            id_text = '; '.join(sorted(list(n.id_ for n in nodes)))
+            id_text = '; '.join(sorted(list(n.id for n in nodes)))
 
             fill, fill_alpha = self._GetMultiColor(list(n.fill_color for n in nodes))
             border, border_alpha = self._GetMultiColor(list(n.border_color for n in nodes))
@@ -779,6 +803,8 @@ class NodeForm(EditPanelForm):
             self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
 
         self.border_width_ctrl.ChangeValue(border_width)
+
+        self.nodeStatusDropDown.SetValue('Floating Node')
 
 
 @dataclass
@@ -980,20 +1006,20 @@ class ReactionForm(EditPanelForm):
 
     def _GetSrcStoichs(self, reai: int):
         ids = self.controller.get_list_of_src_indices(self.net_index, reai)
-        return [StoichInfo(id_, self.controller.get_src_node_stoich(self.net_index, reai, id_))
-                for id_ in ids]
+        return [StoichInfo(id, self.controller.get_src_node_stoich(self.net_index, reai, id))
+                for id in ids]
 
     def _GetDestStoichs(self, reai: int):
         ids = self.controller.get_list_of_dest_indices(self.net_index, reai)
-        return [StoichInfo(id_, self.controller.get_dest_node_stoich(self.net_index, reai, id_))
-                for id_ in ids]
+        return [StoichInfo(id, self.controller.get_dest_node_stoich(self.net_index, reai, id))
+                for id in ids]
 
     def UpdateAllFields(self):
         """Update all reaction fields from current data."""
         self._self_changes = False
         assert len(self._selected_idx) != 0
         reactions = [r for r in self._reactions if r.index in self._selected_idx]
-        id_text = '; '.join(sorted(list(r.id_ for r in reactions)))
+        id_text = '; '.join(sorted(list(r.id for r in reactions)))
         fill: wx.Colour
         fill_alpha: Optional[int]
         ratelaw_text: str
@@ -1283,7 +1309,7 @@ class CompartmentForm(EditPanelForm):
         assert len(comps) == len(self.selected_idx)
         prec = 2
 
-        id_text = '; '.join([c.id_ for c in comps])
+        id_text = '; '.join([c.id for c in comps])
         fill: wx.Colour
         fill_alpha: Optional[int]
         border: wx.Colour

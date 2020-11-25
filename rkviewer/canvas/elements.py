@@ -122,9 +122,13 @@ class NodeElement(CanvasElement):
             self.gfont = gc.CreateFont(font, wx.BLACK)
         gc.SetFont(self.gfont)
 
+        boundaryFactor = 1
+        if not self.node.floatingNode:
+           boundaryFactor = 2  # Store this in a theme? 
+
         s_aligned_rect = self.node.s_rect.aligned()
         aligned_border_width = max(even_round(
-            self.node.border_width * cstate.scale), 2)
+            self.node.border_width * boundaryFactor * cstate.scale), 2)
         width, height = s_aligned_rect.size
         draw_rect(
             gc,
@@ -136,10 +140,10 @@ class NodeElement(CanvasElement):
 
         # draw text
         tw, th, _, _ = gc.GetFullTextExtent(
-            self.node.id_)  # optimize by caching?
+            self.node.id)  # optimize by caching?
         tx = (width - tw) / 2
         ty = (height - th) / 2
-        gc.DrawText(self.node.id_, self.node.s_position.x +
+        gc.DrawText(self.node.id, self.node.s_position.x +
                     tx, self.node.s_position.y + ty)
 
     def do_left_down(self, _: Vec2):

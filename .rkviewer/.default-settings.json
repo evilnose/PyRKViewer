@@ -63,9 +63,9 @@
         ],
         "node_border_width": 2,
         "node_fill": [
-            150,
             255,
-            150,
+            204,
+            153,
             200
         ],
         "node_font_color": [
@@ -94,7 +94,6 @@
             100,
             100
         ],
-        "reaction_center_size": 10,
         "reaction_fill": [
             0,
             0,

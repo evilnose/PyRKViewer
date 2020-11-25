@@ -65,6 +65,7 @@ class TNode:
     id: str
     position: Vec2
     rectSize: Vec2
+    floatingNode : bool  # If false it means the node is a boundary node
     compi: int = -1
     fillColor: TColor = TColor(255, 150, 80, 255)
     outlineColor: TColor = TColor(255, 100, 80, 255)
@@ -535,7 +536,7 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
             return
 
         _pushUndoStack()
-        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h))
+        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h), floatingNode)
         n.addNode(newNode)
         networkDict[neti] = n
     finally:

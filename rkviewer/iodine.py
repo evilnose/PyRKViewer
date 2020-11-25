@@ -515,7 +515,7 @@ def _pushUndoStack():
         netSetStack.push(networkDict)
 
 
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode : bool):
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode : bool = False):
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -1092,26 +1092,6 @@ def setNodeID(neti: int, nodei: int, newID: str):
                 net.nodes[nodei].id = newID
                 return
     raise ExceptionDict[errCode](errorDict[errCode])
-
-def setNodeFloatingStatus (neti : int, nodei : int):
-    errCode = 0 
-    if neti not in networkDict:
-       errCode = -5
-    net = networkDict[neti] 
-    if nodei not in net.nodes.keys():
-       errCode = -7
-    else:
-        net.nodes[nodei].id = True
-
-def setNodeBoundaryStatus (neti : int, nodei : int):
-    errCode = 0 
-    if neti not in networkDict:
-       errCode = -5
-    net = networkDict[neti] 
-    if nodei not in net.nodes.keys():
-       errCode = -7
-    else:
-        net.nodes[nodei].id = False
 
 
 def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCoordinates: bool = False):
@@ -2594,6 +2574,7 @@ class NodeSchema(Schema):
     # h = fields.Float(validate=validate.Range(min=get_setting('min_node_height')))
     position = Dim2()
     rectSize = Dim2()
+    floatingNode = fields.Bool()
     compartment = fields.Int()
     fillColor = Color()
     outlineColor = Color()

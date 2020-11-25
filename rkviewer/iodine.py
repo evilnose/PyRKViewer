@@ -9,28 +9,38 @@ TODOs
     * Phase out errCode, or at least provide more detalis in error messages.
 """
 from __future__ import annotations
+
+from marshmallow.decorators import post_load
 from .mvc import (IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexError,
                   ReactionIndexError, NodeIndexError, CompartmentIndexError, StoichError,
                   StackEmptyError, JSONError, FileError)
+from .canvas.geometry import Vec2
 import copy
 from dataclasses import dataclass, field
 import json
-from typing import DefaultDict, Dict, MutableSet, Set, Tuple, List, cast
+from typing import Any, DefaultDict, Dict, MutableSet, Set, Tuple, List, cast
 from enum import Enum
 from collections import defaultdict
+from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
 
 
-class TColor(object):
+@dataclass(frozen=True)
+class TColor:
     r: int
     g: int
     b: int
-    a: int
+    a: int = 255
 
-    def __init__(self, r: int, g: int, b: int, a: int = 255):
-        self.r = r
-        self.g = g
-        self.b = b
-        self.a = a
+    def swapped(self, r: int = None, g: int = None, b: int = None, a: int = None) -> TColor:
+        if r is None:
+            r = self.r
+        if g is None:
+            g = self.g
+        if b is None:
+            b = self.b
+        if a is None:
+            a = self.a
+        return TColor(r, g, b, a)
 
 
 class TFont:
@@ -40,6 +50,7 @@ class TFont:
     weight: str
     name: str
     color: TColor
+
     def __init__(self):
         self.pointSize = 20
         self.family = "default"
@@ -50,12 +61,10 @@ class TFont:
 
 
 @dataclass
-class TNode(object):
+class TNode:
     id: str
-    x: float
-    y: float
-    w: float
-    h: float
+    position: Vec2
+    rectSize: Vec2
     compi: int = -1
     fillColor: TColor = TColor(255, 150, 80, 255)
     outlineColor: TColor = TColor(255, 100, 80, 255)
@@ -75,17 +84,32 @@ class TNetwork:
     lastReactionIdx: int
     lastCompartmentIdx: int
 
-    def __init__(self, netID: str):
-        self.id = netID
-        self.nodes = dict()
-        self.reactions = dict()
-        self.compartments = dict()
-        self.baseNodes = set()
+    def __init__(self, id: str, nodes: Dict[int, TNode] = None,
+                 reactions: Dict[int, TReaction] = None,
+                 compartments: Dict[int, TCompartment] = None):
+        if nodes is None:
+            nodes = dict()
+        if reactions is None:
+            reactions = dict()
+        if compartments is None:
+            compartments = dict()
+        self.id = id
+        self.nodes = nodes
+        self.reactions = reactions
+        self.compartments = compartments
+        self.baseNodes = set(index for index, n in nodes.items() if n.compi)
         self.srcMap = defaultdict(set)
         self.destMap = defaultdict(set)
-        self.lastNodeIdx = 0
-        self.lastReactionIdx = 0
-        self.lastCompartmentIdx = 0
+        # Initialize srcMap and destMap
+        for index, reaction in reactions.items():
+            for src in reaction.reactants:
+                self.srcMap[src].add(index)
+            for dest in reaction.products:
+                self.destMap[dest].add(index)
+
+        self.lastNodeIdx = max(nodes.keys(), default=-1) + 1
+        self.lastReactionIdx = max(reactions.keys(), default=-1) + 1
+        self.lastCompartmentIdx = max(compartments.keys(), default=-1) + 1
 
     def addNode(self, node: TNode):
         self.nodes[self.lastNodeIdx] = node
@@ -96,9 +120,9 @@ class TNetwork:
         self.reactions[self.lastReactionIdx] = rea
 
         # update nodeToReactions
-        for src in rea.srcDict:
+        for src in rea.reactants:
             self.srcMap[src].add(self.lastReactionIdx)
-        for dest in rea.destDict:
+        for dest in rea.products:
             self.destMap[dest].add(self.lastReactionIdx)
 
         self.lastReactionIdx += 1
@@ -110,47 +134,29 @@ class TNetwork:
         return ind
 
 
-class TReaction(object):
+@dataclass
+class TReaction:
     id: str
-    rateLaw: str
-    srcDict: Dict[int, TSpeciesNode]
-    destDict: Dict[int, TSpeciesNode]
-    fillColor: TColor
-    thickness: float
-    centerHandleX: float
-    centerHandleY: float
-
-    def __init__(self, reaID: str):
-        self.id = reaID
-        self.rateLaw = ""
-        self.srcDict = dict()
-        self.destDict = dict()
-        self.fillColor = TColor(255, 150, 80, 255)
-        self.thickness = 3.0
-        self.centerHandleX = 0.0
-        self.centerHandleY = 0.0
+    rateLaw: str = ""
+    reactants: Dict[int, TSpeciesNode] = field(default_factory=dict)
+    products: Dict[int, TSpeciesNode] = field(default_factory=dict)
+    fillColor: TColor = TColor(255, 150, 80, 255)
+    thickness: float = 3.0
+    centerHandlePos: Vec2 = Vec2()
 
 
+@dataclass
 class TSpeciesNode:
     stoich: float
-    handleX: float
-    handleY: float
-
-    def __init__(self, stoich: float):
-        self.stoich = stoich
-        self.handleX = 0.0
-        self.handleY = 0.0
+    handlePos: Vec2 = Vec2()
 
 
 @dataclass
 class TCompartment:
     id: str
-    x: float
-    y: float
-    w: float
-    h: float
+    position: Vec2
+    rectSize: Vec2
     node_indices: Set[int] = field(default_factory=set)
-    comp_idx: int = -1
     volume: float = 1
     fillColor: TColor = TColor(0, 247, 255, 255)
     outlineColor: TColor = TColor(0, 106, 255, 255)
@@ -174,7 +180,7 @@ class TStack:
         return self.items.pop()
 
 
-class TNetworkDict(Dict[int, TNetwork]):
+class TNetworkDict(dict):
     def __init__(self):
         super().__init__()
         self.lastNetIndex = 0
@@ -352,21 +358,21 @@ def getNetworkIndex(netID: str) -> int:
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def saveNetworkAsJSON(neti: int, fileName: str):
-    """
-    SaveNetworkAsJSON SaveNetworkAsJSON
-    errCode: -5: net index out of range
-    -10: "Json convert error", -11: "File error"
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-        raise ExceptionDict[errCode](errorDict[errCode])
-    else:
-        data2 = json.dumps(networkDict[neti],
-                           sort_keys=True, indent=4, separators=(',', ': '))
-        print(data2)
+# def saveNetworkAsJSON(neti: int, fileName: str):
+#     """
+#     SaveNetworkAsJSON SaveNetworkAsJSON
+#     errCode: -5: net index out of range
+#     -10: "Json convert error", -11: "File error"
+#     """
+#     global stackFlag, errCode, networkDict, netSetStack, redoStack
+#     errCode = 0
+#     if neti not in networkDict:
+#         errCode = -5
+#         raise ExceptionDict[errCode](errorDict[errCode])
+#     else:
+#         data2 = json.dumps(networkDict[neti],
+#                            sort_keys=True, indent=4, separators=(',', ': '))
+#         print(data2)
 
 
 # #ReadNetworkFromJSON ReadNetworkFromJSON
@@ -458,6 +464,19 @@ def _raiseError(eCode: int):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
+def _addNetwork(network: TNetwork) -> int:
+    """Helper function that adds a network object."""
+    global lastNetIndex
+    for net in networkDict.values():
+        if net.id == network.id:
+            _raiseError(-3)
+    _pushUndoStack()
+
+    networkDict[lastNetIndex] = network
+    lastNetIndex += 1
+    return lastNetIndex - 1
+
+
 def _getNetwork(neti: int) -> TNetwork:
     if neti not in networkDict:
         errCode = -5
@@ -471,11 +490,13 @@ def _getNode(neti: int, nodei: int) -> TNode:
         _raiseError(-7)
     return net.nodes[nodei]
 
+
 def _getReaction(neti: int, reai: int) -> TReaction:
     net = _getNetwork(neti)
     if reai not in net.reactions:
         _raiseError(-6)
     return net.reactions[reai]
+
 
 def _getCompartment(neti: int, compi: int) -> TCompartment:
     global errCode
@@ -514,7 +535,7 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float):
             return
 
         _pushUndoStack()
-        newNode = TNode(nodeID, x, y, w, h)
+        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h))
         n.addNode(newNode)
         networkDict[neti] = n
     finally:
@@ -628,8 +649,8 @@ def getNodeCenter(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            X = round(n.nodes[nodei].x + n.nodes[nodei].w*0.5, 2)
-            Y = round(n.nodes[nodei].y + n.nodes[nodei].h*0.5, 2)
+            X = round(n.nodes[nodei].position.x + n.nodes[nodei].rectSize.x*0.5, 2)
+            Y = round(n.nodes[nodei].position.y + n.nodes[nodei].rectSize.y*0.5, 2)
             return (X, Y)
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -697,10 +718,10 @@ def getNodeCoordinateAndSize(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            X = round(n.nodes[nodei].x, 2)
-            Y = round(n.nodes[nodei].y, 2)
-            W = round(n.nodes[nodei].w, 2)
-            H = round(n.nodes[nodei].h, 2)
+            X = round(n.nodes[nodei].position.x, 2)
+            Y = round(n.nodes[nodei].position.y, 2)
+            W = round(n.nodes[nodei].rectSize.x, 2)
+            H = round(n.nodes[nodei].rectSize.y, 2)
             return (X, Y, W, H)
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1052,7 +1073,7 @@ def setNodeID(neti: int, nodei: int, newID: str):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCoordinates: bool):
+def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCoordinates: bool = False):
     """
     setNodeCoordinate setNodeCoordinate
     errCode: -7: node index out of range
@@ -1064,7 +1085,8 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
 
     if allowNegativeCoordinates:
         lowerLimit = -1E12
-    else: lowerLimit = 0
+    else:
+        lowerLimit = 0
 
     if neti not in networkDict:
         errCode = -5
@@ -1076,8 +1098,7 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].x = x
-            n.nodes[nodei].y = y
+            n.nodes[nodei].position = Vec2(x, y)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1102,8 +1123,7 @@ def setNodeSize(neti: int, nodei: int, w: float, h: float):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].w = w
-            n.nodes[nodei].h = h
+            n.nodes[nodei].rectSize = Vec2(w, h)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1128,9 +1148,7 @@ def setNodeFillColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].fillColor.r = r
-            n.nodes[nodei].fillColor.g = g
-            n.nodes[nodei].fillColor.b = b
+            n.nodes[nodei].fillColor = n.nodes[nodei].fillColor.swapped(r, g, b)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1148,14 +1166,12 @@ def setNodeFillColorAlpha(neti: int, nodei: int, a: float):
     if neti not in networkDict:
         errCode = -5
     else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif a < 0 or a > 1:
+        node = _getNode(neti, nodei)
+        if a < 0 or a > 1:
             errCode = -12
         else:
             _pushUndoStack()
-            networkDict[neti].nodes[nodei].fillColor.a = int(a*255)
+            node.fillColor = node.fillColor.swapped(a=int(a*255))
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1180,9 +1196,7 @@ def setNodeOutlineColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].outlineColor.r = r
-            n.nodes[nodei].outlineColor.g = g
-            n.nodes[nodei].outlineColor.b = b
+            n.nodes[nodei].outlineColor = n.nodes[nodei].outlineColor.swapped(r, g, b)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1208,7 +1222,7 @@ def setNodeOutlineColorAlpha(neti: int, nodei: int, a: float):
         else:
             _pushUndoStack()
             A1 = int(a * 255)
-            n.nodes[nodei].outlineColor.a = A1
+            n.nodes[nodei].outlineColor = n.nodes[nodei].outlineColor.swapped(a=A1)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1383,9 +1397,7 @@ def setNodeFontColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].font.color.r = r
-            n.nodes[nodei].font.color.g = g
-            n.nodes[nodei].font.color.b = b
+            n.nodes[nodei].font.color = n.nodes[nodei].font.color.swapped(r, g, b)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1410,7 +1422,8 @@ def setNodeFontColorAlpha(neti: int, nodei: int, a: float):
             errCode = -12
         else:
             _pushUndoStack()
-            networkDict[neti].nodes[nodei].font.color.a = int(a*255)
+            node = networkDict[neti].nodes[nodei]
+            node.font.color = node.font.color.swapped(a=int(a*255))
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1446,9 +1459,9 @@ def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]
 
         # Add src/target nodes
         for srcNodeIdx in sources:
-            newReact.srcDict[srcNodeIdx] = TSpeciesNode(1)  # default stoich to 1
+            newReact.reactants[srcNodeIdx] = TSpeciesNode(1)  # default stoich to 1
         for destNodeIdx in targets:
-            newReact.destDict[destNodeIdx] = TSpeciesNode(1)  # default stoich to 1
+            newReact.products[destNodeIdx] = TSpeciesNode(1)  # default stoich to 1
 
         net.addReaction(newReact)
         return
@@ -1493,9 +1506,9 @@ def deleteReaction(neti: int, reai: int):
             _pushUndoStack()
             net = _getNetwork(neti)
             reaction = _getReaction(neti, reai)
-            for src in reaction.srcDict:
+            for src in reaction.reactants:
                 net.srcMap[src].remove(reai)
-            for dest in reaction.destDict:
+            for dest in reaction.products:
                 net.destMap[dest].remove(reai)
             del networkDict[neti].reactions[reai]
             return
@@ -1684,7 +1697,7 @@ def getReactionCenterHandlePosition(neti: int, reai: int):
         if reai not in networkDict[neti].reactions:
             errCode = -6
         else:
-            return (round(r[reai].centerHandleX, 2), round(r[reai].centerHandleY, 2))
+            return (round(r[reai].centerHandlePos.x, 2), round(r[reai].centerHandlePos.y, 2))
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1705,11 +1718,11 @@ def getReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int):
             errCode = -6
         elif srcNodeIdx not in networkDict[neti].nodes:
             errCode = -7
-        elif srcNodeIdx not in r[reai].srcDict:
+        elif srcNodeIdx not in r[reai].reactants:
             raise ValueError('The given node index "{}" is not a reactant node of "{}"'.format(
                              srcNodeIdx, reai))
         else:
-            return r[reai].srcDict[srcNodeIdx].stoich
+            return r[reai].reactants[srcNodeIdx].stoich
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
@@ -1729,11 +1742,11 @@ def getReactionDestNodeStoich(neti: int, reai: int, destNodeIdx: int):
             errCode = -6
         elif destNodeIdx not in networkDict[neti].nodes:
             errCode = -7
-        elif destNodeIdx not in r[reai].destDict:
+        elif destNodeIdx not in r[reai].products:
             raise ValueError('The given node index "{}" is not a product node of "{}"'.format(
                              destNodeIdx, reai))
         else:
-            s = r[reai].destDict[destNodeIdx]
+            s = r[reai].products[destNodeIdx]
             return s.stoich
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1754,12 +1767,12 @@ def getReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int):
             errCode = -6
         elif srcNodeIdx not in networkDict[neti].nodes:
             errCode = -7
-        elif srcNodeIdx not in r[reai].srcDict:
+        elif srcNodeIdx not in r[reai].reactants:
             raise ValueError('The given node index "{}" is not a reactant node of "{}"'.format(
                              srcNodeIdx, reai))
         else:
-            return (round(r[reai].srcDict[srcNodeIdx].handleX, 2),
-                    round(r[reai].srcDict[srcNodeIdx].handleY, 2))
+            return (round(r[reai].reactants[srcNodeIdx].handlePos.x, 2),
+                    round(r[reai].reactants[srcNodeIdx].handlePos.y, 2))
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1780,12 +1793,12 @@ def getReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int):
             errCode = -6
         elif destNodeIdx not in networkDict[neti].nodes:
             errCode = -7
-        elif destNodeIdx not in r[reai].destDict:
+        elif destNodeIdx not in r[reai].products:
             raise ValueError('The given node index "{}" is not a product node of "{}"'.format(
                              destNodeIdx, reai))
         else:
-            return (round(r[reai].destDict[destNodeIdx].handleX, 2),
-                    round(r[reai].destDict[destNodeIdx].handleY, 2))
+            return (round(r[reai].products[destNodeIdx].handlePos.x, 2),
+                    round(r[reai].products[destNodeIdx].handlePos.y, 2))
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1805,7 +1818,7 @@ def getNumberOfSrcNodes(neti: int, reai: int):
         if reai not in networkDict[neti].reactions:
             errCode = -6
         else:
-            return len(r[reai].srcDict)
+            return len(r[reai].reactants)
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1825,7 +1838,7 @@ def getNumberOfDestNodes(neti: int, reai: int):
         if reai not in networkDict[neti].reactions:
             errCode = -6
         else:
-            return len(r[reai].destDict)
+            return len(r[reai].products)
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1846,7 +1859,7 @@ def getListOfReactionSrcNodes(neti: int, reai: int) -> List[int]:
             errCode = -6
         else:
             list1 = []
-            for k in reactions[reai].srcDict:
+            for k in reactions[reai].reactants:
                 list1.append(k)
             list1.sort()
             return list1
@@ -1870,7 +1883,7 @@ def getListOfReactionDestNodes(neti: int, reai: int) -> List[int]:
             errCode = -6
         else:
             list1 = []
-            for k in r[reai].destDict:
+            for k in r[reai].products:
                 list1.append(k)
             list1.sort()
             return list1
@@ -1920,11 +1933,11 @@ def printReactionInfo(neti: int, reai: int):
 #             errCode = -6
 #         else:
 #             rea = r[reai]
-#             if srcNodeIdx not in rea.srcDict:
+#             if srcNodeIdx not in rea.reactants:
 #                 errCode = -2
 #             else:
 #                 _pushUndoStack()
-#                 del rea.srcDict[srcNodeIdx]
+#                 del rea.reactants[srcNodeIdx]
 #                 networkDict[neti].reactions[reai] = rea
 #                 return
 
@@ -1948,11 +1961,11 @@ def printReactionInfo(neti: int, reai: int):
 #             errCode = -6
 #         else:
 #             rea = r[reai]
-#             if destNodeIdx not in rea.destDict:
+#             if destNodeIdx not in rea.products:
 #                 errCode = -2
 #             else:
 #                 _pushUndoStack()
-#                 del rea.destDict[destNodeIdx]
+#                 del rea.products[destNodeIdx]
 #                 return
 
 #     raise ExceptionDict[errCode](errorDict[errCode])
@@ -2024,14 +2037,14 @@ def setReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int, newStoich: f
             errCode = -6
         elif srcNodeIdx not in networkDict[neti].nodes:
             errCode = -7
-        elif srcNodeIdx not in r[reai].srcDict:
+        elif srcNodeIdx not in r[reai].reactants:
             raise ValueError('The given node index "{}" is not a reactant node of "{}"'.format(
                              srcNodeIdx, reai))
         elif newStoich <= 0.0:
             errCode = -8
         else:
             _pushUndoStack()
-            networkDict[neti].reactions[reai].srcDict[srcNodeIdx].stoich = newStoich
+            networkDict[neti].reactions[reai].reactants[srcNodeIdx].stoich = newStoich
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -2056,20 +2069,20 @@ def setReactionDestNodeStoich(neti: int, reai: int, destNodeIdx: int, newStoich:
             errCode = -6
         elif destNodeIdx not in networkDict[neti].nodes:
             errCode = -7
-        elif destNodeIdx not in r[reai].destDict:
+        elif destNodeIdx not in r[reai].products:
             raise ValueError('The given node index "{}" is not a product node of "{}"'.format(
                              destNodeIdx, reai))
         elif newStoich <= 0.0:
             errCode = -8
         else:
             _pushUndoStack()
-            networkDict[neti].reactions[reai].destDict[destNodeIdx].stoich = newStoich
+            networkDict[neti].reactions[reai].products[destNodeIdx].stoich = newStoich
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def setReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int, handleX: float, handleY: float):
+def setReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int, handlePosX: float, handlePosY: float):
     """
     setReactionSrcNodeHandlePosition edit HandlePosition by Reaction srcNodeID
     errCode: -6: reaction index out of range,
@@ -2086,19 +2099,19 @@ def setReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int, hand
             errCode = -6
         elif srcNodeIdx not in networkDict[neti].nodes:
             _raiseError(-7)
-        elif srcNodeIdx not in r[reai].srcDict:
+        elif srcNodeIdx not in r[reai].reactants:
             raise ValueError('The given node index "{}" is not a reactant node of "{}"'.format(
                              srcNodeIdx, reai))
         else:
             _pushUndoStack()
-            networkDict[neti].reactions[reai].srcDict[srcNodeIdx].handleX = handleX
-            networkDict[neti].reactions[reai].srcDict[srcNodeIdx].handleY = handleY
+            networkDict[neti].reactions[reai].reactants[srcNodeIdx].handlePos = Vec2(
+                handlePosX, handlePosY)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def setReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int, handleX: float, handleY: float):
+def setReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int, handlePosX: float, handlePosY: float):
     """
     setReactionDestNodeHandlePosition edit HandlePosition by Reaction destNodeID
     errCode: -6: reaction index out of range,
@@ -2115,13 +2128,13 @@ def setReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int, ha
             errCode = -6
         elif destNodeIdx not in networkDict[neti].nodes:
             _raiseError(-7)
-        elif destNodeIdx not in r[reai].destDict:
+        elif destNodeIdx not in r[reai].products:
             raise ValueError('The given node index "{}" is not a product node of "{}"'.format(
                              destNodeIdx, reai))
         else:
             _pushUndoStack()
-            networkDict[neti].reactions[reai].destDict[destNodeIdx].handleX = handleX
-            networkDict[neti].reactions[reai].destDict[destNodeIdx].handleY = handleY
+            networkDict[neti].reactions[reai].products[destNodeIdx].handlePos = Vec2(
+                handlePosX, handlePosY)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -2146,9 +2159,7 @@ def setReactionFillColorRGB(neti: int, reai: int, R: int, G: int, B: int):
             errCode = -12
         else:
             _pushUndoStack()
-            r[reai].fillColor.r = R
-            r[reai].fillColor.g = G
-            r[reai].fillColor.b = B
+            r[reai].fillColor = r[reai].fillColor.swapped(R, G, B)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -2174,7 +2185,7 @@ def setReactionFillColorAlpha(neti: int, reai: int, a: float):
         else:
             _pushUndoStack()
             A1 = int(a * 255)
-            r[reai].fillColor.a = A1
+            r[reai].fillColor = r[reai].fillColor.swapped(a=A1)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -2204,7 +2215,7 @@ def setReactionLineThickness(neti: int, reai: int, thickness: float):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def setReactionCenterHandlePosition(neti: int, reai: int, centerHandleX: float, centerHandleY: float):
+def setReactionCenterHandlePosition(neti: int, reai: int, centerHandlePosX: float, centerHandlePosY: float):
     """
     setReactionCenterHandlePosition setReactionCenterHandlePosition
     errCode: -6: reaction index out of range
@@ -2220,8 +2231,8 @@ def setReactionCenterHandlePosition(neti: int, reai: int, centerHandleX: float, 
             errCode = -6
         else:
             _pushUndoStack()
-            networkDict[neti].reactions[reai].centerHandleX = centerHandleX
-            networkDict[neti].reactions[reai].centerHandleY = centerHandleY
+            networkDict[neti].reactions[reai].centerHandlePos = Vec2(
+                centerHandlePosX, centerHandlePosY)
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -2242,7 +2253,7 @@ def addCompartment(neti: int, compID: str, x: float, y: float, w: float, h: floa
     if x < 0 or y < 0 or w < 0 or h < 0:
         _raiseError(-12)
     net = _getNetwork(neti)
-    comp = TCompartment(compID, x, y, w, h)
+    comp = TCompartment(compID, Vec2(x, y), Vec2(w, h))
     if any((compID == c.id for c in net.compartments.values())):
         _raiseError(-3)
     _pushUndoStack()
@@ -2311,13 +2322,12 @@ def setCompartmentPosition(neti: int, compi: int, x: float, y: float):
         _raiseError(-12)
     _pushUndoStack()
     comp = _getCompartment(neti, compi)
-    comp.x = x
-    comp.y = y
+    comp.position = Vec2(x, y)
 
 
 def getCompartmentPosition(neti: int, compi: int) -> Tuple[float, float]:
     comp = _getCompartment(neti, compi)
-    return (comp.x, comp.y)
+    return (comp.position.x, comp.position.y)
 
 
 def setCompartmentSize(neti: int, compi: int, w: float, h: float):
@@ -2325,13 +2335,12 @@ def setCompartmentSize(neti: int, compi: int, w: float, h: float):
         _raiseError(-12)
     _pushUndoStack()
     comp = _getCompartment(neti, compi)
-    comp.w = w
-    comp.h = h
+    comp.rectSize = Vec2(w, h)
 
 
 def getCompartmentSize(neti: int, compi: int) -> Tuple[float, float]:
     comp = _getCompartment(neti, compi)
-    return (comp.w, comp.h)
+    return (comp.rectSize.x, comp.rectSize.y)
 
 
 def setCompartmentVolume(neti: int, compi: int, volume: float):
@@ -2439,71 +2448,211 @@ def reset():
     lastNetIndex = 0
 
 
-# newNetwork("net1")
-# newNetwork("net2")
-# newNetwork("net3")
+'''Code for serialization/deserialization.'''
 
-# print(networkDict)
-# deleteNetwork(1)
-# print(networkDict)
-# a = TNetworkDict([111])
-# print(a)
-# print(type(networkDict[1:2]))
 
-# print(networkDict[0].__dict__,"\n")
-# print(type(networkDict))
-# print(networkDict[0], "\n")
-# print(type(set1))
-# print(set1[0].__dict__,"\n")
-# clearNetworks()
-# print(type(networkDict))
-# print(networkDict)
-# newNetwork("net1")
-# print(networkDict)
+class Color(fields.Field):
+    """Field that represents an RGBA color.
 
-# newNetwork("net2")
-# newNetwork("net3")
-# addNode(0, "node1", 1.1, 2.2, 3.3, 4.4)
-# addNode(0, "node2", 1.1, 2.2, 3.3, 4.4)
-# addNode(0, "node3", 1.1, 2.2, 3.3, 4.4)
-# addNode(0, "node4", 1.1, 2.2, 3.3, 4.4)
-# addNode(0, "node5", 1.1, 2.2, 3.3, 4.4)
-# addNode(0, "node6", 1.1, 2.2, 3.3, 4.4)
-# setNodeFillColorAlpha(0,0,0.5)
-# print(getNodeFillColorAlpha(0,0))
-# setNodeFillColorAlpha(0,0,0.6)
-# setNodeFillColorAlpha(0,0,0.7)
-# addNode(1, "node2", 1.1, 2.2, 3.3, 4.4)
-# addNode(2, "node3", 1.1, 2.2, 3.3, 4.4)
-# CreateBiBi(0, "Rea1", "k1*A", 0, 1, 2, 1, 1, 2, 3, 4)
-# saveNetworkAsJSON(0,"")
-# deleteNode(0, 1)
-# print(networkDict)
-# print("num", getNumberOfNetworks())
-# # print(clearNetworks())
-# # print(networkDict[0].id)
-# print(networkDict)
-# print(getNetworkIndex("net1"))
-# print(getNetworkID(2))
-# print(getNodeIndex(0, "node1"))
-# print(getNodeIndex(0, "node2"))
-# print(getNodeIndex(0, "node3"))
-# print(getNodeCenter(0, 0))
-# print(getNodeIndex(0, "node"))
-# print(networkDict[0].getFreenodes())
-# print(getNumberOfNodes(0))
-# print(getNodeID(0, 0))
-# print(getNodeCoordinateAndSize(0, 0))
-# print(getNodeFillColor(0, 0))
-# print(getNodeFillColorRGB(0, 0))
-# print(getNodeFillColorAlpha(0, 0))
+    To represent the color red, you would write:
+    >>> { "some_color": [255, 0, 0] }
 
-# print(getNodeOutlineColor(0, 0))
-# print(getNodeOutlineColorRGB(0, 0))
-# print(getNodeOutlineColorAlpha(0, 0))
-# print(getNodeOutlineThickness(0, 0))
-# print(setNodeID(0, 0, "sdf"))
-# print(getNodeID(0, 0))
-# clearNetwork(0)
-# print(networkDict[0].getFreenodes())
-# print(getNumberOfNodes(0))
+    You may also specify its opacity. To make the color red half transparent:
+    >>> { "some": [255, 0, 0, 127] }
+
+    In short, you may specify four integer arguments RGBA in an array, which the alpha value
+    being optional and defaulting to 255, or fully opaque. Each value must be in range [0, 255].
+    """
+    list_field = fields.List(fields.Int(), validate=validate.Length(min=3, max=4))
+    range_validate = validate.Range(min=0, max=255, error='RGBA values must be between 0 and 255.')
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+
+    def _serialize(self, value: TColor, attr, obj, **kwargs):
+        ret = [value.r, value.g, value.b]
+        if value.a != 255:
+            ret += [value.a]
+        return ret
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        self.list_field.validate(value)
+        for val in value:
+            Color.range_validate(val)
+        return TColor(*value)
+
+
+class Pixel(fields.Int):
+    """Field that represents some length in pixels.
+
+    The only current restriction is that this must be a nonnegative integer, or
+    >>> { "some_width": 23 }
+    """
+
+    def __init__(self):
+        super().__init__(validate=validate.Range(min=0))
+
+
+class Dim(fields.Float):
+    """Field that represents some real dimension (length)."""
+
+    def __init__(self):
+        # TODO should we allow 0? Also decide for pixel
+        super().__init__(validate=validate.Range(min=0))
+
+
+class Dim2(fields.List):
+    def __init__(self):
+        super().__init__(Dim(), validate=validate.Length(equal=2))
+
+    def _serialize(self, value: Vec2, attr, obj, **kwargs):
+        return (value.x, value.y)
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        self._validate(value)
+        return Vec2(value)
+
+
+class FontSchema(Schema):
+    # TODO use this after implemented
+    pointSize = Pixel()
+    family = str  # TODO change to enum
+    style: str
+    weight: str
+    name: str
+    color: TColor
+
+
+class NodeSchema(Schema):
+    id = fields.Str()  # TODO assert unique
+    # x = Dim()  # TODO validate not out of range of canvas?
+    # y = Dim()
+    # w = fields.Float(validate=validate.Range(min=get_setting('min_node_width')))
+    # h = fields.Float(validate=validate.Range(min=get_setting('min_node_height')))
+    position = Dim2()
+    rectSize = Dim2()
+    compartment = fields.Int()
+    fillColor = Color()
+    outlineColor = Color()
+    outlineThickness = Dim()
+    # font: TFont
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TNode:
+        # return TNode(data['id'], data['position'], data['rectSize'],
+        #              data['compartment'], data['fillColor'], data['outlineColor'],
+        #              data['outlineThickness'], TFont())
+        return TNode(**data)
+
+
+class SpeciesNode(Schema):
+    """Represents a species in a reaction."""
+    stoich = fields.Float()
+    handlePos = Dim2()
+
+    # @pre_dump
+    # def pre_dump(self, data: TSpeciesNode, **kwargs):
+    #     assert isinstance(data, TSpeciesNode)
+    #     # TODO create schema for SpeciesNode
+    #     return {
+    #         'stoich': data.stoich,
+    #         'handlePos': (data.handlePos.x, data.handlePos.y),
+    #     }
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TSpeciesNode:
+        # return TNode(data['id'], data['position'], data['rectSize'],
+        #              data['compartment'], data['fillColor'], data['outlineColor'],
+        #              data['outlineThickness'], TFont())
+        return TSpeciesNode(**data)
+
+
+class ReactionSchema(Schema):
+    id = fields.Str()
+    rateLaw = fields.Str()
+    reactants = fields.Dict(fields.Int(), fields.Nested(SpeciesNode))
+    products = fields.Dict(fields.Int(), fields.Nested(SpeciesNode))
+    fillColor = Color()
+    thickness = Dim()
+    centerHandlePos = Dim2()
+
+    # @pre_dump
+    # def pre_dump(self, data: TReaction, **kwargs):
+    #     assert isinstance(data, TReaction)
+    #     # TODO create schema for SpeciesNode
+    #     return {
+    #         'id': data.id,
+    #         'rateLaw': data.rateLaw,
+    #         'reactants': data.reactants,
+    #         'products': data.products,
+    #         'fillColor': data.fillColor,
+    #         'thickness': data.thickness,
+    #         'centerHandlePos': (data.centerHandlePos.x, data.centerHandlePos.y),
+    #     }
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TReaction:
+        return TReaction(**data)
+
+
+class CompartmentSchema(Schema):
+    id = fields.Str()
+    position = Dim2()
+    rectSize = Dim2()
+    nodes = fields.List(fields.Int())
+    volume = Dim()
+    fillColor = Color()
+    outlineColor = Color()
+    outlineThickness = Dim()
+
+    # @pre_dump
+    # def pre_dump(self, data: TCompartment, **kwargs):
+    #     assert isinstance(data, TCompartment)
+    #     return {
+    #         'id': data.id,
+    #         'position': (data.position.x, data.position.y),
+    #         'rectSize': (data.rectSize.x, data.rectSize.y),
+    #         'nodes': data.node_indices,
+    #         'volume': data.volume,
+    #         'fillColor': data.fillColor,
+    #         'outlineColor': data.outlineColor,
+    #         'outlineThickness': data.outlineThickness,
+    #     }
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TCompartment:
+        return TCompartment(**data)
+
+
+class NetworkSchema(Schema):
+    id = fields.Str()
+    nodes = fields.Mapping(fields.Int(), fields.Nested(NodeSchema))
+    reactions = fields.Mapping(fields.Int(), fields.Nested(ReactionSchema))
+    compartments = fields.Mapping(fields.Int(), fields.Nested(CompartmentSchema))
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TNetwork:
+        return TNetwork(**data)
+
+
+net_schema = NetworkSchema()
+
+
+def dumpNetwork(neti: int):
+    """Dump the network into an object and return it."""
+    # TODO don't construct NetworkSchema every time.
+    net = _getNetwork(neti)
+    return net_schema.dump(net)
+
+
+def loadNetwork(net_object) -> int:
+    """Load the network object (laoded directly from JSON) and add it, returning the network index.
+    
+    Note:
+        For now this overwrites the network at index 0.
+    """
+    # TODO save old
+    net = net_schema.load(net_object)
+    clearNetworks()
+    _addNetwork(net)
+    return 0

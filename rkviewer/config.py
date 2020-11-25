@@ -324,4 +324,5 @@ def get_theme(theme_attr) -> Any:
 
 
 def add_plugin_schema(name: str, schema: Schema):
+    # TODO 
     pass

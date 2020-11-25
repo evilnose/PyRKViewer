@@ -1,7 +1,7 @@
 # pylint: disable=maybe-no-member
 import wx
 import abc
-from typing import List, Optional, Set
+from typing import Any, List, Optional, Set
 from .canvas.geometry import Vec2
 from .canvas.data import Compartment, Node, Reaction
 
@@ -281,8 +281,12 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def save_as_json(self):
-        pass #TODO
+    def dump_network(self, neti: int):
+        pass
+
+    @abc.abstractmethod
+    def load_network(self, json_obj: Any) -> int:
+        pass
 
 
 class IView(abc.ABC):

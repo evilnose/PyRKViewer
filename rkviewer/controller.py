@@ -3,7 +3,7 @@
 # pylint: disable=maybe-no-member
 import wx
 import traceback
-from typing import Collection, List, Optional, Set
+from typing import Any, Collection, List, Optional, Set
 import rkviewer.iodine as iod
 import logging
 
@@ -436,9 +436,13 @@ class Controller(IController):
         """Immediately update the view with using latest model."""
         return self._update_view()
     
-    def save_as_json(self):
-        assert False, "Not implemented"
-        pass
+    def dump_network(self, neti: int):
+        return iod.dumpNetwork(neti)
+
+    def load_network(self, json_obj: Any) -> int:
+        net_index =  iod.loadNetwork(json_obj)
+        self._update_view()
+        return net_index
 
     # get the updated list of nodes from model and update
 

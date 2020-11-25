@@ -548,7 +548,9 @@ class MainFrame(wx.Frame):
 
         # If we're running windows use notepad
         if os.name == 'nt':
-           os.system("notepad " + settings_path)
+           # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
+           import subprocess
+           pid = subprocess.Popen(['notepad.exe', settings_path]).pid
         else:
            start_file(settings_path)
 
@@ -568,7 +570,9 @@ class MainFrame(wx.Frame):
 
         # If we're running windows use notepad
         if os.name == 'nt':
-           os.system("notepad " + default_settings_path)
+           # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
+           import subprocess
+           pid = subprocess.Popen(['notepad.exe', default_settings_path]).pid
         else:
            start_file(default_settings_path)            
 

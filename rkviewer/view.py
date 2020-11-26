@@ -382,17 +382,17 @@ class MainFrame(wx.Frame):
 
         self.menu_events = list()
         file_menu = wx.Menu()
-        self.AddMenuItem(file_menu, '&Edit Settings', 'Edit settings', lambda _: self.EditSettings(),
-                         entries)
-        self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings', lambda _: self.ReloadSettings(),
-                         entries)
-        file_menu.AppendSeparator()
-        self.AddMenuItem(file_menu, '&Save as .json...', 'Save current network as JSON',
-                         lambda _: self.SaveAsJson(), entries)
-        self.AddMenuItem(file_menu, '&Load from .json...', 'Load network from JSON',
-                         lambda _: self.LoadFromJson(), entries)
-        self.AddMenuItem(file_menu, 'E&xit', 'Exit application', lambda _: self.Close(), entries,
-                         id_=wx.ID_EXIT)
+      
+        self.AddMenuItem(file_menu, '&New...', 'Start a new network', lambda _: self.NewNetwork(),  entries)
+        file_menu.AppendSeparator() 
+        self.AddMenuItem(file_menu, '&Load...', 'Load network from JSON file', lambda _: self.LoadFromJson(), entries)
+        self.AddMenuItem(file_menu, '&Save', 'Save current network as a JSON file', lambda _: self.SaveJson(), entries)
+        self.AddMenuItem(file_menu, '&Save As...', 'Save current network as a JSON file', lambda _: self.SaveAsJson(), entries)
+        file_menu.AppendSeparator()      
+        self.AddMenuItem(file_menu, '&Edit Settings', 'Edit settings', lambda _: self.EditSettings(),  entries)
+        self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings', lambda _: self.ReloadSettings(),  entries)
+        file_menu.AppendSeparator()                         
+        self.AddMenuItem(file_menu, 'E&xit', 'Exit application', lambda _: self.Close(), entries,  id_=wx.ID_EXIT)
 
         edit_menu = wx.Menu()
         self.AddMenuItem(edit_menu, '&Undo', 'Undo action', lambda _: controller.undo(),
@@ -415,9 +415,9 @@ class MainFrame(wx.Frame):
         self.AddMenuItem(select_menu, 'Select &All', 'Select all',
                          lambda _: canvas.SelectAll(), entries, key=(wx.ACCEL_CTRL, ord('A')))
         #Jin_edit
-        self.AddMenuItem(select_menu, 'Select &All &Nodes', 'Select all nodes',
+        self.AddMenuItem(select_menu, 'Select All &Nodes', 'Select all nodes',
                          lambda _: canvas.SelectAllNodes(), entries, key=(wx.ACCEL_CTRL, ord('A')))
-        self.AddMenuItem(select_menu, 'Select &All &Reactions', 'Select all reactions',
+        self.AddMenuItem(select_menu, 'Select All &Reactions', 'Select all reactions',
                          lambda _: canvas.SelectAllReactions(), entries, key=(wx.ACCEL_CTRL, ord('A')))
         self.AddMenuItem(select_menu, 'Clear Selection', 'Clear the current selection',
                          lambda _: canvas.ClearCurrentSelection(), entries,
@@ -578,6 +578,16 @@ class MainFrame(wx.Frame):
         else:
            start_file(default_settings_path)            
 
+    def NewNetwork (self):
+        #self.controller.newNetwork()  # This doesn't work, so try different way
+        self.canvas.SelectAll()
+        self.canvas.DeleteSelectedItems()
+
+
+    def SaveJson(self):
+        self.main_panel.canvas.ShowWarningDialog("Not yet implemented")
+
+
     def SaveAsJson(self):
         with wx.FileDialog(self, "Save JSON file", wildcard="JSON files (*.json)|*.json",
                     style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
@@ -594,6 +604,7 @@ class MainFrame(wx.Frame):
                     json.dump(net_json, file)
             except IOError:
                 wx.LogError("Cannot save current data in file '{}'.".format(pathname))
+
 
     def LoadFromJson(self):
         with wx.FileDialog(self, "Load JSON file", wildcard="JSON files (*.json)|*.json",

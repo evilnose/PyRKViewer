@@ -57,9 +57,9 @@
         ],
         "mode_panel_width": 100,
         "node_border": [
-            19,
-            173,
-            2
+            255,
+            108,
+            9
         ],
         "node_border_width": 2,
         "node_fill": [
@@ -95,8 +95,8 @@
             100
         ],
         "reaction_fill": [
-            0,
-            0,
+            128,
+            64,
             0
         ],
         "reaction_line_thickness": 2,

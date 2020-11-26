@@ -391,6 +391,10 @@ class MainFrame(wx.Frame):
         file_menu.AppendSeparator()      
         self.AddMenuItem(file_menu, '&Edit Settings', 'Edit settings', lambda _: self.EditSettings(),  entries)
         self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings', lambda _: self.ReloadSettings(),  entries)
+        file_menu.AppendSeparator() 
+        self.AddMenuItem(file_menu, '&Export...', 'Export Network as an image or pdf', lambda _: self.ExportNetwork(),  entries)        
+        file_menu.AppendSeparator() 
+        self.AddMenuItem(file_menu, '&Print...', 'Print Network', lambda _: self.PrintNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('P')))
         file_menu.AppendSeparator()                         
         self.AddMenuItem(file_menu, 'E&xit', 'Exit application', lambda _: self.Close(), entries,  id_=wx.ID_EXIT)
 
@@ -583,6 +587,12 @@ class MainFrame(wx.Frame):
         self.canvas.SelectAll()
         self.canvas.DeleteSelectedItems()
 
+
+    def PrintNetwork (self):
+        self.main_panel.canvas.ShowWarningDialog("Print not yet implemented")
+       
+    def ExportNetwork (self):
+        self.main_panel.canvas.ShowWarningDialog("Export not yet implemented")
 
     def SaveJson(self):
         self.main_panel.canvas.ShowWarningDialog("Not yet implemented")

@@ -984,7 +984,8 @@ class Canvas(wx.ScrolledWindow):
                     rect = padded_rect(rect, get_theme('select_outline_padding'))
                     # draw rect
                     draw_rect(gc, rect, border=get_theme('handle_color'),
-                              border_width=get_theme('select_outline_width'))
+                              border_width=get_theme('select_outline_width'),
+                              corner_radius=get_theme('node_corner_radius'))
 
             # Draw reactant and product marker outlines
             def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):
@@ -1018,10 +1019,12 @@ class Canvas(wx.ScrolledWindow):
                     fill = get_theme('drag_fill')
                     border = get_theme('drag_border')
                     bwidth = get_theme('drag_border_width')
+                    corner_radius = 0
                 elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                     fill = opacity_mul(get_theme('comp_fill'), 0.3)
                     border = opacity_mul(get_theme('comp_border'), 0.3)
                     bwidth = get_theme('comp_border_width')
+                    corner_radius = get_theme('comp_corner_radius')
                 else:
                     assert False, "Should not be _drag_selecting in any other input mode."
 
@@ -1034,6 +1037,7 @@ class Canvas(wx.ScrolledWindow):
                     fill=fill,
                     border=border,
                     border_width=bwidth,
+                    corner_radius=corner_radius,
                 )
 
             # Draw minimap

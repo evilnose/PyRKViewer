@@ -39,7 +39,7 @@ def auto_node(id_: str, neti: int) -> Node:
 
 def auto_reaction(id_: str, neti: int, sources: List[int], targets: List[int]) -> Reaction:
     return Reaction(
-        id_=id_,
+        id=id_,
         net_index=neti,
         sources=sources,
         targets=targets,
@@ -51,7 +51,7 @@ def auto_reaction(id_: str, neti: int, sources: List[int], targets: List[int]) -
 
 def auto_compartment(id_: str, neti: int) -> Compartment:
     return Compartment(
-        id_=id_,
+        id=id_,
         net_index=neti,
         nodes=list(),
         position=Vec2(400, 400),

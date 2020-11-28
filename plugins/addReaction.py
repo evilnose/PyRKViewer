@@ -4,6 +4,7 @@ Version 0.01: Author: Jin Xu and Herbert Sauro (2020)
 """
 
 
+# pylint: disable=maybe-no-member
 import wx
 import wx.grid as  gridlib
 from rkplugin.plugins import PluginMetadata, WindowedPlugin
@@ -96,7 +97,7 @@ class AddReaction(WindowedPlugin):
         names = []
         # Get a unique reaction name
         for r in api.get_reactions (0):
-            names.append (r.id_)          
+            names.append (r.id)          
         reactionId = self.getUniqueName('reaction', names)
         r_idx = api.add_reaction(0, reactionId, src, dest, fill_color=api.Color(129, 123, 255))
 

@@ -857,7 +857,7 @@ class ReactionForm(EditPanelForm):
             return
         else:
             for rxn in self._reactions:
-                if rxn.id_ == new_id:
+                if rxn.id == new_id:
                     self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
 
@@ -1111,7 +1111,7 @@ class CompartmentForm(EditPanelForm):
             return
         else:
             for comp in self._compartments:
-                if comp.id_ == new_id:
+                if comp.id == new_id:
                     self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
 

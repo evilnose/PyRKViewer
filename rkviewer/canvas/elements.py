@@ -136,6 +136,7 @@ class NodeElement(CanvasElement):
             fill=self.node.fill_color,
             border=self.node.border_color,
             border_width=aligned_border_width,
+            corner_radius=get_theme('node_corner_radius')
         )
 
         # draw text
@@ -426,7 +427,7 @@ class CompartmentElt(CanvasElement):
             border = change_opacity(border.ChangeLightness(130), border.Alpha())
             fill = change_opacity(fill.ChangeLightness(130), fill.Alpha())
         draw_rect(gc, rect, border=border,
-                  border_width=self.compartment.border_width, fill=fill)
+                  border_width=self.compartment.border_width, fill=fill, corner_radius=get_theme('comp_corner_radius'))
 
 
 class SelectBox(CanvasElement):
@@ -667,7 +668,7 @@ class SelectBox(CanvasElement):
 
             # draw main outline
             draw_rect(gc, Rect(pos, size), border=get_theme('handle_color'),
-                      border_width=outline_width)
+                      border_width=outline_width, corner_radius=0)
 
             for handle_rect in self._resize_handle_rects():
                 # convert to device position for drawing

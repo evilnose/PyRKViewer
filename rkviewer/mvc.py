@@ -71,6 +71,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def set_node_floating_status(self, neti: int, nodei: int, floatingStatus: bool):
+        pass
+
+    @abc.abstractmethod
     def set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour) -> bool:
         pass
 

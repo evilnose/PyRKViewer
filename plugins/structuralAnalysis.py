@@ -6,6 +6,7 @@ Version 0.01: Author: Jin Xu (2020)
 """
 
 
+# pylint: disable=maybe-no-member
 import wx
 import wx.grid as  gridlib
 from rkplugin.plugins import PluginMetadata, WindowedPlugin
@@ -195,7 +196,7 @@ class StructuralAnalysis(WindowedPlugin):
             wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
-            id = allNodes[0].id_[0:-2]
+            id = allNodes[0].id[0:-2]
             self.default_color = allNodes[0].fill_color
             
             largest_node_index = 0

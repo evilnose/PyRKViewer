@@ -677,24 +677,11 @@ def getNodeID(neti: int, nodei: int):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 def IsFloatingNode (neti : int, nodei : int):
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5    
-    n = networkDict[neti]
-    if n.nodes[nodei].floating:
-       return True
-    else:
-       return False
+    n = _getNetwork(neti)
+    return n.nodes[nodei].floating
 
-def IsBoundarygNode (neti : int, nodei : int):
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5    
-    n = networkDict[neti]        
-    if n.nodes[nodei].floating:
-       return False
-    else:
-       return True
+def IsBoundaryNode(neti : int, nodei : int):
+    return not IsFloatingNode(neti, nodei)
 
 
 def getListOfNodeIDs(neti: int) -> List[str]:

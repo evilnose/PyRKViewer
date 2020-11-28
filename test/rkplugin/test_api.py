@@ -25,7 +25,7 @@ class TestNode(unittest.TestCase):
                         fill_color=wx.RED,
                         border_color=wx.GREEN,
                         border_width=4)
-            api.add_node(self.neti, id_=node.id_,
+            api.add_node(self.neti, id=node.id,
                          position=node.position,
                          size=node.size,
                          fill_color=api._to_color(node.fill_color),  # HACK using API private methods
@@ -40,14 +40,14 @@ class TestNode(unittest.TestCase):
 
     def test_update_nodes(self):
         with run_app():
-            api.add_node(self.neti, id_="Eric")
+            api.add_node(self.neti, id="Eric")
             api.update_node(self.neti, 0, 'James')
             nodes = api.get_nodes(self.neti)
             self.assertEqual(len(nodes), 1)
-            self.assertTrue(nodes[0].id_, 'James')
+            self.assertTrue(nodes[0].id, 'James')
 
             with self.assertRaises(ValueError):
-                api.update_node(self.neti, 0, id_='')
+                api.update_node(self.neti, 0, id='')
             with self.assertRaises(ValueError):
                 api.update_node(self.neti, 0, position=Vec2(-1, 0))
             with self.assertRaises(ValueError):
@@ -157,7 +157,7 @@ class TestCompartment(unittest.TestCase):
 
     def test_simple_compartments(self):
         self.assertEqual(api.get_nodes_in_compartment(self.neti, -1), [0, 1, 2])
-        api.add_compartment(self.neti, id_="c_1")
+        api.add_compartment(self.neti, id="c_1")
         api.set_compartment_of_node(self.neti, 0, 0)
         api.set_compartment_of_node(self.neti, 1, 0)
         self.assertEqual(api.get_nodes_in_compartment(self.neti, 0), [0, 1])

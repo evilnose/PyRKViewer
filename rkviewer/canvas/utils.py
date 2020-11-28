@@ -20,14 +20,14 @@ def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
 
 def get_nodes_by_ident(nodes: List[Node], ids: Collection[str]):
     """Simple helper that maps the given list of IDs to their corresponding nodes."""
-    ret = [n for n in nodes if n.id_ in ids]
+    ret = [n for n in nodes if n.id in ids]
     assert len(ret) == len(ids)
     return ret
 
 
 def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] = None,
               border: Optional[wx.Colour] = None, border_width: float = 1,
-              fill_style=wx.BRUSHSTYLE_SOLID, border_style=wx.PENSTYLE_SOLID):
+              fill_style=wx.BRUSHSTYLE_SOLID, border_style=wx.PENSTYLE_SOLID, corner_radius: float = 0):
     """Draw a rectangle with the given graphics context.
 
     Either fill or border must be specified to avoid drawing an entirely transparent rectangle.
@@ -39,6 +39,7 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
         border: If specified, the border color of the rectangle.
         border_width: The width of the borders. Defaults to 1. This cannot be 0 when border
             is specified.
+        corner_radius: The corner radius of the rounded rectangle. Defaults to 0.
     """
     assert not(fill is None and border is None), \
         "Both 'fill' and 'border' are None, but at least one of them should be provided"
@@ -65,7 +66,7 @@ def draw_rect(gc: wx.GraphicsContext, rect: Rect, *, fill: Optional[wx.Colour] =
     gc.SetBrush(brush)
 
     # draw rect
-    gc.DrawRoundedRectangle(x, y, width, height, 6)
+    gc.DrawRoundedRectangle(x, y, width, height, corner_radius)
 
 
 """Classes for the observer-Subject interface. See https://en.wikipedia.org/wiki/Observer_pattern

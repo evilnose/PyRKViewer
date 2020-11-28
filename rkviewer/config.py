@@ -63,6 +63,7 @@ class AppSettings:
        config.WriteInt ('frame_size_h', self.size.y)
 
 
+# TODO merge these schema with those in iodine?
 class Color(fields.Field):
     """Field that represents an RGBA color.
     
@@ -101,6 +102,14 @@ class Pixel(fields.Int):
     >>> { "some_width": 23 }
     """
     def __init__(self, **kwargs):
+        super().__init__(validate=validate.Range(min=0), **kwargs)
+
+
+class Dim(fields.Float):
+    """Field that represents some real dimension (length)."""
+
+    def __init__(self, **kwargs):
+        # TODO should we allow 0? Also decide for pixel
         super().__init__(validate=validate.Range(min=0), **kwargs)
 
 
@@ -166,8 +175,9 @@ class ThemeSchema(Schema):
     edit_panel_width = Pixel(missing=260)
     node_fill = Color(missing=wx.Colour(255, 204, 153, 200))
     node_border = Color(missing=wx.Colour(255, 108, 9))
-    node_width = Pixel(missing=50)
-    node_height = Pixel(missing=30)
+    node_width = Dim(missing=50)
+    node_height = Dim(missing=30)
+    node_corner_radius = Pixel(missing=6)
     node_border_width = Pixel(missing=2)
     node_font_size = Pixel(missing=10)
     node_font_color = Color(missing=wx.Colour(255, 0, 0, 100))
@@ -192,12 +202,13 @@ class ThemeSchema(Schema):
     reactant_border = Color(missing=wx.Colour(255, 100, 100))
     product_border = Color(missing=wx.Colour(0, 214, 125))
     reaction_fill = Color(missing=wx.Colour(128, 64, 0))
-    reaction_line_thickness = Pixel(missing=2)
+    reaction_line_thickness = Dim(missing=2)
     selected_reaction_fill = Color(missing=wx.Colour(0, 140, 255))
     comp_fill = Color(missing=wx.Colour(158, 169, 255, 200))
     comp_border = Color(missing=wx.Colour(0, 29, 255))
-    comp_border_width = Pixel(missing=2)
-    reaction_radius = Pixel(missing=6)
+    comp_border_width = Dim(missing=2)
+    comp_corner_radius = Dim(missing=6)
+    reaction_radius = Dim(missing=6)
 
 
 class RootSchema(Schema):

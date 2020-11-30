@@ -18,7 +18,7 @@ from .canvas.geometry import Vec2
 import copy
 from dataclasses import dataclass, field
 import json
-from typing import Any, DefaultDict, Dict, MutableSet, Set, Tuple, List, cast
+from typing import Any, DefaultDict, Dict, MutableSet, Optional, Set, Tuple, List, cast
 from enum import Enum
 from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
@@ -138,6 +138,7 @@ class TNetwork:
 @dataclass
 class TReaction:
     id: str
+    centerPos: Optional[Vec2] = None
     rateLaw: str = ""
     reactants: Dict[int, TSpeciesNode] = field(default_factory=dict)
     products: Dict[int, TSpeciesNode] = field(default_factory=dict)
@@ -1628,6 +1629,14 @@ def getReactionRateLaw(neti: int, reai: int):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
+def getReactionCenterPos(neti: int, reai: int):
+    """
+    getReactionCenterPos get the center position of the Reaction
+    """
+    r = _getReaction(neti, reai)
+    return r.centerPos
+
+
 def getReactionFillColor(neti: int, reai: int):
     """
     getReactionFillColor rgba tulple format, rgb range int[0,255] alpha range float[0,1]
@@ -2046,6 +2055,14 @@ def setRateLaw(neti: int, reai: int, rateLaw: str):
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
+
+
+def setReactionCenterPos(neti: int, reai: int, centerPos: Optional[Vec2]):
+    """
+    setReactionCenterPos set the center position of the Reaction
+    """
+    r = _getReaction(neti, reai)
+    r.centerPos = centerPos
 
 
 def setReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int, newStoich: float):

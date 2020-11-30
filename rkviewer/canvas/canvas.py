@@ -601,7 +601,7 @@ class Canvas(wx.ScrolledWindow):
                 for el in reversed(self._elements):
                     if not el.enabled:
                         continue
-                    if el.pos_inside(logical_pos) and el.do_left_down(logical_pos):
+                    if el.pos_inside(logical_pos) and el.on_left_down(logical_pos):
                         self.dragged_element = el
                         self._last_drag_pos = logical_pos
                         break
@@ -661,8 +661,8 @@ class Canvas(wx.ScrolledWindow):
                 # if clicked on a new node/compartment, immediately allow dragging on the
                 # updated select box
                 if not cstate.multi_select and (node or comp) and self._select_box.pos_inside(logical_pos):
-                    self._select_box.do_mouse_enter(logical_pos)
-                    good = self._select_box.do_left_down(logical_pos)
+                    self._select_box.on_mouse_enter(logical_pos)
+                    good = self._select_box.on_left_down(logical_pos)
                     assert good
                     self.dragged_element = self._select_box
                     return
@@ -765,7 +765,7 @@ class Canvas(wx.ScrolledWindow):
         if self._minimap.dragging:
             self._minimap.OnLeftUp(device_pos)
             # HACK once we integrate overlays (e.g. minimap) as CanvasElements, we can simply call
-            # do_mouse_leave or something
+            # on_mouse_leave or something
             self._minimap.hovering = False
         elif self._minimap.hovering:
             self._minimap.hovering = False
@@ -807,16 +807,16 @@ class Canvas(wx.ScrolledWindow):
             # cursor
             logical_pos = self.CalcScrolledPositionFloat(device_pos)
             if self.dragged_element is not None:
-                self.dragged_element.do_left_up(logical_pos)
+                self.dragged_element.on_left_up(logical_pos)
                 self.dragged_element = None
             elif self.hovered_element is not None:
-                self.hovered_element.do_mouse_leave(logical_pos)
+                self.hovered_element.on_mouse_leave(logical_pos)
                 self.hovered_element = None
             elif evt.LeftIsDown():
                 for el in reversed(self._elements):
                     if not el.enabled:
                         continue
-                    if el.pos_inside(logical_pos) and el.do_left_up(logical_pos):
+                    if el.pos_inside(logical_pos) and el.on_left_up(logical_pos):
                         return
 
         if overlay is not None:
@@ -870,7 +870,7 @@ class Canvas(wx.ScrolledWindow):
                     if self.dragged_element is not None:
                         self._FloatNodes()
                         rel_pos = logical_pos - self._last_drag_pos
-                        if self.dragged_element.do_mouse_drag(logical_pos, rel_pos):
+                        if self.dragged_element.on_mouse_drag(logical_pos, rel_pos):
                             redraw = True
                         self._last_drag_pos = logical_pos
                     elif self._minimap.dragging:
@@ -893,14 +893,14 @@ class Canvas(wx.ScrolledWindow):
 
                         if self.hovered_element is not hovered:
                             if self.hovered_element is not None:
-                                self.hovered_element.do_mouse_leave(logical_pos)
+                                self.hovered_element.on_mouse_leave(logical_pos)
                             if hovered is not None:
-                                hovered.do_mouse_enter(logical_pos)
+                                hovered.on_mouse_enter(logical_pos)
                             redraw = True
                             self.hovered_element = hovered
                         elif hovered is not None:
                             # still in the same hovered element
-                            moved = self.hovered_element.do_mouse_move(logical_pos)
+                            moved = self.hovered_element.on_mouse_move(logical_pos)
                             if moved:
                                 redraw = True
 
@@ -966,9 +966,9 @@ class Canvas(wx.ScrolledWindow):
                     continue
                 if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
                     # Highlight compartment that will be dropped in.
-                    el.do_paint(gc, highlight=True)
+                    el.on_paint(gc, highlight=True)
                 else:
-                    el.do_paint(gc)
+                    el.on_paint(gc)
 
             # TODO Put this in SelectionChanged
             sel_rects = [n.rect * cstate.scale for n in self.sel_nodes] + \

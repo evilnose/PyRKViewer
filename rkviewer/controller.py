@@ -251,6 +251,10 @@ class Controller(IController):
         iod.setRateLaw(neti, reai, ratelaw)
 
     @iod_setter
+    def set_reaction_center(self, neti: int, reai: int, center_pos: Optional[Vec2]):
+        iod.setReactionCenterPos(neti, reai, center_pos)
+
+    @iod_setter
     def set_src_node_stoich(self, neti: int, reai: int, nodei: int, stoich: float):
         iod.setReactionSrcNodeStoich(neti, reai, nodei, stoich)
 

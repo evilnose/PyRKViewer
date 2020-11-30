@@ -66,7 +66,7 @@ class CanvasElement:
         pass
 
     @abstractmethod
-    def do_paint(self, gc: wx.GraphicsContext):
+    def on_paint(self, gc: wx.GraphicsContext):
         """Paint the shape onto the given GraphicsContext.
         
         This draws onto the scrolled canvas, i.e. the position of the drawn item will respond to
@@ -74,27 +74,27 @@ class CanvasElement:
         """
         pass
 
-    def do_mouse_enter(self, logical_pos: Vec2) -> bool:
+    def on_mouse_enter(self, logical_pos: Vec2) -> bool:
         """Handler for when the mouse has entered the shape."""
         return False
 
-    def do_mouse_leave(self, logical_pos: Vec2) -> bool:
+    def on_mouse_leave(self, logical_pos: Vec2) -> bool:
         """Handler for when the mouse has exited the shape"""
         return False
 
-    def do_mouse_move(self, logical_pos: Vec2) -> bool:
+    def on_mouse_move(self, logical_pos: Vec2) -> bool:
         """Handler for when the mouse moves inside the shape, with the left mouse button up."""
         return False
 
-    def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
+    def on_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
         """Handler for when the mouse drags inside the shape, with the left mouse button down."""
         return False
 
-    def do_left_down(self, logical_pos: Vec2) -> bool:
+    def on_left_down(self, logical_pos: Vec2) -> bool:
         """Handler for when the mouse left button is pressed down inside the shape."""
         return False
 
-    def do_left_up(self, logical_pos: Vec2) -> bool:
+    def on_left_up(self, logical_pos: Vec2) -> bool:
         """Handler for when the mouse left button is springs up inside the shape."""
         return False
 
@@ -115,7 +115,7 @@ class NodeElement(CanvasElement):
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return within_rect(logical_pos, self.node.s_rect)
 
-    def do_paint(self, gc: wx.GraphicsContext):
+    def on_paint(self, gc: wx.GraphicsContext):
         if self.gfont is None or self.font_scale != cstate.scale:
             self.font_scale = cstate.scale
             font = wx.Font(wx.FontInfo(10 * cstate.scale))
@@ -147,7 +147,7 @@ class NodeElement(CanvasElement):
         gc.DrawText(self.node.id, self.node.s_position.x +
                     tx, self.node.s_position.y + ty)
 
-    def do_left_down(self, _: Vec2):
+    def on_left_down(self, _: Vec2):
         return True
 
 
@@ -188,7 +188,7 @@ class BezierHandle(CanvasElement):
     def pos_inside(self, logical_pos: Vec2):
         return pt_in_circle(logical_pos, BezierHandle.HANDLE_RADIUS, self.data.tip * cstate.scale)
 
-    def do_paint(self, gc: wx.GraphicsContext):
+    def on_paint(self, gc: wx.GraphicsContext):
         """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
         assert self.data.base is not None
         c = get_theme('highlighted_handle_color') if self.hovering else get_theme('handle_color')
@@ -209,22 +209,22 @@ class BezierHandle(CanvasElement):
                        stip.y - BezierHandle.HANDLE_RADIUS,
                        2 * BezierHandle.HANDLE_RADIUS, 2 * BezierHandle.HANDLE_RADIUS)
 
-    def do_mouse_enter(self, logical_pos: Vec2) -> bool:
+    def on_mouse_enter(self, logical_pos: Vec2) -> bool:
         self.hovering = True
         if self.twin:
             self.twin.hovering = True
         return True
 
-    def do_mouse_leave(self, logical_pos: Vec2) -> bool:
+    def on_mouse_leave(self, logical_pos: Vec2) -> bool:
         self.hovering = False
         if self.twin:
             self.twin.hovering = False
         return True
 
-    def do_left_down(self, logical_pos: Vec2) -> bool:
+    def on_left_down(self, logical_pos: Vec2) -> bool:
         return True
 
-    def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
+    def on_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
         self.data.tip += rel_pos / cstate.scale
         self.on_moved(self.data.tip)
         neti = 0
@@ -233,7 +233,7 @@ class BezierHandle(CanvasElement):
 
         return True
 
-    def do_left_up(self, logical_pos: Vec2):
+    def on_left_up(self, logical_pos: Vec2):
         self.on_dropped(self.data.tip)
         return True
 
@@ -353,7 +353,7 @@ class ReactionElement(CanvasElement):
                     bz.handle.tip += off
                     post_event(DidMoveBezierHandleEvent(neti, self.reaction.index, bz.node_idx,
                                                         by_user=True, direct=False))
-                    bz.update_curve(self.bezier.centroid)
+                    bz.update_curve(self.bezier.real_center)
 
         if self._moving_all and isinstance(offset, Vec2):
             # Only move src_handle_tip if moving all nodes and they are moved by the same amount.
@@ -386,13 +386,13 @@ class ReactionElement(CanvasElement):
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return self.bezier.is_mouse_on(logical_pos)
 
-    def do_mouse_enter(self, logical_pos: Vec2):
-        self.do_mouse_move(logical_pos)
+    def on_mouse_enter(self, logical_pos: Vec2):
+        self.on_mouse_move(logical_pos)
 
-    def do_left_down(self, logical_pos: Vec2) -> bool:
+    def on_left_down(self, logical_pos: Vec2) -> bool:
         return True  # Return True so that this can be selected
 
-    def do_paint(self, gc: wx.GraphicsContext):
+    def on_paint(self, gc: wx.GraphicsContext):
         self.bezier.do_paint(gc, self.reaction.fill_color, self.selected)
 
         # draw centroid
@@ -402,7 +402,7 @@ class ReactionElement(CanvasElement):
         gc.SetPen(pen)
         gc.SetBrush(brush)
         radius = get_theme('reaction_radius') * cstate.scale
-        center = self.bezier.centroid * cstate.scale - Vec2.repeat(radius)
+        center = self.bezier.real_center * cstate.scale - Vec2.repeat(radius)
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
 
 
@@ -414,10 +414,10 @@ class CompartmentElt(CanvasElement):
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return within_rect(logical_pos, self.compartment.rect * cstate.scale)
 
-    def do_left_down(self, logical_pos: Vec2) -> bool:
+    def on_left_down(self, logical_pos: Vec2) -> bool:
         return True
 
-    def do_paint(self, gc: wx.GraphicsContext, highlight=False):
+    def on_paint(self, gc: wx.GraphicsContext, highlight=False):
         rect = Rect(self.compartment.position,
                     self.compartment.size) * cstate.scale
         border = self.compartment.border
@@ -553,7 +553,7 @@ class SelectBox(CanvasElement):
                 self._padding = get_theme('select_outline_padding')
             else:
                 self._padding = get_theme('select_box_padding')
-            # Align bounding box if only one node is selected, see NodeElement::do_paint for
+            # Align bounding box if only one node is selected, see NodeElement::on_paint for
             # explanations. Note that self._padding should be an integer
             self._padding = int_round(self._padding)
             self.bounding_rect = get_bounding_rect(
@@ -642,10 +642,10 @@ class SelectBox(CanvasElement):
     def pos_inside(self, logical_pos: Vec2):
         return self._pos_inside_part(logical_pos) != -2
 
-    def do_mouse_enter(self, logical_pos: Vec2):
-        self.do_mouse_move(logical_pos)
+    def on_mouse_enter(self, logical_pos: Vec2):
+        self.on_mouse_move(logical_pos)
 
-    def do_mouse_move(self, logical_pos: Vec2):
+    def on_mouse_move(self, logical_pos: Vec2):
         self._hovered_part = self._pos_inside_part(logical_pos)
         if self._hovered_part >= 0:
             cursor = SelectBox.CURSOR_TYPES[self._hovered_part]
@@ -654,14 +654,14 @@ class SelectBox(CanvasElement):
             self.canvas.SetCursor(wx.Cursor(wx.CURSOR_SIZING))
         return True
 
-    def do_mouse_leave(self, logical_pos: Vec2):
+    def on_mouse_leave(self, logical_pos: Vec2):
         self._hovered_part = -2
         # HACK re-set input_mode with the same value to make canvas update the cursor
         # See issue #9 for details
         cstate.input_mode = cstate.input_mode
         return True
 
-    def do_paint(self, gc: wx.GraphicsContext):
+    def on_paint(self, gc: wx.GraphicsContext):
         if len(self.nodes) + len(self.compartments) > 0:
             outline_width = max(even_round(get_theme('select_outline_width')), 2)
             pos, size = self.outline_rect().as_tuple()
@@ -679,7 +679,7 @@ class SelectBox(CanvasElement):
                 for p in positions]
         return temp
 
-    def do_left_down(self, logical_pos: Vec2):
+    def on_left_down(self, logical_pos: Vec2):
         if len(self.nodes) + len(self.compartments) == 0:
             return False
 
@@ -773,7 +773,7 @@ class SelectBox(CanvasElement):
         else:
             assert False, 'Cannot possibly click on handle when nothing is selected.'
 
-    def do_left_up(self, logical_pos: Vec2):
+    def on_left_up(self, logical_pos: Vec2):
         assert len(self.nodes) + len(self.compartments) != 0
         if self._mode == SelectBox.Mode.MOVING:
             if self._did_move:
@@ -795,11 +795,11 @@ class SelectBox(CanvasElement):
             self.controller.end_group()
 
             # Need to do this in case _special_mode == NOT_CONTAINED, so that the mouse has now
-            # left the handle. do_mouse_leave is not triggered because it's considered to be dragging.
+            # left the handle. on_mouse_leave is not triggered because it's considered to be dragging.
             self._hovered_part = self._pos_inside_part(logical_pos)
         self._mode = SelectBox.Mode.IDLE
 
-    def do_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
+    def on_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
         assert self._mode != SelectBox.Mode.IDLE
         rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)
         if self.special_mode == SelectBox.SMode.NOT_CONTAINED:

@@ -54,7 +54,7 @@ class Node(RectData):
 
     # force keyword-only arguments
     def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, floatingNode : bool = True, index: int = -1):
+                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, floatingNode: bool = True, index: int = -1):
         self.index = index
         self.net_index = net_index
         self.id = id
@@ -142,21 +142,23 @@ def init_bezier():
 
 @dataclass
 class Reaction:
-    """Class that keeps track of data for a reaction as well as its Bezier curve.
-
-    Attributes:
-        id: reaction ID.
-        index: reaction index.
-        fill_color: reaction fill color.
-        line_thickness: Bezier curve thickness.
-        rate_law: reaction rate law.
-        sources: The source (reactant) node indices.
-        target: The target (product) node indices.
-    """
+    id: str
+    net_index: int
+    index: int
+    center_pos: Optional[Vec2]
+    fill_color: wx.Colour
+    rate_law: str
+    _sources: List[int]
+    _targets: List[int]
+    _thickness: float
+    src_c_handle: HandleData
+    dest_c_handle: HandleData
+    handles: List[HandleData]
 
     def __init__(self, id: str, net_index: int, *, sources: List[int], targets: List[int],
                  handle_positions: List[Vec2], fill_color: wx.Colour,
-                 line_thickness: float, rate_law: str, index: int = -1):
+                 line_thickness: float, rate_law: str, center_pos: Optional[Vec2] = None,
+                 index: int = -1):
         """Constructor for a reaction.
 
         Args:
@@ -175,6 +177,7 @@ class Reaction:
         self.id = id
         self.net_index = net_index
         self.index = index
+        self.center_pos = center_pos
         self.fill_color = fill_color
         self.rate_law = rate_law
         self._sources = sources
@@ -262,11 +265,13 @@ class SpeciesBezier:
     centroid_handle: HandleData
     is_source: bool
     bezier_points: List[Vec2]
+    real_center: Vec2
+    thickness: float
     _extended_handle: Vec2
     _collision_dirty: bool  #: Whether the Bezier curve needs to be recomputed.
     _paint_dirty: bool
 
-    def __init__(self, node_idx: int, node_rect: Rect, handle: HandleData, centroid: Vec2,
+    def __init__(self, node_idx: int, node_rect: Rect, handle: HandleData, real_center: Vec2,
                  centroid_handle: HandleData, is_source: bool, thickness: float):
         assert INITIALIZED, 'Bezier matrices not initialized! Call init_bezier()'
         self.node_idx = node_idx
@@ -278,15 +283,16 @@ class SpeciesBezier:
         self.bezier_points = [Vec2() for _ in range(MAXSEGS + 1)]
         self._collision_dirty = True
         self._paint_dirty = True
-        self.update_curve(centroid)
+        self.update_curve(real_center)
         self.arrow_adjusted_coords = list()
         self.bounding_box = None
         self.thickness = thickness
+        self.real_center = Vec2()
 
-    def update_curve(self, centroid: Vec2):
+    def update_curve(self, real_center: Vec2):
         """Called after either the node, the centroid, or at least one of their handles changed.
         """
-        self.centroid = centroid
+        self.real_center = real_center
         self._collision_dirty = True
         self._paint_dirty = True
 
@@ -328,7 +334,7 @@ class SpeciesBezier:
                 for i in range(MAXSEGS+1):
                     tmp = Vec2()
                     for j, point in enumerate((self.node_intersection, self.handle.tip,
-                                               self.centroid_handle.tip, self.centroid)):
+                                               self.centroid_handle.tip, self.real_center)):
                         tmp += point * float(BezJ[i, j])
 
                     # and scale back down again
@@ -398,7 +404,7 @@ class SpeciesBezier:
         points = [p * cstate.scale for p in (self.node_intersection,
                                              self.handle.tip,
                                              self.centroid_handle.tip,
-                                             self.centroid)]
+                                             self.real_center)]
         path.MoveToPoint(*points[0])
         path.AddCurveToPoint(*points[1], *points[2], *points[3])
         gc.StrokePath(path)
@@ -465,49 +471,54 @@ class ReactionBezier:
         self.src_beziers = list()
         self.dest_beziers = list()
 
-        reaction.dest_c_handle.tip = self.centroid * 2 - reaction.src_c_handle.tip
-        reaction.src_c_handle.base = self.centroid
-        reaction.dest_c_handle.base = self.centroid
+        reaction.dest_c_handle.tip = self.real_center * 2 - reaction.src_c_handle.tip
+        reaction.src_c_handle.base = self.real_center
+        reaction.dest_c_handle.base = self.real_center
         # create handles for species
         for index, (gi, node) in enumerate(gchain(reactants, products)):
             in_products = bool(gi)
 
             node_handle = reaction.handles[index]
             centroid_handle = self.reaction.dest_c_handle if in_products else self.reaction.src_c_handle
-            sb = SpeciesBezier(node.index, node.rect, node_handle, self.centroid, centroid_handle,
+            sb = SpeciesBezier(node.index, node.rect, node_handle, self.real_center, centroid_handle,
                                not in_products, self.reaction.thickness)
             to_append = self.dest_beziers if in_products else self.src_beziers
             to_append.append(sb)
 
+    @property
+    def real_center(self) -> Vec2:
+        return self.reaction.center_pos if self.reaction.center_pos else self.centroid
+
     def make_handle_moved_func(self, sb: SpeciesBezier):
         """Manufacture a callback function (on_moved) for the given SpeciesBezier."""
-        return lambda _: sb.update_curve(self.centroid)
+        return lambda _: sb.update_curve(self.real_center)
 
     def is_mouse_on(self, pos: Vec2) -> bool:
         """Return whether mouse is on the Bezier curve (not including the handles).
 
         pos is the logical position of the mouse (and not multiplied by any scale).
         """
-        if (pos - self.centroid).norm_sq <= get_theme('reaction_radius') ** 2:
+        if (pos - self.real_center).norm_sq <= get_theme('reaction_radius') ** 2:
             return True
         return any(bz.is_on_curve(pos) for bz in chain(self.src_beziers, self.dest_beziers))
 
     def src_handle_moved(self):
         """Special callback for when the source centroid handle is moved."""
-        self.reaction.dest_c_handle.tip = 2 * self.centroid - self.reaction.src_c_handle.tip
+        self.reaction.dest_c_handle.tip = 2 * self.real_center - self.reaction.src_c_handle.tip
         for bz in chain(self.src_beziers, self.dest_beziers):
-            bz.update_curve(self.centroid)
+            bz.update_curve(self.real_center)
 
     def dest_handle_moved(self):
         """Special callback for when the dest centroid handle is moved."""
-        self.reaction.src_c_handle.tip = 2 * self.centroid - self.reaction.dest_c_handle.tip
+        self.reaction.src_c_handle.tip = 2 * self.real_center - self.reaction.dest_c_handle.tip
         for bz in chain(self.src_beziers, self.dest_beziers):
-            bz.update_curve(self.centroid)
+            bz.update_curve(self.real_center)
 
     def nodes_moved(self, rects: List[Rect]):
+        # TODO set center pos, but not controller. Need to update controller later.
         self.centroid = compute_centroid(rects)
-        self.reaction.src_c_handle.base = self.centroid
-        self.reaction.dest_c_handle.base = self.centroid
+        self.reaction.src_c_handle.base = self.real_center
+        self.reaction.dest_c_handle.base = self.real_center
         for i, sb in enumerate(chain(self.src_beziers, self.dest_beziers)):
             sb.node_rect = rects[i]
         self.src_handle_moved()

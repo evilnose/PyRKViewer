@@ -5,6 +5,7 @@ import enum
 from functools import partial
 from itertools import chain
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
+from copy import copy
 
 import wx
 
@@ -31,6 +32,22 @@ from .utils import draw_rect
 
 
 SetCursorFn = Callable[[wx.Cursor], None]
+Layer = Union[int, Tuple[int, ...]]
+
+
+def layer_above(layer: Layer, count: int = 1) -> Layer:
+    """
+    Return the next layer above this layer, without increasing the length of the layer list.
+
+    count is optionally the layer number increment.
+    """
+    if count < 1:
+        raise ValueError('Layer count must be at least 1!')
+    if isinstance(layer, int):
+        return layer + count
+    else:
+        last = len(layer) - 1
+        return layer[0:last] + (layer[last] + count,)
 
 
 class CanvasElement:
@@ -41,29 +58,29 @@ class CanvasElement:
         enabled: Whether the element is enabled.
         destroyed: Whether the object was destroyed (if this is True then you shouldn't use this)
     """
-    layers: List[int]
+    layers: Layer
     enabled: bool
     destroyed: bool
 
-    def __init__(self, layers: Union[int, List[int]]):
+    def __init__(self, layers: Layer):
         if isinstance(layers, int):
-            layers = [layers]
+            layers = (layers,)
         self.layers = layers
         self.enabled = True
         self.destroyed = False
 
-    def set_layers(self, layers: Union[int, List[int]]):
+    def set_layers(self, layers: Layer):
         if isinstance(layers, int):
-            self.layers = [layers]
+            layers = (layers,)
+        self.layers = layers
 
     def destroy(self):
         """Destroy this element; override this for specific implementations."""
         self.destroyed = True
 
-    @abstractmethod
     def pos_inside(self, logical_pos: Vec2) -> bool:
         """Returns whether logical_pos is inside the diplayed shape of this element."""
-        pass
+        return False
 
     @abstractmethod
     def on_paint(self, gc: wx.GraphicsContext):
@@ -105,7 +122,7 @@ class NodeElement(CanvasElement):
     canvas: Any
 
     # HACK no type specified for canvas since otherwise there would be circular dependency
-    def __init__(self, node: Node, canvas, layers: Union[int, List[int]]):
+    def __init__(self, node: Node, canvas, layers: Layer):
         super().__init__(layers)
         self.node = node
         self.canvas = canvas
@@ -173,7 +190,7 @@ class BezierHandle(CanvasElement):
     twin = Any
     node_idx: int
 
-    def __init__(self, data: HandleData, layer: int, on_moved: Callable[[Vec2], None],
+    def __init__(self, data: HandleData, layer: Layer, on_moved: Callable[[Vec2], None],
                  on_dropped: Callable[[Vec2], None], reaction: Reaction, node_idx: int):
         super().__init__(layer)
         self.data = data
@@ -238,6 +255,53 @@ class BezierHandle(CanvasElement):
         return True
 
 
+class ReactionCenter(CanvasElement):
+    parent: ReactionElement
+    _moved: bool
+
+    def __init__(self, parent: ReactionElement, layers: Layer):
+        super().__init__(layers)
+        self.parent = parent
+        self._moved = False
+    
+    def on_paint(self, gc: wx.GraphicsContext):
+        # draw centroid
+        color = get_theme('handle_color') if self.parent.selected else self.parent.reaction.fill_color
+        pen = wx.Pen(color)
+        brush = wx.Brush(color)
+        gc.SetPen(pen)
+        gc.SetBrush(brush)
+        radius = get_theme('reaction_radius') * cstate.scale
+        center = self.parent.bezier.real_center * cstate.scale - Vec2.repeat(radius)
+        gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
+
+    def on_left_down(self, logical_pos: Vec2) -> bool:
+        return True
+
+    def on_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
+        offset = rel_pos / cstate.scale
+        self.parent.reaction.center_pos = self.parent.bezier.real_center + offset
+        self.parent.bezier.center_moved(offset)
+        self._moved = True
+        return True
+
+    def on_left_up(self, logical_pos: Vec2) -> bool:
+        ctrl = self.parent.controller
+        neti = self.parent.canvas.net_index
+        reai = self.parent.reaction.index
+        ctrl.start_group()
+        ctrl.set_reaction_center(neti, reai, self.parent.reaction.center_pos)
+        ctrl.set_center_handle(neti, reai, self.parent.reaction.src_c_handle.tip)
+        ctrl.end_group()
+        self._moved = False
+        return True
+
+    def pos_inside(self, logical_pos: Vec2) -> bool:
+        # TODO works witih zoom?
+        radius = get_theme('reaction_radius') * cstate.scale
+        return pt_in_circle(self.parent.bezier.real_center, radius, logical_pos)
+
+
 # Uniquely identifies nodes in a reaction: (regular node index; whether the node is a reactant)
 RIndex = Tuple[int, bool]
 
@@ -250,6 +314,7 @@ class ReactionElement(CanvasElement):
     corresponding update methods should be called.
     """
     reaction: Reaction
+    center_el: ReactionCenter
     index_to_bz: Dict[RIndex, SpeciesBezier]
     bezier: ReactionBezier
     bhandles: List[BezierHandle]
@@ -259,10 +324,11 @@ class ReactionElement(CanvasElement):
     #: Works in tandem with _dirty_indices. True if all nodes of the reaction are being moved.
     _moving_all: bool
     _selected: bool
+    canvas: Any  # avoid circular dependency
+    controller: IController
 
     # HACK no type for canvas since otherwise there is circular dependency
-    def __init__(self, reaction: Reaction, bezier: ReactionBezier, canvas, layers: List[int],
-                 handle_layer: int):
+    def __init__(self, reaction: Reaction, bezier: ReactionBezier, canvas, layers: Layer, handle_layer: Layer):
         super().__init__(layers)
         self.reaction = reaction
         self.bezier = bezier
@@ -272,6 +338,7 @@ class ReactionElement(CanvasElement):
                             for gi, bz in gchain(bezier.src_beziers,
                                                  bezier.dest_beziers)}
         self.canvas = canvas
+        self.controller = canvas.controller
         self._hovered_handle = None
         self._dirty_indices = set()
         self._moving_all = False
@@ -294,7 +361,6 @@ class ReactionElement(CanvasElement):
             post_event(DidCommitDragEvent())
             ctrl.end_group()
 
-        # TODO twins
         src_bh = BezierHandle(reaction.src_c_handle, handle_layer,
                               lambda _: bezier.src_handle_moved(),
                               centroid_handle_dropped, reaction, -1)
@@ -305,6 +371,8 @@ class ReactionElement(CanvasElement):
         dest_bh.twin = src_bh
         self.bhandles.append(src_bh)
         self.bhandles.append(dest_bh)
+        center_layers = layer_above(handle_layer, count=2)
+        self.center_el = ReactionCenter(self, center_layers)
 
     def make_drop_handle_func(self, ctrl: IController, neti: int, reai: int, nodei: int,
                               is_source: bool):
@@ -395,20 +463,10 @@ class ReactionElement(CanvasElement):
     def on_paint(self, gc: wx.GraphicsContext):
         self.bezier.do_paint(gc, self.reaction.fill_color, self.selected)
 
-        # draw centroid
-        color = get_theme('handle_color') if self.selected else self.reaction.fill_color
-        pen = wx.Pen(color)
-        brush = wx.Brush(color)
-        gc.SetPen(pen)
-        gc.SetBrush(brush)
-        radius = get_theme('reaction_radius') * cstate.scale
-        center = self.bezier.real_center * cstate.scale - Vec2.repeat(radius)
-        gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
-
 
 class CompartmentElt(CanvasElement):
     def __init__(self, compartment: Compartment, major_layer: int, minor_layer: int):
-        super().__init__([major_layer, minor_layer])
+        super().__init__((major_layer, minor_layer))
         self.compartment = compartment
 
     def pos_inside(self, logical_pos: Vec2) -> bool:

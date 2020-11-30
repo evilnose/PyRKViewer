@@ -27,7 +27,7 @@ from ..events import (
 from ..mvc import IController
 from ..utils import even_round, opacity_mul
 from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
-from .elements import CanvasElement, CompartmentElt, NodeElement, ReactionElement, SelectBox
+from .elements import CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
     Rect,
     Vec2,
@@ -380,10 +380,10 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.realsize = self.realsize
         self._minimap.nodes = self._nodes
 
-    def CreateNodeElement(self, node: Node, layers: Union[int, List[int]]) -> NodeElement:
+    def CreateNodeElement(self, node: Node, layers: Layer) -> NodeElement:
         return NodeElement(node, self, layers)
 
-    def CreateReactionElement(self, rxn: Reaction, layers: List[int]) -> ReactionElement:
+    def CreateReactionElement(self, rxn: Reaction, layers: Layer) -> ReactionElement:
         snodes = [self.node_idx_map[id] for id in rxn.sources]
         tnodes = [self.node_idx_map[id] for id in rxn.targets]
         rb = ReactionBezier(rxn, snodes, tnodes)
@@ -442,7 +442,7 @@ class Canvas(wx.ScrolledWindow):
         self._node_elements = list()
         for node in nodes:
             compi = self.controller.get_compartment_of_node(self.net_index, node.index)
-            layers = Canvas.NODE_LAYER if compi == -1 else [Canvas.COMPARTMENT_LAYER, compi, 1]
+            layers = Canvas.NODE_LAYER if compi == -1 else (Canvas.COMPARTMENT_LAYER, compi, 1)
             self._node_elements.append(self.CreateNodeElement(node, layers))
         # create reaction elements and assign the correct layers
         self._reaction_elements = list()
@@ -451,14 +451,16 @@ class Canvas(wx.ScrolledWindow):
             top_layer = max(
                 el.layers for el in self._node_elements if el.node.index in related_nodes)
             # Make sure reaction is displayed above its top-most node
-            self._reaction_elements.append(self.CreateReactionElement(rxn, top_layer + [1]))
+            self._reaction_elements.append(self.CreateReactionElement(rxn, layer_above(top_layer)))
 
         # Initialize elements list
         select_elements = cast(List[CanvasElement], self._node_elements) + cast(
             List[CanvasElement], self._reaction_elements) + cast(
                 List[CanvasElement], self._compartment_elements)
         for rxn_el in self._reaction_elements:
+            # Add Bezier handle and center elements
             select_elements += rxn_el.bhandles
+            select_elements.append(rxn_el.center_el)
             # Update reactions on whether they are selected
             rxn_el.selected = rxn_el.reaction.index in new_sel_reactions
 
@@ -608,9 +610,11 @@ class Canvas(wx.ScrolledWindow):
                 else:
                     self.dragged_element = None
 
-                node = None
-                rxn = None
-                comp = None
+                # variables for keeping track if clicked on a selectable element 
+                node: Optional[Node] = None
+                rxn: Optional[Reaction] = None
+                comp: Optional[Compartment] = None
+                rxn_center: Optional[ReactionCenter] = None
                 if isinstance(self.dragged_element, NodeElement):
                     n_elem = typing.cast(NodeElement, self.dragged_element)
                     node = n_elem.node
@@ -620,6 +624,9 @@ class Canvas(wx.ScrolledWindow):
                 elif isinstance(self.dragged_element, CompartmentElt):
                     c_elem = typing.cast(CompartmentElt, self.dragged_element)
                     comp = c_elem.compartment
+                elif isinstance(self.dragged_element, ReactionCenter):
+                    rxn_center = typing.cast(ReactionCenter, self.dragged_element)
+                    rxn = rxn_center.parent.reaction
 
                 # not resizing or dragging
                 if cstate.multi_select:
@@ -658,14 +665,15 @@ class Canvas(wx.ScrolledWindow):
                             self.sel_reactions_idx.set_item(set())
                             self.sel_compartments_idx.set_item(set())
 
-                # if clicked on a new node/compartment, immediately allow dragging on the
-                # updated select box
-                if not cstate.multi_select and (node or comp) and self._select_box.pos_inside(logical_pos):
-                    self._select_box.on_mouse_enter(logical_pos)
-                    good = self._select_box.on_left_down(logical_pos)
-                    assert good
-                    self.dragged_element = self._select_box
-                    return
+                if not cstate.multi_select:
+                    # if clicked on a new node/compartment, immediately allow dragging on the
+                    # updated select box
+                    if (node or comp) and self._select_box.pos_inside(logical_pos):
+                        self._select_box.on_mouse_enter(logical_pos)
+                        good = self._select_box.on_left_down(logical_pos)
+                        assert good
+                        self.dragged_element = self._select_box
+                        return
 
                 # clicked on nothing; drag-selecting
                 if self.dragged_element is None:
@@ -1044,7 +1052,7 @@ class Canvas(wx.ScrolledWindow):
             self._minimap.DoPaint(gc)
             post_event(DidPaintCanvasEvent(gc))
 
-    def ResetLayer(self, elt: CanvasElement, layers: Union[int, List[int]]):
+    def ResetLayer(self, elt: CanvasElement, layers: Layer):
         if elt in self._elements:
             self._elements.remove(elt)
         elt.set_layers(layers)

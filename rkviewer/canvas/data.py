@@ -248,8 +248,13 @@ class HandleData:
 class SpeciesBezier:
     """Class that keeps track of the Bezier curve associated with a reaction species.
 
+    Note:
+        When drawing the reaction curve, the builtin AddCurveToPoint is used. However, for the
+        purpose of detecting a click on the curve, we still need to compute a rough approximation
+        of the Bezier curve (e.g. 5 straight line segments). Hence why we need to compute the Bezier
+        curve.
+
     Attributes:
-        TODO update node
         node: The associated node.
         node_intersection: The intersection point between the handle and the padded node, i.e. the
                            point after which the handle is not drawn, to create a gap.
@@ -287,7 +292,6 @@ class SpeciesBezier:
         self.arrow_adjusted_coords = list()
         self.bounding_box = None
         self.thickness = thickness
-        self.real_center = Vec2()
 
     def update_curve(self, real_center: Vec2):
         """Called after either the node, the centroid, or at least one of their handles changed.
@@ -498,8 +502,6 @@ class ReactionBezier:
 
         pos is the logical position of the mouse (and not multiplied by any scale).
         """
-        if (pos - self.real_center).norm_sq <= get_theme('reaction_radius') ** 2:
-            return True
         return any(bz.is_on_curve(pos) for bz in chain(self.src_beziers, self.dest_beziers))
 
     def src_handle_moved(self):
@@ -513,6 +515,12 @@ class ReactionBezier:
         self.reaction.src_c_handle.tip = 2 * self.real_center - self.reaction.dest_c_handle.tip
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.update_curve(self.real_center)
+
+    def center_moved(self, offset: Vec2):
+        self.reaction.src_c_handle.base = self.real_center
+        self.reaction.dest_c_handle.base = self.real_center
+        self.reaction.src_c_handle.tip += offset
+        self.src_handle_moved()
 
     def nodes_moved(self, rects: List[Rect]):
         # TODO set center pos, but not controller. Need to update controller later.

@@ -423,7 +423,8 @@ class Controller(IController):
                         line_thickness=iod.getReactionLineThickness(neti, reai),
                         index=reai,
                         rate_law=iod.getReactionRateLaw(neti, reai),
-                        handle_positions=items
+                        handle_positions=items,
+                        center_pos=iod.getReactionCenterPos(neti, reai),
                         )
 
     def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:

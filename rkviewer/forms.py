@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from .config import get_theme, get_setting
 from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyReactionEvent,
-                     DidMoveCompartmentsEvent, DidMoveNodesEvent, DidResizeCompartmentsEvent,
+                     DidMoveCompartmentsEvent, DidMoveNodesEvent, DidMoveReactionCenterEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, post_event)
 from .mvc import IController
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
@@ -211,7 +211,7 @@ class EditPanelForm(ScrolledPanel):
         """Set the most natural insertion point for a paired-number text control.
 
         The format of the text control must be "X,Y" where X, Y are numbers, allowing whitespace.
-        This should be called after the text control is manually changed by View during user's
+        This should be called after the text control is autoly changed by View during user's
         editing. Normally if the text changes the caret will be reset to the 0th position, but this
         calculates a smarter position to place the caret to produce a more natural behavior.
 
@@ -840,6 +840,17 @@ class ReactionForm(EditPanelForm):
         self.stroke_width_ctrl.Bind(wx.EVT_TEXT, stroke_cb)
         self._AppendControl(sizer, 'line width', self.stroke_width_ctrl)
 
+        # Whether the center position should be autoly set?
+        self.auto_center_ctrl = wx.CheckBox(self)
+        self.auto_center_ctrl.SetValue(True)
+        self.auto_center_ctrl.Bind(wx.EVT_CHECKBOX, self._AutoCenterCallback)
+        self._AppendControl(sizer, 'auto-position', self.auto_center_ctrl)
+
+        self.center_pos_ctrl = wx.TextCtrl(self)
+        self.center_pos_ctrl.Disable()
+        self.center_pos_ctrl.Bind(wx.EVT_TEXT, self._CenterPosCallback)
+        self._AppendControl(sizer, 'center position', self.center_pos_ctrl)
+
         self._reactant_subtitle = None
         self._product_subtitle = None
         self.reactant_stoich_ctrls = list()
@@ -877,6 +888,56 @@ class ReactionForm(EditPanelForm):
             self.controller.set_reaction_line_thickness(self.net_index, rxn.index, width)
         post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
+
+    def _AutoCenterCallback(self, evt):
+        checked = evt.GetInt()
+        assert len(self._selected_idx) == 1
+        prec = 2
+        reaction = self.canvas.reaction_idx_map[next(iter(self._selected_idx))]
+        centroid_map = self.canvas.GetReactionCentroids(self.net_index)
+        centroid = centroid_map[reaction.index]
+        if checked:
+            self.center_pos_ctrl.Disable()
+            self.center_pos_ctrl.ChangeValue('')
+            self.controller.start_group()
+            self.controller.set_reaction_center(self.net_index, reaction.index, None)
+            # Move centroid handle along if centroid changed.
+            if reaction.center_pos is not None:
+                offset = centroid - reaction.center_pos
+                if offset != Vec2():
+                    self.controller.set_center_handle(self.net_index, reaction.index, reaction.src_c_handle.tip + offset)
+            self.controller.end_group()
+            self.center_pos_ctrl.Disable()
+        else:
+            self.center_pos_ctrl.Enable()
+            self.center_pos_ctrl.ChangeValue('{}, {}'.format(
+                no_rzeros(centroid.x, prec), no_rzeros(centroid.y, prec)
+            ))
+            self.controller.set_reaction_center(self.net_index, reaction.index, centroid)
+    
+    def _CenterPosCallback(self, evt):
+        text = evt.GetString()
+        xy = parse_num_pair(text)
+        ctrl_id = self.center_pos_ctrl.GetId()
+        if xy is None:
+            self._SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
+            return
+
+        pos = Vec2(xy)
+        if pos.x < 0 or pos.y < 0:
+            self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
+            return
+        
+        assert len(self._selected_idx) == 1
+        reaction = self.canvas.reaction_idx_map[next(iter(self._selected_idx))]
+        if reaction.center_pos != pos:
+            offset = pos - reaction.center_pos
+            self._self_changes = True
+            self.controller.start_group()
+            self.controller.set_reaction_center(self.net_index, reaction.index, pos)
+            post_event(DidMoveReactionCenterEvent(self.net_index, reaction.index, offset, False))
+            self.controller.end_group()
+        self._SetValidationState(True, ctrl_id)
 
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
@@ -1034,12 +1095,20 @@ class ReactionForm(EditPanelForm):
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
             self.ratelaw_ctrl.Enable()
+
+            self.auto_center_ctrl.Enable()
+            auto_set = reaction.center_pos is None
+            self.auto_center_ctrl.SetValue(auto_set)
+            self.center_pos_ctrl.Enable(not auto_set)
+
             self._UpdateStoichFields(reai, self._GetSrcStoichs(reai), self._GetDestStoichs(reai))
         else:
             self.id_ctrl.Disable()
             fill, fill_alpha = self._GetMultiColor(list(r.fill_color for r in reactions))
             ratelaw_text = 'multiple'
             self.ratelaw_ctrl.Disable()
+            self.auto_center_ctrl.Disable()
+            self.center_pos_ctrl.Disable()
             self._UpdateStoichFields(0, [], [])
 
         stroke_width = self._GetMultiFloatText(set(r.thickness for r in reactions), prec)

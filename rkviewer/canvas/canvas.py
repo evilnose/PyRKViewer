@@ -132,6 +132,7 @@ class Canvas(wx.ScrolledWindow):
     #: bool to indicate whether a selection changed event was fired inside selection group.
     _selection_dirty: bool
     node_idx_map: Dict[int, Node]  #: Maps node index to node
+    reaction_idx_map: Dict[int, Reaction]  #; Maps reaction index to reaction
     comp_idx_map: Dict[int, Compartment]  #: Maps compartment index to compartment
     sel_nodes: List[Node]  #: Current lsit of selected nodes; cached for performance
     sel_comps: List[Compartment]  #: Current list of selected comps; cached for performance
@@ -247,6 +248,7 @@ class Canvas(wx.ScrolledWindow):
         cstate.input_mode_changed = self.InputModeChanged
         self.comp_index = 0  # Compartment of index; remove once controller implements compartments
         self.node_idx_map = dict()
+        self.reaction_idx_map = dict()
         self.comp_idx_map = dict()
 
         self._nodes_floating = False
@@ -417,10 +419,13 @@ class Canvas(wx.ScrolledWindow):
         self._reactant_idx &= node_idx
         self._product_idx &= node_idx
 
-        # Update index map
+        # Update index maps
         self.node_idx_map = dict()
         for node in nodes:
             self.node_idx_map[node.index] = node
+        self.reaction_idx_map = dict()
+        for rxn in reactions:
+            self.reaction_idx_map[rxn.index] = rxn
         self.comp_idx_map = dict()
         for comp in compartments:
             self.comp_idx_map[comp.index] = comp
@@ -1343,3 +1348,8 @@ depend on it.".format(bound_node.id))
             raise ValueError("Tried to remove an element that is not on canvas.")
         self._plugin_elements.remove(element)
         self._elements.remove(element)
+
+    def GetReactionCentroids(self, net_index: int) -> Dict[int, Vec2]:
+        """Helper method for ReactionForm to get access to the centroid positions.
+        """
+        return { r.reaction.index : r.bezier.centroid for r in self._reaction_elements }

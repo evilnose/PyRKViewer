@@ -11,7 +11,7 @@ import wx
 
 from ..config import get_setting, get_theme
 from ..events import (
-    CanvasEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidMoveBezierHandleEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
+    CanvasEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidMoveBezierHandleEvent, DidMoveReactionCenterEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
     DidMoveNodesEvent, bind_handler,
     post_event, unbind_handler,
 )
@@ -263,26 +263,36 @@ class ReactionCenter(CanvasElement):
         super().__init__(layers)
         self.parent = parent
         self._moved = False
+        self.hovering = False
     
     def on_paint(self, gc: wx.GraphicsContext):
         # draw centroid
-        color = get_theme('handle_color') if self.parent.selected else self.parent.reaction.fill_color
+        color = self.parent.reaction.fill_color
+        if self.parent.selected:
+            if self.hovering:
+                color = get_theme('highlighted_handle_color')
+            else:
+                color = get_theme('handle_color')
         pen = wx.Pen(color)
         brush = wx.Brush(color)
         gc.SetPen(pen)
         gc.SetBrush(brush)
-        radius = get_theme('reaction_radius') * cstate.scale
+        radius = get_theme('reaction_radius')
         center = self.parent.bezier.real_center * cstate.scale - Vec2.repeat(radius)
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
+        # If not selected, then nothing is done to prevent accidental dragging
         return True
 
     def on_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
         offset = rel_pos / cstate.scale
-        self.parent.reaction.center_pos = self.parent.bezier.real_center + offset
+        reaction = self.parent.reaction
+        reaction.center_pos = self.parent.bezier.real_center + offset
         self.parent.bezier.center_moved(offset)
         self._moved = True
+        net_index = 0
+        post_event(DidMoveReactionCenterEvent(net_index, reaction.index, offset, True))
         return True
 
     def on_left_up(self, logical_pos: Vec2) -> bool:
@@ -292,14 +302,23 @@ class ReactionCenter(CanvasElement):
         ctrl.start_group()
         ctrl.set_reaction_center(neti, reai, self.parent.reaction.center_pos)
         ctrl.set_center_handle(neti, reai, self.parent.reaction.src_c_handle.tip)
+        post_event(DidCommitDragEvent())
         ctrl.end_group()
         self._moved = False
         return True
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         # TODO works witih zoom?
-        radius = get_theme('reaction_radius') * cstate.scale
-        return pt_in_circle(self.parent.bezier.real_center, radius, logical_pos)
+        radius = get_theme('reaction_radius')
+        return pt_in_circle(self.parent.bezier.real_center * cstate.scale, radius, logical_pos)
+
+    def on_mouse_enter(self, logical_pos: Vec2) -> bool:
+        self.hovering = True
+        return True
+
+    def on_mouse_leave(self, logical_pos: Vec2) -> bool:
+        self.hovering = False
+        return True
 
 
 # Uniquely identifies nodes in a reaction: (regular node index; whether the node is a reactant)

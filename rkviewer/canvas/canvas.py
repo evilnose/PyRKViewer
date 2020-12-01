@@ -1221,7 +1221,6 @@ depend on it.".format(bound_node.id))
             self.sel_compartments_idx.set_item({c.index for c in self._compartments})
         self.LazyRefresh()
     
-    #Jin_edit
     def SelectAllNodes(self):
         with self._SelectGroupEvent():
             self.sel_nodes_idx.set_item({n.index for n in self._nodes})

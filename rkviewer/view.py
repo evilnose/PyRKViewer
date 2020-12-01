@@ -418,7 +418,6 @@ class MainFrame(wx.Frame):
         select_menu = wx.Menu()
         self.AddMenuItem(select_menu, 'Select &All', 'Select all',
                          lambda _: canvas.SelectAll(), entries, key=(wx.ACCEL_CTRL, ord('A')))
-        #Jin_edit
         self.AddMenuItem(select_menu, 'Select All &Nodes', 'Select all nodes',
                          lambda _: canvas.SelectAllNodes(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('N')))
         self.AddMenuItem(select_menu, 'Select All &Reactions', 'Select all reactions',

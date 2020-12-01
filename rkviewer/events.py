@@ -64,6 +64,7 @@ class DidMoveNodesEvent(CanvasEvent):
                 is given; otherwise, a list of offsets are given, with each offset matching a node.
         dragged: Whether the resize operation was done by the user dragging, and not, for exmaple,
                  through the form.
+        by_user: Whether the event was performed by the user or through a plugin.
     """
     node_indices: List[int]
     offset: Union[Vec2, List[Vec2]]
@@ -83,6 +84,7 @@ class DidMoveCompartmentsEvent(CanvasEvent):
                 with each offset matching a node.
         dragged: Whether the resize operation was done by the user dragging, and not, for exmaple,
                  through the form.
+        by_user: Whether the event was performed by the user or through a plugin.
     """
     compartment_indices: List[int]
     offset: Union[Vec2, List[Vec2]]
@@ -99,6 +101,7 @@ class DidResizeNodesEvent(CanvasEvent):
         ratio: The resize ratio.
         dragged: Whether the resize operation was done by the user dragging, and not, for exmaple,
                  through the form.
+        by_user: Whether the event was performed by the user or through a plugin.
     """
     node_indices: List[int]
     ratio: Vec2
@@ -140,12 +143,32 @@ class DidMoveBezierHandleEvent(CanvasEvent):
         direct: Automatically true when by_user is False. Otherwise, True if the handle is
                 moved by the user dragging the handle directly, and False if the handle was moved
                 by the user dragging the node associated with that handle.
+        by_user: Whether the event was performed by the user or through a plugin.
     """
     net_index: int
     reaction_index: int
     node_index: int
     by_user: bool
     direct: bool
+
+
+@dataclass
+class DidMoveReactionCenterEvent(CanvasEvent):
+    """Dispatched after the reaction center is moved by the user.
+
+    Note that this is not triggered if the center moved automatically due to nodes moving.
+
+    Attributes:
+        net_index: The network index.
+        reaction_index: The reaction index.
+        offset: The amount moved.
+        dragged: Whether the center is moved by the user dragging (it could have been through the
+                 form).
+    """
+    net_index: int
+    reaction_index: int
+    offset: Vec2
+    dragged: bool
 
 
 @dataclass

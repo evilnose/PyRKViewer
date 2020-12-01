@@ -4,6 +4,7 @@ Version 0.01: Author: Carmen Perena Cortes 2020
 Based on THOMAS M. J. FRUCHTERMAN AND EDWARD M. REINGOLD's Graph Drawing by Force-directed Placement
 SOFTWARE—PRACTICE AND EXPERIENCE, VOL. 21(1 1), 1129-1164 (NOVEMBER 1991)
 '''
+# pylint: disable=maybe-no-member
 import wx
 from rkplugin.plugins import PluginMetadata, WindowedPlugin
 from rkplugin import api

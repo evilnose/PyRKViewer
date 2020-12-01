@@ -101,15 +101,38 @@ class LayoutNetworkX(WindowedPlugin):
                 G.add_edges_from(edgesFrom)
             
         generateGraph()
-        pos = (nx.spring_layout(G))
+        pos = (nx.spring_layout(G, k = 40, iterations = 100, dim=700))
         positions = np.array(list(pos.values()))
+        print(positions)
         centroids = positions[0: len(reactionsInd)]
         nodes = positions[len(reactionsInd): len(positions)]
-        with api.group_action:
-            count = 0
-            for c in centroids:
-                
         
+        minX = 0
+        minY = 0
+        for p in positions:
+            if p[0] < minX:
+                minX = p[0]
+            if p[1] < minY:
+                minY = p[1]
+
+        count = 0
+        for n in nodes:
+            newX = 1000*((n[0]) - minX)
+            newY = 1000*((n[1]) - minY)
+            api.move_node(0, count, position = Vec2(newX, newY), allowNegativeCoordinates=True)   
+            count = count + 1
+
+        for r in api.get_reactions(0):
+            handles = api.default_handle_positions(0, r.index) # centroid, sources, target
+            api.set_reaction_center_handle(0, r.index, handles[0])
+            count = 1
+            for s in r.sources:
+                api.set_reaction_node_handle(0, r.index, s, True, handles[count])
+                count += 1
+            for t in r.targets:
+                api.set_reaction_node_handle(0, r.index, t, False, handles[count])
+                count += 1
+    
         
 
             

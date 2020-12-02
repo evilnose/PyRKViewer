@@ -27,7 +27,7 @@ from ..events import (
 from ..mvc import IController
 from ..utils import even_round, opacity_mul
 from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
-from .elements import CanvasElement, CompartmentElt, NodeElement, ReactionElement, SelectBox
+from .elements import CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
     Rect,
     Vec2,
@@ -132,6 +132,7 @@ class Canvas(wx.ScrolledWindow):
     #: bool to indicate whether a selection changed event was fired inside selection group.
     _selection_dirty: bool
     node_idx_map: Dict[int, Node]  #: Maps node index to node
+    reaction_idx_map: Dict[int, Reaction]  #; Maps reaction index to reaction
     comp_idx_map: Dict[int, Compartment]  #: Maps compartment index to compartment
     sel_nodes: List[Node]  #: Current lsit of selected nodes; cached for performance
     sel_comps: List[Compartment]  #: Current list of selected comps; cached for performance
@@ -247,6 +248,7 @@ class Canvas(wx.ScrolledWindow):
         cstate.input_mode_changed = self.InputModeChanged
         self.comp_index = 0  # Compartment of index; remove once controller implements compartments
         self.node_idx_map = dict()
+        self.reaction_idx_map = dict()
         self.comp_idx_map = dict()
 
         self._nodes_floating = False
@@ -380,10 +382,10 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.realsize = self.realsize
         self._minimap.nodes = self._nodes
 
-    def CreateNodeElement(self, node: Node, layers: Union[int, List[int]]) -> NodeElement:
+    def CreateNodeElement(self, node: Node, layers: Layer) -> NodeElement:
         return NodeElement(node, self, layers)
 
-    def CreateReactionElement(self, rxn: Reaction, layers: List[int]) -> ReactionElement:
+    def CreateReactionElement(self, rxn: Reaction, layers: Layer) -> ReactionElement:
         snodes = [self.node_idx_map[id] for id in rxn.sources]
         tnodes = [self.node_idx_map[id] for id in rxn.targets]
         rb = ReactionBezier(rxn, snodes, tnodes)
@@ -417,10 +419,13 @@ class Canvas(wx.ScrolledWindow):
         self._reactant_idx &= node_idx
         self._product_idx &= node_idx
 
-        # Update index map
+        # Update index maps
         self.node_idx_map = dict()
         for node in nodes:
             self.node_idx_map[node.index] = node
+        self.reaction_idx_map = dict()
+        for rxn in reactions:
+            self.reaction_idx_map[rxn.index] = rxn
         self.comp_idx_map = dict()
         for comp in compartments:
             self.comp_idx_map[comp.index] = comp
@@ -442,7 +447,7 @@ class Canvas(wx.ScrolledWindow):
         self._node_elements = list()
         for node in nodes:
             compi = self.controller.get_compartment_of_node(self.net_index, node.index)
-            layers = Canvas.NODE_LAYER if compi == -1 else [Canvas.COMPARTMENT_LAYER, compi, 1]
+            layers = Canvas.NODE_LAYER if compi == -1 else (Canvas.COMPARTMENT_LAYER, compi, 1)
             self._node_elements.append(self.CreateNodeElement(node, layers))
         # create reaction elements and assign the correct layers
         self._reaction_elements = list()
@@ -451,14 +456,16 @@ class Canvas(wx.ScrolledWindow):
             top_layer = max(
                 el.layers for el in self._node_elements if el.node.index in related_nodes)
             # Make sure reaction is displayed above its top-most node
-            self._reaction_elements.append(self.CreateReactionElement(rxn, top_layer + [1]))
+            self._reaction_elements.append(self.CreateReactionElement(rxn, layer_above(top_layer)))
 
         # Initialize elements list
         select_elements = cast(List[CanvasElement], self._node_elements) + cast(
             List[CanvasElement], self._reaction_elements) + cast(
                 List[CanvasElement], self._compartment_elements)
         for rxn_el in self._reaction_elements:
+            # Add Bezier handle and center elements
             select_elements += rxn_el.bhandles
+            select_elements.append(rxn_el.center_el)
             # Update reactions on whether they are selected
             rxn_el.selected = rxn_el.reaction.index in new_sel_reactions
 
@@ -601,16 +608,18 @@ class Canvas(wx.ScrolledWindow):
                 for el in reversed(self._elements):
                     if not el.enabled:
                         continue
-                    if el.pos_inside(logical_pos) and el.do_left_down(logical_pos):
+                    if el.pos_inside(logical_pos) and el.on_left_down(logical_pos):
                         self.dragged_element = el
                         self._last_drag_pos = logical_pos
                         break
                 else:
                     self.dragged_element = None
 
-                node = None
-                rxn = None
-                comp = None
+                # variables for keeping track if clicked on a selectable element 
+                node: Optional[Node] = None
+                rxn: Optional[Reaction] = None
+                comp: Optional[Compartment] = None
+                rxn_center: Optional[ReactionCenter] = None
                 if isinstance(self.dragged_element, NodeElement):
                     n_elem = typing.cast(NodeElement, self.dragged_element)
                     node = n_elem.node
@@ -620,6 +629,9 @@ class Canvas(wx.ScrolledWindow):
                 elif isinstance(self.dragged_element, CompartmentElt):
                     c_elem = typing.cast(CompartmentElt, self.dragged_element)
                     comp = c_elem.compartment
+                elif isinstance(self.dragged_element, ReactionCenter):
+                    rxn_center = typing.cast(ReactionCenter, self.dragged_element)
+                    rxn = rxn_center.parent.reaction
 
                 # not resizing or dragging
                 if cstate.multi_select:
@@ -658,14 +670,15 @@ class Canvas(wx.ScrolledWindow):
                             self.sel_reactions_idx.set_item(set())
                             self.sel_compartments_idx.set_item(set())
 
-                # if clicked on a new node/compartment, immediately allow dragging on the
-                # updated select box
-                if not cstate.multi_select and (node or comp) and self._select_box.pos_inside(logical_pos):
-                    self._select_box.do_mouse_enter(logical_pos)
-                    good = self._select_box.do_left_down(logical_pos)
-                    assert good
-                    self.dragged_element = self._select_box
-                    return
+                if not cstate.multi_select:
+                    # if clicked on a new node/compartment, immediately allow dragging on the
+                    # updated select box
+                    if (node or comp) and self._select_box.pos_inside(logical_pos):
+                        self._select_box.on_mouse_enter(logical_pos)
+                        good = self._select_box.on_left_down(logical_pos)
+                        assert good
+                        self.dragged_element = self._select_box
+                        return
 
                 # clicked on nothing; drag-selecting
                 if self.dragged_element is None:
@@ -765,7 +778,7 @@ class Canvas(wx.ScrolledWindow):
         if self._minimap.dragging:
             self._minimap.OnLeftUp(device_pos)
             # HACK once we integrate overlays (e.g. minimap) as CanvasElements, we can simply call
-            # do_mouse_leave or something
+            # on_mouse_leave or something
             self._minimap.hovering = False
         elif self._minimap.hovering:
             self._minimap.hovering = False
@@ -807,16 +820,16 @@ class Canvas(wx.ScrolledWindow):
             # cursor
             logical_pos = self.CalcScrolledPositionFloat(device_pos)
             if self.dragged_element is not None:
-                self.dragged_element.do_left_up(logical_pos)
+                self.dragged_element.on_left_up(logical_pos)
                 self.dragged_element = None
             elif self.hovered_element is not None:
-                self.hovered_element.do_mouse_leave(logical_pos)
+                self.hovered_element.on_mouse_leave(logical_pos)
                 self.hovered_element = None
             elif evt.LeftIsDown():
                 for el in reversed(self._elements):
                     if not el.enabled:
                         continue
-                    if el.pos_inside(logical_pos) and el.do_left_up(logical_pos):
+                    if el.pos_inside(logical_pos) and el.on_left_up(logical_pos):
                         return
 
         if overlay is not None:
@@ -870,7 +883,7 @@ class Canvas(wx.ScrolledWindow):
                     if self.dragged_element is not None:
                         self._FloatNodes()
                         rel_pos = logical_pos - self._last_drag_pos
-                        if self.dragged_element.do_mouse_drag(logical_pos, rel_pos):
+                        if self.dragged_element.on_mouse_drag(logical_pos, rel_pos):
                             redraw = True
                         self._last_drag_pos = logical_pos
                     elif self._minimap.dragging:
@@ -893,14 +906,14 @@ class Canvas(wx.ScrolledWindow):
 
                         if self.hovered_element is not hovered:
                             if self.hovered_element is not None:
-                                self.hovered_element.do_mouse_leave(logical_pos)
+                                self.hovered_element.on_mouse_leave(logical_pos)
                             if hovered is not None:
-                                hovered.do_mouse_enter(logical_pos)
+                                hovered.on_mouse_enter(logical_pos)
                             redraw = True
                             self.hovered_element = hovered
                         elif hovered is not None:
                             # still in the same hovered element
-                            moved = self.hovered_element.do_mouse_move(logical_pos)
+                            moved = self.hovered_element.on_mouse_move(logical_pos)
                             if moved:
                                 redraw = True
 
@@ -966,9 +979,9 @@ class Canvas(wx.ScrolledWindow):
                     continue
                 if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
                     # Highlight compartment that will be dropped in.
-                    el.do_paint(gc, highlight=True)
+                    el.on_paint(gc, highlight=True)
                 else:
-                    el.do_paint(gc)
+                    el.on_paint(gc)
 
             # TODO Put this in SelectionChanged
             sel_rects = [n.rect * cstate.scale for n in self.sel_nodes] + \
@@ -1044,7 +1057,7 @@ class Canvas(wx.ScrolledWindow):
             self._minimap.DoPaint(gc)
             post_event(DidPaintCanvasEvent(gc))
 
-    def ResetLayer(self, elt: CanvasElement, layers: Union[int, List[int]]):
+    def ResetLayer(self, elt: CanvasElement, layers: Layer):
         if elt in self._elements:
             self._elements.remove(elt)
         elt.set_layers(layers)
@@ -1334,3 +1347,8 @@ depend on it.".format(bound_node.id))
             raise ValueError("Tried to remove an element that is not on canvas.")
         self._plugin_elements.remove(element)
         self._elements.remove(element)
+
+    def GetReactionCentroids(self, net_index: int) -> Dict[int, Vec2]:
+        """Helper method for ReactionForm to get access to the centroid positions.
+        """
+        return { r.reaction.index : r.bezier.centroid for r in self._reaction_elements }

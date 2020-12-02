@@ -115,6 +115,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def set_reaction_center(self, neti: int, reai: int, center_pos: Optional[Vec2]):
+        pass
+
+    @abc.abstractmethod
     def delete_node(self, neti: int, nodei: int) -> bool:
         pass
 

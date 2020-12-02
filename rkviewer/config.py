@@ -188,7 +188,7 @@ class ThemeSchema(Schema):
     # Color of control handles, e.g. resize handles, Bezier handles
     handle_color = Color(missing=wx.Colour(0, 140, 255))
     # Color of control handles when they are highlighted, if applicable
-    highlighted_handle_color = Color(missing=wx.Colour(255, 112, 0))
+    highlighted_handle_color = Color(missing=wx.Colour(128, 198, 255))
     # Padding of the select box, relative to the mininum possible bbox
     select_box_padding = Pixel(missing=5)
     # Length of the squares one uses to drag resize nodes

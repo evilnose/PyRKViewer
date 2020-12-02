@@ -135,13 +135,23 @@ class ReactionData:
     line_thickness: float = field()
     sources: List[int] = field()
     targets: List[int] = field()
+    center_pos: Optional[Vec2] = field(default=None)
     rate_law: str = field(default='')
     index: int = field(default=-1)
 
     @property
     def centroid(self) -> Vec2:
-        """The position of the centroid of this reaction (i.e. the center circle)."""
+        """The position of the centroid of this reaction"""
         return compute_centroid(self.net_index, self.sources, self.targets)
+
+    @property
+    def real_center(self) -> Vec2:
+        """The position of the reaction center circle.
+        
+        If the center has been manually moved by the user, then this would be equal to center_pos.
+        Otherwise this is equal to the dynamically computed centeroid position.
+        """
+        return self.center_pos if self.center_pos is not None else self.centroid
 
 
 @require_kwargs_on_init
@@ -300,6 +310,7 @@ def _translate_reaction(reaction: Reaction) -> ReactionData:
         targets=reaction.targets,
         rate_law=reaction.rate_law,
         index=reaction.index,
+        center_pos=reaction.center_pos,
     )
 
 
@@ -750,7 +761,7 @@ def default_handle_positions(net_index: int, reaction_index: int) -> List[Vec2]:
     rxn = get_reaction_by_index(net_index, reaction_index)
     sources = [_controller.get_node_by_index(net_index, nodei) for nodei in rxn.sources]
     targets = [_controller.get_node_by_index(net_index, nodei) for nodei in rxn.targets]
-    return _default_handle_positions(rxn.centroid, sources, targets)
+    return _default_handle_positions(rxn.real_center, sources, targets)
 
 
 def _set_handle_positions(reaction: Reaction, handle_positions: List[Vec2]):
@@ -767,7 +778,8 @@ def _set_handle_positions(reaction: Reaction, handle_positions: List[Vec2]):
 
 def add_reaction(net_index: int, id: str, reactants: List[int], products: List[int],
                  fill_color: Color = None, line_thickness: float = None,
-                 rate_law: str = '', handle_positions: List[Vec2] = None) -> int:
+                 rate_law: str = '', handle_positions: List[Vec2] = None,
+                 center_pos: Optional[Vec2] = None) -> int:
     """ 
     Adds a reaction.
 
@@ -810,6 +822,7 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
         line_thickness=line_thickness,
         rate_law=rate_law,
         handle_positions=handle_positions,
+        center_pos=center_pos
     )
 
     _controller.start_group()

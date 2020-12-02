@@ -139,7 +139,9 @@ def init_bezier():
 
         INITIALIZED = True
 
-#Jin_edit(2)
+# Jin_edit(2)
+
+
 @dataclass
 class Reaction:
     id: str
@@ -245,7 +247,9 @@ class HandleData:
         self.tip = tip
         self.base = base
 
-#Jin_edit(2)
+# Jin_edit(2)
+
+
 class SpeciesBezier:
     """Class that keeps track of the Bezier curve associated with a reaction species.
 
@@ -383,16 +387,18 @@ class SpeciesBezier:
         for i in range(4):
             self.arrow_adjusted_coords[i] += offset
     # Jin_edit
+
     def is_on_curve(self, pos: Vec2) -> bool:
         """Check if position is on curve; pos is scaled logical position."""
+        self._recompute(for_collision=True)
         if self.bezierCurves:
-            self._recompute(for_collision=True)
-
-        # if not within_rect(pos, self.bounding_box * cstate.scale):
-        #     return False
-
-            return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK + self.thickness / 2)
-                   for p1, p2 in pairwise(self.bezier_points))
+            return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos,
+                                  CURVE_SLACK + self.thickness / 2)
+                       for p1, p2 in pairwise(self.bezier_points))
+        else:
+            return pt_on_line(self.node_intersection * cstate.scale,
+                              self.real_center * cstate.scale, pos,
+                              CURVE_SLACK + self.thickness / 2)
 
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
         self._recompute(for_collision=False)
@@ -413,13 +419,12 @@ class SpeciesBezier:
                                              self.centroid_handle.tip,
                                              self.real_center)]
         path.MoveToPoint(*points[0])
-        #Jin_edit
+        # Jin_edit
         if self.bezierCurves:
             path.AddCurveToPoint(*points[1], *points[2], *points[3])
         else:
             path.AddLineToPoint(*points[3])
         gc.StrokePath(path)
-
 
         if selected:
             assert self.node_intersection is not None
@@ -492,7 +497,6 @@ class ReactionBezier:
 
             node_handle = reaction.handles[index]
             centroid_handle = self.reaction.dest_c_handle if in_products else self.reaction.src_c_handle
-            #Jin_edit
             sb = SpeciesBezier(node.index, node.rect, node_handle, self.centroid, centroid_handle,
                                not in_products, self.reaction.thickness, self.reaction.bezierCurves)
             to_append = self.dest_beziers if in_products else self.src_beziers

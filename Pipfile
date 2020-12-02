@@ -13,11 +13,12 @@ autopep8 = "*"
 
 [packages]
 wxpython = "==4.1.0"
-numpy = "*"
+numpy = "<1.19.4"
 scipy = "*"
 sortedcontainers = "*"
 marshmallow = "*"
 commentjson = "*"
+networkx = "*"
 
 [requires]
 python_version = "3.8"

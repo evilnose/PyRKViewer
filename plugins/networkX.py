@@ -96,11 +96,35 @@ class LayoutNetworkX(WindowedPlugin):
                 numS = np.empty_like(centroidsFromIn, dtype = int)
                 numS[:,] = n
                 nodeIndArrayFrom = np.char.add(nS, numS.astype(str))
+                
 
                 edgesTo = np.array(list(zip(centroidsToIn, nodeIndArrayTo)))
                 edgesFrom = np.array(list(zip(nodeIndArrayFrom, centroidsFromIn)))
+                
+                
                 G.add_edges_from(edgesTo)
                 G.add_edges_from(edgesFrom)
+               
+            '''
+            forExtra = np.ones((len(nodesId - 1), 1))
+            nS = np.empty_like(nodesId, dtype = str)
+            nS[:,] = "n"
+            numS = np.empty_like(nodesId, dtype = int)
+            numS[:,] = 0
+            extra = np.char.add(nS, numS.astype(str))
+            
+            np.delete(extra, 1)
+            print(extra)
+            allNodes = nodesId
+            np.delete(allNodes, 1)
+            print(allNodes)
+            
+
+            extraEdges = np.array(list(zip(extra, allNodes)))
+            print(extraEdges)
+            G.add_edges_from(extraEdges)
+            '''
+            
 
             cn = 0
             for rea in api.get_reactions(0):
@@ -112,11 +136,9 @@ class LayoutNetworkX(WindowedPlugin):
             for nod in api.get_nodes(0):
                 originalPos[nodesId[cn]] = list([nod.position.x, nod.position.y])
                 cn = cn + 1
-
-            print(originalPos)
             
         generateGraph()
-        pos = (nx.spring_layout(G, k = 100, iterations = 100, scale = 500, pos = originalPos ))
+        pos = (nx.fruchterman_reingold_layout(G, k = 70, iterations = 100, scale = 550, pos = originalPos))
         positions = np.array(list(pos.values()))
         centroids = positions[0: len(reactionsInd)]
         nodes = positions[len(reactionsInd): len(positions)]
@@ -129,10 +151,12 @@ class LayoutNetworkX(WindowedPlugin):
             if p[1] < minY:
                 minY = p[1]
 
+        nodes = nodes - np.array([minX, minY])
+        
         count = 0
         for n in nodes:
-            newX = float((n[0]) - minX)
-            newY = float((n[1]) - minY)
+            newX = float(n[0])
+            newY = float(n[1])
             api.move_node(0, count, position = Vec2(newX, newY), allowNegativeCoordinates=True)   
             count = count + 1
 

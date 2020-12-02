@@ -268,6 +268,8 @@ class SpeciesBezier:
                          this reaction.
         is_source: Whether this species is considered a source or a dest node.
         arrow_adjusted_coords: Coordinate array for the arrow vertices.
+        bezierCurves: True if we are drawing Bezier curves. Otherwise we are drawing simple
+                      straight lines.
     """
     node_idx: int
     node_intersection: Optional[Vec2]
@@ -280,6 +282,7 @@ class SpeciesBezier:
     _extended_handle: Vec2
     _collision_dirty: bool  #: Whether the Bezier curve needs to be recomputed.
     _paint_dirty: bool
+    bezierCurves: bool
 
     def __init__(self, node_idx: int, node_rect: Rect, handle: HandleData, real_center: Vec2,
                  centroid_handle: HandleData, is_source: bool, thickness: float, bezierCurves: bool):
@@ -309,7 +312,6 @@ class SpeciesBezier:
     def _recompute(self, for_collision):
         """Recompute everything that could have changed, but only recompute the curve if calc_curve.
         """
-
         if self._collision_dirty or self._paint_dirty:
             # STEP 1, get intersection between handle and node outer padding
             node_center = self.node_rect.position + self.node_rect.size / 2
@@ -323,8 +325,11 @@ class SpeciesBezier:
             # node rectangle sides. We're essentially making the handle a ray.
             longer_side = max(outer_rect.size.x, outer_rect.size.y)
             long_dist = (longer_side + NODE_EDGE_GAP_DISTANCE) * 10
-            handle_diff = self.handle.tip - node_center
+
+            other_point = self.handle.tip if self.bezierCurves else self.real_center
+            handle_diff = other_point - node_center
             if handle_diff.norm_sq <= 1e-6:
+                # if norm is too small, make it a hardcoded value to avoid zero vectors
                 handle_diff = Vec2(0, 1)
             self._extended_handle = node_center + handle_diff.normalized(long_dist)
             handle_segment = (node_center, self._extended_handle)
@@ -386,7 +391,6 @@ class SpeciesBezier:
         # Translate the remaining coordinates of the arrow, note tip = Q
         for i in range(4):
             self.arrow_adjusted_coords[i] += offset
-    # Jin_edit
 
     def is_on_curve(self, pos: Vec2) -> bool:
         """Check if position is on curve; pos is scaled logical position."""

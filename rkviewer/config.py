@@ -201,7 +201,7 @@ class ThemeSchema(Schema):
     react_node_border_width = Pixel(missing=3)
     reactant_border = Color(missing=wx.Colour(255, 100, 100))
     product_border = Color(missing=wx.Colour(0, 214, 125))
-    reaction_fill = Color(missing=wx.Colour(128, 64, 0))
+    reaction_fill = Color(missing=wx.Colour(91, 176, 253))
     reaction_line_thickness = Dim(missing=2)
     selected_reaction_fill = Color(missing=wx.Colour(0, 140, 255))
     comp_fill = Color(missing=wx.Colour(158, 169, 255, 200))

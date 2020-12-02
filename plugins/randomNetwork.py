@@ -371,8 +371,8 @@ class RandomNetwork(WindowedPlugin):
 
         nodeIdx = []
         for i in range (numNodes):
-            nodeIdx.append ( api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 179, 175),
-                    border_color=api.Color(255, 105, 97),
+            nodeIdx.append ( api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 204, 153),
+                    border_color=api.Color(255, 108, 9),
                     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800))))
        
         for i in range (numRxns):
@@ -384,7 +384,7 @@ class RandomNetwork(WindowedPlugin):
                     src.append(nodeIdx[j])  
                 if (st.item(j,i) == 1):
                     dest.append(nodeIdx[j])
-            r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(129, 123, 255))
+            r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(91, 176, 253))
         
         # Need to remove orphan nodes
         for i in range (numNodes):

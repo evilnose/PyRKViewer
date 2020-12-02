@@ -104,18 +104,18 @@ class LayoutNetworkX(WindowedPlugin):
             cn = 0
             for rea in api.get_reactions(0):
                 cent = api.compute_centroid(0, rea.sources, rea.targets)
-                originalPos[centroidId[cn]] = [cent.x, cent.y]
+                originalPos[centroidId[cn]] = list([cent.x, cent.y])
                 cn = cn + 1
 
             cn = 0
             for nod in api.get_nodes(0):
-                originalPos[nodesId[cn]] = [nod.position.x, nod.position.y]
+                originalPos[nodesId[cn]] = list([nod.position.x, nod.position.y])
                 cn = cn + 1
 
             print(originalPos)
             
         generateGraph()
-        pos = (nx.spring_layout(G, k = 40, iterations = 100, dim=700, pos = originalPos, scale = 100))
+        pos = (nx.spring_layout(G, k = 100, iterations = 100, scale = 500, pos = originalPos))
         positions = np.array(list(pos.values()))
         centroids = positions[0: len(reactionsInd)]
         nodes = positions[len(reactionsInd): len(positions)]

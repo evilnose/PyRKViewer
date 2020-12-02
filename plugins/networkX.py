@@ -54,7 +54,8 @@ class LayoutNetworkX(WindowedPlugin):
         return window
 
     def Apply(self, evt):
-        G = nx.DiGraph()
+        
+        G = nx.Graph()
         nodes = np.array(list(api.get_node_indices(0)))
         reactionsInd =  np.array(list(api.get_reaction_indices(0)))
         originalPos = {}
@@ -115,7 +116,7 @@ class LayoutNetworkX(WindowedPlugin):
             print(originalPos)
             
         generateGraph()
-        pos = (nx.spring_layout(G, k = 100, iterations = 100, scale = 500, pos = originalPos))
+        pos = (nx.spring_layout(G, k = 100, iterations = 100, scale = 500, pos = originalPos ))
         positions = np.array(list(pos.values()))
         centroids = positions[0: len(reactionsInd)]
         nodes = positions[len(reactionsInd): len(positions)]
@@ -130,8 +131,8 @@ class LayoutNetworkX(WindowedPlugin):
 
         count = 0
         for n in nodes:
-            newX = ((n[0]) - minX)
-            newY = ((n[1]) - minY)
+            newX = float((n[0]) - minX)
+            newY = float((n[1]) - minY)
             api.move_node(0, count, position = Vec2(newX, newY), allowNegativeCoordinates=True)   
             count = count + 1
 

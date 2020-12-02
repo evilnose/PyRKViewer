@@ -139,7 +139,7 @@ def init_bezier():
 
         INITIALIZED = True
 
-
+#Jin_edit(2)
 @dataclass
 class Reaction:
     id: str
@@ -157,7 +157,7 @@ class Reaction:
 
     def __init__(self, id: str, net_index: int, *, sources: List[int], targets: List[int],
                  handle_positions: List[Vec2], fill_color: wx.Colour,
-                 line_thickness: float, rate_law: str, center_pos: Optional[Vec2] = None,
+                 line_thickness: float, rate_law: str, center_pos: Optional[Vec2] = None, bezierCurves: bool = True,
                  index: int = -1):
         """Constructor for a reaction.
 
@@ -183,6 +183,7 @@ class Reaction:
         self._sources = sources
         self._targets = targets
         self._thickness = line_thickness
+        self.bezierCurves = bezierCurves
 
         assert len(handle_positions) == len(sources) + len(targets) + 1
         src_handle_pos = handle_positions[0]
@@ -244,7 +245,7 @@ class HandleData:
         self.tip = tip
         self.base = base
 
-
+#Jin_edit(2)
 class SpeciesBezier:
     """Class that keeps track of the Bezier curve associated with a reaction species.
 
@@ -277,7 +278,7 @@ class SpeciesBezier:
     _paint_dirty: bool
 
     def __init__(self, node_idx: int, node_rect: Rect, handle: HandleData, real_center: Vec2,
-                 centroid_handle: HandleData, is_source: bool, thickness: float):
+                 centroid_handle: HandleData, is_source: bool, thickness: float, bezierCurves: bool):
         assert INITIALIZED, 'Bezier matrices not initialized! Call init_bezier()'
         self.node_idx = node_idx
         self.node_rect = node_rect
@@ -292,6 +293,7 @@ class SpeciesBezier:
         self.arrow_adjusted_coords = list()
         self.bounding_box = None
         self.thickness = thickness
+        self.bezierCurves = bezierCurves
 
     def update_curve(self, real_center: Vec2):
         """Called after either the node, the centroid, or at least one of their handles changed.
@@ -380,15 +382,16 @@ class SpeciesBezier:
         # Translate the remaining coordinates of the arrow, note tip = Q
         for i in range(4):
             self.arrow_adjusted_coords[i] += offset
-
+    # Jin_edit
     def is_on_curve(self, pos: Vec2) -> bool:
         """Check if position is on curve; pos is scaled logical position."""
-        self._recompute(for_collision=True)
+        if self.bezierCurves:
+            self._recompute(for_collision=True)
 
         # if not within_rect(pos, self.bounding_box * cstate.scale):
         #     return False
 
-        return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK + self.thickness / 2)
+            return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK + self.thickness / 2)
                    for p1, p2 in pairwise(self.bezier_points))
 
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
@@ -410,8 +413,13 @@ class SpeciesBezier:
                                              self.centroid_handle.tip,
                                              self.real_center)]
         path.MoveToPoint(*points[0])
-        path.AddCurveToPoint(*points[1], *points[2], *points[3])
+        #Jin_edit
+        if self.bezierCurves:
+            path.AddCurveToPoint(*points[1], *points[2], *points[3])
+        else:
+            path.AddLineToPoint(*points[3])
         gc.StrokePath(path)
+
 
         if selected:
             assert self.node_intersection is not None
@@ -484,8 +492,9 @@ class ReactionBezier:
 
             node_handle = reaction.handles[index]
             centroid_handle = self.reaction.dest_c_handle if in_products else self.reaction.src_c_handle
-            sb = SpeciesBezier(node.index, node.rect, node_handle, self.real_center, centroid_handle,
-                               not in_products, self.reaction.thickness)
+            #Jin_edit
+            sb = SpeciesBezier(node.index, node.rect, node_handle, self.centroid, centroid_handle,
+                               not in_products, self.reaction.thickness, self.reaction.bezierCurves)
             to_append = self.dest_beziers if in_products else self.src_beziers
             to_append.append(sb)
 

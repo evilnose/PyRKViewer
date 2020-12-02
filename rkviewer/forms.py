@@ -17,7 +17,7 @@ from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
 from .canvas.data import Compartment, Reaction, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
-from .canvas.utils import get_nodes_by_idx
+from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 
 
 def parse_num_pair(text: str) -> Optional[Tuple[float, float]]:
@@ -856,6 +856,13 @@ class ReactionForm(EditPanelForm):
         self.reactant_stoich_ctrls = list()
         self.product_stoich_ctrls = list()
 
+        #Jin_edit
+        states = ['Bezier Curve', 'Straight Line'] 
+        self.rxnStatusDropDown = wx.ComboBox(self, choices=states, style=wx.CB_READONLY)
+        self._AppendControl(sizer, 'Reaction Status', self.rxnStatusDropDown)
+        self.rxnStatusDropDown.Bind(wx.EVT_COMBOBOX, self.OnRxnStatusChoice)
+
+
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
@@ -886,6 +893,23 @@ class ReactionForm(EditPanelForm):
         self.controller.start_group()
         for rxn in reactions:
             self.controller.set_reaction_line_thickness(self.net_index, rxn.index, width)
+        post_event(DidModifyReactionEvent(list(self._selected_idx)))
+        self.controller.end_group()
+
+    #Jin_edit
+    def  OnRxnStatusChoice (self, evt):    
+        """Callback for the change reaction status, bezier curve or straight line."""
+        status = self.rxnStatusDropDown.GetValue()
+        if status == 'Bezier Curve':
+           bezierCurves = True
+        else:
+           bezierCurves = False 
+
+        rxns = get_rxns_by_idx(self._reactions, self._selected_idx)
+        self._self_changes = True
+        self.controller.start_group()
+        for rxn in rxns:
+            self.controller.set_reaction_bezier_curves(self.net_index, rxn.index, bezierCurves)
         post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
 
@@ -1120,6 +1144,9 @@ class ReactionForm(EditPanelForm):
 
         if on_msw():
             self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
+        
+        #Jin_edit 
+        self.rxnStatusDropDown.SetValue('Bezier Curve')
 
 
 class CompartmentForm(EditPanelForm):

@@ -267,6 +267,11 @@ class IController(abc.ABC):
     def get_reaction_index(self, neti: int, rxn_id: str) -> int:
         pass
 
+    #Jin_edit
+    @abc.abstractmethod
+    def set_reaction_bezier_curves(self, neti: int, bezierCurves: bool) -> Reaction:
+        pass
+
     @abc.abstractmethod
     def add_reaction_g(self, neti: int, reaction: Reaction) -> int:
         pass

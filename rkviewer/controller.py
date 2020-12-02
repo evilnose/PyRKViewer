@@ -201,6 +201,11 @@ class Controller(IController):
     def set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int):
         iod.setReactionFillColorAlpha(neti, reai, alpha / 255)
 
+   #Jin_edit
+    @iod_setter
+    def set_reaction_bezier_curves(self, neti: int, reai: int, bezierCurves: bool):
+        iod.setReactionBezierCurves(neti, reai, bezierCurves)
+
     @iod_setter
     def set_node_border_width(self, neti: int, nodei: int, width: float):
         iod.setNodeOutlineThickness(neti, nodei, width)
@@ -425,6 +430,8 @@ class Controller(IController):
                         rate_law=iod.getReactionRateLaw(neti, reai),
                         handle_positions=items,
                         center_pos=iod.getReactionCenterPos(neti, reai),
+                        #Jin_edit:
+                        bezierCurves=iod.bezier_curves(neti, reai)
                         )
 
     def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:

@@ -8,7 +8,7 @@ import abc
 import math
 from typing import Collection, Generic, List, Optional, Set, TypeVar, Callable
 from .geometry import Rect, Vec2, rotate_unit
-from .data import Node
+from .data import Node, Reaction
 
 
 def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
@@ -17,6 +17,12 @@ def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
     assert len(ret) == len(indices)
     return ret
 
+#Jin_edit
+def get_rxns_by_idx(rxns: List[Reaction], indices: Collection[int]):
+    """Simple helper that maps the given list of indices to their corresponding rxns."""
+    ret = [n for n in rxns if n.index in indices]
+    assert len(ret) == len(indices)
+    return ret
 
 def get_nodes_by_ident(nodes: List[Node], ids: Collection[str]):
     """Simple helper that maps the given list of IDs to their corresponding nodes."""

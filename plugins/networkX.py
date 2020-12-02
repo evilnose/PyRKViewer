@@ -57,6 +57,7 @@ class LayoutNetworkX(WindowedPlugin):
         G = nx.DiGraph()
         nodes = np.array(list(api.get_node_indices(0)))
         reactionsInd =  np.array(list(api.get_reaction_indices(0)))
+        originalPos = {}
         
         def generateGraph():
             nodes = np.array(list(api.get_node_indices(0)))
@@ -70,7 +71,7 @@ class LayoutNetworkX(WindowedPlugin):
             nStr[:,] = "n"
             nodesId = np.array(list(np.char.add(nStr, nodes.astype(str))))
             G.add_nodes_from(nodesId)
-
+            
             for n in nodes:
                 centroidsTo = np.array(list(api.get_reactions_as_product(0, n))) # Gets the reactions in which it is a product -> TO 
                 
@@ -99,11 +100,23 @@ class LayoutNetworkX(WindowedPlugin):
                 edgesFrom = np.array(list(zip(nodeIndArrayFrom, centroidsFromIn)))
                 G.add_edges_from(edgesTo)
                 G.add_edges_from(edgesFrom)
+
+            cn = 0
+            for rea in api.get_reactions(0):
+                cent = api.compute_centroid(0, rea.sources, rea.targets)
+                originalPos[centroidId[cn]] = [cent.x, cent.y]
+                cn = cn + 1
+
+            cn = 0
+            for nod in api.get_nodes(0):
+                originalPos[nodesId[cn]] = [nod.position.x, nod.position.y]
+                cn = cn + 1
+
+            print(originalPos)
             
         generateGraph()
-        pos = (nx.spring_layout(G, k = 40, iterations = 100, dim=700))
+        pos = (nx.spring_layout(G, k = 40, iterations = 100, dim=700, pos = originalPos, scale = 100))
         positions = np.array(list(pos.values()))
-        print(positions)
         centroids = positions[0: len(reactionsInd)]
         nodes = positions[len(reactionsInd): len(positions)]
         
@@ -117,8 +130,8 @@ class LayoutNetworkX(WindowedPlugin):
 
         count = 0
         for n in nodes:
-            newX = 1000*((n[0]) - minX)
-            newY = 1000*((n[1]) - minY)
+            newX = ((n[0]) - minX)
+            newY = ((n[1]) - minY)
             api.move_node(0, count, position = Vec2(newX, newY), allowNegativeCoordinates=True)   
             count = count + 1
 

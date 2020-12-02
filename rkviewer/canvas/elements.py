@@ -204,25 +204,27 @@ class BezierHandle(CanvasElement):
 
     def pos_inside(self, logical_pos: Vec2):
         return pt_in_circle(logical_pos, BezierHandle.HANDLE_RADIUS, self.data.tip * cstate.scale)
-
+    
+    #Jin_edit
     def on_paint(self, gc: wx.GraphicsContext):
         """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
         assert self.data.base is not None
-        c = get_theme('highlighted_handle_color') if self.hovering else get_theme('handle_color')
-        brush = wx.Brush(c)
-        pen = gc.CreatePen(wx.GraphicsPenInfo(c))
+        if self.reaction.bezierCurves:
+            c = get_theme('highlighted_handle_color') if self.hovering else get_theme('handle_color')
+            brush = wx.Brush(c)
+            pen = gc.CreatePen(wx.GraphicsPenInfo(c))
 
-        sbase = self.data.base * cstate.scale
-        stip = self.data.tip * cstate.scale
+            sbase = self.data.base * cstate.scale
+            stip = self.data.tip * cstate.scale
 
-        gc.SetPen(pen)
+            gc.SetPen(pen)
 
-        # Draw handle lines
-        gc.StrokeLine(*sbase, *stip)
+            # Draw handle lines
+            gc.StrokeLine(*sbase, *stip)
 
-        # Draw handle circles
-        gc.SetBrush(brush)
-        gc.DrawEllipse(stip.x - BezierHandle.HANDLE_RADIUS,
+            # Draw handle circles
+            gc.SetBrush(brush)
+            gc.DrawEllipse(stip.x - BezierHandle.HANDLE_RADIUS,
                        stip.y - BezierHandle.HANDLE_RADIUS,
                        2 * BezierHandle.HANDLE_RADIUS, 2 * BezierHandle.HANDLE_RADIUS)
 

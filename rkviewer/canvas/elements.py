@@ -205,7 +205,6 @@ class BezierHandle(CanvasElement):
     def pos_inside(self, logical_pos: Vec2):
         return pt_in_circle(logical_pos, BezierHandle.HANDLE_RADIUS, self.data.tip * cstate.scale)
     
-    #Jin_edit
     def on_paint(self, gc: wx.GraphicsContext):
         """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
         assert self.data.base is not None
@@ -472,10 +471,8 @@ class ReactionElement(CanvasElement):
         unbind_handler(self.moved_handler_id)
         super().destroy()
 
-    #Jin_edit
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        if self.reaction.bezierCurves:
-          return self.bezier.is_mouse_on(logical_pos)
+        return self.bezier.is_mouse_on(logical_pos)
 
     def on_mouse_enter(self, logical_pos: Vec2):
         self.on_mouse_move(logical_pos)
@@ -483,7 +480,6 @@ class ReactionElement(CanvasElement):
     def on_left_down(self, logical_pos: Vec2) -> bool:
         return True  # Return True so that this can be selected
 
-    #Jin_edit
     def on_paint(self, gc: wx.GraphicsContext):
         self.bezier.do_paint(gc, self.reaction.fill_color, self.selected)
 

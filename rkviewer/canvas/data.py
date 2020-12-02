@@ -139,7 +139,9 @@ def init_bezier():
 
         INITIALIZED = True
 
-#Jin_edit(2)
+# Jin_edit(2)
+
+
 @dataclass
 class Reaction:
     id: str
@@ -245,7 +247,9 @@ class HandleData:
         self.tip = tip
         self.base = base
 
-#Jin_edit(2)
+# Jin_edit(2)
+
+
 class SpeciesBezier:
     """Class that keeps track of the Bezier curve associated with a reaction species.
 
@@ -264,6 +268,8 @@ class SpeciesBezier:
                          this reaction.
         is_source: Whether this species is considered a source or a dest node.
         arrow_adjusted_coords: Coordinate array for the arrow vertices.
+        bezierCurves: True if we are drawing Bezier curves. Otherwise we are drawing simple
+                      straight lines.
     """
     node_idx: int
     node_intersection: Optional[Vec2]
@@ -276,6 +282,7 @@ class SpeciesBezier:
     _extended_handle: Vec2
     _collision_dirty: bool  #: Whether the Bezier curve needs to be recomputed.
     _paint_dirty: bool
+    bezierCurves: bool
 
     def __init__(self, node_idx: int, node_rect: Rect, handle: HandleData, real_center: Vec2,
                  centroid_handle: HandleData, is_source: bool, thickness: float, bezierCurves: bool):
@@ -305,7 +312,6 @@ class SpeciesBezier:
     def _recompute(self, for_collision):
         """Recompute everything that could have changed, but only recompute the curve if calc_curve.
         """
-
         if self._collision_dirty or self._paint_dirty:
             # STEP 1, get intersection between handle and node outer padding
             node_center = self.node_rect.position + self.node_rect.size / 2
@@ -319,8 +325,11 @@ class SpeciesBezier:
             # node rectangle sides. We're essentially making the handle a ray.
             longer_side = max(outer_rect.size.x, outer_rect.size.y)
             long_dist = (longer_side + NODE_EDGE_GAP_DISTANCE) * 10
-            handle_diff = self.handle.tip - node_center
+
+            other_point = self.handle.tip if self.bezierCurves else self.real_center
+            handle_diff = other_point - node_center
             if handle_diff.norm_sq <= 1e-6:
+                # if norm is too small, make it a hardcoded value to avoid zero vectors
                 handle_diff = Vec2(0, 1)
             self._extended_handle = node_center + handle_diff.normalized(long_dist)
             handle_segment = (node_center, self._extended_handle)
@@ -382,17 +391,18 @@ class SpeciesBezier:
         # Translate the remaining coordinates of the arrow, note tip = Q
         for i in range(4):
             self.arrow_adjusted_coords[i] += offset
-    # Jin_edit
+
     def is_on_curve(self, pos: Vec2) -> bool:
         """Check if position is on curve; pos is scaled logical position."""
+        self._recompute(for_collision=True)
         if self.bezierCurves:
-            self._recompute(for_collision=True)
-
-        # if not within_rect(pos, self.bounding_box * cstate.scale):
-        #     return False
-
-            return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos, CURVE_SLACK + self.thickness / 2)
-                   for p1, p2 in pairwise(self.bezier_points))
+            return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos,
+                                  CURVE_SLACK + self.thickness / 2)
+                       for p1, p2 in pairwise(self.bezier_points))
+        else:
+            return pt_on_line(self.node_intersection * cstate.scale,
+                              self.real_center * cstate.scale, pos,
+                              CURVE_SLACK + self.thickness / 2)
 
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
         self._recompute(for_collision=False)
@@ -413,13 +423,12 @@ class SpeciesBezier:
                                              self.centroid_handle.tip,
                                              self.real_center)]
         path.MoveToPoint(*points[0])
-        #Jin_edit
+        # Jin_edit
         if self.bezierCurves:
             path.AddCurveToPoint(*points[1], *points[2], *points[3])
         else:
             path.AddLineToPoint(*points[3])
         gc.StrokePath(path)
-
 
         if selected:
             assert self.node_intersection is not None
@@ -492,8 +501,7 @@ class ReactionBezier:
 
             node_handle = reaction.handles[index]
             centroid_handle = self.reaction.dest_c_handle if in_products else self.reaction.src_c_handle
-            #Jin_edit
-            sb = SpeciesBezier(node.index, node.rect, node_handle, self.centroid, centroid_handle,
+            sb = SpeciesBezier(node.index, node.rect, node_handle, self.real_center, centroid_handle,
                                not in_products, self.reaction.thickness, self.reaction.bezierCurves)
             to_append = self.dest_beziers if in_products else self.src_beziers
             to_append.append(sb)

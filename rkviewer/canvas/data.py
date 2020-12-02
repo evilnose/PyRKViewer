@@ -501,7 +501,7 @@ class ReactionBezier:
 
             node_handle = reaction.handles[index]
             centroid_handle = self.reaction.dest_c_handle if in_products else self.reaction.src_c_handle
-            sb = SpeciesBezier(node.index, node.rect, node_handle, self.centroid, centroid_handle,
+            sb = SpeciesBezier(node.index, node.rect, node_handle, self.real_center, centroid_handle,
                                not in_products, self.reaction.thickness, self.reaction.bezierCurves)
             to_append = self.dest_beziers if in_products else self.src_beziers
             to_append.append(sb)

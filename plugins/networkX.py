@@ -45,13 +45,57 @@ class LayoutNetworkX(WindowedPlugin):
             dialog
         '''
         # TODO: k, gravity, useMagnetism, useBoundary, useGrid
-        window = wx.Panel(dialog, pos=(5,100), size=(400, 320))
+        window = wx.Panel(dialog, pos=(5,100), size=(350, 200))
         
-        apply_btn = wx.Button(window, -1, 'Run', (280, 240))
+        MaxIter = wx.StaticText(window, -1, 'Maximum Number of Iterations', (20 , 20))
+        self.MaxIterText = wx.TextCtrl(window, -1, "100", (220, 20), size=(100, -1))
+        self.MaxIterText.SetInsertionPoint(0)
+        self.MaxIterText.Bind(wx.EVT_TEXT, self.OnText_MaxIter)
+        self.MaxIterValue = int(self.MaxIterText.GetValue())
+
+        k = wx.StaticText(window, -1, 'k (float > 0)', (20 , 50))
+        self.kText = wx.TextCtrl(window, -1, "70", (220, 50), size=(100, -1))
+        self.kText.SetInsertionPoint(0)
+        self.kText.Bind(wx.EVT_TEXT, self.OnText_k)
+        self.kValue = float(self.kText.GetValue())        
+
+        scale = wx.StaticText(window, -1, 'Scale of Layout', (20 , 80))
+        self.scaleText = wx.TextCtrl(window, -1, "550", (220, 80), size=(100, -1))
+        self.scaleText.SetInsertionPoint(0)
+        self.scaleText.Bind(wx.EVT_TEXT, self.OnText_scale)
+        self.scaleValue = float(self.scaleText.GetValue())  
+        
+        apply_btn = wx.Button(window, -1, 'Run', (220, 130))
         apply_btn.Bind(wx.EVT_BUTTON, self.Apply)
  
         window.SetPosition (wx.Point(10,10))
         return window
+
+    def OnText_MaxIter(self, evt):
+        try:
+          update = evt.GetString()
+          if update != '':
+              self.MaxIterValue = int(self.MaxIterText.GetValue())
+        except ValueError:
+           wx.MessageBox('Value must be a number', 'Error', wx.OK | wx.ICON_INFORMATION)
+
+    def OnText_k(self, evt):
+        try:
+           update = evt.GetString()
+           if update != '':
+              self.kValue = float(self.kText.GetValue())
+        except ValueError:
+           wx.MessageBox('Value must be a number', 'Error', wx.OK | wx.ICON_INFORMATION)
+
+
+    def OnText_scale(self, evt):
+        try:
+           update = evt.GetString()
+           if update != '':
+              self.scaleValue = float(self.scaleText.GetValue())
+        except ValueError:
+           wx.MessageBox('Value must be a number', 'Error', wx.OK | wx.ICON_INFORMATION)
+
 
     def Apply(self, evt):
         
@@ -104,28 +148,7 @@ class LayoutNetworkX(WindowedPlugin):
                 
                 G.add_edges_from(edgesTo)
                 G.add_edges_from(edgesFrom)
-               
-            '''
-            forExtra = np.ones((len(nodesId - 1), 1))
-            nS = np.empty_like(nodesId, dtype = str)
-            nS[:,] = "n"
-            numS = np.empty_like(nodesId, dtype = int)
-            numS[:,] = 0
-            extra = np.char.add(nS, numS.astype(str))
             
-            np.delete(extra, 1)
-            print(extra)
-            allNodes = nodesId
-            np.delete(allNodes, 1)
-            print(allNodes)
-            
-
-            extraEdges = np.array(list(zip(extra, allNodes)))
-            print(extraEdges)
-            G.add_edges_from(extraEdges)
-            '''
-            
-
             cn = 0
             for rea in api.get_reactions(0):
                 cent = api.compute_centroid(0, rea.sources, rea.targets)
@@ -136,41 +159,44 @@ class LayoutNetworkX(WindowedPlugin):
             for nod in api.get_nodes(0):
                 originalPos[nodesId[cn]] = list([nod.position.x, nod.position.y])
                 cn = cn + 1
-            
+
         generateGraph()
-        pos = (nx.fruchterman_reingold_layout(G, k = 70, iterations = 100, scale = 550, pos = originalPos))
-        positions = np.array(list(pos.values()))
-        centroids = positions[0: len(reactionsInd)]
-        nodes = positions[len(reactionsInd): len(positions)]
-        
-        minX = 0
-        minY = 0
-        for p in positions:
-            if p[0] < minX:
-                minX = p[0]
-            if p[1] < minY:
-                minY = p[1]
+        print(nx.to_dict_of_lists(G))
+        with api.group_action():   
+            for t in range(20):
+                pos = (nx.fruchterman_reingold_layout(G, k = self.kValue, iterations = self.MaxIterValue, scale = self.scaleValue, pos = originalPos))
+                positions = np.array(list(pos.values()))
+                centroids = positions[0: len(reactionsInd)]
+                nodes = positions[len(reactionsInd): len(positions)]
+                
+                minX = 0
+                minY = 0
+                for p in positions:
+                    if p[0] < minX:
+                        minX = p[0]
+                    if p[1] < minY:
+                        minY = p[1]
 
-        nodes = nodes - np.array([minX, minY])
-        
-        count = 0
-        for n in nodes:
-            newX = float(n[0])
-            newY = float(n[1])
-            api.move_node(0, count, position = Vec2(newX, newY), allowNegativeCoordinates=True)   
-            count = count + 1
+                nodes = nodes - np.array([minX, minY])
+                
+                count = 0
+                for n in nodes:
+                    newX = float(n[0])
+                    newY = float(n[1])
+                    api.move_node(0, count, position = Vec2(newX, newY), allowNegativeCoordinates=True)   
+                    count = count + 1
 
-        for r in api.get_reactions(0):
-            handles = api.default_handle_positions(0, r.index) # centroid, sources, target
-            api.set_reaction_center_handle(0, r.index, handles[0])
-            count = 1
-            for s in r.sources:
-                api.set_reaction_node_handle(0, r.index, s, True, handles[count])
-                count += 1
-            for t in r.targets:
-                api.set_reaction_node_handle(0, r.index, t, False, handles[count])
-                count += 1
-    
+                for r in api.get_reactions(0):
+                    handles = api.default_handle_positions(0, r.index) # centroid, sources, target
+                    api.set_reaction_center_handle(0, r.index, handles[0])
+                    count = 1
+                    for s in r.sources:
+                        api.set_reaction_node_handle(0, r.index, s, True, handles[count])
+                        count += 1
+                    for t in r.targets:
+                        api.set_reaction_node_handle(0, r.index, t, False, handles[count])
+                        count += 1
+        
         
 
             

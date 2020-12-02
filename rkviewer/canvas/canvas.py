@@ -946,13 +946,31 @@ class Canvas(wx.ScrolledWindow):
             fps = int(self._accum_frames / diff * 1000)
             self._SetStatusText('fps', 'refreshes/sec: {}'.format(int(fps)))
             self._accum_frames = 0
+        # Update cursor status text here
         status_text = repr(self._cursor_logical_pos)
         self._SetStatusText('cursor', status_text)
         self.SetOverlayPositions()  # have to do this here to prevent jitters
 
         dc = wx.PaintDC(self)
-        #: transform for drawing to scrolled coordinates
+        # transform for drawing to scrolled coordinates
         self.DoPrepareDC(dc)
+
+        # Draw everything
+        gc = self.DrawToDC(dc)
+
+        # Draw minimap
+        self._minimap.DoPaint(gc)
+
+        post_event(DidPaintCanvasEvent(gc))
+
+    def DrawToBitmap(self):
+        bmp = wx.Bitmap(*self.realsize)
+        dc = wx.MemoryDC()
+        dc.SelectObject(bmp)
+        self.DrawToDC(dc)
+        return bmp
+
+    def DrawToDC(self, dc):
         # Create graphics context since we need transparency
         gc = wx.GraphicsContext.Create(dc)
 
@@ -1052,10 +1070,7 @@ class Canvas(wx.ScrolledWindow):
                     border_width=bwidth,
                     corner_radius=corner_radius,
                 )
-
-            # Draw minimap
-            self._minimap.DoPaint(gc)
-            post_event(DidPaintCanvasEvent(gc))
+        return gc
 
     def ResetLayer(self, elt: CanvasElement, layers: Layer):
         if elt in self._elements:

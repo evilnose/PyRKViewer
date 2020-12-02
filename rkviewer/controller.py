@@ -461,6 +461,10 @@ class Controller(IController):
         self._update_view()
         return net_index
 
+    def new_network(self):
+        iod.clearNetwork(0)
+        self._update_view()
+
     # get the updated list of nodes from model and update
 
     def _update_view(self):

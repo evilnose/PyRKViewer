@@ -555,7 +555,7 @@ class MainFrame(wx.Frame):
         if os.name == 'nt':
            # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
            import subprocess
-           pid = subprocess.Popen(['notepad.exe', settings_path]).pid
+           _pid = subprocess.Popen(['notepad.exe', settings_path]).pid
         else:
            start_file(settings_path)
 
@@ -577,25 +577,24 @@ class MainFrame(wx.Frame):
         if os.name == 'nt':
            # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
            import subprocess
-           pid = subprocess.Popen(['notepad.exe', default_settings_path]).pid
+           _pid = subprocess.Popen(['notepad.exe', default_settings_path]).pid
         else:
            start_file(default_settings_path)            
 
-    def NewNetwork (self):
-        #self.controller.newNetwork()  # This doesn't work, so try different way
-        self.canvas.SelectAll()
-        self.canvas.DeleteSelectedItems()
+    def NewNetwork(self):
+        self.controller.new_network()  # This doesn't work, so try different way
+        # self.canvas.SelectAll()
+        # self.canvas.DeleteSelectedItems()
 
-
-    def PrintNetwork (self):
-        self.main_panel.canvas.ShowWarningDialog("Print not yet implemented")
+    def PrintNetwork(self):
+        bmp = self.main_panel.canvas.DrawToBitmap()
+        bmp.SaveFile('printout.png', type=wx.BITMAP_TYPE_PNG)
        
-    def ExportNetwork (self):
+    def ExportNetwork(self):
         self.main_panel.canvas.ShowWarningDialog("Export not yet implemented")
 
     def SaveJson(self):
         self.main_panel.canvas.ShowWarningDialog("Not yet implemented")
-
 
     def SaveAsJson(self):
         with wx.FileDialog(self, "Save JSON file", wildcard="JSON files (*.json)|*.json",
@@ -626,8 +625,7 @@ class MainFrame(wx.Frame):
             try:
                 with open(pathname, 'r') as file:
                     net_json = json.load(file)
-                # TODO save previous network
-                net_index = self.controller.load_network(net_json)
+                _net_index = self.controller.load_network(net_json)
             except IOError:
                 wx.LogError("Cannot load network from file '{}'.".format(pathname))
 

@@ -301,6 +301,15 @@ class IController(abc.ABC):
     def load_network(self, json_obj: Any) -> int:
         pass
 
+    @abc.abstractmethod
+    def new_network(self):
+        """Create a new network.
+        
+        Since there is only one tab for now, this merely clears the the current network. Also,
+        does not clear undo stack.
+        """
+        pass
+
 
 class IView(abc.ABC):
     """The inteface class for a controller

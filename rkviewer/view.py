@@ -363,7 +363,7 @@ class MainFrame(wx.Frame):
         load_settings()
         self.appSettings = AppSettings()
         self.appSettings.load_appSettings()
-
+        
         self.manager = manager
         status_fields = get_setting('status_fields')
         assert status_fields is not None
@@ -483,6 +483,9 @@ class MainFrame(wx.Frame):
         self.SetSize (self.appSettings.size)
         self.SetPosition (self.appSettings.position)
         self.Layout()
+
+        #Record the initial position of the window
+        self.controller.initial_position = self.GetPosition()
 
 
     # Any thing we need to do when the app closes can be included here

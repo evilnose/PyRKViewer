@@ -54,6 +54,7 @@ class Controller(IController):
         iod.newNetwork('the one')
         self.stacklen = 0  # TODO temporary hack to not undo the first newNetwork() operation.
         self.group_depth = 0
+        self.initial_position = wx.Point (0,0)
 
     def start_group(self) -> bool:
         self.group_depth += 1
@@ -131,6 +132,9 @@ class Controller(IController):
         post_event(DidAddNodeEvent(nodei))
         self.end_group()
         return nodei
+
+    def get_application_position(self) -> wx.Point:
+        return self.initial_position
 
     def wx_to_tcolor(self, color: wx.Colour) -> TColor:
         return TColor(color.Red(), color.Green(), color.Blue(), color.Alpha())

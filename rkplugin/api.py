@@ -262,6 +262,11 @@ def window_position() -> Vec2:
     return Vec2(_canvas.CalcUnscrolledPosition(0, 0))
 
 
+def get_application_position() -> Vecr2:
+    """ Return the absolute position of thetop left corner of the applcition"""
+    return _controller.get_application_position()
+
+
 def canvas_scale() -> float:
     """Return the zoom scale of the _canvas."""
     return cstate.scale

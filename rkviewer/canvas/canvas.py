@@ -175,6 +175,7 @@ class Canvas(wx.ScrolledWindow):
         # events
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
+        self.Bind(wx.EVT_RIGHT_UP, self.OnRightUp)
         self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SCROLLWIN, self.OnScroll)
@@ -765,6 +766,16 @@ class Canvas(wx.ScrolledWindow):
         finally:
             self.LazyRefresh()
             evt.Skip()
+
+    def OnRightUp(self, evt):
+        menu = wx.Menu()
+        # menu.Append(-1, 'Hello')
+        # Find item underneath cursor
+
+        # Find CanvasElement underneath cursor
+
+        self.PopupMenu(menu)
+        menu.Destroy()
 
     # TODO improve this. we might want a special mouseLeftWindow event
     def _EndDrag(self, evt: wx.MouseEvent):

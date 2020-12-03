@@ -16,7 +16,7 @@ import wx
 import copy
 from contextlib import contextmanager
 from rkviewer.mvc import IController
-from typing import KeysView, List, Optional, Set, Tuple
+from typing import KeysView, List, Optional, Set, Tuple, Union
 from rkviewer.canvas import data
 from rkviewer.canvas.state import cstate, ArrowTip
 from rkviewer.config import get_setting, get_theme
@@ -31,6 +31,11 @@ from logging import Logger
 _canvas: Optional[_canvas] = None
 _controller: Optional[IController] = None
 _plugin_logger = logging.getLogger('plugin')
+
+
+class CustomNone:
+    """Used for default parameters where 'None' is a valid and possible input."""
+    pass
 
 
 def get_canvas() -> Optional[Canvas]:
@@ -137,6 +142,7 @@ class ReactionData:
     targets: List[int] = field()
     center_pos: Optional[Vec2] = field(default=None)
     rate_law: str = field(default='')
+    using_bezier: bool = field(default=True)
     index: int = field(default=-1)
 
     @property
@@ -311,6 +317,7 @@ def _translate_reaction(reaction: Reaction) -> ReactionData:
         rate_law=reaction.rate_law,
         index=reaction.index,
         center_pos=reaction.center_pos,
+        using_bezier=reaction.bezierCurves,
     )
 
 
@@ -779,7 +786,7 @@ def _set_handle_positions(reaction: Reaction, handle_positions: List[Vec2]):
 def add_reaction(net_index: int, id: str, reactants: List[int], products: List[int],
                  fill_color: Color = None, line_thickness: float = None,
                  rate_law: str = '', handle_positions: List[Vec2] = None,
-                 center_pos: Optional[Vec2] = None) -> int:
+                 center_pos: Vec2 = None, use_bezier: bool = True) -> int:
     """ 
     Adds a reaction.
 
@@ -795,6 +802,11 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
         line_thickness: The thickness of the reaction line, or leave as None to use current theme.
         rate_law: The reaction rate law; defaults to empty string.
         handle_positions: The initial positions of the Bezier handles
+        center_pos: The position of the reaction center. If None, the center position will be
+                    automatically set as the centroid of all the species and will dynamically move
+                    as nodes are moved.
+        use_bezier: If specified, whether to use Bezier curves when drawing the reaction. If False,
+                    simply use straight lines.
     Returns:
         The index of the reaction that was added.
     """
@@ -822,7 +834,8 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
         line_thickness=line_thickness,
         rate_law=rate_law,
         handle_positions=handle_positions,
-        center_pos=center_pos
+        center_pos=center_pos,
+        bezierCurves=use_bezier,
     )
 
     _controller.start_group()
@@ -842,7 +855,8 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
 
 def update_reaction(net_index: int, reaction_index: int, id: str = None,
                     fill_color: Color = None, thickness: float = None, ratelaw: str = None,
-                    handle_positions: List[Vec2] = None):
+                    handle_positions: List[Vec2] = None,
+                    center_pos: Union[Vec2, CustomNone] = CustomNone(), use_bezier: bool = None):
     """
     Update one or multiple properties of a reaction.
 
@@ -855,6 +869,11 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
         ratelaw: If specified, the rate law of the reaction.
         handle_positions: If specified, the list of handles of the reaction. See add_reaction() for
                           details on the format.
+        center_pos: The position of the reaction center. If None, the center position will be
+                    automatically set as the centroid of all the species and will dynamically move
+                    as nodes are moved.
+        use_bezier: If specified, whether to use Bezier curves when drawing the reaction. If False,
+                    simply use straight lines.
 
     Note:
         This is *not* an atomic function, meaning if we failed to set one specific property, the
@@ -885,6 +904,10 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
             _controller.set_reaction_ratelaw(net_index, reaction_index, ratelaw)
         if handle_positions is not None:
             _set_handle_positions(reaction, handle_positions)
+        if not isinstance(center_pos, CustomNone):
+            _controller.set_reaction_center(net_index, reaction_index, center_pos)
+        if use_bezier is not None:
+            _controller.set_reaction_bezier_curves(net_index, use_bezier)
     
 
 def get_selected_node_indices(net_index: int) -> Set[int]:

@@ -856,7 +856,6 @@ class ReactionForm(EditPanelForm):
         self.reactant_stoich_ctrls = list()
         self.product_stoich_ctrls = list()
 
-        #Jin_edit
         states = ['Bezier Curve', 'Straight Line'] 
         self.rxnStatusDropDown = wx.ComboBox(self, choices=states, style=wx.CB_READONLY)
         self._AppendControl(sizer, 'Reaction Status', self.rxnStatusDropDown)
@@ -896,7 +895,6 @@ class ReactionForm(EditPanelForm):
         post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
 
-    #Jin_edit
     def  OnRxnStatusChoice (self, evt):    
         """Callback for the change reaction status, bezier curve or straight line."""
         status = self.rxnStatusDropDown.GetValue()
@@ -1144,8 +1142,7 @@ class ReactionForm(EditPanelForm):
 
         if on_msw():
             self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
-        
-        #Jin_edit 
+         
         self.rxnStatusDropDown.SetValue('Bezier Curve')
 
 

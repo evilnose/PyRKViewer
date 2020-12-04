@@ -10,14 +10,45 @@ from marshmallow import Schema, fields, validate, missing as missing_, Validatio
 from rkviewer.canvas.geometry import Vec2
 import copy
 import commentjson
+from pathlib import Path
 
 
 # TODO rename get_local_path
-config_dir = get_local_path('.rkviewer')
-settings_path = os.path.join(config_dir, 'settings.json')
-default_settings_path = os.path.join(config_dir, '.default-settings.json')
+config_dir = "" #get_local_path('.rkviewer')  # This will be set by either appsettings (see below) or CreateConfigDir in view.poy
+#settings_theme_path = os.path.join(config_dir, 'settings.json')
+#default_settings_path = os.path.join(config_dir, '.default-settings.json')
 
 
+def GetConfigDir ():
+    global config_dir
+    return config_dir
+
+
+def GetThemeSettingsPath ():
+    return os.path.join(config_dir, 'settings.json')
+
+
+def CreateConfigDir():
+    """Create the configuration directory if it does not already exist."""
+    global config_dir
+    try:
+        sp = wx.StandardPaths.Get()
+        config_dir = sp.GetUserConfigDir()
+        if not os.path.exists(os.path.join(config_dir, 'rkViewer')):
+            config_dir = os.path.join(config_dir, 'rkViewer')
+            Path(config_dir).mkdir(parents=True, exist_ok=True)
+        else:
+            config_dir = os.path.join(os.path.join(config_dir, 'rkViewer'))
+        return True
+    except FileExistsError:
+        self.main_panel.canvas.ShowWarningDialog('Could not create RKViewer configuration '
+                                                     'directory. A file already exists at path '
+                                                     '{}.'.format(config_dir))
+    return False
+
+
+
+# Application based settings stored in an ini file
 class AppSettings:
 
    # Default positions
@@ -49,12 +80,13 @@ class AppSettings:
 
    def save_appSettings(self):
        sp = wx.StandardPaths.Get()
-       configDir = sp.GetUserConfigDir()
-       if not os.path.exists(os.path.join(configDir, 'rkViewer')):
-            os.mkdir(os.path.join(configDir, 'rkViewer'))
-       fileName = os.path.join(configDir, 'rkViewer', 'appSettings.ini')
+       config_dir = sp.GetUserConfigDir()
+       if not os.path.exists(os.path.join(config_dir, 'rkViewer')):
+            os.mkdir(os.path.join(config_dir, 'rkViewer'))
+       fileName = os.path.join(config_dir, 'rkViewer', 'appSettings.ini')
        if os.path.exists(fileName):
            os.remove (fileName)
+
        config = wx.FileConfig(localFilename=fileName) 
        config.SetPath ('PositionAndSize')
        config.WriteInt ('frame_position_x', self.position.x)
@@ -287,8 +319,8 @@ def load_theme_settings():
     """
     global _theme, _settings, _settings_err
     cur_settings = dict()
-    if os.path.isfile(settings_path):
-        with open(settings_path, 'r') as fp:
+    if os.path.isfile(GetThemeSettingsPath ()):
+        with open(GetThemeSettingsPath (), 'r') as fp:
             try:
                 cur_settings = commentjson.load(fp)
             except JSONLibraryException as e:

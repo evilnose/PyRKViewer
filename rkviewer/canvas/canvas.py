@@ -26,7 +26,7 @@ from ..events import (
     post_event,
 )
 from ..mvc import IController
-from ..utils import even_round, opacity_mul
+from ..utils import even_round, opacity_mul, resource_path
 from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
 from .elements import CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
@@ -891,6 +891,9 @@ class Canvas(wx.ScrolledWindow):
 
     def AlignSelectedNodes(self, alignment: Alignment):
         """Align the selected nodes. Should be called only when *only* nodes are selected."""
+
+        # The selected nodes are self.sel_nodes
+        # To access a file in the resources folder, use  
         raise NotImplementedError('Align Not Implemented!')
 
     # TODO improve this. we might want a special mouseLeftWindow event

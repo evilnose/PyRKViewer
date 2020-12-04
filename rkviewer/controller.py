@@ -54,6 +54,7 @@ class Controller(IController):
         iod.newNetwork('the one')
         self.stacklen = 0  # TODO temporary hack to not undo the first newNetwork() operation.
         self.group_depth = 0
+        self.initial_position = wx.Point (0,0)
 
     def start_group(self) -> bool:
         self.group_depth += 1
@@ -132,6 +133,9 @@ class Controller(IController):
         self.end_group()
         return nodei
 
+    def get_application_position(self) -> wx.Point:
+        return self.initial_position
+
     def wx_to_tcolor(self, color: wx.Colour) -> TColor:
         return TColor(color.Red(), color.Green(), color.Blue(), color.Alpha())
 
@@ -201,7 +205,6 @@ class Controller(IController):
     def set_reaction_fill_alpha(self, neti: int, reai: int, alpha: int):
         iod.setReactionFillColorAlpha(neti, reai, alpha / 255)
 
-   #Jin_edit
     @iod_setter
     def set_reaction_bezier_curves(self, neti: int, reai: int, bezierCurves: bool):
         iod.setReactionBezierCurves(neti, reai, bezierCurves)
@@ -430,7 +433,6 @@ class Controller(IController):
                         rate_law=iod.getReactionRateLaw(neti, reai),
                         handle_positions=items,
                         center_pos=iod.getReactionCenterPos(neti, reai),
-                        #Jin_edit:
                         bezierCurves=iod.bezier_curves(neti, reai)
                         )
 

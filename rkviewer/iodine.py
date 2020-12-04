@@ -145,7 +145,6 @@ class TReaction:
     fillColor: TColor = TColor(255, 150, 80, 255)
     thickness: float = 3.0
     centerHandlePos: Vec2 = Vec2()
-    #Jin_edit:
     bezierCurves: bool = True  # If false it means a straight line
 
 
@@ -2264,7 +2263,6 @@ def setReactionLineThickness(neti: int, reai: int, thickness: float):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-#Jin_edit(2)
 def bezier_curves(neti: int, reai: int):
     errCode = 0
     if neti not in networkDict:	   

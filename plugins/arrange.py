@@ -15,11 +15,11 @@ from typing import List
 import os
 
 metadata = PluginMetadata(
-    name='Rearrange Selected Nodes',
+    name='Node Alignment',
     author='Carmen Perena, Herbert M Sauro',
     version='0.0.1',
     short_desc='Rearrange',
-    long_desc='Rearrange a slected nides into chosen style'
+    long_desc='Rearrange selected nodes into chosen style'
 )
 
 class AutoLayout(WindowedPlugin):
@@ -40,69 +40,87 @@ class AutoLayout(WindowedPlugin):
             self
             dialog
         '''
-        # TODO: k, gravity, useMagnetism, useBoundary, useGrid
-        window = wx.Panel(dialog, pos=(5,100), size=(270, 570))
+        window = wx.Panel(dialog, pos=(0,0), size=(195, 375))
+
+        top = 10
+        left = 10
 
         path = os.path.realpath(__file__)
         path = os.path.dirname(os.path.abspath(path))
         s = os.path.join (path + '\\alignLeft_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 10), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Left', (80, 20))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Left', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignLeft)
 
+        top += 35
         s = os.path.join (path + '\\alignRight_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 60), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Right', (80, 70))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Right', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignRight)
 
+        top += 35
         s = os.path.join (path + '\\alignVertCenter_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 110), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Center', (80, 120))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Center', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignCenter)
 
+        top += 35
         path = os.path.realpath(__file__)
         path = os.path.dirname(os.path.abspath(path))
         s = os.path.join (path + '\\alignTop_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 160), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Top', (80, 170))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Top', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignTop)
 
+        top += 35
         s = os.path.join (path + '\\alignBottom_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 210), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Bottom', (80, 220))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Bottom', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignBottom)
 
+        top += 35
         s = os.path.join (path + '\\alignHorizCenter_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 260), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Align Middle', (80, 270))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Align Middle', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.AlignMiddle)
 
+        top += 35
         s = os.path.join (path + '\\alignOnGrid_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 310), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Grid', (80, 320))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Grid', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.Grid)
 
+        top += 35
         s = os.path.join (path + '\\alignHorizEqually_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 360), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Arrange Horizontally', (80, 370))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Arrange Horizontally', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.distributeHorizontally)
 
+        top += 35
         s = os.path.join (path + '\\alignVertEqually_XP.bmp')
         bmp = wx.Bitmap(s, wx.BITMAP_TYPE_ANY)
-        apply_btn = wx.BitmapButton(window, -1, pos=(30, 410), size=(40,40), bitmap=bmp)
-        wx.StaticText(window, -1, 'Arrange Vertically', (80, 420))
+        apply_btn = wx.BitmapButton(window, -1, pos=(left, top), size=(32,32), bitmap=bmp)
+        wx.StaticText(window, -1, 'Arrange Vertically', (left+40, top+8))
         apply_btn.Bind(wx.EVT_BUTTON, self.distributeVertically)
 
-        window.SetPosition (wx.Point(10,10))
         return window
+
+    def on_did_create_dialog(self):
+        # Set position of popup window
+        p = api.get_application_position()
+        if p.x < 185:
+           # Not enough room
+           self.dialog.SetPosition ((p.x+200, p.y))
+        else:
+           self.dialog.SetPosition ((p.x-185, p.y))
     
     def findMinX(self, l):
         '''

@@ -21,8 +21,8 @@ from rkviewer.plugin_manage import PluginManager
 from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import InputMode, cstate
-from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, config_dir, get_default_raw_settings, get_setting, get_theme,
-                     load_settings, pop_settings_err, settings_path, default_settings_path)
+from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, get_default_raw_settings, get_setting, get_theme,
+                     CreateConfigDir, GetConfigDir, GetThemeSettingsPath, load_theme_settings, pop_settings_err)
 from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
                      DidMoveNodesEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, SelectionDidUpdateEvent,
@@ -328,20 +328,21 @@ class MainPanel(wx.Panel):
 
         self.Layout()
 
-
 class AboutDialog(wx.Dialog):
     def __init__(self, parent: wx.Window):
-        super().__init__(parent, title='About RKViewer')
-        sizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
-        self.left_width = 150
-        self.right_width = 180
-        self.row_height = 50
-        self.leftflags = wx.SizerFlags().Border(wx.TOP, 10)
-        self.rightflags = wx.SizerFlags().Border(wx.TOP, 10)
-        self.leftfont = wx.Font(wx.FontInfo(10).Bold())
-        self.rightfont = wx.Font(wx.FontInfo(10))
-        self.AppendRow('version', rkviewer.__version__, sizer)
-        self.SetSizerAndFit(sizer)
+        pass      
+        #super().__init__(parent, title='About RKViewer')
+        #sizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
+        #self.left_width = 150
+        #elf.right_width = 180
+        #self.row_height = 50
+        #self.leftflags = wx.SizerFlags().Border(wx.TOP, 10)
+        #self.rightflags = wx.SizerFlags().Border(wx.TOP, 10)
+        #self.leftfont = wx.Font(wx.FontInfo(10).Bold())
+        #self.rightfont = wx.Font(wx.FontInfo(10))
+        #elf.AppendRow('PathDesigner', "An Extensible Reaction Network Editors", sizer)
+        #self.AppendRow('Version', rkviewer.__version__, sizer)
+        #self.SetSizerAndFit(sizer)
 
     def AppendRow(self, left_text: str, right_text: str, sizer: wx.FlexGridSizer):
         left = wx.StaticText(self, label=left_text, size=(self.left_width, 30),
@@ -353,17 +354,16 @@ class AboutDialog(wx.Dialog):
         sizer.Add(left, self.leftflags)
         sizer.Add(right, self.rightflags)
 
-
 class MainFrame(wx.Frame):
     """The main frame."""
 
     def __init__(self, controller: IController, manager: PluginManager, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
                          wx.WS_EX_PROCESS_UI_UPDATES, **kw)
-        load_settings()
+        load_theme_settings()
         self.appSettings = AppSettings()
         self.appSettings.load_appSettings()
-
+        
         self.manager = manager
         status_fields = get_setting('status_fields')
         assert status_fields is not None
@@ -455,7 +455,7 @@ class MainFrame(wx.Frame):
 
         help_menu = wx.Menu()
         self.AddMenuItem(help_menu, '&About...',
-                         'Show about dialog', self.ShowAbout, entries)
+                         'Show about dialog', self.onAboutDlg, entries) #self.ShowAbout, entries)
         self.AddMenuItem(help_menu, '&Default settings...', 'View default settings',
                          lambda _: self.ShowDefaultSettings(), entries)
 
@@ -484,6 +484,9 @@ class MainFrame(wx.Frame):
         self.SetPosition (self.appSettings.position)
         self.Layout()
 
+        #Record the initial position of the window
+        self.controller.initial_position = self.GetPosition()
+
 
     # Any thing we need to do when the app closes can be included here
     def OnCloseExit (self, evt):
@@ -508,8 +511,21 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, callback, item)
         self.menu_events.append((callback, item))
 
+    def onAboutDlg(self, event):
+       info = wx.adv.AboutDialogInfo()
+       info.Name = "An Extensible Reaction Network Editor"
+       info.Version = "0.0.1 Beta"
+       info.Copyright = "(C) 2020"
+       info.Description = "Create reaction networks"
+       info.WebSite = ("http://www.XXXXX.org", "Home Page")
+       info.Developers = ["Gary Geng, Jin Xu, Carmen Pereña Cortés, Herbert Sauro"]
+       info.License = "MIT"
+
+       # Show the wx.AboutBox
+       wx.adv.AboutBox(info)
+
     def ReloadSettings(self):
-        load_settings()
+        load_theme_settings()
         err = pop_settings_err()
         if err is None:
             # msg = NotificationMessage('Settings reloaded', 'Some changes may not be applied until the application is restarted.')
@@ -525,61 +541,50 @@ class MainFrame(wx.Frame):
             message += str(err)
             self.main_panel.canvas.ShowWarningDialog(message)
         
-    def CreateConfigDir(self):
-        """Create the configuration directory if it does not already exist."""
-        try:
-            Path(config_dir).mkdir(parents=True, exist_ok=True)
-            return True
-        except FileExistsError:
-            self.main_panel.canvas.ShowWarningDialog('Could not create RKViewer configuration '
-                                                     'directory. A file already exists at path '
-                                                     '{}.'.format(config_dir))
-            return False
-
     def EditSettings(self):
         """Open the preferences file for editing."""
-        if not self.CreateConfigDir():
+        if not CreateConfigDir():
             return
 
-        if not os.path.exists(settings_path):
-            with open(settings_path, 'w') as fp:
+        if not os.path.exists(GetThemeSettingsPath()):
+            with open(GetThemeSettingsPath(), 'w') as fp:
                 fp.write(INIT_SETTING_TEXT)
         else:
-            if not os.path.isfile(settings_path):
+            if not os.path.isfile(GetThemeSettingsPath()):
                 self.main_panel.canvas.ShowWarningDialog('Could not open settings file since '
                                                          'a directory already exists at path '
-                                                         '{}.'.format(settings_path))
+                                                         '{}.'.format(GetThemeSettingsPath()))
                 return
 
         # If we're running windows use notepad
         if os.name == 'nt':
            # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
            import subprocess
-           _pid = subprocess.Popen(['notepad.exe', settings_path]).pid
+           _pid = subprocess.Popen(['notepad.exe', GetThemeSettingsPath()]).pid
         else:
-           start_file(settings_path)
+           start_file(GetThemeSettingsPath())
 
     def ShowDefaultSettings(self):
-        if not self.CreateConfigDir():
+        if not CreateConfigDir():
             return
 
-        if os.path.exists(default_settings_path) and not os.path.isfile(default_settings_path):
+        if os.path.exists(os.path.join(GetConfigDir(), '.default-settings.json')) and not os.path.isfile(os.path.join(GetConfigDir(), '.default-settings.json')):
             self.main_panel.canvas.ShowWarningDialog('Could not open default settings file '
                                                         'since a directory already exists at path '
-                                                        '{}.'.format(default_settings_path))
+                                                        '{}.'.format(os.path.join(GetConfigDir(), '.default-settings.json')))
             return
         # TODO prepopulate file with help text, i.e link to docs about schema
         json_str = json.dumps(get_default_raw_settings(), indent=4, sort_keys=True)
-        with open(default_settings_path, 'w') as fp:
+        with open(os.path.join(GetConfigDir(), '.default-settings.json'), 'w') as fp:
             fp.write(DEFAULT_SETTING_FMT.format(json_str))
 
         # If we're running windows use notepad
         if os.name == 'nt':
            # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
            import subprocess
-           _pid = subprocess.Popen(['notepad.exe', default_settings_path]).pid
+           _pid = subprocess.Popen(['notepad.exe', os.path.join(GetConfigDir(), '.default-settings.json')]).pid
         else:
-           start_file(default_settings_path)            
+           start_file(os.path.join(GetConfigDir(), '.default-settings.json'))            
 
     def NewNetwork(self):
         self.controller.new_network()  # This doesn't work, so try different way

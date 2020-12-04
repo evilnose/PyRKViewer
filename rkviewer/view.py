@@ -21,8 +21,8 @@ from rkviewer.plugin_manage import PluginManager
 from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import InputMode, cstate
-from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, config_dir, get_default_raw_settings, get_setting, get_theme,
-                     load_theme_settings, pop_settings_err, settings_path, default_settings_path)
+from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, get_default_raw_settings, get_setting, get_theme,
+                     CreateConfigDir, GetConfigDir, GetThemeSettingsPath, load_theme_settings, pop_settings_err)
 from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
                      DidMoveNodesEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, SelectionDidUpdateEvent,
@@ -528,61 +528,50 @@ class MainFrame(wx.Frame):
             message += str(err)
             self.main_panel.canvas.ShowWarningDialog(message)
         
-    def CreateConfigDir(self):
-        """Create the configuration directory if it does not already exist."""
-        try:
-            Path(config_dir).mkdir(parents=True, exist_ok=True)
-            return True
-        except FileExistsError:
-            self.main_panel.canvas.ShowWarningDialog('Could not create RKViewer configuration '
-                                                     'directory. A file already exists at path '
-                                                     '{}.'.format(config_dir))
-            return False
-
     def EditSettings(self):
         """Open the preferences file for editing."""
-        if not self.CreateConfigDir():
+        if not CreateConfigDir():
             return
 
-        if not os.path.exists(settings_path):
-            with open(settings_path, 'w') as fp:
+        if not os.path.exists(GetThemeSettingsPath()):
+            with open(GetThemeSettingsPath(), 'w') as fp:
                 fp.write(INIT_SETTING_TEXT)
         else:
-            if not os.path.isfile(settings_path):
+            if not os.path.isfile(GetThemeSettingsPath()):
                 self.main_panel.canvas.ShowWarningDialog('Could not open settings file since '
                                                          'a directory already exists at path '
-                                                         '{}.'.format(settings_path))
+                                                         '{}.'.format(GetThemeSettingsPath()))
                 return
 
         # If we're running windows use notepad
         if os.name == 'nt':
            # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
            import subprocess
-           _pid = subprocess.Popen(['notepad.exe', settings_path]).pid
+           _pid = subprocess.Popen(['notepad.exe', GetThemeSettingsPath()]).pid
         else:
-           start_file(settings_path)
+           start_file(GetThemeSettingsPath())
 
     def ShowDefaultSettings(self):
-        if not self.CreateConfigDir():
+        if not CreateConfigDir():
             return
 
-        if os.path.exists(default_settings_path) and not os.path.isfile(default_settings_path):
+        if os.path.exists(os.path.join(GetConfigDir(), '.default-settings.json')) and not os.path.isfile(os.path.join(GetConfigDir(), '.default-settings.json')):
             self.main_panel.canvas.ShowWarningDialog('Could not open default settings file '
                                                         'since a directory already exists at path '
-                                                        '{}.'.format(default_settings_path))
+                                                        '{}.'.format(os.path.join(GetConfigDir(), '.default-settings.json')))
             return
         # TODO prepopulate file with help text, i.e link to docs about schema
         json_str = json.dumps(get_default_raw_settings(), indent=4, sort_keys=True)
-        with open(default_settings_path, 'w') as fp:
+        with open(os.path.join(GetConfigDir(), '.default-settings.json'), 'w') as fp:
             fp.write(DEFAULT_SETTING_FMT.format(json_str))
 
         # If we're running windows use notepad
         if os.name == 'nt':
            # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
            import subprocess
-           _pid = subprocess.Popen(['notepad.exe', default_settings_path]).pid
+           _pid = subprocess.Popen(['notepad.exe', os.path.join(GetConfigDir(), '.default-settings.json')]).pid
         else:
-           start_file(default_settings_path)            
+           start_file(os.path.join(GetConfigDir(), '.default-settings.json'))            
 
     def NewNetwork(self):
         self.controller.new_network()  # This doesn't work, so try different way

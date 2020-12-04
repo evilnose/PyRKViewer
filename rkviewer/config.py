@@ -278,7 +278,7 @@ _settings = BUILTIN_SETTINGS
 _theme = None
 _settings_err = None  
 
-def load_settings():
+def load_theme_settings():
     """Reload all settings from the default settings path.
     
     The exceptions are not immediately thrown since the first time the settings are loaded, the 

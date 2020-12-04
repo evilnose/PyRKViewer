@@ -22,7 +22,7 @@ from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import InputMode, cstate
 from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, config_dir, get_default_raw_settings, get_setting, get_theme,
-                     load_settings, pop_settings_err, settings_path, default_settings_path)
+                     load_theme_settings, pop_settings_err, settings_path, default_settings_path)
 from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
                      DidMoveNodesEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, SelectionDidUpdateEvent,
@@ -360,7 +360,7 @@ class MainFrame(wx.Frame):
     def __init__(self, controller: IController, manager: PluginManager, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
                          wx.WS_EX_PROCESS_UI_UPDATES, **kw)
-        load_settings()
+        load_theme_settings()
         self.appSettings = AppSettings()
         self.appSettings.load_appSettings()
         
@@ -512,7 +512,7 @@ class MainFrame(wx.Frame):
         self.menu_events.append((callback, item))
 
     def ReloadSettings(self):
-        load_settings()
+        load_theme_settings()
         err = pop_settings_err()
         if err is None:
             # msg = NotificationMessage('Settings reloaded', 'Some changes may not be applied until the application is restarted.')

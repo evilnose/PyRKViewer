@@ -30,11 +30,11 @@ from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid,
 from .elements import CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
     Rect,
-    Vec2,
+    Vec2, circle_bounds,
     clamp_rect_pos,
     padded_rect,
     rects_overlap,
-    within_rect,
+    pt_in_rect,
 )
 from .overlays import CanvasOverlay, Minimap
 from .state import InputMode, cstate
@@ -70,7 +70,7 @@ class Canvas(wx.ScrolledWindow):
         sel_compartments_idx: The set of indices of the currently selected compartments.
         drag_sel_nodes_idx: The set of indices tentatively selected during dragging. This is added
                            to sel_nodes_idx only after the user has stopped drag-selecting.
-        drag_sel_comp_idx: See drag_sel_nodes_idx but for compartments
+        drag_sel_comps_idx: See drag_sel_nodes_idx but for compartments
         hovered_element: The element over which the mouse is hovering, or None.
         zoom_slider: The zoom slider widget.
         reaction_map: Maps node index to the set of reaction (indices) that it is in.
@@ -92,6 +92,8 @@ class Canvas(wx.ScrolledWindow):
     sel_reactions_idx: SetSubject
     sel_compartments_idx: SetSubject
     drag_sel_nodes_idx: Set[int]
+    drag_sel_rxns_idx: Set[int]
+    drag_sel_comps_idx: Set[int]
     hovered_element: Optional[CanvasElement]
     dragged_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
@@ -132,9 +134,10 @@ class Canvas(wx.ScrolledWindow):
     #: bool to indicate whether a selection changed event was fired inside selection group.
     _selection_dirty: bool
     node_idx_map: Dict[int, Node]  #: Maps node index to node
-    reaction_idx_map: Dict[int, Reaction]  #; Maps reaction index to reaction
+    reaction_idx_map: Dict[int, Reaction]  # ; Maps reaction index to reaction
     comp_idx_map: Dict[int, Compartment]  #: Maps compartment index to compartment
-    sel_nodes: List[Node]  #: Current lsit of selected nodes; cached for performance
+    sel_nodes: List[Node]  #: Current list of selected nodes; cached for performance
+    sel_reactions: List[Reaction]
     sel_comps: List[Compartment]  #: Current list of selected comps; cached for performance
     drawing_drag: bool  #: See self._UpdateSelectedLists() for more details
 
@@ -229,7 +232,8 @@ class Canvas(wx.ScrolledWindow):
         self._drag_select_start = Vec2()
         self._drag_rect = Rect(Vec2(), Vec2())
         self.drag_sel_nodes_idx = set()
-        self.drag_sel_comp_idx = set()
+        self.drag_sel_rxns_idx = set()
+        self.drag_sel_comps_idx = set()
 
         self._status_bar = self.GetTopLevelParent().GetStatusBar()
         assert self._status_bar is not None, "Need to create status bar before creating canvas!"
@@ -355,7 +359,7 @@ class Canvas(wx.ScrolledWindow):
             An overlay if applicable, or None if not.
         """
         # TODO right now this is hardcoded; in the future add List[CanvasOverlay] attribute
-        if within_rect(device_pos, Rect(self._minimap.device_pos, self._minimap.size)):
+        if pt_in_rect(device_pos, Rect(self._minimap.device_pos, self._minimap.size)):
             return self._minimap
         return None
 
@@ -616,7 +620,7 @@ class Canvas(wx.ScrolledWindow):
                 else:
                     self.dragged_element = None
 
-                # variables for keeping track if clicked on a selectable element 
+                # variables for keeping track if clicked on a selectable element
                 node: Optional[Node] = None
                 rxn: Optional[Reaction] = None
                 comp: Optional[Compartment] = None
@@ -687,7 +691,8 @@ class Canvas(wx.ScrolledWindow):
                     self._drag_select_start = logical_pos
                     self._drag_rect = Rect(self._drag_select_start, Vec2())
                     self.drag_sel_nodes_idx = set()
-                    self.drag_sel_comp_idx = set()
+                    self.drag_sel_rxns_idx = set()
+                    self.drag_sel_comps_idx = set()
             elif cstate.input_mode == InputMode.ADD_NODES:
                 size = Vec2(get_theme('node_width'), get_theme('node_height'))
 
@@ -703,7 +708,7 @@ class Canvas(wx.ScrolledWindow):
                     border_color=get_theme('node_border'),
                     border_width=get_theme('node_border_width'),
                     comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
-                    floatingNode = True,
+                    floatingNode=True,
                 )
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id = self._GetUniqueName(node.id, [n.id for n in self._nodes])
@@ -797,9 +802,11 @@ class Canvas(wx.ScrolledWindow):
             self._drag_selecting = False
             if cstate.input_mode == InputMode.SELECT:
                 self.sel_nodes_idx.union(self.drag_sel_nodes_idx)
-                self.sel_compartments_idx.union(self.drag_sel_comp_idx)
+                self.sel_reactions_idx.union(self.drag_sel_rxns_idx)
+                self.sel_compartments_idx.union(self.drag_sel_comps_idx)
                 self.drag_sel_nodes_idx = set()
-                self.drag_sel_comp_idx = set()
+                self.drag_sel_rxns_idx = set()
+                self.drag_sel_comps_idx = set()
             elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                 id = self._GetUniqueName('c', [c.id for c in self._compartments])
 
@@ -864,6 +871,7 @@ class Canvas(wx.ScrolledWindow):
             device_pos = Vec2(evt.GetPosition())
             logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
             self._cursor_logical_pos = logical_pos
+            rxn_radius = get_theme('reaction_radius')
 
             if self._drag_selecting:
                 assert evt.leftIsDown
@@ -877,12 +885,28 @@ class Canvas(wx.ScrolledWindow):
                                       if rects_overlap(n.s_rect, self._drag_rect)]
                     selected_comps = [c for c in self._compartments
                                       if rects_overlap(c.rect * cstate.scale, self._drag_rect)]
+                    selected_rxns = [re.reaction for re in self._reaction_elements
+                                     if rects_overlap(circle_bounds(
+                                         re.bezier.real_center * cstate.scale, rxn_radius * cstate.scale),
+                                         self._drag_rect)]
                     new_drag_sel_nodes_idx = set(n.index for n in selected_nodes)
-                    new_drag_sel_comp_idx = set(c.index for c in selected_comps)
-                    if new_drag_sel_nodes_idx != self.drag_sel_nodes_idx or new_drag_sel_comp_idx != self.drag_sel_comp_idx:
+                    new_drag_sel_rxns_idx = set(r.index for r in selected_rxns)
+                    new_drag_sel_comps_idx = set(c.index for c in selected_comps)
+
+                    reactions_updated = new_drag_sel_rxns_idx != self.drag_sel_rxns_idx
+                    if (new_drag_sel_nodes_idx != self.drag_sel_nodes_idx or
+                            reactions_updated or
+                            new_drag_sel_comps_idx != self.drag_sel_comps_idx):
                         self.drag_sel_nodes_idx = new_drag_sel_nodes_idx
-                        self.drag_sel_comp_idx = new_drag_sel_comp_idx
+                        self.drag_sel_rxns_idx = new_drag_sel_rxns_idx
+                        self.drag_sel_comps_idx = new_drag_sel_comps_idx
                         self._UpdateSelectedLists()
+
+                    if reactions_updated:
+                        # If drag selected reactions changed, then update reaction selection state.
+                        all_selected = self.drag_sel_rxns_idx | self.sel_reactions_idx.item_copy()
+                        for rel in self._reaction_elements:
+                            rel.selected = rel.reaction.index in all_selected
                 elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                     pass
                 redraw = True
@@ -1013,12 +1037,12 @@ class Canvas(wx.ScrolledWindow):
                     el.on_paint(gc)
 
             # TODO Put this in SelectionChanged
-            sel_rects = [n.rect * cstate.scale for n in self.sel_nodes] + \
-                [c.rect * cstate.scale for c in self.sel_comps]
+            sel_rects = ([n.rect * cstate.scale for n in self.sel_nodes] +
+                         [c.rect * cstate.scale for c in self.sel_comps])
 
             # If we are not drag-selecting, don't draw selection outlines if there is only one rect
             # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
-            # documented above)
+            # documented in _UpdateSelectedLists())
             if len(sel_rects) > 1 or self.drawing_drag:
                 for rect in sel_rects:
                     rect = rect.aligned()
@@ -1145,18 +1169,27 @@ class Canvas(wx.ScrolledWindow):
             self._selection_dirty = False
 
     def _UpdateSelectedLists(self):
+        """Helper that updates the selected nodes, etc. using the selected indices.
+
+        Should be called when there is an update to the indices.
+        """
         sel_node_idx = self.sel_nodes_idx.item_copy()
+        sel_rxn_idx = self.sel_reactions_idx.item_copy()
         sel_comp_idx = self.sel_compartments_idx.item_copy()
-        orig_count = len(sel_node_idx) + len(sel_comp_idx)
+        orig_count = len(sel_node_idx) + len(sel_comp_idx) + len(sel_rxn_idx)
+        orig_rxn_count = len(sel_rxn_idx)
         self.drawing_drag = False
         if self._drag_selecting:
             sel_node_idx |= self.drag_sel_nodes_idx
-            sel_comp_idx |= self.drag_sel_comp_idx
+            sel_rxn_idx |= self.drag_sel_rxns_idx
+            sel_comp_idx |= self.drag_sel_comps_idx
             # Flag that indicates whether there are nodes/comps not selected but within
             # the drag-selection rectangle
-            if len(sel_node_idx) + len(sel_comp_idx) != orig_count:
+            if len(sel_node_idx) + len(sel_rxn_idx) + len(sel_comp_idx) != orig_count:
                 self.drawing_drag = True
+
         self.sel_nodes = [n for n in self._nodes if n.index in sel_node_idx]
+        self.sel_reactions = [r for r in self._reactions if r.index in sel_rxn_idx]
         self.sel_comps = [c for c in self._compartments if c.index in sel_comp_idx]
 
     def _SelectionChanged(self):
@@ -1259,7 +1292,7 @@ depend on it.".format(bound_node.id))
             self.sel_reactions_idx.set_item({r.index for r in self._reactions})
             self.sel_compartments_idx.set_item({c.index for c in self._compartments})
         self.LazyRefresh()
-    
+
     def SelectAllNodes(self):
         with self._SelectGroupEvent():
             self.sel_nodes_idx.set_item({n.index for n in self._nodes})
@@ -1358,7 +1391,7 @@ depend on it.".format(bound_node.id))
         # and updated. For example, if it is not, then the ID of some nodes may be 0 as they are
         # uninitialized.
         self.sel_nodes_idx.set_item({self.controller.get_node_index(self._net_index, id)
-                                        for id in pasted_ids})
+                                     for id in pasted_ids})
 
     def ShowWarningDialog(self, msg: str, caption='Warning'):
         wx.MessageBox(msg, caption, wx.OK | wx.ICON_WARNING)
@@ -1377,4 +1410,4 @@ depend on it.".format(bound_node.id))
     def GetReactionCentroids(self, net_index: int) -> Dict[int, Vec2]:
         """Helper method for ReactionForm to get access to the centroid positions.
         """
-        return { r.reaction.index : r.bezier.centroid for r in self._reaction_elements }
+        return {r.reaction.index: r.bezier.centroid for r in self._reaction_elements}

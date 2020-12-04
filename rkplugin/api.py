@@ -10,7 +10,7 @@ from rkviewer.canvas.canvas import Canvas
 from rkviewer.events import DidChangeCompartmentOfNodesEvent, post_event
 from rkviewer.canvas.utils import default_handle_positions as _default_handle_positions
 from rkviewer.utils import gchain, require_kwargs_on_init
-from rkviewer.canvas.geometry import Rect, within_rect
+from rkviewer.canvas.geometry import Rect, pt_in_rect
 from rkviewer.config import DEFAULT_ARROW_TIP
 import wx
 import copy

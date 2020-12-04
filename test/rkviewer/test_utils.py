@@ -1,35 +1,35 @@
 import unittest
 import copy
-from rkviewer.canvas.geometry import Rect, Vec2, within_rect, clamp_rect_pos, clamp_point, \
+from rkviewer.canvas.geometry import Rect, Vec2, pt_in_rect, clamp_rect_pos, clamp_point, \
     rects_overlap, get_bounding_rect
 
 
 class TestRectUtils(unittest.TestCase):
-    def test_within_rect(self):
+    def test_pt_in_rect(self):
         pos = Vec2(50, 50)
         rect = Rect(Vec2(40, 40), Vec2(20, 65.0))
-        self.assertTrue(within_rect(pos, rect))
+        self.assertTrue(pt_in_rect(pos, rect))
 
         rect = Rect(Vec2(50, 45), Vec2(21, 716.0))
-        self.assertTrue(within_rect(pos, rect))
+        self.assertTrue(pt_in_rect(pos, rect))
 
         rect = Rect(Vec2(50, 50), Vec2(0, 0))
-        self.assertTrue(within_rect(pos, rect))
+        self.assertTrue(pt_in_rect(pos, rect))
 
         pos = Vec2(-12, -37)
         rect = Rect(Vec2(-40, -39), Vec2(28, 2))
-        self.assertTrue(within_rect(pos, rect))
+        self.assertTrue(pt_in_rect(pos, rect))
 
-    def test_not_within_rect(self):
+    def test_not_pt_in_rect(self):
         pos = Vec2(40, 40)
         rect = Rect(Vec2(15, 20), Vec2(50, 12))
-        self.assertFalse(within_rect(pos, rect))
+        self.assertFalse(pt_in_rect(pos, rect))
 
         rect = Rect(Vec2(30, 12), Vec2(4, 0.53))
-        self.assertFalse(within_rect(pos, rect))
+        self.assertFalse(pt_in_rect(pos, rect))
 
         rect = Rect(Vec2(41, 20), Vec2(104134, 41414))
-        self.assertFalse(within_rect(pos, rect))
+        self.assertFalse(pt_in_rect(pos, rect))
 
     def test_get_bounding_rect(self):
         data = [

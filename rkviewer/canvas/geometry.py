@@ -358,13 +358,6 @@ def clamp_point_outside(pos: Vec2, bounds: Rect) -> Vec2:
         return pos.swapped(1, botright.y)
 
 
-def within_rect(pos: Vec2, rect: Rect) -> bool:
-    """Returns whether the given position is within the rectangle, inclusive."""
-    end = rect.position + rect.size
-    return pos.x >= rect.position.x and pos.y >= rect.position.y and pos.x <= end.x and \
-        pos.y <= end.y
-
-
 def get_bounding_rect(rects: Sequence[Rect], padding: float = 0) -> Rect:
     """Compute the bounding rectangle of a given list of rects.
 
@@ -407,6 +400,16 @@ def rects_overlap(r1: Rect, r2: Rect) -> bool:
     return True
 
 
+# def circle_overlaps_rect(center: Vec2, radius: float, rect: Rect) -> bool:
+#     pass
+
+
+def circle_bounds(center: Vec2, radius: float) -> Rect:
+    """Return the bounding rectangle (actually a square) of circle."""
+    offset = Vec2.repeat(radius)
+    return Rect(center - offset, Vec2.repeat(radius * 2))
+
+
 def pt_on_line(a: Vec2, b: Vec2, point: Vec2, threshold: float = 0) -> bool:
     """Returns whether point is on line ab, with the given threshold distance on either side."""
     delta = b - a
@@ -426,6 +429,13 @@ def pt_on_line(a: Vec2, b: Vec2, point: Vec2, threshold: float = 0) -> bool:
 def pt_in_circle(center: Vec2, radius: float, point: Vec2) -> bool:
     """Returns whether point is inside the circle with the given center and radius."""
     return (point - center).norm_sq <= radius ** 2
+
+
+def pt_in_rect(pos: Vec2, rect: Rect) -> bool:
+    """Returns whether the given position is within the rectangle, inclusive."""
+    end = rect.position + rect.size
+    return pos.x >= rect.position.x and pos.y >= rect.position.y and pos.x <= end.x and \
+        pos.y <= end.y
 
 
 class Orientation(Enum):

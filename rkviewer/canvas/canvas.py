@@ -3,6 +3,7 @@
 from collections import defaultdict
 from contextlib import contextmanager
 import copy
+import enum
 from itertools import chain
 import logging
 from logging import Logger
@@ -48,6 +49,19 @@ issues.
 """
 BOUNDS_EPS_VEC = Vec2.repeat(BOUNDS_EPS)
 """2D bounds vector formed from BOUNDS_EPS"""
+
+
+class Alignment(enum.Enum):
+    """Alignment"""
+    LEFT = 0
+    RIGHT = 1
+    CENTER = 2
+    TOP = 3
+    BOTTOM = 4
+    MIDDLE = 5
+    GRID = 6
+    HORIZONTAL = 7  #: Arrange into a row
+    VERTICAL = 8  #: Arrange into a column
 
 
 # Don't use ScrolledPanel since Canvas does not scroll conventionally.
@@ -773,14 +787,111 @@ class Canvas(wx.ScrolledWindow):
             evt.Skip()
 
     def OnRightUp(self, evt):
+        """Right mouse button up event handler.
+
+        Note that the handling of the right click up event is determined by the canvas rather
+        than by the individual elements.
+        """
+        device_pos = Vec2(evt.GetPosition())
+        logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+
+        overlay = self._InWhichOverlay(device_pos)
+        if overlay is not None:
+            return
+
+        node_el: Optional[NodeElement] = None
+        reaction_el: Optional[ReactionElement] = None
+        comp_el: Optional[CompartmentElt] = None
+        for el in reversed(self._elements):
+            if not el.enabled:
+                continue
+            if el.pos_inside(logical_pos):
+                if isinstance(el, NodeElement):
+                    node_el = cast(NodeElement, el)
+                    break
+                elif isinstance(el, ReactionElement):
+                    reaction_el = cast(ReactionElement, el)
+                    break
+                elif isinstance(el, CompartmentElt):
+                    comp_el = cast(CompartmentElt, el)
+                    break
+
+        on_selected = False  # Whether clicked on a selected element.
+        selected_nodes: Set[int] = set()
+        selected_reactions: Set[int] = set()
+        selected_comps: Set[int] = set()
+        if node_el is not None:
+            if node_el.node.index in self.sel_nodes_idx:
+                on_selected = True
+            else:
+                selected_nodes.add(node_el.node.index)
+        elif reaction_el is not None:
+            if reaction_el.reaction.index in self.sel_reactions_idx:
+                on_selected = True
+            else:
+                selected_reactions.add(reaction_el.reaction.index)
+        elif comp_el is not None:
+            if comp_el.compartment.index in self.sel_compartments_idx:
+                on_selected = True
+            else:
+                selected_comps.add(comp_el.compartment.index)
+
+        if on_selected:
+            # If right-clicked on selected element, then don't need to update anything, but only
+            # need to populate right-clicked element lists.
+            selected_nodes = self.sel_nodes_idx.item_copy()
+            selected_reactions = self.sel_reactions_idx.item_copy()
+            selected_comps = self.sel_compartments_idx.item_copy()
+        else:
+            # If right-clicked on something not selected, update selected indices.
+            cur_selected = (len(self.sel_nodes_idx) + len(self.sel_reactions_idx) +
+                            len(self.sel_compartments_idx))
+            new_selected = len(selected_nodes) + len(selected_reactions) + len(selected_comps)
+            # If nothing is selected before or after, don't update anything
+            if cur_selected != 0 or new_selected != 0:
+                with self._SelectGroupEvent():
+                    self.sel_nodes_idx.set_item(selected_nodes)
+                    self.sel_reactions_idx.set_item(selected_reactions)
+                    self.sel_compartments_idx.set_item(selected_comps)
+
+        # Whether clicked on something?
+        total_selected = len(selected_nodes) + len(selected_reactions) + len(selected_comps)
         menu = wx.Menu()
-        # menu.Append(-1, 'Hello')
-        # Find item underneath cursor
 
-        # Find CanvasElement underneath cursor
+        def add_item(menu: wx.Menu, menu_name, callback):
+            id_ = menu.Append(-1, menu_name).Id
+            menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
 
+        if total_selected != 0:
+            add_item(menu, 'Delete', self.DeleteSelectedItems)
+
+        if len(selected_nodes) != 0:
+            owner_comps = set(node.comp_idx for node in self.sel_nodes)
+            if len(owner_comps) == 1:
+                # Only allow alignment if all selected nodes are in the same compartment
+                # Add alignment options
+                menu.AppendSeparator()
+                align_menu = wx.Menu()
+                add_item(align_menu, 'Align Left', lambda: self.AlignSelectedNodes(Alignment.LEFT))
+                add_item(align_menu, 'Align Right', lambda: self.AlignSelectedNodes(Alignment.RIGHT))
+                add_item(align_menu, 'Align Center', lambda: self.AlignSelectedNodes(Alignment.CENTER))
+                add_item(align_menu, 'Align Top', lambda: self.AlignSelectedNodes(Alignment.TOP))
+                add_item(align_menu, 'Align Bottom', lambda: self.AlignSelectedNodes(Alignment.BOTTOM))
+                add_item(align_menu, 'Align Middle', lambda: self.AlignSelectedNodes(Alignment.MIDDLE))
+                add_item(align_menu, 'Grid', lambda: self.AlignSelectedNodes(Alignment.GRID))
+                add_item(align_menu, 'Arrange Horizontally', lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))
+                add_item(align_menu, 'Arrange Vertically', lambda: self.AlignSelectedNodes(Alignment.VERTICAL))
+                menu.AppendSubMenu(align_menu, text='Align...')
+
+
+        # Must refresh before the context menu is displayed, otherwise the refresh won't occur
+        self.Refresh()
         self.PopupMenu(menu)
         menu.Destroy()
+
+    def AlignSelectedNodes(self, alignment: Alignment):
+        """Align the selected nodes. Should be called only when *only* nodes are selected."""
+        raise NotImplementedError('Align Not Implemented!')
 
     # TODO improve this. we might want a special mouseLeftWindow event
     def _EndDrag(self, evt: wx.MouseEvent):
@@ -1177,7 +1288,6 @@ class Canvas(wx.ScrolledWindow):
         sel_rxn_idx = self.sel_reactions_idx.item_copy()
         sel_comp_idx = self.sel_compartments_idx.item_copy()
         orig_count = len(sel_node_idx) + len(sel_comp_idx) + len(sel_rxn_idx)
-        orig_rxn_count = len(sel_rxn_idx)
         self.drawing_drag = False
         if self._drag_selecting:
             sel_node_idx |= self.drag_sel_nodes_idx

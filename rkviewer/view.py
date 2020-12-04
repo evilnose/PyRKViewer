@@ -328,20 +328,21 @@ class MainPanel(wx.Panel):
 
         self.Layout()
 
-
 class AboutDialog(wx.Dialog):
     def __init__(self, parent: wx.Window):
-        super().__init__(parent, title='About RKViewer')
-        sizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
-        self.left_width = 150
-        self.right_width = 180
-        self.row_height = 50
-        self.leftflags = wx.SizerFlags().Border(wx.TOP, 10)
-        self.rightflags = wx.SizerFlags().Border(wx.TOP, 10)
-        self.leftfont = wx.Font(wx.FontInfo(10).Bold())
-        self.rightfont = wx.Font(wx.FontInfo(10))
-        self.AppendRow('version', rkviewer.__version__, sizer)
-        self.SetSizerAndFit(sizer)
+        pass      
+        #super().__init__(parent, title='About RKViewer')
+        #sizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
+        #self.left_width = 150
+        #elf.right_width = 180
+        #self.row_height = 50
+        #self.leftflags = wx.SizerFlags().Border(wx.TOP, 10)
+        #self.rightflags = wx.SizerFlags().Border(wx.TOP, 10)
+        #self.leftfont = wx.Font(wx.FontInfo(10).Bold())
+        #self.rightfont = wx.Font(wx.FontInfo(10))
+        #elf.AppendRow('PathDesigner', "An Extensible Reaction Network Editors", sizer)
+        #self.AppendRow('Version', rkviewer.__version__, sizer)
+        #self.SetSizerAndFit(sizer)
 
     def AppendRow(self, left_text: str, right_text: str, sizer: wx.FlexGridSizer):
         left = wx.StaticText(self, label=left_text, size=(self.left_width, 30),
@@ -352,7 +353,6 @@ class AboutDialog(wx.Dialog):
         right.SetFont(self.rightfont)
         sizer.Add(left, self.leftflags)
         sizer.Add(right, self.rightflags)
-
 
 class MainFrame(wx.Frame):
     """The main frame."""
@@ -455,7 +455,7 @@ class MainFrame(wx.Frame):
 
         help_menu = wx.Menu()
         self.AddMenuItem(help_menu, '&About...',
-                         'Show about dialog', self.ShowAbout, entries)
+                         'Show about dialog', self.onAboutDlg, entries) #self.ShowAbout, entries)
         self.AddMenuItem(help_menu, '&Default settings...', 'View default settings',
                          lambda _: self.ShowDefaultSettings(), entries)
 
@@ -510,6 +510,19 @@ class MainFrame(wx.Frame):
         item = menu.Append(id_, '{}\t{}'.format(text, shortcut), help_text)
         self.Bind(wx.EVT_MENU, callback, item)
         self.menu_events.append((callback, item))
+
+    def onAboutDlg(self, event):
+       info = wx.adv.AboutDialogInfo()
+       info.Name = "An Extensible Reaction Network Editor"
+       info.Version = "0.0.1 Beta"
+       info.Copyright = "(C) 2020"
+       info.Description = "Create reaction networks"
+       info.WebSite = ("http://www.XXXXX.org", "Home Page")
+       info.Developers = ["Gary Geng, Jin Xu, Carmen Pereña Cortés, Herbert Sauro"]
+       info.License = "MIT"
+
+       # Show the wx.AboutBox
+       wx.adv.AboutBox(info)
 
     def ReloadSettings(self):
         load_theme_settings()

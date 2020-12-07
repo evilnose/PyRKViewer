@@ -186,7 +186,6 @@ class LayoutNetworkX(WindowedPlugin):
                     api.move_node(0, count, position = Vec2(newX, newY), allowNegativeCoordinates=True)   
                     count = count + 1
 
-                api.
 
                 for r in api.get_reactions(0):
                     handles = api.default_handle_positions(0, r.index) # centroid, sources, target

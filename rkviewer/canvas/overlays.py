@@ -5,7 +5,7 @@ import wx
 import abc
 from typing import Callable, List
 from .data import Node
-from .geometry import Vec2, Rect, clamp_point, within_rect
+from .geometry import Vec2, Rect, clamp_point, pt_in_rect
 from .utils import draw_rect
 
 
@@ -168,7 +168,7 @@ class Minimap(CanvasOverlay):
         if not self._dragging:
             scale = self._size.x / self._realsize.x
             pos = device_pos - self.device_pos
-            if within_rect(pos, Rect(self.window_pos * scale, self.window_size * scale)):
+            if pt_in_rect(pos, Rect(self.window_pos * scale, self.window_size * scale)):
                 self._dragging = True
                 self._drag_rel = pos - self.window_pos * scale
             else:

@@ -139,7 +139,6 @@ def init_bezier():
 
         INITIALIZED = True
 
-# Jin_edit(2)
 
 
 @dataclass
@@ -247,7 +246,6 @@ class HandleData:
         self.tip = tip
         self.base = base
 
-# Jin_edit(2)
 
 
 class SpeciesBezier:
@@ -423,7 +421,6 @@ class SpeciesBezier:
                                              self.centroid_handle.tip,
                                              self.real_center)]
         path.MoveToPoint(*points[0])
-        # Jin_edit
         if self.bezierCurves:
             path.AddCurveToPoint(*points[1], *points[2], *points[3])
         else:

@@ -25,7 +25,7 @@ from .geometry import (
     get_bounding_rect,
     padded_rect,
     pt_in_circle,
-    within_rect,
+    pt_in_rect,
 )
 from .state import cstate
 from .utils import draw_rect
@@ -130,7 +130,7 @@ class NodeElement(CanvasElement):
         self.font_scale = 1
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return within_rect(logical_pos, self.node.s_rect)
+        return pt_in_rect(logical_pos, self.node.s_rect)
 
     def on_paint(self, gc: wx.GraphicsContext):
         if self.gfont is None or self.font_scale != cstate.scale:
@@ -490,7 +490,7 @@ class CompartmentElt(CanvasElement):
         self.compartment = compartment
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return within_rect(logical_pos, self.compartment.rect * cstate.scale)
+        return pt_in_rect(logical_pos, self.compartment.rect * cstate.scale)
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
         return True
@@ -707,12 +707,12 @@ class SelectBox(CanvasElement):
 
         rects = self._resize_handle_rects()
         for i, rect in enumerate(rects):
-            if within_rect(logical_pos, rect):
+            if pt_in_rect(logical_pos, rect):
                 return i
 
         rects = [n.rect for n in self.nodes] + \
             [c.rect for c in self.compartments]
-        if any(within_rect(logical_pos, r * cstate.scale) for r in rects):
+        if any(pt_in_rect(logical_pos, r * cstate.scale) for r in rects):
             return -1
         else:
             return -2

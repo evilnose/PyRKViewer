@@ -17,7 +17,6 @@ def get_nodes_by_idx(nodes: List[Node], indices: Collection[int]):
     assert len(ret) == len(indices)
     return ret
 
-#Jin_edit
 def get_rxns_by_idx(rxns: List[Reaction], indices: Collection[int]):
     """Simple helper that maps the given list of indices to their corresponding rxns."""
     ret = [n for n in rxns if n.index in indices]

@@ -1,12 +1,11 @@
 '''
 Given a random network, this plugin  will rearrange the network neatly on the screen.
-
-Version 0.01: Author: Carmen Perena Cortes 2020
-
+Version 0.01: Author: Carmen Perena Cortes, Herbert M Sauro 2020
 Based on THOMAS M. J. FRUCHTERMAN AND EDWARD M. REINGOLD's Graph Drawing by Force-directed Placement
 SOFTWARE—PRACTICE AND EXPERIENCE, VOL. 21(1 1), 1129-1164 (NOVEMBER 1991)
-'''
 
+Using python's networkx
+'''
 import wx
 from rkplugin.plugins import PluginMetadata, WindowedPlugin
 from rkplugin import api
@@ -14,23 +13,27 @@ from rkplugin.api import Node, Vec2, Reaction
 import math
 from dataclasses import field
 from typing import List
+from random import uniform
+from numpy.random import rand
+import numpy as np
+import random
+from dataclasses import dataclass
+import networkx as nx
 
 metadata = PluginMetadata(
-    name='AutoLayoutOld',
-    author='Carmen Perena, Herbert M Sauro',
-    version='0.0.1',
-    short_desc='Auto Layout.',
+    name='Old',
+    author='Carmen and Herbert M Sauro',
+    version='0.5.2',
+    short_desc='Auto Layout using networkX.',
     long_desc='Rearrange a random network into a neat auto layout'
 )
 
-class AutoLayout(WindowedPlugin):
+class LayoutNetworkX(WindowedPlugin):
     def __init__(self):
         '''
         Initialize the RandomNetwork.
-
         Args:
             self
-
         '''
         super().__init__(metadata)
 
@@ -42,344 +45,161 @@ class AutoLayout(WindowedPlugin):
             dialog
         '''
         # TODO: k, gravity, useMagnetism, useBoundary, useGrid
-        window = wx.Panel(dialog, pos=(5,100), size=(400, 320))
-
+        window = wx.Panel(dialog, pos=(5,100), size=(350, 200))
+        
         MaxIter = wx.StaticText(window, -1, 'Maximum Number of Iterations', (20 , 20))
-        self.MaxIterText = wx.TextCtrl(window, -1, "215", (280, 20), size=(100, -1))
+        self.MaxIterText = wx.TextCtrl(window, -1, "100", (220, 20), size=(100, -1))
         self.MaxIterText.SetInsertionPoint(0)
         self.MaxIterText.Bind(wx.EVT_TEXT, self.OnText_MaxIter)
         self.MaxIterValue = int(self.MaxIterText.GetValue())
 
         k = wx.StaticText(window, -1, 'k (float > 0)', (20 , 50))
-        self.kText = wx.TextCtrl(window, -1, "0.5", (280, 50), size=(100, -1))
+        self.kText = wx.TextCtrl(window, -1, "70", (220, 50), size=(100, -1))
         self.kText.SetInsertionPoint(0)
         self.kText.Bind(wx.EVT_TEXT, self.OnText_k)
-        self.kValue = float(self.kText.GetValue())
+        self.kValue = float(self.kText.GetValue())        
 
-        gravity = wx.StaticText(window, -1, 'gravity (integer > 0)', (20 , 90))
-        self.gravityText = wx.TextCtrl(window, -1, "10", (280, 90), size=(100, -1))
-        self.gravityText.SetInsertionPoint(0)
-        self.gravityText.Bind(wx.EVT_TEXT, self.OnText_gravity)
-        self.gravityValue = int(self.gravityText.GetValue())
-
-        useMagnetism = wx.StaticText(window, -1, 'Use Magnetism (True or False)', (20 , 120))
-        self.useMagnetismText = wx.TextCtrl(window, -1, "True", (280, 120), size=(100, -1))
-        self.useMagnetismText.SetInsertionPoint(0)
-        self.useMagnetismText.Bind(wx.EVT_TEXT, self.OnText_useMagnetism)
-        self.useMagnetismValue = bool(self.useMagnetismText.GetValue())
-
-        useBoundary = wx.StaticText(window, -1, 'Use Boundary (set to False)', (20 , 150))
-        self.useBoundaryText = wx.TextCtrl(window, -1, "False", (280, 150), size=(100, -1))
-        self.useBoundaryText.SetInsertionPoint(0)
-        self.useBoundaryText.Bind(wx.EVT_TEXT, self.OnText_useBoundary)
-        self.useBoundaryValue = bool(self.useBoundaryText.GetValue())
-
-        useGrid = wx.StaticText(window, -1, 'Use Grid (set to False)', (20 , 180))
-        self.useGridText = wx.TextCtrl(window, -1, "False", (280, 180), size=(100, -1))
-        self.useGridText.SetInsertionPoint(0)
-        self.useGridText.Bind(wx.EVT_TEXT, self.OnText_useGrid)
-        self.useGridValue = bool(self.useGridText.GetValue())
-
-        apply_btn = wx.Button(window, -1, 'Apply', (180, 240))
+        scale = wx.StaticText(window, -1, 'Scale of Layout', (20 , 80))
+        self.scaleText = wx.TextCtrl(window, -1, "550", (220, 80), size=(100, -1))
+        self.scaleText.SetInsertionPoint(0)
+        self.scaleText.Bind(wx.EVT_TEXT, self.OnText_scale)
+        self.scaleValue = float(self.scaleText.GetValue())  
+        
+        apply_btn = wx.Button(window, -1, 'Run', (220, 130))
         apply_btn.Bind(wx.EVT_BUTTON, self.Apply)
-
+ 
         window.SetPosition (wx.Point(10,10))
         return window
-    
+
     def OnText_MaxIter(self, evt):
-        update = evt.GetString()
-        if update != '':
-            self.MaxIterValue = int(self.MaxIterText.GetValue())
+        try:
+          update = evt.GetString()
+          if update != '':
+              self.MaxIterValue = int(self.MaxIterText.GetValue())
+        except ValueError:
+           wx.MessageBox('Value must be a number', 'Error', wx.OK | wx.ICON_INFORMATION)
 
     def OnText_k(self, evt):
-        update = evt.GetString()
-        if update != '':
-            self.kValue = float(self.kText.GetValue())
+        try:
+           update = evt.GetString()
+           if update != '':
+              self.kValue = float(self.kText.GetValue())
+        except ValueError:
+           wx.MessageBox('Value must be a number', 'Error', wx.OK | wx.ICON_INFORMATION)
 
-    def OnText_gravity(self, evt):
-        update = evt.GetString()
-        if update != '':
-            self.gravityValue = int(self.gravityText.GetValue())
 
-    def OnText_useBoundary(self, evt):
-        update = evt.GetString()
-        if update != '':
-            self.useBoundaryValue = bool(self.useBoundaryText.GetValue())
-
-    def OnText_useGrid(self, evt):
-        update = evt.GetString()
-        if update != '':
-            self.useGridValue = bool(self.useGridText.GetValue())
-
-    def OnText_useMagnetism(self, evt):
-        update = evt.GetString()
-        if update != '':
-            self.useMagnetismValue = bool(self.useMagnetismText.GetValue())
+    def OnText_scale(self, evt):
+        try:
+           update = evt.GetString()
+           if update != '':
+              self.scaleValue = float(self.scaleText.GetValue())
+        except ValueError:
+           wx.MessageBox('Value must be a number', 'Error', wx.OK | wx.ICON_INFORMATION)
 
 
     def Apply(self, evt):
-        '''
-        Handler for the "apply" button. apply the random network.
-
-        Adapting the Fruchterman Reingold algorithm to auto layout
-        '''
-
-        # TODO: look at these variables
-        e = math.e
-
-        # TODO: make these into inputs
-        k = self.kValue
-        gravity = self.gravityValue
-        useMagnetism = self.useMagnetismValue
-        useBoundary = self.useBoundaryValue
-        useGrid = self.useGridValue
-
-        def attractiveForce(d, k) -> float:
-            return k*k/d
         
-        def repulsiveForce(d, k ) -> float:
-            return k*k/d
-
-        class Connection:
-            reactant: int = field()
-            product: int = field()
-
-
-        # Make a list of all pairs in each reaction
-        def pairList(reactions: List[Reaction]) -> List[List[Connection]]:
-            con = []
-            for q in reactions:
-                qList = []
-                for t in q.sources:
-                    for w in q.targets:
-                        qList.append(Connection(t, w))
-                con.insert(q, qList) 
-            return con
-
-        def curves(reactions: List[Reaction]) -> List[List[int]]:
-            cur = []
-            for q in reactions:
-                l = []
-                for t in q.sources:
-                    l.append(t)
-                for w in q.targets:
-                    l.append(w)
-                cur.append(l)
-            return cur
-
-        class PointF:
-            def __init__(self, x, y):
-                self.x = x
-                self.y = y
-
-            
-            '''
-            def add(self, p : PointF) -> PointF:
-                self.x = self.x + p.x
-                self.y = self.y + p.y
-                return PointF(self.x, self.y)
-
-            def minus(self, p : PointF) -> PointF:
-                self.x = self.x - p.x
-                self.y = self.y - p.y
-                return PointF(self.x, self.y)
-            '''
+        G = nx.Graph()
+        nodes = np.array(list(api.get_node_indices(0)))
+        reactionsInd =  np.array(list(api.get_reaction_indices(0)))
+        originalPos = {}
         
-        def add(p1 : PointF, p2: PointF) -> PointF:
-            x = p1.x + p2.x
-            y = p1.y + p2.y
-            return PointF(x, y)
+        def generateGraph():
+            nodes = np.array(list(api.get_node_indices(0)))
+            reactionsInd =  np.array(list(api.get_reaction_indices(0)))
+            cStr = np.empty_like(reactionsInd, dtype=str)
+            cStr[:,] = "c"
+            centroidId = np.char.add(cStr, reactionsInd.astype(str))
+            G.add_nodes_from(centroidId)
 
-        def minus(p1 : PointF, p2: PointF) -> PointF:
-            x = p1.x - p2.x
-            y = p1.y - p2.y
-            return PointF(x, y)
-
-
-        def fruchtermanReingold(self, canvasSize):
-            # TODO: the node_count makes no sense
-            # netIn = api.cur_net_index
-            netIn = 0
-            #numNodes = api.node_count(netIn)
-            #print("numNodes: %d" % numNodes)
-            numReactions = api.reaction_count(netIn)
-            #print ("n: %d" % numReactions)
-            allNodes = api.get_nodes(netIn)
-            numNodes = len(allNodes)
-            # TODO: throw exceptions
-            allReactions = api.get_reactions(netIn)
-            #print("all reactions:")
-            #print(allReactions)
-            # cons = pairList(allReactions)
-            curs = curves(allReactions)
-            #print ("curs: ")
-            #print (curs)
-
-            # TODO: decide if input of not
-            maxIter = math.trunc(100* math.log(numNodes + 2))
-            tempinit = (1000 * math.log(numReactions + 2))
-            tempcurr = tempinit
-            time = 0.0 
-            tIncrement = 1.0
-            alpha = math.log(tempinit) - math.log(0.25)
-            adjustk = 0
-
-            #area = windowSize[0] * windowSize[1]
+            nStr = np.empty_like(nodes, dtype=str)
+            nStr[:,] = "n"
+            nodesId = np.array(list(np.char.add(nStr, nodes.astype(str))))
+            G.add_nodes_from(nodesId)
             
-            its: int
-            d: int
-            delta = PointF(0, 0)
-            width = math.sqrt(numNodes)* k * 5 # TODO: WHY
-            length = width
-            area = width*length
-            #k = math.sqrt(area/numNodes)
-            baryCenter = PointF(0, 0)
-
-            # displacement of nodes, index = node index
-            Pos = []
-            # displacement of centroids, index = reaction index
-            CentDisp = []
-            for y in range(0, numNodes + 1):
-                Pos.append(PointF(0,0))
-
-            for y in range(0, numReactions + 1):
-                CentDisp.append(PointF(0,0))
-
-            #each curve[i] is a reaction and the list corresponding are the curves
-            Curves = []
-
-            for its in range(0, maxIter):
-                tempcurr = tempinit * math.pow(e, -alpha * time)
-                time = time + tIncrement
-                # NOTE: modifying any node fields won't be final until you run api.update_node()
+            for n in nodes:
+                centroidsTo = np.array(list(api.get_reactions_as_product(0, n))) # Gets the reactions in which it is a product -> TO 
+                
+                cStr = np.empty_like(centroidsTo, dtype=str)
+                cStr[:,] = "c"
+                centroidsToIn = np.char.add(cStr, centroidsTo.astype(str)) # centroids from which the node is product
+            
+                centroidsFrom = np.array(list(api.get_reactions_as_reactant(0, n))) # reactions in which it is a reactanr -> FROM
+                cStr = np.empty_like(centroidsFrom, dtype=str)
+                cStr[:,] = "c"
+                centroidsFromIn = np.char.add(cStr, centroidsFrom.astype(str)) # centroids to which the node is reactant
+            
+                nS = np.empty_like(centroidsToIn, dtype = str)
+                nS[:,] = "n"
+                numS = np.empty_like(centroidsToIn, dtype = int)
+                numS[:,] = n
+                nodeIndArrayTo = np.char.add(nS, numS.astype(str))
+                
+                nS = np.empty_like(centroidsFromIn, dtype = str)
+                nS[:,] = "n"
+                numS = np.empty_like(centroidsFromIn, dtype = int)
+                numS[:,] = n
+                nodeIndArrayFrom = np.char.add(nS, numS.astype(str))
                 
 
-                # repulsive forces
-                for v in range(0, numNodes): # TODO: -1?
-                    # TODO: this can help manage stray nodes could add as input option?
-                    vNode = allNodes[v]
-                    if numReactions > 0:
-                        for u in range(0, numNodes):
-                            uNode = allNodes[u]
-                            if vNode != uNode:
-                                delta.x = vNode.position.x - uNode.position.x
-                                delta.y = vNode.position.y - uNode.position.y
-                                d = math.sqrt(delta.x*delta.x+delta.y*delta.y)
-                                if d == 0:
-                                    d = 0.001
-                                
-                                fr = repulsiveForce(d, k)/d
-                                #TODO: adjustk = (k * math.log())
-                                delta.x = delta.x/d * fr
-                                delta.y = delta.y/d * fr 
-                                newV = add(Pos[v], delta)
-                                newU = minus(Pos[v], delta)
-                                Pos[v] = newV
-                                Pos[u] = newU
+                edgesTo = np.array(list(zip(centroidsToIn, nodeIndArrayTo)))
+                edgesFrom = np.array(list(zip(nodeIndArrayFrom, centroidsFromIn)))
                 
-                # Attractive forces
-                # Calculates attractive forces to the centroids of the reactions
-                #print(curs)
-                for m in range(0, numReactions): # m keeps track of what reaction we're in
-                    cc = curs[m]
-                    
-                    center = api.compute_centroid(netIn, allReactions[m].sources, allReactions[m].targets)
-                    for g in range (0, len(cc)): # g is index inlist of reaction components
-                        thisNodeIn = cc[g] # index of node in whole network
-                        thisNode = api.get_node_by_index(netIn, thisNodeIn)
-                        delta.x = thisNode.position.x - center.x
-                        delta.y = thisNode.position.y - center.y
-                        d = math.sqrt(delta.x*delta.x+delta.y*delta.y)
-                        if (d != 0):
-                            #TODO: adjustk
-                            fa = attractiveForce(d, k)/d
-                            delta.x = delta.x/d * fa
-                            delta.y = delta.y/d * fa 
-                            newM = minus(Pos[thisNodeIn], delta)
-                            newCen = add(CentDisp[m], (delta))
-                            Pos[thisNodeIn] = newM
-                            CentDisp[m] = newCen
-
-
-                # Use magnetism
-                if (useMagnetism):
-                    for o in range(0, numReactions): # keeps track of what reaction we are in
-                        sources = allReactions[o].sources
-                        targets = allReactions[o].targets
-                        cc = curs[o]
-                        sameRole: bool
-                        for curve1 in range(0, len(cc)): # index of curve in list of components 
-                            # TODO: method or field for checing role
-                            # TODO: locked nodes?
-                            for curve2 in range (0, len(cc)): # index of curve in list of components 
-                                Node1In = cc[curve1] # index in whole network
-                                Node1 = api.get_node_by_index(netIn, Node1In)
-                                Node2In = cc[curve2] # index in whole network
-                                Node2 = api.get_node_by_index(netIn, Node2In)
+                
+                G.add_edges_from(edgesTo)
+                G.add_edges_from(edgesFrom)
             
-                                if ((curve1 in sources) and (curve2 in sources)) or ((curve1 in targets) and (curve2 in targets)):
-                                    sameRole = True
-                                else:
-                                    sameRole = False
+            cn = 0
+            for rea in api.get_reactions(0):
+                cent = api.compute_centroid(0, rea.sources, rea.targets)
+                originalPos[centroidId[cn]] = list([cent.x, cent.y])
+                cn = cn + 1
 
-                                if (curve1 != curve2 and sameRole):
-                                    delta.x = Node1.position.x - Node2.position.x
-                                    delta.y = Node1.position.y - Node2.position.y
-                                    d = math.sqrt(delta.x*delta.x+delta.y*delta.y)
-                                    if (d != 0):
-                                        #TODO: adjustk use k instead for now
-                                        delta.x = (delta.x/d * (d*d/k))/4
-                                        delta.y = (delta.x/d * (d*d/k))/4
-                                        new1 = minus(Pos[Node1In], delta)
-                                        new2 = add(Pos[Node2In], (delta))
-                                        Pos[Node1In] = new1
-                                        Pos[Node2In] = new2
+            cn = 0
+            for nod in api.get_nodes(0):
+                originalPos[nodesId[cn]] = list([nod.position.x, nod.position.y])
+                cn = cn + 1
 
+        generateGraph()
+        print(nx.to_dict_of_lists(G))
+        with api.group_action():   
+            for t in range(20):
+                pos = (nx.fruchterman_reingold_layout(G, k = self.kValue, iterations = self.MaxIterValue, scale = self.scaleValue, pos = originalPos))
+                positions = np.array(list(pos.values()))
+                centroids = positions[0: len(reactionsInd)]
+                nodes = positions[len(reactionsInd): len(positions)]
+                
+                minX = 0
+                minY = 0
+                for p in positions:
+                    if p[0] < minX:
+                        minX = p[0]
+                    if p[1] < minY:
+                        minY = p[1]
 
-                # Gravity
-                if (gravity > 5):
-                    for f in range (0, numNodes):
-                        curNode = allNodes[f]
-                        # TODO: locked?
-                        delta.x = curNode.position.x - baryCenter.x
-                        delta.y = curNode.position.y - baryCenter.y
-                        d = math.sqrt(delta.x*delta.x+delta.y*delta.y)
-                        # TODO: adjustk
-                        if (d != 0):
-                            delta.x = (delta.x/d * (d*k))
-                            delta.y = (delta.x/d * (d*k))
-                            newPos = minus(Pos[f], (delta))
-                            Pos[Node1In] = newPos
-
-
-
-                # Adjust Coordinates
+                nodes = nodes - np.array([minX, minY])
+                
                 count = 0
-                for curNode in api.get_nodes(0):
-                    displ = Pos[count]
-                    d = math.sqrt(displ.x*displ.x+displ.y*displ.y)
-                    
-                    if (d != 0):
-                        # canvasCenter = Vec2(canvasSize.x /2, canvasSize.y/2)
-                        curPos = curNode.position
-                        addPos = PointF(displ.x/d * tempcurr, displ.y/d * tempcurr)
-                        newPos = add(curPos, addPos)
-                        if (useBoundary):
-                            adjustedx = min(canvasSize.x/2, max(-(canvasSize.x/2), newPos.x))
-                            adjustedy = min(canvasSize.y/2, max(-(canvasSize.y/2), newPos.y))
-                            newPos = PointF(adjustedx, adjustedy)
-                        # new = Vec2(newPos.x, newPos.y)
-                        # tempPos = minus(curPos, PointF(1,1))
-                        #print(a)
-                        # indx = api.cur_net_index()
-                        if newPos.x >= 0 and newPos.y >= 0:
-                            api.update_node(0, curNode.index, position = Vec2(newPos.x, newPos.y))
-                    
-                    count += 1
-                    
-                    # TODO: boundary and grid
+                for n in nodes:
+                    newX = float(n[0])
+                    newY = float(n[1])
+                    api.move_node(0, count, position = Vec2(newX, newY), allowNegativeCoordinates=True)   
+                    count = count + 1
 
-                its += 1 # TODO: check
-                
-        canvasSize = api.canvas_size()
-        fruchtermanReingold(self, canvasSize)
+                api.
+
+                for r in api.get_reactions(0):
+                    handles = api.default_handle_positions(0, r.index) # centroid, sources, target
+                    api.set_reaction_center_handle(0, r.index, handles[0])
+                    count = 1
+                    for s in r.sources:
+                        api.set_reaction_node_handle(0, r.index, s, True, handles[count])
+                        count += 1
+                    for t in r.targets:
+                        api.set_reaction_node_handle(0, r.index, t, False, handles[count])
+                        count += 1
+        
+        
+
+            
+

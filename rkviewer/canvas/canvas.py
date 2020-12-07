@@ -98,7 +98,9 @@ class Canvas(wx.ScrolledWindow):
     HANDLE_LAYER = 11
     DRAGGED_NODE_LAYER = 12
     MILLIS_PER_REFRESH = 16  # serves as framerate cap
-    KEY_MOVE_PIXELS = 1  # Number of pixels to move when the user presses an arrow key.
+    KEY_MOVE_STRIDE: int = 1  #: Number of pixels to move when the user presses an arrow key.
+    #: Larger move stride for convenience; used when SHIFT is pressed.
+    KEY_MOVE_LONG_STRIDE: int = 10
 
     controller: IController
     realsize: Vec2
@@ -304,8 +306,11 @@ class Canvas(wx.ScrolledWindow):
             evt.Skip()
             return
 
-        offset *= Canvas.KEY_MOVE_PIXELS
-        if self._select_box is not None:
+        if wx.GetKeyState(wx.WXK_SHIFT):
+            offset *= Canvas.KEY_MOVE_LONG_STRIDE
+        else:
+            offset *= Canvas.KEY_MOVE_STRIDE
+        if len(self._select_box.nodes) != 0 or len(self._select_box.compartments) != 0:
             self._select_box.move_offset(offset)
 
     @property

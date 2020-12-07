@@ -309,6 +309,13 @@ class IController(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def set_application_position(self, pos: wx.Point):
+        pass
+
+    @abc.abstractmethod
+    def get_application_position(self) -> wx.Point:
+        pass
 
 class IView(abc.ABC):
     """The inteface class for a controller

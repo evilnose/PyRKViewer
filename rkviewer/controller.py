@@ -133,6 +133,9 @@ class Controller(IController):
         self.end_group()
         return nodei
 
+    def set_application_position(self, pos: wx.Point):
+        self.initial_position = pos
+
     def get_application_position(self) -> wx.Point:
         return self.initial_position
 

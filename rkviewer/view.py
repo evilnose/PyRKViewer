@@ -11,7 +11,7 @@ import wx
 import wx.lib.agw.flatnotebook as fnb
 from commentjson.commentjson import JSONLibraryException
 from rkplugin.api import init_api
-# import wx.lib.agw.shortcuteditor as sedit
+import wx.adv
 from wx.adv import NotificationMessage
 
 import rkviewer
@@ -328,31 +328,6 @@ class MainPanel(wx.Panel):
 
         self.Layout()
 
-class AboutDialog(wx.Dialog):
-    def __init__(self, parent: wx.Window):
-        pass      
-        #super().__init__(parent, title='About RKViewer')
-        #sizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
-        #self.left_width = 150
-        #elf.right_width = 180
-        #self.row_height = 50
-        #self.leftflags = wx.SizerFlags().Border(wx.TOP, 10)
-        #self.rightflags = wx.SizerFlags().Border(wx.TOP, 10)
-        #self.leftfont = wx.Font(wx.FontInfo(10).Bold())
-        #self.rightfont = wx.Font(wx.FontInfo(10))
-        #elf.AppendRow('PathDesigner', "An Extensible Reaction Network Editors", sizer)
-        #self.AppendRow('Version', rkviewer.__version__, sizer)
-        #self.SetSizerAndFit(sizer)
-
-    def AppendRow(self, left_text: str, right_text: str, sizer: wx.FlexGridSizer):
-        left = wx.StaticText(self, label=left_text, size=(self.left_width, 30),
-                             style=wx.ALIGN_RIGHT)
-        left.SetFont(self.leftfont)
-        right = wx.StaticText(self, label=right_text, size=(self.right_width, 30),
-                              style=wx.ALIGN_LEFT)
-        right.SetFont(self.rightfont)
-        sizer.Add(left, self.leftflags)
-        sizer.Add(right, self.rightflags)
 
 class MainFrame(wx.Frame):
     """The main frame."""
@@ -485,7 +460,7 @@ class MainFrame(wx.Frame):
         self.Layout()
 
         #Record the initial position of the window
-        self.controller.initial_position = self.GetPosition()
+        self.controller.set_application_position(self.GetPosition())
 
 
     # Any thing we need to do when the app closes can be included here
@@ -517,7 +492,7 @@ class MainFrame(wx.Frame):
        info.Version = "0.0.1 Beta"
        info.Copyright = "(C) 2020"
        info.Description = "Create reaction networks"
-       info.WebSite = ("http://www.XXXXX.org", "Home Page")
+       info.SetWebSite("https://github.com/evilnose/PyRKViewer", "Home Page")  # TODO update home page?
        info.Developers = ["Gary Geng, Jin Xu, Carmen Pereña Cortés, Herbert Sauro"]
        info.License = "MIT"
 
@@ -642,11 +617,6 @@ class MainFrame(wx.Frame):
                 pass  # exited normally
             else:
                 pass  # exited by clicking some button
-
-    def ShowAbout(self, evt):
-        with AboutDialog(self) as dlg:
-            dlg.Centre()
-            dlg.ShowModal()
 
     def OverrideAccelTable(self, widget):
         """Set up functions to disable accelerator shortcuts for certain descendants of widgets.

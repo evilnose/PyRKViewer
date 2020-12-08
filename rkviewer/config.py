@@ -41,6 +41,7 @@ def CreateConfigDir():
             config_dir = os.path.join(os.path.join(config_dir, 'rkViewer'))
         return True
     except FileExistsError:
+        # TODO fix
         self.main_panel.canvas.ShowWarningDialog('Could not create RKViewer configuration '
                                                      'directory. A file already exists at path '
                                                      '{}.'.format(config_dir))
@@ -203,7 +204,7 @@ class ThemeSchema(Schema):
     hgap = Pixel(missing=2)
     canvas_outside_bg = Color(missing=wx.Colour(160, 160, 160))
     mode_panel_width = Pixel(missing=100)
-    toolbar_height = Pixel(missing=40)
+    toolbar_height = Pixel(missing=75)
     edit_panel_width = Pixel(missing=260)
     node_fill = Color(missing=wx.Colour(255, 204, 153, 200))
     node_border = Color(missing=wx.Colour(255, 108, 9))

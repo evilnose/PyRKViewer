@@ -66,6 +66,8 @@ class TNode:
     position: Vec2
     rectSize: Vec2
     floating : bool  # If false it means the node is a boundary node
+    #Jin_edit:
+    moving: bool #if false it means the node is locked
     compi: int = -1
     fillColor: TColor = TColor(255, 150, 80, 255)
     outlineColor: TColor = TColor(255, 100, 80, 255)
@@ -517,7 +519,8 @@ def _pushUndoStack():
         netSetStack.push(networkDict)
 
 
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode : bool = False):
+#Jin_edit:
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = False, movingNode: bool = False):
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -538,7 +541,8 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
             return
 
         _pushUndoStack()
-        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h), floatingNode)
+        #Jin_edit:
+        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h), floatingNode, movingNode)
         n.addNode(newNode)
         networkDict[neti] = n
     finally:
@@ -684,6 +688,11 @@ def IsFloatingNode (neti : int, nodei : int):
 
 def IsBoundaryNode(neti : int, nodei : int):
     return not IsFloatingNode(neti, nodei)
+
+#Jin_edit
+def IsMovingNode (neti : int, nodei : int):
+    n = _getNetwork(neti)
+    return n.nodes[nodei].moving  
 
 
 def getListOfNodeIDs(neti: int) -> List[str]:
@@ -1160,6 +1169,28 @@ def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
+
+#Jin_edit
+def setNodeMovingStatus (neti: int, nodei: int, movingStatus: bool):
+    """
+    setNodeMovingStatus setNodeMovingStatus
+    errCode: -7: node index out of range
+    -5: net index out of range
+    -12: Variable out of range
+    """
+    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        n = networkDict[neti]
+        if nodei not in n.nodes:
+            errCode = -7
+        else:
+            _pushUndoStack()
+            n.nodes[nodei].moving = movingStatus
+            return
+
 
 def setNodeFillColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     """

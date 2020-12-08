@@ -142,6 +142,10 @@ class NodeElement(CanvasElement):
         boundaryFactor = 1
         if not self.node.floatingNode:
            boundaryFactor = 2  # Store this in a theme? 
+    
+        #Jin_edit:
+        if not self.node.movingNode:
+           print("block")
 
         s_aligned_rect = self.node.s_rect.aligned()
         aligned_border_width = max(even_round(

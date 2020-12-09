@@ -707,8 +707,8 @@ class NodeForm(EditPanelForm):
     #Jin_edit:
     def  OnNodeMovingStatusChoice (self, evt):
         """Callback for the change node status, floating or boundary."""
-        status = self.nodeMovingStatusDropDown.GetValue()
-        if status == 'Moving Node':
+        moving_status = self.nodeMovingStatusDropDown.GetValue()
+        if moving_status == 'Moving Node':
            movingStatus = True
         else:
            movingStatus = False

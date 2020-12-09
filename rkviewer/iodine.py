@@ -520,7 +520,7 @@ def _pushUndoStack():
 
 
 #Jin_edit:
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = False, movingNode: bool = False):
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, movingNode: bool = True):
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok

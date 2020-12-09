@@ -7,7 +7,7 @@ import wx
 
 # pylint: disable=maybe-no-member
 from rkviewer.canvas.geometry import Vec2
-from rkplugin.plugins import CommandPlugin, PluginMetadata
+from rkplugin.plugins import CommandPlugin, PluginMetadata, PluginCategory
 from rkplugin import api
 from rkplugin.api import Rect, Vec2
 from rkplugin.events import DidAddNodeEvent, DidMoveBezierHandleEvent
@@ -18,7 +18,8 @@ metadata = PluginMetadata(
     author='Gary Geng',
     version='0.0.1',
     short_desc='Log events.',
-    long_desc='Log all events that are handled by plugins.'
+    long_desc='Log all events that are handled by plugins.',
+    category=PluginCategory.MISC,
 )
 
 

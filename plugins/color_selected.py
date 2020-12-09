@@ -8,8 +8,7 @@ Version 0.01: Author: Gary Geng (2020)
 # pylint: disable=maybe-no-member
 from rkplugin.api import Color
 import wx
-from typing import List
-from rkplugin.plugins import CommandPlugin, PluginMetadata, WindowedPlugin
+from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 # from rkplugin.events import SelectionDidUpdateEvent
 
@@ -19,7 +18,8 @@ metadata = PluginMetadata(
     author='Gary Geng',
     version='0.0.1',
     short_desc='Pick a color, and set everything selected to that color.',
-    long_desc='The color of all selected nodes and reactions are set to the picked color.'
+    long_desc='The color of all selected nodes and reactions are set to the picked color.',
+    category=PluginCategory.MISC,
 )
 
 

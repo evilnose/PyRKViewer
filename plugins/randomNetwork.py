@@ -7,7 +7,7 @@ Version 0.01: Author: Jin Xu, Herbert M Sauro (2020)
 
 
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin
+from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction
 import math
@@ -23,7 +23,8 @@ metadata = PluginMetadata(
     author='Jin Xu, Herbert M Sauro',
     version='0.0.1',
     short_desc='Random network.',
-    long_desc='Display a random network.'
+    long_desc='Display a random network.',
+    category=PluginCategory.UTILITIES
 )
 
 @dataclass

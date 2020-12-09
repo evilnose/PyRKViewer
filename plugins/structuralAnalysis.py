@@ -9,7 +9,7 @@ Version 0.01: Author: Jin Xu (2020)
 # pylint: disable=maybe-no-member
 import wx
 import wx.grid as  gridlib
-from rkplugin.plugins import PluginMetadata, WindowedPlugin
+from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction, Color
 import math
@@ -24,7 +24,8 @@ metadata = PluginMetadata(
     author='Jin Xu',
     version='0.1',
     short_desc='Structural Analysis.',
-    long_desc='Do the Structural Analysis.'
+    long_desc='Perform Structural Analysis.',
+    category=PluginCategory.ANALYSIS
 )
 
 class TabOne(wx.Panel):

@@ -10,7 +10,7 @@ from rkviewer.canvas.state import ArrowTip
 import wx
 from typing import List, Tuple
 from rkplugin import api
-from rkplugin.plugins import PluginMetadata, WindowedPlugin
+from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin.api import Vec2
 
 metadata = PluginMetadata(
@@ -18,7 +18,8 @@ metadata = PluginMetadata(
     author='Gary Geng',
     version='0.0.1',
     short_desc='Arrow tip designer for reactions.',
-    long_desc='Arrow tip designer for reactions.'
+    long_desc='Arrow tip designer for reactions.',
+    category=PluginCategory.APPEARANCE,
 )
 
 

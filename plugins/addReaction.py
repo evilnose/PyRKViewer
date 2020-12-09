@@ -7,7 +7,7 @@ Version 0.01: Author: Jin Xu and Herbert Sauro (2020)
 # pylint: disable=maybe-no-member
 import wx
 import wx.grid as  gridlib
-from rkplugin.plugins import PluginMetadata, WindowedPlugin
+from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction, Color
 import math
@@ -22,7 +22,8 @@ metadata = PluginMetadata(
     author='Jin Xu and Herbert Sauro',
     version='0.01',
     short_desc='Add Reactions.',
-    long_desc='Add different reactions.'
+    long_desc='Add different reactions.',
+    category=PluginCategory.UTILITIES,
 )
 
 

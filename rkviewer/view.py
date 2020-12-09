@@ -2,6 +2,7 @@
 """
 import os
 from pathlib import Path
+from rkplugin.plugins import CATEGORY_NAMES, PluginCategory
 from typing import Any, Callable, Dict, List, Tuple
 import json
 
@@ -176,10 +177,12 @@ class ToolbarItem(wx.Panel):
         # button = GenBitmapButton(self, wx.ID_ANY, bitmap=bitmap,
         #           style=wx.NO_BORDER | wx.BU_EXACTFIT, size=(20, 20))
         # button.SetWindowStyleFlag(wx.SIMPLE_BORDER)
-        label_text = wx.StaticText(self, label=label, style=wx.ST_ELLIPSIZE_END | wx.ALIGN_CENTER_HORIZONTAL, size=(size[0], 20))
+        label_text = wx.StaticText(self, label=label, style=wx.ST_ELLIPSIZE_END |
+                                   wx.ALIGN_CENTER_HORIZONTAL, size=(size[0], 20))
+        fontinfo = wx.FontInfo(8)
+        label_text.SetFont(wx.Font(fontinfo))
 
         sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_HORIZONTAL)
-        # self.sizer.AddSpacer(wx.Size(0, 10))
         self.sizer.Add(button, sizerflags.Border(wx.TOP, 5))
         self.sizer.Add(label_text, sizerflags)
         self.SetSizer(self.sizer)
@@ -204,15 +207,21 @@ class Toolbar(wx.Panel):
         self.sizer.Layout()
 
     def AppendCenterSpacer(self):
+        """Append a center spacer. Tools added after this will be aligned to the right side.
+
+        """
         self.sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
         self.sizer.Layout()
 
 
 class TabbedToolbar(wx.Notebook):
     """Toolbar with multiple tabs, at the top of the app."""
+    manager: PluginManager
 
-    def __init__(self, parent, controller: IController, canvas: Canvas, edit_panel_callback, **kw):
+    def __init__(self, parent, controller: IController, canvas: Canvas, edit_panel_callback,
+                 manager: PluginManager, **kw):
         super().__init__(parent, **kw)
+        self.manager = manager
         file_tb = Toolbar(self)
         # file_tb.SetBackgroundColour(wx.RED)
         file_tb.AppendTool('Undo', controller.undo,
@@ -224,9 +233,21 @@ class TabbedToolbar(wx.Notebook):
         file_tb.AppendTool('Zoom Out', lambda: canvas.ZoomCenter(False),
                            wx.ArtProvider.GetBitmap(wx.ART_MINUS, wx.ART_MENU))
         file_tb.AppendCenterSpacer()
-        file_tb.AppendTool('Toggle Details', edit_panel_callback)
-        self.AddPage(file_tb, text='File')
-        file_tb.SetSize(file_tb.GetSize()[0], self.GetSize()[1])
+        file_tb.AppendTool('Details', edit_panel_callback,
+                           wx.ArtProvider.GetBitmap(wx.ART_HELP_SIDE_PANEL, wx.ART_MENU))
+        self.AddPage(file_tb, text='Main')
+
+        self.AddPluginPages()
+
+    def AddPluginPages(self):
+        categories = self.manager.get_plugins_by_category()
+        for cat in PluginCategory:
+            tb = Toolbar(self)
+            for name, callback, bitmap in categories[cat]:
+                if bitmap is None:
+                    bitmap = wx.ArtProvider.GetBitmap(wx.ART_MISSING_IMAGE, wx.ART_MENU)
+                tb.AppendTool(name, callback, bitmap)
+            self.AddPage(tb, text=CATEGORY_NAMES[cat])
 
 
 class ModePanel(wx.Panel):
@@ -281,7 +302,7 @@ class MainPanel(wx.Panel):
     toolbar: TabbedToolbar
     edit_panel: EditPanel
 
-    def __init__(self, parent, controller: IController):
+    def __init__(self, parent, controller: IController, manager: PluginManager):
         # ensure the parent's __init__ is called
         super().__init__(parent, style=wx.CLIP_CHILDREN)
         self.SetBackgroundColour(get_theme('overall_bg'))
@@ -310,11 +331,11 @@ class MainPanel(wx.Panel):
 
         self.mode_panel.SetBackgroundColour(get_theme('toolbar_bg'))
 
-        toolbar_width = get_theme('canvas_width') + \
-            get_theme('edit_panel_width') + get_theme('vgap')
+        # Note: setting the width to 0 doesn't matter since GridBagSizer is in control of the
+        # width.
         self.toolbar = TabbedToolbar(self, controller, self.canvas,
-                                     size=(toolbar_width, get_theme('toolbar_height')),
-                                     edit_panel_callback=self.ToggleEditPanel)
+                                     self.ToggleEditPanel, manager,
+                                     size=(0, get_theme('toolbar_height')))
 
         self.toolbar.SetBackgroundColour(get_theme('toolbar_bg'))
 
@@ -326,8 +347,7 @@ class MainPanel(wx.Panel):
         # and create a sizer to manage the layout of child widgets
         sizer = wx.GridBagSizer(vgap=get_theme('vgap'), hgap=get_theme('hgap'))
 
-        sizer.Add(self.toolbar, wx.GBPosition(0, 1),
-                  wx.GBSpan(1, 2), flag=wx.EXPAND)
+        sizer.Add(self.toolbar, wx.GBPosition(0, 0), wx.GBSpan(1, 3), flag=wx.EXPAND)
         sizer.Add(self.mode_panel, wx.GBPosition(1, 0), flag=wx.EXPAND)
         sizer.Add(self.canvas, wx.GBPosition(1, 1),  flag=wx.EXPAND)
         sizer.Add(self.edit_panel, wx.GBPosition(1, 2), flag=wx.EXPAND)
@@ -356,9 +376,11 @@ class MainPanel(wx.Panel):
 class MainFrame(wx.Frame):
     """The main frame."""
 
-    def __init__(self, controller: IController, manager: PluginManager, **kw):
+    def __init__(self, controller: IController, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
                          wx.WS_EX_PROCESS_UI_UPDATES, **kw)
+        manager = PluginManager(self, controller)
+        manager.load_from('plugins')
         load_theme_settings()
         self.appSettings = AppSettings()
         self.appSettings.load_appSettings()
@@ -368,7 +390,7 @@ class MainFrame(wx.Frame):
         assert status_fields is not None
         self.CreateStatusBar(len(get_setting('status_fields')))
         self.SetStatusWidths([width for _, width in status_fields])
-        self.main_panel = MainPanel(self, controller)
+        self.main_panel = MainPanel(self, controller, manager)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.main_panel, 1, wx.EXPAND)
 
@@ -457,15 +479,16 @@ class MainFrame(wx.Frame):
                          key=(wx.ACCEL_CTRL, ord('R')))
 
         plugins_menu = wx.Menu()
-        self.AddMenuItem(plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
-                         key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
-        self.manager.register_menu(plugins_menu, self)
+        self.manager.register_menu(plugins_menu)
 
         help_menu = wx.Menu()
         self.AddMenuItem(help_menu, '&About...',
                          'Show about dialog', self.onAboutDlg, entries)  # self.ShowAbout, entries)
         self.AddMenuItem(help_menu, '&Default settings...', 'View default settings',
                          lambda _: self.ShowDefaultSettings(), entries)
+        help_menu.AppendSeparator()
+        self.AddMenuItem(help_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
+                         key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
 
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')
@@ -699,10 +722,7 @@ class View(IView):
     def init(self):
         assert self.controller is not None
         self.app = wx.App()
-        self.manager = PluginManager(self.controller)
-        self.manager.load_from('plugins')
-        self.frame = MainFrame(
-            self.controller, self.manager, title='RK Network Viewer')
+        self.frame = MainFrame(self.controller, title='RK Network Viewer')
         init_api(self.frame.main_panel.canvas, self.controller)
         self.canvas_panel = self.frame.main_panel.canvas
 

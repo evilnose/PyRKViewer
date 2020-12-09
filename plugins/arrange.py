@@ -6,7 +6,7 @@ Version 0.01: Author: Carmen Perena Cortes 2020
 '''
 
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin
+from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction
 import math
@@ -19,7 +19,8 @@ metadata = PluginMetadata(
     author='Carmen Perena, Herbert M Sauro',
     version='0.0.1',
     short_desc='Rearrange',
-    long_desc='Rearrange selected nodes into chosen style'
+    long_desc='Rearrange selected nodes into chosen style',
+    category=PluginCategory.UTILITIES,
 )
 
 class AutoLayout(WindowedPlugin):

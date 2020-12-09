@@ -1,16 +1,21 @@
-"""Classes for managing plugins for Canvas."""
+"""Classes for managing plugins for Canvas.
+
+Note: This file imports stuff from rkplugin.plugins, but usually rkplugin imports from
+rkviewer. Beware of circular dependency.
+"""
 # pylint: disable=maybe-no-member
+from collections import defaultdict
 import importlib.abc
 import importlib.util
 import inspect
 import os
 import sys
-from typing import Any, Callable, List, Optional, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 from marshmallow.schema import Schema
 
 # pylint: disable=no-name-in-module
 import wx
-from rkplugin.plugins import CommandPlugin, Plugin, PluginType, WindowedPlugin
+from rkplugin.plugins import CommandPlugin, Plugin, PluginCategory, PluginType, WindowedPlugin
 # pylint: disable=no-name-in-module
 from wx.html import HtmlWindow
 
@@ -29,9 +34,12 @@ from rkviewer.mvc import IController
 
 class PluginManager:
     plugins: List[Plugin]
+    callbacks: Dict[Plugin, Callable[[], None]]
 
-    def __init__(self, controller: IController):
+    def __init__(self, parent_window: wx.Window, controller: IController):
         self.plugins = list()
+        self.callbacks = dict()
+        self.parent_window = parent_window
         self.controller = controller
         bind_handler(DidAddNodeEvent, self.make_notify('on_did_add_node'))
         bind_handler(DidMoveNodesEvent, self.make_notify('on_did_move_nodes'))
@@ -84,6 +92,17 @@ class PluginManager:
         if len(set(p.metadata.name for p in self.plugins)) < len(self.plugins):
             pass  # TODO fail when there is duplicate name.
 
+        # Create and register callbacks
+        for plugin in self.plugins:
+            callback: Callable[[], None]
+            if plugin.ptype == PluginType.COMMAND:
+                plugin = cast(CommandPlugin, plugin)
+                callback = self.make_command_callback(plugin)
+            else:
+                plugin = cast(WindowedPlugin, plugin)
+                callback = self.make_windowed_callback(plugin, self.parent_window)
+            self.callbacks[plugin] = callback
+
         # load schema
         for plugin in self.plugins:
             schema = plugin.get_settings_schema()
@@ -111,28 +130,14 @@ Plugin!".format(handler_name)
 
         return ret
 
-    def register_menu(self, menu: wx.Menu, parent: wx.Window):
-        commands = [cast(CommandPlugin, p) for p in self.plugins if p.ptype == PluginType.COMMAND]
-        windowed = [cast(WindowedPlugin, p) for p in self.plugins if p.ptype == PluginType.WINDOWED]
+    def register_menu(self, menu: wx.Menu):
+        sorted_plugins = sorted(self.plugins, key=lambda p: p.metadata.name)
+        for plugin in sorted_plugins:
+            item = menu.Append(wx.ID_ANY, plugin.metadata.name)
+            menu.Bind(wx.EVT_MENU, lambda _: self.callbacks[plugin](), item)
 
-        if len(self.plugins) != 0:
-            menu.AppendSeparator()
-
-        for plugin in commands:
-            id_ = wx.NewIdRef(count=1)
-            item = menu.Append(id_, plugin.metadata.name)
-            menu.Bind(wx.EVT_MENU, self.make_command_callback(plugin), item)
-
-        if len(commands) != 0 and len(windowed) != 0:
-            menu.AppendSeparator()
-
-        for plugin in windowed:
-            id_ = wx.NewIdRef(count=1)
-            item = menu.Append(id_, plugin.metadata.name)
-            menu.Bind(wx.EVT_MENU, self.make_windowed_callback(plugin, parent), item)
-
-    def make_command_callback(self, command: CommandPlugin) -> Callable[[Any], None]:
-        def command_cb(_):
+    def make_command_callback(self, command: CommandPlugin) -> Callable[[], None]:
+        def command_cb():
             self.controller.start_group()
             command.run()
             self.controller.end_group()
@@ -140,12 +145,12 @@ Plugin!".format(handler_name)
         return command_cb
 
     def make_windowed_callback(self, windowed: WindowedPlugin,
-                               parent: wx.Window) -> Callable[[Any], None]:
+                               parent: wx.Window) -> Callable[[], None]:
         title = windowed.metadata.name
         dialog_exists = False
         dialog: Optional[wx.Window] = None
 
-        def windowed_cb(_):
+        def windowed_cb():
             nonlocal dialog_exists, dialog
 
             if not dialog_exists:
@@ -178,6 +183,18 @@ Plugin!".format(handler_name)
 
     def create_dialog(self, parent):
         return PluginDialog(parent, self.plugins)
+
+    def get_plugins_by_category(self) -> Dict[PluginCategory, List[Tuple[str, Callable[[], None], Optional[wx.Bitmap]]]]:
+        """Returns a dictionary that maps each category to the list of plugins.
+        
+        Each plugin in the lists is a tuple (short_name, bitmap, callback). The 
+        """
+        ret = defaultdict(list)
+        for plugin in self.plugins:
+            sname = plugin.metadata.short_name if plugin.metadata.short_name else plugin.metadata.name
+            assert isinstance(plugin.metadata.category, PluginCategory)
+            ret[plugin.metadata.category].append((sname, self.callbacks[plugin], plugin.metadata.icon))
+        return ret
 
 
 class PluginDialog(wx.Dialog):
@@ -218,18 +235,3 @@ class PluginPage(HtmlWindow):
         self.SetPage(html)
         # inherit parent background color for better look
         self.SetBackgroundColour(parent.GetBackgroundColour())
-
-        '''
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer_flags = wx.SizerFlags().Border(wx.TOP | wx.LEFT, 10)
-        title = wx.StaticText(self, label=plugin.metadata.name)
-        title.SetFont(wx.Font(wx.FontInfo(14).Bold()))
-        sizer.Add(title, sizer_flags)
-        author = wx.StaticText(self, label='{}, by {}'.format(plugin.metadata.version, plugin.metadata.author))
-        author.SetFont(wx.Font(wx.FontInfo(10).Italic()))
-        sizer.Add(author, sizer_flags)
-        desc = wx.StaticText(self, label=plugin.metadata.long_desc)
-        desc.SetFont(wx.Font(wx.FontInfo(10)))
-        sizer.Add(desc, sizer_flags)
-        self.SetSizer(sizer)
-        '''

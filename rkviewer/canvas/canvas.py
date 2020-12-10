@@ -157,7 +157,7 @@ class Canvas(wx.ScrolledWindow):
     sel_comps: List[Compartment]  #: Current list of selected comps; cached for performance
     drawing_drag: bool  #: See self._UpdateSelectedLists() for more details
 
-    def __init__(self, controller: IController, *args, realsize: Tuple[int, int], **kw):
+    def __init__(self, controller: IController, zoom_slider, *args, realsize: Tuple[int, int],  **kw):
         # ensure the parent's __init__ is called
         super().__init__(*args, style=wx.DEFAULT_FRAME_STYLE & ~wx.MAXIMIZE_BOX ^ wx.RESIZE_BORDER,
                          **kw)
@@ -233,10 +233,10 @@ class Canvas(wx.ScrolledWindow):
         self._reactant_idx = set()
         self._product_idx = set()
 
-        self.zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM, size=(200, 25))
+        self.zoom_slider = zoom_slider
         self.zoom_slider.SetRange(Canvas.MIN_ZOOM_LEVEL, Canvas.MAX_ZOOM_LEVEL)
         self.zoom_slider.SetBackgroundColour(get_theme('zoom_slider_bg'))
-        self.Bind(wx.EVT_SLIDER, self.OnSlider)
+        self.GetParent().Bind(wx.EVT_SLIDER, self.OnSlider)
 
         # Set a placeholder value for position; we will set it later in SetOverlayPositions().
         self._minimap = Minimap(pos=Vec2(), device_pos=Vec2(), width=200, realsize=self.realsize,
@@ -388,20 +388,12 @@ class Canvas(wx.ScrolledWindow):
         This should be called in OnPaint so that the overlaid widgets stay in the same relative
         position.
         """
-        canvas_size = Vec2(self.GetSize())
-
-        zoom_pos = canvas_size - Vec2(self.zoom_slider.GetSize()) - self._scroll_off
-        self.zoom_slider.SetPosition(zoom_pos.to_wx_point())
-
         # do all the minimap updates here, since this is simpler and less prone to bugs
-        minimap_pos = Vec2(self.GetSize()) - self._scroll_off - self._minimap.size
-        _, slider_height = self.zoom_slider.GetSize()
-        minimap_pos = minimap_pos.swapped(1, minimap_pos.y - (slider_height + 10))
+        minimap_pos = Vec2(self.GetClientSize()) - self._minimap.size
+        minimap_pos = minimap_pos.swapped(1, minimap_pos.y)
         self._minimap.device_pos = minimap_pos
         self._minimap.position = Vec2(self.CalcUnscrolledPosition(*minimap_pos.as_int()))
         self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(0, 0)) / cstate.scale
-        # TODO for windows, need to subtract scroll offset from window size. Need to test if this
-        # is true for Mac and Linux, however. -Gary
         self._minimap.window_size = Vec2(self.GetSize()) / cstate.scale
         self._minimap.realsize = self.realsize
         self._minimap.nodes = self._nodes
@@ -502,6 +494,7 @@ class Canvas(wx.ScrolledWindow):
         self._UpdateSelectBoxLayer()
         self._select_box.related_elts = select_elements
         self._elements.add(self._select_box)
+        self._minimap.elements = self._elements
 
         self._UpdateSelectedLists()
 
@@ -1106,6 +1099,7 @@ class Canvas(wx.ScrolledWindow):
         self.SetOverlayPositions()  # have to do this here to prevent jitters
 
         dc = wx.PaintDC(self)
+
         # transform for drawing to scrolled coordinates
         self.DoPrepareDC(dc)
 
@@ -1116,6 +1110,7 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.DoPaint(gc)
 
         post_event(DidPaintCanvasEvent(gc))
+
 
     def DrawToBitmap(self):
         bmp = wx.Bitmap(*self.realsize)
@@ -1129,6 +1124,12 @@ class Canvas(wx.ScrolledWindow):
         gc = wx.GraphicsContext.Create(dc)
 
         if gc:
+            # Draw gray background
+            draw_rect(
+                gc,
+                Rect(Vec2(), Vec2(self.GetVirtualSize())),
+                fill=get_theme('canvas_outside_bg'),
+            )
             # Draw background
             draw_rect(
                 gc,

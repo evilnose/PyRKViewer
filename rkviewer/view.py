@@ -23,7 +23,7 @@ from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import InputMode, cstate
 from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, get_default_raw_settings, get_setting, get_theme,
-                     CreateConfigDir, GetConfigDir, GetThemeSettingsPath, load_theme_settings, pop_settings_err)
+                     GetConfigDir, GetThemeSettingsPath, load_theme_settings, pop_settings_err)
 from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
                      DidMoveNodesEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, SelectionDidUpdateEvent,
@@ -294,6 +294,21 @@ class ModePanel(wx.Panel):
         sizer.Add(line, wx.SizerFlags().Expand().Border(wx.TOP, 10))
 
 
+class BottomBar(wx.Panel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.SetBackgroundColour(get_theme('toolbar_bg'))
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.SetSizer(self.sizer)
+
+    def CreateSlider(self):
+        self.sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
+        zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM | wx.SL_AUTOTICKS, size=(225, 25))
+        self.sizer.Add(zoom_slider, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self.sizer.Layout()
+        return zoom_slider
+
+
 class MainPanel(wx.Panel):
     """The main panel, which is the only chlid of the root Frame."""
     controller: IController
@@ -308,12 +323,14 @@ class MainPanel(wx.Panel):
         self.SetBackgroundColour(get_theme('overall_bg'))
         self.controller = controller
 
-        self.canvas = Canvas(self.controller, self,
+        self.bottom_bar = BottomBar(self)
+        zoom_slider = self.bottom_bar.CreateSlider()
+
+        self.canvas = Canvas(self.controller, zoom_slider, self,
                              size=(get_theme('canvas_width'),
                                    get_theme('canvas_height')),
                              realsize=(4 * get_theme('canvas_width'),
-                                       4 * get_theme('canvas_height')),
-                             )
+                                       4 * get_theme('canvas_height')),)
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()
@@ -350,7 +367,8 @@ class MainPanel(wx.Panel):
         sizer.Add(self.toolbar, wx.GBPosition(0, 0), wx.GBSpan(1, 3), flag=wx.EXPAND)
         sizer.Add(self.mode_panel, wx.GBPosition(1, 0), flag=wx.EXPAND)
         sizer.Add(self.canvas, wx.GBPosition(1, 1),  flag=wx.EXPAND)
-        sizer.Add(self.edit_panel, wx.GBPosition(1, 2), flag=wx.EXPAND)
+        sizer.Add(self.edit_panel, wx.GBPosition(1, 2), wx.GBSpan(2, 1), flag=wx.EXPAND)
+        sizer.Add(self.bottom_bar, wx.GBPosition(2, 0), wx.GBSpan(1, 2), flag=wx.EXPAND)
 
         # allow the canvas to grow
         sizer.AddGrowableCol(1, 1)
@@ -574,7 +592,7 @@ class MainFrame(wx.Frame):
 
     def EditSettings(self):
         """Open the preferences file for editing."""
-        if not CreateConfigDir():
+        if not self.CreateConfigDir(GetConfigDir()):
             return
 
         if not os.path.exists(GetThemeSettingsPath()):
@@ -595,8 +613,26 @@ class MainFrame(wx.Frame):
         else:
             start_file(GetThemeSettingsPath())
 
+    def CreateConfigDir(self, config_dir: str):
+        """Create the configuration directory if it does not already exist."""
+        try:
+            sp = wx.StandardPaths.Get()
+            config_dir = sp.GetUserConfigDir()
+            if not os.path.exists(os.path.join(config_dir, 'rkViewer')):
+                config_dir = os.path.join(config_dir, 'rkViewer')
+                Path(config_dir).mkdir(parents=True, exist_ok=True)
+            else:
+                config_dir = os.path.join(os.path.join(config_dir, 'rkViewer'))
+            return True
+        except FileExistsError:
+            # TODO fix
+            self.main_panel.canvas.ShowWarningDialog('Could not create RKViewer configuration '
+                                                     'directory. A file already exists at path '
+                                                     '{}.'.format(config_dir))
+        return False
+
     def ShowDefaultSettings(self):
-        if not CreateConfigDir():
+        if not self.CreateConfigDir(GetConfigDir()):
             return
 
         if os.path.exists(os.path.join(GetConfigDir(), '.default-settings.json')) and not os.path.isfile(os.path.join(GetConfigDir(), '.default-settings.json')):

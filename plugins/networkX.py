@@ -163,6 +163,16 @@ class LayoutNetworkX(WindowedPlugin):
                     newY = float(n[1])
                     api.move_node(0, nodeIds[count], position = Vec2(newX, newY), allowNegativeCoordinates=True)   
                     count = count + 1
+                
+                '''
+                count = 0
+                for c in centroids:
+                    newX = float(c[0])
+                    newY = float(c[1])
+                    api.update_reaction(0, reactionsInd[count], center_pos= Vec2(newX, newY))  
+                    count = count + 1
+                '''
+                
                 for r in api.get_reactions(0):
                     handles = api.default_handle_positions(0, r.index) # centroid, sources, target
                     api.set_reaction_center_handle(0, r.index, handles[0])
@@ -173,6 +183,8 @@ class LayoutNetworkX(WindowedPlugin):
                     for t in r.targets:
                         api.set_reaction_node_handle(0, r.index, t, False, handles[count])
                         count += 1
+                
+
             ws = api.window_size()
             offset = Vec2(ws.x/4, ws.y/4)
             api.translate_network(0, offset, check_bounds = True)

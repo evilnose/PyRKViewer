@@ -1116,9 +1116,14 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
         elif x < lowerLimit or y < lowerLimit:
             errCode = -12
         else:
-            _pushUndoStack()
-            n.nodes[nodei].position = Vec2(x, y)
-            return
+            #Jin_edit:
+            if n.nodes[nodei].moving == True:
+                _pushUndoStack()
+                n.nodes[nodei].position = Vec2(x, y)
+                return
+            else:
+                _pushUndoStack()
+                return
 
     raise ExceptionDict[errCode](errorDict[errCode])
 

@@ -6,7 +6,7 @@ SOFTWARE—PRACTICE AND EXPERIENCE, VOL. 21(1 1), 1129-1164 (NOVEMBER 1991)
 '''
 # pylint: disable=maybe-no-member
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin
+from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction
 import math
@@ -23,7 +23,8 @@ metadata = PluginMetadata(
     author='Carmen and Herbert M Sauro',
     version='0.5.2',
     short_desc='Auto Layout.',
-    long_desc='Rearrange a random network into a neat auto layout'
+    long_desc='Rearrange a random network into a neat auto layout',
+    category=PluginCategory.UTILITIES,
 )
 
 @dataclass

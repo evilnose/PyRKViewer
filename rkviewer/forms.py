@@ -441,6 +441,8 @@ class NodeForm(EditPanelForm):
     border_alpha_ctrl: Optional[wx.TextCtrl]
     border_width_ctrl: wx.TextCtrl
     nodeStatusDropDown : wx.ComboBox
+    #Jin_edit:
+    nodeMovingStatusDropDown: wx.ComboBox
     _nodes: List[Node]  #: current list of nodes in canvas.
     _selected_idx: Set[int]  #: current list of selected indices in canvas.
     _bounding_rect: Optional[Rect]  #: the exact bounding rectangle of the selected nodes
@@ -541,6 +543,12 @@ class NodeForm(EditPanelForm):
         self.nodeStatusDropDown = wx.ComboBox(self, choices=states, style=wx.CB_READONLY)
         self._AppendControl(sizer, 'Node Status', self.nodeStatusDropDown)
         self.nodeStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeStatusChoice)
+
+        #Jin_edit:
+        movingstates = ['Moving Node', 'Block Node']
+        self.nodeMovingStatusDropDown = wx.ComboBox(self, choices=movingstates, style=wx.CB_READONLY)
+        self._AppendControl(sizer, 'Node Moving Status', self.nodeMovingStatusDropDown)
+        self.nodeMovingStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeMovingStatusChoice)
 
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -696,6 +704,24 @@ class NodeForm(EditPanelForm):
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
+    #Jin_edit:
+    def  OnNodeMovingStatusChoice (self, evt):
+        """Callback for the change node status, floating or boundary."""
+        moving_status = self.nodeMovingStatusDropDown.GetValue()
+        if moving_status == 'Moving Node':
+           movingStatus = True
+        else:
+           movingStatus = False
+
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        self._self_changes = True
+        self.controller.start_group()
+        for node in nodes:
+            self.controller.set_node_moving_status(self.net_index, node.index, movingStatus)
+        post_event(DidModifyNodesEvent(list(self._selected_idx)))
+        self.controller.end_group()    
+
+
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
@@ -805,6 +831,10 @@ class NodeForm(EditPanelForm):
         self.border_width_ctrl.ChangeValue(border_width)
 
         self.nodeStatusDropDown.SetValue('Floating Node')
+
+
+        #Jin_edit: 
+        self.nodeMovingStatusDropDown.SetValue('Moving Node')
 
 
 @dataclass

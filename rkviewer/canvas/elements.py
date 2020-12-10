@@ -164,6 +164,14 @@ class NodeElement(CanvasElement):
         gc.DrawText(self.node.id, self.node.s_position.x +
                     tx, self.node.s_position.y + ty)
 
+        #Jin_edit:
+        if not self.node.movingNode:
+            pen = gc.CreatePen(wx.GraphicsPenInfo(self.node.border_color).Width(aligned_border_width))
+            gc.SetPen(pen)
+            path = gc.CreatePath()
+            path.AddCircle(self.node.s_position.x, self.node.s_position.y, .1*height)
+            gc.StrokePath(path)
+
     def on_left_down(self, _: Vec2):
         return True
 

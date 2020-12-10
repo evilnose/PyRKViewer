@@ -133,6 +133,9 @@ class Controller(IController):
         self.end_group()
         return nodei
 
+    def set_application_position(self, pos: wx.Point):
+        self.initial_position = pos
+
     def get_application_position(self) -> wx.Point:
         return self.initial_position
 
@@ -172,6 +175,11 @@ class Controller(IController):
     @iod_setter
     def set_node_floating_status(self, neti: int, nodei: int, floatingStatus: bool):
         iod.setNodeFloatingStatus (neti, nodei, floatingStatus)
+
+    #Jin_edit:
+    @iod_setter
+    def set_node_moving_status(self, neti: int, nodei: int, movingStatus: bool):
+        iod.setNodeMovingStatus (neti, nodei, movingStatus)
 
     @iod_setter
     def set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour):
@@ -408,6 +416,8 @@ class Controller(IController):
             border_width=iod.getNodeOutlineThickness(neti, nodei),
             comp_idx=iod.getCompartmentOfNode(neti, nodei),
             floatingNode=iod.IsFloatingNode (neti, nodei),
+            #Jin_edit
+            movingNode=iod.IsMovingNode(neti, nodei),
         )
 
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:

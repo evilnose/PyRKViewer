@@ -28,26 +28,6 @@ def GetThemeSettingsPath ():
     return os.path.join(config_dir, 'settings.json')
 
 
-def CreateConfigDir():
-    """Create the configuration directory if it does not already exist."""
-    global config_dir
-    try:
-        sp = wx.StandardPaths.Get()
-        config_dir = sp.GetUserConfigDir()
-        if not os.path.exists(os.path.join(config_dir, 'rkViewer')):
-            config_dir = os.path.join(config_dir, 'rkViewer')
-            Path(config_dir).mkdir(parents=True, exist_ok=True)
-        else:
-            config_dir = os.path.join(os.path.join(config_dir, 'rkViewer'))
-        return True
-    except FileExistsError:
-        self.main_panel.canvas.ShowWarningDialog('Could not create RKViewer configuration '
-                                                     'directory. A file already exists at path '
-                                                     '{}.'.format(config_dir))
-    return False
-
-
-
 # Application based settings stored in an ini file
 class AppSettings:
 
@@ -203,7 +183,7 @@ class ThemeSchema(Schema):
     hgap = Pixel(missing=2)
     canvas_outside_bg = Color(missing=wx.Colour(160, 160, 160))
     mode_panel_width = Pixel(missing=100)
-    toolbar_height = Pixel(missing=40)
+    toolbar_height = Pixel(missing=75)
     edit_panel_width = Pixel(missing=260)
     node_fill = Color(missing=wx.Colour(255, 204, 153, 200))
     node_border = Color(missing=wx.Colour(255, 108, 9))
@@ -225,7 +205,7 @@ class ThemeSchema(Schema):
     select_box_padding = Pixel(missing=5)
     # Length of the squares one uses to drag resize nodes
     select_handle_length = Pixel(missing=8)
-    zoom_slider_bg = Color(missing=wx.Colour(150, 150, 150))
+    zoom_slider_bg = Color(missing=wx.Colour(180, 180, 180))
     drag_fill = Color(missing=wx.Colour(0, 140, 255, 20))
     drag_border = Color(missing=wx.Colour(0, 140, 255))
     drag_border_width = Pixel(missing=1)

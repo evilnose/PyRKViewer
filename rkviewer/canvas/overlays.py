@@ -1,10 +1,11 @@
 """Widgets that are floating on top of the canvas (overlaid) which do not change position on scroll.
 """
 # pylint: disable=maybe-no-member
+from sortedcontainers.sortedlist import SortedKeyList
+from rkviewer.canvas.elements import CanvasElement, CompartmentElt, NodeElement
 import wx
 import abc
-from typing import Callable, List
-from .data import Node
+from typing import Callable, List, cast
 from .geometry import Vec2, Rect, clamp_point, pt_in_rect
 from .utils import draw_rect
 
@@ -66,14 +67,18 @@ class Minimap(CanvasOverlay):
 
         window_pos: Position of the canvas window, as updated by canvas.
         window_size: Size of the canvas window, as updated by canvas.
-        nodes: The current list of nodes, as updated by canvas.
+        device_pos: The device position (i.e. seen on screen) of the top left corner. Used for
+                    determining user click/drag offset. It is important to use the device_pos,
+                    since it does not change, whereas window_pos (logical position) changes based
+                    on scrolling. This coupled with delays in update causes very noticeable jitters
+                    when dragging.
+        elements: The list of elements updated by canvas.
     """
     Callback = Callable[[Vec2], None]
     window_pos: Vec2
     window_size: Vec2
-    nodes: List[Node]
     device_pos: Vec2
-
+    elements: SortedKeyList
     _position: Vec2  #: Unscrolled, i.e. logical position of the minimap. This varies by scrolling.
     _realsize: Vec2  #: Full size of the canvas
     _width: int
@@ -105,7 +110,7 @@ class Minimap(CanvasOverlay):
         self.realsize = realsize  # use the setter to set the _size as well
         self.window_pos = window_pos
         self.window_size = window_size
-        self.nodes = list()
+        self.elements = SortedKeyList()
         self._callback = pos_callback
         self._dragging = False
         self._drag_rel = Vec2()
@@ -156,13 +161,26 @@ class Minimap(CanvasOverlay):
         # draw visible rect
         draw_rect(gc, Rect(win_pos, win_size), fill=foreground)
 
-        # draw nodes
-        for node in self.nodes:
-            n_pos = node.position * scale + self.position
-            n_size = node.size * scale
-            fc = node.fill_color
+        for el in self.elements:
+            pos: Vec2
+            size: Vec2
+            fc: wx.Colour
+            if isinstance(el, NodeElement):
+                el = cast(NodeElement, el)
+                pos = el.node.position * scale + self.position
+                size = el.node.size * scale
+                fc = el.node.fill_color
+            elif isinstance(el, CompartmentElt):
+                el = cast(CompartmentElt, el)
+                pos = el.compartment.position * scale + self.position
+                size = el.compartment.size * scale
+                fc = el.compartment.fill
+            else:
+                continue
+
             color = wx.Colour(fc.Red(), fc.Green(), fc.Blue(), 100)
-            draw_rect(gc, Rect(n_pos, n_size), fill=color)
+            draw_rect(gc, Rect(pos, size), fill=color)
+
 
     def OnLeftDown(self, device_pos: Vec2):
         if not self._dragging:

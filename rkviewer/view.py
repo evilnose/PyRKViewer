@@ -2,17 +2,18 @@
 """
 import os
 from pathlib import Path
+from rkplugin.plugins import CATEGORY_NAMES, PluginCategory
 from typing import Any, Callable, Dict, List, Tuple
 import json
 
 # pylint: disable=maybe-no-member
 # pylint: disable=no-name-in-module
 import wx
+from wx.lib.buttons import GenBitmapButton, GenBitmapTextButton
 import wx.lib.agw.flatnotebook as fnb
 from commentjson.commentjson import JSONLibraryException
 from rkplugin.api import init_api
-# import wx.lib.agw.shortcuteditor as sedit
-from wx.adv import NotificationMessage
+import wx.adv
 
 import rkviewer
 from rkviewer.canvas.geometry import get_bounding_rect
@@ -22,14 +23,14 @@ from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import InputMode, cstate
 from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, get_default_raw_settings, get_setting, get_theme,
-                     CreateConfigDir, GetConfigDir, GetThemeSettingsPath, load_theme_settings, pop_settings_err)
+                     GetConfigDir, GetThemeSettingsPath, load_theme_settings, pop_settings_err)
 from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
                      DidMoveNodesEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, SelectionDidUpdateEvent,
                      bind_handler)
 from .forms import CompartmentForm, NodeForm, ReactionForm
 from .mvc import IController, IView
-from .utils import ButtonGroup, get_bundled_path, on_msw, start_file
+from .utils import ButtonGroup, get_bundled_path, on_msw, resource_path, start_file
 from rkviewer.config import AppSettings
 
 
@@ -168,40 +169,85 @@ class EditPanel(fnb.FlatNotebook):
         self.comp_form.CompsMovedOrResized(evt)
 
 
+class ToolbarItem(wx.Panel):
+    def __init__(self, parent, label: str, bitmap: wx.Bitmap, size):
+        super().__init__(parent, size=size)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        button = wx.BitmapButton(self, bitmap=bitmap, size=(20, 20))
+        # button = GenBitmapButton(self, wx.ID_ANY, bitmap=bitmap,
+        #           style=wx.NO_BORDER | wx.BU_EXACTFIT, size=(20, 20))
+        # button.SetWindowStyleFlag(wx.SIMPLE_BORDER)
+        label_text = wx.StaticText(self, label=label, style=wx.ST_ELLIPSIZE_END |
+                                   wx.ALIGN_CENTER_HORIZONTAL, size=(size[0], 20))
+        fontinfo = wx.FontInfo(8)
+        label_text.SetFont(wx.Font(fontinfo))
+
+        sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_HORIZONTAL)
+        self.sizer.Add(button, sizerflags.Border(wx.TOP, 5))
+        self.sizer.Add(label_text, sizerflags)
+        self.SetSizer(self.sizer)
+
+
 class Toolbar(wx.Panel):
-    """ModePanel at the top of the app."""
+    SIZER_FLAGS = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
 
-    def __init__(self, parent, controller: IController, zoom_callback, edit_panel_callback, **kw):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.SetSizer(self.sizer)
+
+    def AppendTool(self, label: str, callback: Callable[[], Any], bitmap=None):
+        if bitmap is None:
+            bitmap = wx.ArtProvider.GetBitmap(wx.ART_MISSING_IMAGE, wx.ART_MENU)
+
+        item = ToolbarItem(self, label, bitmap, (60, self.GetParent().GetSize()[1] - 10))
+
+        self.sizer.Add(item, Toolbar.SIZER_FLAGS)
+        item.Bind(wx.EVT_BUTTON, lambda _: callback())
+        self.sizer.Layout()
+
+    def AppendCenterSpacer(self):
+        """Append a center spacer. Tools added after this will be aligned to the right side.
+
+        """
+        self.sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
+        self.sizer.Layout()
+
+
+class TabbedToolbar(wx.Notebook):
+    """Toolbar with multiple tabs, at the top of the app."""
+    manager: PluginManager
+
+    def __init__(self, parent, controller: IController, canvas: Canvas, edit_panel_callback,
+                 manager: PluginManager, **kw):
         super().__init__(parent, **kw)
+        self.manager = manager
+        file_tb = Toolbar(self)
+        # file_tb.SetBackgroundColour(wx.RED)
+        file_tb.AppendTool('Undo', controller.undo,
+                           wx.ArtProvider.GetBitmap(wx.ART_UNDO, wx.ART_MENU))
+        file_tb.AppendTool('Redo', controller.redo,
+                           wx.ArtProvider.GetBitmap(wx.ART_REDO, wx.ART_MENU))
+        file_tb.AppendTool('Zoom In', lambda: canvas.ZoomCenter(True),
+                           wx.ArtProvider.GetBitmap(wx.ART_PLUS, wx.ART_MENU))
+        file_tb.AppendTool('Zoom Out', lambda: canvas.ZoomCenter(False),
+                           wx.ArtProvider.GetBitmap(wx.ART_MINUS, wx.ART_MENU))
+        file_tb.AppendCenterSpacer()
+        file_tb.AppendTool('Details', edit_panel_callback,
+                           wx.ArtProvider.GetBitmap(wx.ART_HELP_SIDE_PANEL, wx.ART_MENU))
+        self.AddPage(file_tb, text='Main')
 
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        zoom_in_btn = wx.Button(self, label="Zoom In")
-        # TODO make this a method
-        sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
-        undo_button = wx.Button(self, label="Undo")
-        sizer.Add(undo_button, sizerflags)
-        undo_button.Bind(wx.EVT_BUTTON, lambda _: controller.undo())
+        self.AddPluginPages()
 
-        redo_button = wx.Button(self, label="Redo")
-        sizer.Add(redo_button, sizerflags)
-        redo_button.Bind(wx.EVT_BUTTON, lambda _: controller.redo())
-
-        sizer.Add(zoom_in_btn, sizerflags)
-        zoom_in_btn.Bind(wx.EVT_BUTTON, lambda _: zoom_callback(True))
-
-        zoom_out_btn = wx.Button(self, label="Zoom Out")
-        sizer.Add(zoom_out_btn, sizerflags)
-        zoom_out_btn.Bind(wx.EVT_BUTTON, lambda _: zoom_callback(False))
-
-        # Note: Right align after this
-        sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
-
-        toggle_panel_button = wx.Button(self, label="Toggle Details")
-        sizer.Add(toggle_panel_button, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER_VERTICAL).Border(wx.RIGHT, 10))
-        toggle_panel_button.Bind(wx.EVT_BUTTON, edit_panel_callback)
-
-        self.SetSizer(sizer)
+    def AddPluginPages(self):
+        categories = self.manager.get_plugins_by_category()
+        for cat in PluginCategory:
+            tb = Toolbar(self)
+            for name, callback, bitmap in categories[cat]:
+                if bitmap is None:
+                    bitmap = wx.ArtProvider.GetBitmap(wx.ART_MISSING_IMAGE, wx.ART_MENU)
+                tb.AppendTool(name, callback, bitmap)
+            self.AddPage(tb, text=CATEGORY_NAMES[cat])
 
 
 class ModePanel(wx.Panel):
@@ -248,26 +294,43 @@ class ModePanel(wx.Panel):
         sizer.Add(line, wx.SizerFlags().Expand().Border(wx.TOP, 10))
 
 
+class BottomBar(wx.Panel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.SetBackgroundColour(get_theme('toolbar_bg'))
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.SetSizer(self.sizer)
+
+    def CreateSlider(self):
+        self.sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
+        zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM | wx.SL_AUTOTICKS, size=(225, 25))
+        self.sizer.Add(zoom_slider, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self.sizer.Layout()
+        return zoom_slider
+
+
 class MainPanel(wx.Panel):
     """The main panel, which is the only chlid of the root Frame."""
     controller: IController
     canvas: Canvas
     mode_panel: ModePanel
-    toolbar: Toolbar
+    toolbar: TabbedToolbar
     edit_panel: EditPanel
 
-    def __init__(self, parent, controller: IController):
+    def __init__(self, parent, controller: IController, manager: PluginManager):
         # ensure the parent's __init__ is called
         super().__init__(parent, style=wx.CLIP_CHILDREN)
         self.SetBackgroundColour(get_theme('overall_bg'))
         self.controller = controller
 
-        self.canvas = Canvas(self.controller, self,
+        self.bottom_bar = BottomBar(self)
+        zoom_slider = self.bottom_bar.CreateSlider()
+
+        self.canvas = Canvas(self.controller, zoom_slider, self,
                              size=(get_theme('canvas_width'),
                                    get_theme('canvas_height')),
                              realsize=(4 * get_theme('canvas_width'),
-                                       4 * get_theme('canvas_height')),
-                             )
+                                       4 * get_theme('canvas_height')),)
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()
@@ -285,12 +348,12 @@ class MainPanel(wx.Panel):
 
         self.mode_panel.SetBackgroundColour(get_theme('toolbar_bg'))
 
-        toolbar_width = get_theme('canvas_width') + \
-            get_theme('edit_panel_width') + get_theme('vgap')
-        self.toolbar = Toolbar(self, controller,
-                               size=(toolbar_width, get_theme('toolbar_height')),
-                               zoom_callback=self.canvas.ZoomCenter,
-                               edit_panel_callback=self.ToggleEditPanel)
+        # Note: setting the width to 0 doesn't matter since GridBagSizer is in control of the
+        # width.
+        self.toolbar = TabbedToolbar(self, controller, self.canvas,
+                                     self.ToggleEditPanel, manager,
+                                     size=(0, get_theme('toolbar_height')))
+
         self.toolbar.SetBackgroundColour(get_theme('toolbar_bg'))
 
         self.edit_panel = EditPanel(self, self.canvas, self.controller,
@@ -301,11 +364,11 @@ class MainPanel(wx.Panel):
         # and create a sizer to manage the layout of child widgets
         sizer = wx.GridBagSizer(vgap=get_theme('vgap'), hgap=get_theme('hgap'))
 
-        sizer.Add(self.toolbar, wx.GBPosition(0, 1),
-                  wx.GBSpan(1, 2), flag=wx.EXPAND)
+        sizer.Add(self.toolbar, wx.GBPosition(0, 0), wx.GBSpan(1, 3), flag=wx.EXPAND)
         sizer.Add(self.mode_panel, wx.GBPosition(1, 0), flag=wx.EXPAND)
         sizer.Add(self.canvas, wx.GBPosition(1, 1),  flag=wx.EXPAND)
-        sizer.Add(self.edit_panel, wx.GBPosition(1, 2), flag=wx.EXPAND)
+        sizer.Add(self.edit_panel, wx.GBPosition(1, 2), wx.GBSpan(2, 1), flag=wx.EXPAND)
+        sizer.Add(self.bottom_bar, wx.GBPosition(2, 0), wx.GBSpan(1, 2), flag=wx.EXPAND)
 
         # allow the canvas to grow
         sizer.AddGrowableCol(1, 1)
@@ -314,8 +377,7 @@ class MainPanel(wx.Panel):
         # Set the sizer and *prevent the user from resizing it to a smaller size
         self.SetSizerAndFit(sizer)
 
-
-    def ToggleEditPanel(self, evt):
+    def ToggleEditPanel(self):
         sizer = self.GetSizer()
         if self.edit_panel.IsShown():
             sizer.Detach(self.edit_panel)
@@ -328,48 +390,25 @@ class MainPanel(wx.Panel):
 
         self.Layout()
 
-class AboutDialog(wx.Dialog):
-    def __init__(self, parent: wx.Window):
-        pass      
-        #super().__init__(parent, title='About RKViewer')
-        #sizer = wx.FlexGridSizer(cols=2, vgap=5, hgap=5)
-        #self.left_width = 150
-        #elf.right_width = 180
-        #self.row_height = 50
-        #self.leftflags = wx.SizerFlags().Border(wx.TOP, 10)
-        #self.rightflags = wx.SizerFlags().Border(wx.TOP, 10)
-        #self.leftfont = wx.Font(wx.FontInfo(10).Bold())
-        #self.rightfont = wx.Font(wx.FontInfo(10))
-        #elf.AppendRow('PathDesigner', "An Extensible Reaction Network Editors", sizer)
-        #self.AppendRow('Version', rkviewer.__version__, sizer)
-        #self.SetSizerAndFit(sizer)
-
-    def AppendRow(self, left_text: str, right_text: str, sizer: wx.FlexGridSizer):
-        left = wx.StaticText(self, label=left_text, size=(self.left_width, 30),
-                             style=wx.ALIGN_RIGHT)
-        left.SetFont(self.leftfont)
-        right = wx.StaticText(self, label=right_text, size=(self.right_width, 30),
-                              style=wx.ALIGN_LEFT)
-        right.SetFont(self.rightfont)
-        sizer.Add(left, self.leftflags)
-        sizer.Add(right, self.rightflags)
 
 class MainFrame(wx.Frame):
     """The main frame."""
 
-    def __init__(self, controller: IController, manager: PluginManager, **kw):
+    def __init__(self, controller: IController, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
                          wx.WS_EX_PROCESS_UI_UPDATES, **kw)
+        manager = PluginManager(self, controller)
+        manager.load_from('plugins')
         load_theme_settings()
         self.appSettings = AppSettings()
         self.appSettings.load_appSettings()
-        
+
         self.manager = manager
         status_fields = get_setting('status_fields')
         assert status_fields is not None
         self.CreateStatusBar(len(get_setting('status_fields')))
         self.SetStatusWidths([width for _, width in status_fields])
-        self.main_panel = MainPanel(self, controller)
+        self.main_panel = MainPanel(self, controller, manager)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.main_panel, 1, wx.EXPAND)
 
@@ -382,21 +421,30 @@ class MainFrame(wx.Frame):
 
         self.menu_events = list()
         file_menu = wx.Menu()
-      
-        self.AddMenuItem(file_menu, '&New...', 'Start a new network', lambda _: self.NewNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('N')))
-        file_menu.AppendSeparator() 
-        self.AddMenuItem(file_menu, '&Load...', 'Load network from JSON file', lambda _: self.LoadFromJson(), entries, key=(wx.ACCEL_CTRL, ord('O')))
-        self.AddMenuItem(file_menu, '&Save', 'Save current network as a JSON file', lambda _: self.SaveJson(), entries, key=(wx.ACCEL_CTRL, ord('S')))
-        self.AddMenuItem(file_menu, '&Save As...', 'Save current network as a JSON file', lambda _: self.SaveAsJson(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('N')))
-        file_menu.AppendSeparator()      
-        self.AddMenuItem(file_menu, '&Edit Settings', 'Edit settings', lambda _: self.EditSettings(),  entries)
-        self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings', lambda _: self.ReloadSettings(),  entries)
-        file_menu.AppendSeparator() 
-        self.AddMenuItem(file_menu, '&Export...', 'Export Network as an image or pdf', lambda _: self.ExportNetwork(),  entries)        
-        file_menu.AppendSeparator() 
-        self.AddMenuItem(file_menu, '&Print...', 'Print Network', lambda _: self.PrintNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('P')))
-        file_menu.AppendSeparator()                         
-        self.AddMenuItem(file_menu, 'E&xit', 'Exit application', lambda _: self.Close(), entries,  id_=wx.ID_EXIT)
+
+        self.AddMenuItem(file_menu, '&New...', 'Start a new network',
+                         lambda _: self.NewNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('N')))
+        file_menu.AppendSeparator()
+        self.AddMenuItem(file_menu, '&Load...', 'Load network from JSON file',
+                         lambda _: self.LoadFromJson(), entries, key=(wx.ACCEL_CTRL, ord('O')))
+        self.AddMenuItem(file_menu, '&Save', 'Save current network as a JSON file',
+                         lambda _: self.SaveJson(), entries, key=(wx.ACCEL_CTRL, ord('S')))
+        self.AddMenuItem(file_menu, '&Save As...', 'Save current network as a JSON file',
+                         lambda _: self.SaveAsJson(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('N')))
+        file_menu.AppendSeparator()
+        self.AddMenuItem(file_menu, '&Edit Settings', 'Edit settings',
+                         lambda _: self.EditSettings(),  entries)
+        self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings',
+                         lambda _: self.ReloadSettings(),  entries)
+        file_menu.AppendSeparator()
+        self.AddMenuItem(file_menu, '&Export...', 'Export Network as an image or pdf',
+                         lambda _: self.ExportNetwork(),  entries)
+        file_menu.AppendSeparator()
+        self.AddMenuItem(file_menu, '&Print...', 'Print Network',
+                         lambda _: self.PrintNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('P')))
+        file_menu.AppendSeparator()
+        self.AddMenuItem(file_menu, 'E&xit', 'Exit application',
+                         lambda _: self.Close(), entries,  id_=wx.ID_EXIT)
 
         edit_menu = wx.Menu()
         self.AddMenuItem(edit_menu, '&Undo', 'Undo action', lambda _: controller.undo(),
@@ -449,15 +497,16 @@ class MainFrame(wx.Frame):
                          key=(wx.ACCEL_CTRL, ord('R')))
 
         plugins_menu = wx.Menu()
-        self.AddMenuItem(plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
-                         key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
-        self.manager.register_menu(plugins_menu, self)
+        self.manager.register_menu(plugins_menu)
 
         help_menu = wx.Menu()
         self.AddMenuItem(help_menu, '&About...',
-                         'Show about dialog', self.onAboutDlg, entries) #self.ShowAbout, entries)
+                         'Show about dialog', self.onAboutDlg, entries)  # self.ShowAbout, entries)
         self.AddMenuItem(help_menu, '&Default settings...', 'View default settings',
                          lambda _: self.ShowDefaultSettings(), entries)
+        help_menu.AppendSeparator()
+        self.AddMenuItem(help_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
+                         key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
 
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')
@@ -479,22 +528,21 @@ class MainFrame(wx.Frame):
 
         # set sizer at the end, after adding the menus.
         self.SetSizerAndFit(sizer)
-        
-        self.SetSize (self.appSettings.size)
-        self.SetPosition (self.appSettings.position)
+
+        self.SetSize(self.appSettings.size)
+        self.SetPosition(self.appSettings.position)
         self.Layout()
 
-        #Record the initial position of the window
-        self.controller.initial_position = self.GetPosition()
-
+        # Record the initial position of the window
+        self.controller.set_application_position(self.GetPosition())
 
     # Any thing we need to do when the app closes can be included here
-    def OnCloseExit (self, evt):
+
+    def OnCloseExit(self, evt):
         self.appSettings.size = self.GetSize()
         self.appSettings.position = self.Position
         self.appSettings.save_appSettings()
         self.Destroy()
-    
 
     def AddMenuItem(self, menu: wx.Menu, text: str, help_text: str, callback: Callable,
                     entries: List, key: Tuple[Any, int] = None, id_: int = None):
@@ -512,17 +560,18 @@ class MainFrame(wx.Frame):
         self.menu_events.append((callback, item))
 
     def onAboutDlg(self, event):
-       info = wx.adv.AboutDialogInfo()
-       info.Name = "An Extensible Reaction Network Editor"
-       info.Version = "0.0.1 Beta"
-       info.Copyright = "(C) 2020"
-       info.Description = "Create reaction networks"
-       info.WebSite = ("http://www.XXXXX.org", "Home Page")
-       info.Developers = ["Gary Geng, Jin Xu, Carmen Pereña Cortés, Herbert Sauro"]
-       info.License = "MIT"
+        info = wx.adv.AboutDialogInfo()
+        info.Name = "An Extensible Reaction Network Editor"
+        info.Version = "0.0.1 Beta"
+        info.Copyright = "(C) 2020"
+        info.Description = "Create reaction networks"
+        info.SetWebSite("https://github.com/evilnose/PyRKViewer",
+                        "Home Page")  # TODO update home page?
+        info.Developers = ["Gary Geng, Jin Xu, Carmen Pereña Cortés, Herbert Sauro"]
+        info.License = "MIT"
 
-       # Show the wx.AboutBox
-       wx.adv.AboutBox(info)
+        # Show the wx.AboutBox
+        wx.adv.AboutBox(info)
 
     def ReloadSettings(self):
         load_theme_settings()
@@ -540,10 +589,10 @@ class MainFrame(wx.Frame):
                 message += str(err)
             message += str(err)
             self.main_panel.canvas.ShowWarningDialog(message)
-        
+
     def EditSettings(self):
         """Open the preferences file for editing."""
-        if not CreateConfigDir():
+        if not self.CreateConfigDir(GetConfigDir()):
             return
 
         if not os.path.exists(GetThemeSettingsPath()):
@@ -558,20 +607,38 @@ class MainFrame(wx.Frame):
 
         # If we're running windows use notepad
         if os.name == 'nt':
-           # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
-           import subprocess
-           _pid = subprocess.Popen(['notepad.exe', GetThemeSettingsPath()]).pid
+            # Doing it this way allows python to regain control even though notepad hasn't been clsoed
+            import subprocess
+            _pid = subprocess.Popen(['notepad.exe', GetThemeSettingsPath()]).pid
         else:
-           start_file(GetThemeSettingsPath())
+            start_file(GetThemeSettingsPath())
+
+    def CreateConfigDir(self, config_dir: str):
+        """Create the configuration directory if it does not already exist."""
+        try:
+            sp = wx.StandardPaths.Get()
+            config_dir = sp.GetUserConfigDir()
+            if not os.path.exists(os.path.join(config_dir, 'rkViewer')):
+                config_dir = os.path.join(config_dir, 'rkViewer')
+                Path(config_dir).mkdir(parents=True, exist_ok=True)
+            else:
+                config_dir = os.path.join(os.path.join(config_dir, 'rkViewer'))
+            return True
+        except FileExistsError:
+            # TODO fix
+            self.main_panel.canvas.ShowWarningDialog('Could not create RKViewer configuration '
+                                                     'directory. A file already exists at path '
+                                                     '{}.'.format(config_dir))
+        return False
 
     def ShowDefaultSettings(self):
-        if not CreateConfigDir():
+        if not self.CreateConfigDir(GetConfigDir()):
             return
 
         if os.path.exists(os.path.join(GetConfigDir(), '.default-settings.json')) and not os.path.isfile(os.path.join(GetConfigDir(), '.default-settings.json')):
             self.main_panel.canvas.ShowWarningDialog('Could not open default settings file '
-                                                        'since a directory already exists at path '
-                                                        '{}.'.format(os.path.join(GetConfigDir(), '.default-settings.json')))
+                                                     'since a directory already exists at path '
+                                                     '{}.'.format(os.path.join(GetConfigDir(), '.default-settings.json')))
             return
         # TODO prepopulate file with help text, i.e link to docs about schema
         json_str = json.dumps(get_default_raw_settings(), indent=4, sort_keys=True)
@@ -580,11 +647,12 @@ class MainFrame(wx.Frame):
 
         # If we're running windows use notepad
         if os.name == 'nt':
-           # Doing it this way allows python to regain control even though notepad hasn't been clsoed 
-           import subprocess
-           _pid = subprocess.Popen(['notepad.exe', os.path.join(GetConfigDir(), '.default-settings.json')]).pid
+            # Doing it this way allows python to regain control even though notepad hasn't been clsoed
+            import subprocess
+            _pid = subprocess.Popen(['notepad.exe', os.path.join(
+                GetConfigDir(), '.default-settings.json')]).pid
         else:
-           start_file(os.path.join(GetConfigDir(), '.default-settings.json'))            
+            start_file(os.path.join(GetConfigDir(), '.default-settings.json'))
 
     def NewNetwork(self):
         self.controller.new_network()  # This doesn't work, so try different way
@@ -594,7 +662,7 @@ class MainFrame(wx.Frame):
     def PrintNetwork(self):
         bmp = self.main_panel.canvas.DrawToBitmap()
         bmp.SaveFile('printout.png', type=wx.BITMAP_TYPE_PNG)
-       
+
     def ExportNetwork(self):
         self.main_panel.canvas.ShowWarningDialog("Export not yet implemented")
 
@@ -603,7 +671,7 @@ class MainFrame(wx.Frame):
 
     def SaveAsJson(self):
         with wx.FileDialog(self, "Save JSON file", wildcard="JSON files (*.json)|*.json",
-                    style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+                           style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
 
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 return  # the user changed their mind
@@ -618,10 +686,9 @@ class MainFrame(wx.Frame):
             except IOError:
                 wx.LogError("Cannot save current data in file '{}'.".format(pathname))
 
-
     def LoadFromJson(self):
         with wx.FileDialog(self, "Load JSON file", wildcard="JSON files (*.json)|*.json",
-                    style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+                           style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 return  # the user changed their mind
 
@@ -642,11 +709,6 @@ class MainFrame(wx.Frame):
                 pass  # exited normally
             else:
                 pass  # exited by clicking some button
-
-    def ShowAbout(self, evt):
-        with AboutDialog(self) as dlg:
-            dlg.Centre()
-            dlg.ShowModal()
 
     def OverrideAccelTable(self, widget):
         """Set up functions to disable accelerator shortcuts for certain descendants of widgets.
@@ -696,10 +758,7 @@ class View(IView):
     def init(self):
         assert self.controller is not None
         self.app = wx.App()
-        self.manager = PluginManager(self.controller)
-        self.manager.load_from('plugins')
-        self.frame = MainFrame(
-            self.controller, self.manager, title='RK Network Viewer')
+        self.frame = MainFrame(self.controller, title='RK Network Viewer')
         init_api(self.frame.main_panel.canvas, self.controller)
         self.canvas_panel = self.frame.main_panel.canvas
 

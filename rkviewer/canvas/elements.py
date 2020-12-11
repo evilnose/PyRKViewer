@@ -812,8 +812,8 @@ class SelectBox(CanvasElement):
         elif handle == -1:
             self._mode = SelectBox.Mode.MOVING
             # relative starting positions to the mouse positions
-            rel_node_pos = [n.position * cstate.scale - logical_pos for n in self.nodes]
-            rel_comp_pos = [c.position * cstate.scale - logical_pos for c in self.compartments]
+            rel_node_pos = [n.position * cstate.scale - logical_pos for n in self.nodes if n.movingNode]
+            rel_comp_pos = [c.position * cstate.scale - logical_pos for c in self.compartments ]
             self._rel_positions = rel_comp_pos + rel_node_pos
             self._drag_rel = self.bounding_rect.position * cstate.scale - logical_pos
             return True

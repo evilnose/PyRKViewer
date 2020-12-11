@@ -67,7 +67,7 @@ class TNode:
     rectSize: Vec2
     floating : bool  # If false it means the node is a boundary node
     #Jin_edit:
-    moving: bool #if false it means the node is locked
+    nodeLocked: bool #if false it means the node is locked
     compi: int = -1
     fillColor: TColor = TColor(255, 150, 80, 255)
     outlineColor: TColor = TColor(255, 100, 80, 255)
@@ -520,7 +520,7 @@ def _pushUndoStack():
 
 
 #Jin_edit:
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, movingNode: bool = True):
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, nodeLocked: bool = False):
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -542,7 +542,7 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
 
         _pushUndoStack()
         #Jin_edit:
-        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h), floatingNode, movingNode)
+        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked)
         n.addNode(newNode)
         networkDict[neti] = n
     finally:
@@ -690,9 +690,9 @@ def IsBoundaryNode(neti : int, nodei : int):
     return not IsFloatingNode(neti, nodei)
 
 #Jin_edit
-def IsMovingNode (neti : int, nodei : int):
+def IsNodeLocked (neti : int, nodei : int):
     n = _getNetwork(neti)
-    return n.nodes[nodei].moving  
+    return n.nodes[nodei].nodeLocked  
 
 
 def getListOfNodeIDs(neti: int) -> List[str]:
@@ -1176,7 +1176,7 @@ def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 #Jin_edit
-def setNodeMovingStatus (neti: int, nodei: int, movingStatus: bool):
+def setNodeLockedStatus (neti: int, nodei: int, lockedNode: bool):
     """
     setNodeMovingStatus setNodeMovingStatus
     errCode: -7: node index out of range
@@ -1193,7 +1193,7 @@ def setNodeMovingStatus (neti: int, nodei: int, movingStatus: bool):
             errCode = -7
         else:
             _pushUndoStack()
-            n.nodes[nodei].moving = movingStatus
+            n.nodes[nodei].nodeLocked   = lockedNode
             return
 
 

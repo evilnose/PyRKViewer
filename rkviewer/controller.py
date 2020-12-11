@@ -178,8 +178,8 @@ class Controller(IController):
 
     #Jin_edit:
     @iod_setter
-    def set_node_moving_status(self, neti: int, nodei: int, movingStatus: bool):
-        iod.setNodeMovingStatus (neti, nodei, movingStatus)
+    def set_node_locked_status(self, neti: int, nodei: int, lockedNode: bool):
+        iod.setNodeLockedStatus (neti, nodei, lockedNode)
 
     @iod_setter
     def set_node_fill_rgb(self, neti: int, nodei: int, color: wx.Colour):
@@ -416,8 +416,7 @@ class Controller(IController):
             border_width=iod.getNodeOutlineThickness(neti, nodei),
             comp_idx=iod.getCompartmentOfNode(neti, nodei),
             floatingNode=iod.IsFloatingNode (neti, nodei),
-            #Jin_edit
-            movingNode=iod.IsMovingNode(neti, nodei),
+            lockNode=iod.IsNodeLocked(neti, nodei),
         )
 
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:

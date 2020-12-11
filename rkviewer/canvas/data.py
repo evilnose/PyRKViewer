@@ -51,13 +51,12 @@ class Node(RectData):
     index: int
     net_index: int
     floatingNode: bool
-    #Jin_edit:
-    movingNode: bool
+    lockNode: bool  # Prevent users from moving the node
 
     #Jin_edit(2)
     # force keyword-only arguments
     def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, floatingNode: bool = True, movingNode: bool = True, index: int = -1):
+                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, floatingNode: bool = True, lockNode: bool = True, index: int = -1):
         self.index = index
         self.net_index = net_index
         self.id = id
@@ -68,7 +67,7 @@ class Node(RectData):
         self.border_width = border_width
         self.comp_idx = comp_idx
         self.floatingNode = floatingNode
-        self.movingNode = movingNode
+        self.lockNode = lockNode
 
     @property
     def s_position(self):
@@ -159,6 +158,7 @@ class Reaction:
     src_c_handle: HandleData
     dest_c_handle: HandleData
     handles: List[HandleData]
+    bezierCurves : bool
 
     def __init__(self, id: str, net_index: int, *, sources: List[int], targets: List[int],
                  handle_positions: List[Vec2], fill_color: wx.Colour,

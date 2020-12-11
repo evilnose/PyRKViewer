@@ -76,7 +76,7 @@ class IController(abc.ABC):
     
     #Jin_edit:
     @abc.abstractmethod
-    def set_node_moving_status(self, neti: int, nodei: int, movingStatus: bool):
+    def set_node_locked_status(self, neti: int, nodei: int, lockedNode: bool):
         pass
 
     @abc.abstractmethod

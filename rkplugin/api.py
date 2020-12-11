@@ -100,7 +100,7 @@ class NodeData:
         comp_idx: The index of the compartment that this node is in, or -1 if it is in the base
                   compartment.
         floatingNode: Set true if you want the node to have floating status or false for boundary status (default is floating)
-        lockNode: Set true if you want the node to have moving status or false for block status (default is movinging)
+        lockNode: Set false if you want the node to move or true for block (default is false)
     """
     # TODO add fields; possibly use @dataclass
     id: str = field()

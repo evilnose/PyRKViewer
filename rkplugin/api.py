@@ -113,7 +113,6 @@ class NodeData:
     comp_idx: int = field(default=-1)
     index: int = field(default=-1)
     floatingNode: bool = field(default=True)
-    #Jin_edit:
     lockNode: bool = field(default=False)
 
     @property
@@ -310,7 +309,6 @@ def _translate_node(node: Node) -> NodeData:
         comp_idx=node.comp_idx,
         index=node.index,
         floatingNode=node.floatingNode,
-        #Jin_edit:
         lockNode=node.lockNode,
     )
 
@@ -611,7 +609,6 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
     return _controller.add_compartment_g(net_index, compartment)
 
 
-#Jin_edit
 def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
              border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode : bool = True, lockNode: bool = False) -> int:
     """Adds a node to the given network.
@@ -654,7 +651,6 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         pos=position,
         size=size,
         floatingNode=floatingNode,
-        #Jin_edit:
         lockNode=lockNode,
     )
     return _controller.add_node_g(net_index, node)
@@ -679,7 +675,6 @@ def resize_node(net_index: int, node_index: int, size: Vec2):
 # to the history stack. This requires _controller to have "programmatic group" feature, i.e. actions
 # performed inside such groups are not recorded. programmatic groups nested within group operations
 # should be ignored.
-#Jin_edit
 def update_node(net_index: int, node_index: int, id: str = None, fill_color: Color = None,
                 border_color: Color = None, border_width: float = None, position: Vec2 = None,
                 size: Vec2 = None, floatingNode: bool = True, lockNode: bool = False):
@@ -751,7 +746,6 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
             _controller.set_node_size(net_index, node_index, size)
         if floatingNode is not None:
             _controller.set_node_floating_status (net_index, node_index, floatingNode)
-        #Jin_edit
         if lockNode is not None:
             _controller.set_node_locked_status (net_index, node_index, lockNode)
 

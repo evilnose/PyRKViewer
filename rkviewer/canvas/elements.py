@@ -164,7 +164,6 @@ class NodeElement(CanvasElement):
         gc.DrawText(self.node.id, self.node.s_position.x +
                     tx, self.node.s_position.y + ty)
 
-        #Jin_edit:
         if self.node.lockNode:
             pen = gc.CreatePen(wx.GraphicsPenInfo(self.node.border_color).Width(aligned_border_width))
             gc.SetPen(pen)

@@ -176,7 +176,6 @@ class Controller(IController):
     def set_node_floating_status(self, neti: int, nodei: int, floatingStatus: bool):
         iod.setNodeFloatingStatus (neti, nodei, floatingStatus)
 
-    #Jin_edit:
     @iod_setter
     def set_node_locked_status(self, neti: int, nodei: int, lockedNode: bool):
         iod.setNodeLockedStatus (neti, nodei, lockedNode)

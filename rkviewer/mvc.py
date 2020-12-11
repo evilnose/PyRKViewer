@@ -74,7 +74,6 @@ class IController(abc.ABC):
     def set_node_floating_status(self, neti: int, nodei: int, floatingStatus: bool):
         pass
     
-    #Jin_edit:
     @abc.abstractmethod
     def set_node_locked_status(self, neti: int, nodei: int, lockedNode: bool):
         pass

@@ -67,7 +67,7 @@ class TNode:
     rectSize: Vec2
     floating : bool  # If false it means the node is a boundary node
     #Jin_edit:
-    nodeLocked: bool #if false it means the node is locked
+    nodeLocked: bool #if false it means the node can be moved
     compi: int = -1
     fillColor: TColor = TColor(255, 150, 80, 255)
     outlineColor: TColor = TColor(255, 100, 80, 255)
@@ -1117,7 +1117,7 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
             errCode = -12
         else:
             #Jin_edit:
-            if n.nodes[nodei].moving == True:
+            if n.nodes[nodei].nodeLocked == False:
                 _pushUndoStack()
                 n.nodes[nodei].position = Vec2(x, y)
                 return
@@ -1178,7 +1178,7 @@ def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
 #Jin_edit
 def setNodeLockedStatus (neti: int, nodei: int, lockedNode: bool):
     """
-    setNodeMovingStatus setNodeMovingStatus
+    setNodeLockedStatus setNodeLockedStatus
     errCode: -7: node index out of range
     -5: net index out of range
     -12: Variable out of range
@@ -1193,7 +1193,7 @@ def setNodeLockedStatus (neti: int, nodei: int, lockedNode: bool):
             errCode = -7
         else:
             _pushUndoStack()
-            n.nodes[nodei].nodeLocked   = lockedNode
+            n.nodes[nodei].nodeLocked = lockedNode
             return
 
 

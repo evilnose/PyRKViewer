@@ -834,6 +834,7 @@ class NodeForm(EditPanelForm):
         else:
            self.nodeStatusDropDown.SetValue('Boundary Node')   
 
+        #Jin_edit
         if lockNode:
             self.lockNodeCheckBox.SetValue (True)
         else:

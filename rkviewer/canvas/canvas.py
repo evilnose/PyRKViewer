@@ -722,7 +722,7 @@ class Canvas(wx.ScrolledWindow):
                     comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
                     floatingNode=True,
                     #Jin_edit:                   
-                    lockNode=True,
+                    lockNode=False,
                 )
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id = self._GetUniqueName(node.id, [n.id for n in self._nodes])

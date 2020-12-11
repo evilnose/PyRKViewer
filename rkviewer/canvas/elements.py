@@ -812,7 +812,7 @@ class SelectBox(CanvasElement):
         elif handle == -1:
             self._mode = SelectBox.Mode.MOVING
             # relative starting positions to the mouse positions
-            rel_node_pos = [n.position * cstate.scale - logical_pos for n in self.nodes if n.lockNode]
+            rel_node_pos = [n.position * cstate.scale - logical_pos for n in self.nodes if not n.lockNode]
             rel_comp_pos = [c.position * cstate.scale - logical_pos for c in self.compartments ]
             self._rel_positions = rel_comp_pos + rel_node_pos
             self._drag_rel = self.bounding_rect.position * cstate.scale - logical_pos
@@ -904,7 +904,7 @@ class SelectBox(CanvasElement):
 
             self._resize(logical_pos, rect_data, self._orig_rpos, self._orig_rsizes, bounds)
         else:
-            nodes = [n for n in self.nodes if n.lockNode]
+            nodes = [n for n in self.nodes if not n.lockNode]
             rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], nodes)
             if len(rect_data) == 0:
                 return True
@@ -1071,10 +1071,10 @@ class SelectBox(CanvasElement):
                                                 offset=pos_offset, dragged=True))
     
     def move_offset(self, offset: Vec2):
-        nodes = [n for n in self.nodes if n.lockNode]
+        nodes = [n for n in self.nodes if not n.lockNode]
         rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], nodes)
         pos = self.bounding_rect.position
-        rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes if n.lockNode]
+        rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes if not n.lockNode]
         rel_comp_pos = [c.position * cstate.scale - pos for c in self.compartments]
         rel_positions = rel_comp_pos + rel_node_pos
 

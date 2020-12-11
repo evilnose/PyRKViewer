@@ -1072,7 +1072,7 @@ class SelectBox(CanvasElement):
     
     def move_offset(self, offset: Vec2):
         nodes = [n for n in self.nodes if n.movingNode]
-        rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)
+        rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], nodes)
         pos = self.bounding_rect.position
         rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes]
         rel_comp_pos = [c.position * cstate.scale - pos for c in self.compartments]

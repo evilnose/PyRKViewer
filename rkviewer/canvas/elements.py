@@ -1074,7 +1074,7 @@ class SelectBox(CanvasElement):
         nodes = [n for n in self.nodes if n.movingNode]
         rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], nodes)
         pos = self.bounding_rect.position
-        rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes]
+        rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes if n.movingNode]
         rel_comp_pos = [c.position * cstate.scale - pos for c in self.compartments]
         rel_positions = rel_comp_pos + rel_node_pos
 

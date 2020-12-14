@@ -129,12 +129,15 @@ Plugin!".format(handler_name)
             # self.controller.end_group()
 
         return ret
-
+    
     def register_menu(self, menu: wx.Menu):
+        def _get_callback(plugin):
+            return lambda _: self.callbacks[plugin]
+        
         sorted_plugins = sorted(self.plugins, key=lambda p: p.metadata.name)
         for plugin in sorted_plugins:
             item = menu.Append(wx.ID_ANY, plugin.metadata.name)
-            menu.Bind(wx.EVT_MENU, lambda _: self.callbacks[plugin](), item)
+            menu.Bind(wx.EVT_MENU, _get_callback(plugin), item)
 
     def make_command_callback(self, command: CommandPlugin) -> Callable[[], None]:
         def command_cb():

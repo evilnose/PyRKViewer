@@ -396,7 +396,6 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(0, 0)) / cstate.scale
         self._minimap.window_size = Vec2(self.GetSize()) / cstate.scale
         self._minimap.realsize = self.realsize
-        self._minimap.nodes = self._nodes
 
     def CreateNodeElement(self, node: Node, layers: Layer) -> NodeElement:
         return NodeElement(node, self, layers)

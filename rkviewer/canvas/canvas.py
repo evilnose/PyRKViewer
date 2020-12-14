@@ -94,9 +94,9 @@ class Canvas(wx.ScrolledWindow):
     NODE_LAYER = 1
     REACTION_LAYER = 2
     COMPARTMENT_LAYER = 3
+    DRAGGED_NODE_LAYER = 9
     SELECT_BOX_LAYER = 10
     HANDLE_LAYER = 11
-    DRAGGED_NODE_LAYER = 12
     MILLIS_PER_REFRESH = 16  # serves as framerate cap
     KEY_MOVE_STRIDE: int = 1  #: Number of pixels to move when the user presses an arrow key.
     #: Larger move stride for convenience; used when SHIFT is pressed.
@@ -1034,9 +1034,15 @@ class Canvas(wx.ScrolledWindow):
                         if self.dragged_element.on_mouse_drag(logical_pos, rel_pos):
                             redraw = True
                         self._last_drag_pos = logical_pos
+                        # If redrawing, i.e. dragged element moved, return immediately. Otherwise
+                        # we need to check if the mouse is still inside the dragged element.
+                        # The early return is for performance.
+                        if redraw:
+                            return
                     elif self._minimap.dragging:
                         self._minimap.OnMotion(device_pos, evt.LeftIsDown())
                         redraw = True
+                        return
                 else:
                     overlay = self._InWhichOverlay(device_pos)
                     if overlay is not None:
@@ -1344,6 +1350,10 @@ class Canvas(wx.ScrolledWindow):
         elements += [cast(CompartmentElt, e) for e in self._compartment_elements if e.compartment.index in
                      self.sel_compartments_idx]
         layers = max(e.layers for e in elements)
+        if isinstance(layers, int):
+            layers = (Canvas.SELECT_BOX_LAYER, layers)
+        else:
+            layers = (Canvas.SELECT_BOX_LAYER,) + layers
         self.ResetLayer(self._select_box, layers)
 
     def InWhichCompartment(self, nodes: List[Node]) -> int:

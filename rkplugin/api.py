@@ -100,8 +100,7 @@ class NodeData:
         comp_idx: The index of the compartment that this node is in, or -1 if it is in the base
                   compartment.
         floatingNode: Set true if you want the node to have floating status or false for boundary status (default is floating)
-        #Jin_edit:
-        movingNode: Set true if you want the node to have moving status or false for block status (default is movinging)
+        lockNode: Set false if you want the node to move or true for block (default is false)
     """
     # TODO add fields; possibly use @dataclass
     id: str = field()
@@ -114,8 +113,7 @@ class NodeData:
     comp_idx: int = field(default=-1)
     index: int = field(default=-1)
     floatingNode: bool = field(default=True)
-    #Jin_edit:
-    movingNode: bool = field(default=True)
+    lockNode: bool = field(default=False)
 
     @property
     def bounding_rect(self) -> Rect:
@@ -311,8 +309,7 @@ def _translate_node(node: Node) -> NodeData:
         comp_idx=node.comp_idx,
         index=node.index,
         floatingNode=node.floatingNode,
-        #Jin_edit:
-        movingNode=node.movingNode,
+        lockNode=node.lockNode,
     )
 
 
@@ -612,9 +609,8 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
     return _controller.add_compartment_g(net_index, compartment)
 
 
-#Jin_edit
 def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
-             border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode : bool = True, movingNode: bool = True) -> int:
+             border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode : bool = True, lockNode: bool = False) -> int:
     """Adds a node to the given network.
 
     The node indices are assigned in increasing order, regardless of deletion.
@@ -655,8 +651,7 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         pos=position,
         size=size,
         floatingNode=floatingNode,
-        #Jin_edit:
-        movingNode=movingNode,
+        lockNode=lockNode,
     )
     return _controller.add_node_g(net_index, node)
 
@@ -680,10 +675,9 @@ def resize_node(net_index: int, node_index: int, size: Vec2):
 # to the history stack. This requires _controller to have "programmatic group" feature, i.e. actions
 # performed inside such groups are not recorded. programmatic groups nested within group operations
 # should be ignored.
-#Jin_edit
 def update_node(net_index: int, node_index: int, id: str = None, fill_color: Color = None,
                 border_color: Color = None, border_width: float = None, position: Vec2 = None,
-                size: Vec2 = None, floatingNode: bool = True, movingNode: bool = True):
+                size: Vec2 = None, floatingNode: bool = True, lockNode: bool = False):
     """
     Update one or multiple properties of a node.
 
@@ -752,9 +746,8 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
             _controller.set_node_size(net_index, node_index, size)
         if floatingNode is not None:
             _controller.set_node_floating_status (net_index, node_index, floatingNode)
-        #Jin_edit
-        if movingNode is not None:
-            _controller.set_node_moving_status (net_index, node_index, movingNode)
+        if lockNode is not None:
+            _controller.set_node_locked_status (net_index, node_index, lockNode)
 
 
 def compute_centroid(net_index: int, reactants: List[int], products: List[int]):

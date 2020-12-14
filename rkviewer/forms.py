@@ -441,8 +441,8 @@ class NodeForm(EditPanelForm):
     border_alpha_ctrl: Optional[wx.TextCtrl]
     border_width_ctrl: wx.TextCtrl
     nodeStatusDropDown : wx.ComboBox
-    #Jin_edit:
-    nodeMovingStatusDropDown: wx.ComboBox
+    lockNodeCheckBox : wx.CheckBox
+
     _nodes: List[Node]  #: current list of nodes in canvas.
     _selected_idx: Set[int]  #: current list of selected indices in canvas.
     _bounding_rect: Optional[Rect]  #: the exact bounding rectangle of the selected nodes
@@ -539,17 +539,16 @@ class NodeForm(EditPanelForm):
                                                       self._BorderWidthCallback, (1, 100))
         self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
 
-        states = ['Floating Node', 'Boundary Node'] 
-        self.nodeStatusDropDown = wx.ComboBox(self, choices=states, style=wx.CB_READONLY)
+        self.nodeStates = ['Floating Node', 'Boundary Node'] 
+        self.nodeStatusDropDown = wx.ComboBox(self, choices=self.nodeStates, style=wx.CB_READONLY)
         self._AppendControl(sizer, 'Node Status', self.nodeStatusDropDown)
         self.nodeStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeStatusChoice)
 
-        #Jin_edit:
-        movingstates = ['Moving Node', 'Block Node']
-        self.nodeMovingStatusDropDown = wx.ComboBox(self, choices=movingstates, style=wx.CB_READONLY)
-        self._AppendControl(sizer, 'Node Moving Status', self.nodeMovingStatusDropDown)
-        self.nodeMovingStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeMovingStatusChoice)
+        self.lockNodeCheckBox = wx.CheckBox(self, label = '') 
+        self._AppendControl(sizer, 'Lock Node', self.lockNodeCheckBox)
+        self.lockNodeCheckBox.Bind (wx.EVT_CHECKBOX, self.OnNodeLockCheckBox)
 
+ 
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
@@ -704,23 +703,21 @@ class NodeForm(EditPanelForm):
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
-    #Jin_edit:
-    def  OnNodeMovingStatusChoice (self, evt):
+    def OnNodeLockCheckBox (self, evt):
         """Callback for the change node status, floating or boundary."""
-        moving_status = self.nodeMovingStatusDropDown.GetValue()
-        if moving_status == 'Moving Node':
-           movingStatus = True
+        cb = evt.GetEventObject() 
+        if cb.GetValue():
+             nodeLocked = True
         else:
-           movingStatus = False
+             nodeLocked= False
 
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         self._self_changes = True
         self.controller.start_group()
         for node in nodes:
-            self.controller.set_node_moving_status(self.net_index, node.index, movingStatus)
+            self.controller.set_node_locked_status(self.net_index, node.index, nodeLocked)
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
-        self.controller.end_group()    
-
+        self.controller.end_group()  
 
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
@@ -808,6 +805,8 @@ class NodeForm(EditPanelForm):
             fill_alpha = node.fill_color.Alpha()
             border = node.border_color
             border_alpha = node.border_color.Alpha()
+            floatingNode = node.floatingNode
+            lockNode = node.lockNode
         else:
             self.id_ctrl.Enable(False)
             id_text = '; '.join(sorted(list(n.id for n in nodes)))
@@ -830,12 +829,15 @@ class NodeForm(EditPanelForm):
 
         self.border_width_ctrl.ChangeValue(border_width)
 
-        self.nodeStatusDropDown.SetValue('Floating Node')
+        if floatingNode:
+           self.nodeStatusDropDown.SetValue('Floating Node')
+        else:
+           self.nodeStatusDropDown.SetValue('Boundary Node')   
 
-
-        #Jin_edit: 
-        self.nodeMovingStatusDropDown.SetValue('Moving Node')
-
+        if lockNode:
+            self.lockNodeCheckBox.SetValue (True)
+        else:
+           self.lockNodeCheckBox.SetValue (False)
 
 @dataclass
 class StoichInfo:
@@ -1144,10 +1146,10 @@ class ReactionForm(EditPanelForm):
             reai = reaction.index
             self.id_ctrl.Enable()
             fill = reaction.fill_color
+            bezierCurves = reaction.bezierCurves
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
             self.ratelaw_ctrl.Enable()
-
             self.auto_center_ctrl.Enable()
             auto_set = reaction.center_pos is None
             self.auto_center_ctrl.SetValue(auto_set)
@@ -1173,7 +1175,12 @@ class ReactionForm(EditPanelForm):
         if on_msw():
             self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
          
-        self.rxnStatusDropDown.SetValue('Bezier Curve')
+        # HMS Replaced stings with contants 
+        if bezierCurves:
+           self.rxnStatusDropDown.SetValue('Bezier Curve')
+        else:
+           self.rxnStatusDropDown.SetValue('Straight Line')
+
 
 
 class CompartmentForm(EditPanelForm):
@@ -1472,6 +1479,7 @@ class CompartmentForm(EditPanelForm):
             self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
 
         self.border_width_ctrl.ChangeValue(border_width)
+
 
     def CompsMovedOrResized(self, evt):
         """Called when nodes are moved or resized by dragging"""

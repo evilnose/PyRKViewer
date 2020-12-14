@@ -164,8 +164,7 @@ class NodeElement(CanvasElement):
         gc.DrawText(self.node.id, self.node.s_position.x +
                     tx, self.node.s_position.y + ty)
 
-        #Jin_edit:
-        if not self.node.movingNode:
+        if self.node.lockNode:
             pen = gc.CreatePen(wx.GraphicsPenInfo(self.node.border_color).Width(aligned_border_width))
             gc.SetPen(pen)
             path = gc.CreatePath()
@@ -812,8 +811,8 @@ class SelectBox(CanvasElement):
         elif handle == -1:
             self._mode = SelectBox.Mode.MOVING
             # relative starting positions to the mouse positions
-            rel_node_pos = [n.position * cstate.scale - logical_pos for n in self.nodes]
-            rel_comp_pos = [c.position * cstate.scale - logical_pos for c in self.compartments]
+            rel_node_pos = [n.position * cstate.scale - logical_pos for n in self.nodes if not n.lockNode]
+            rel_comp_pos = [c.position * cstate.scale - logical_pos for c in self.compartments ]
             self._rel_positions = rel_comp_pos + rel_node_pos
             self._drag_rel = self.bounding_rect.position * cstate.scale - logical_pos
             return True
@@ -892,6 +891,7 @@ class SelectBox(CanvasElement):
             # Return True since we still want this to appear to be dragging, just not working.
             return True
         if self._mode == SelectBox.Mode.RESIZING:
+            rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)           
             # TODO move the orig_rpos, etc. code to update()
             bounds = self._bounds
             if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
@@ -903,6 +903,10 @@ class SelectBox(CanvasElement):
 
             self._resize(logical_pos, rect_data, self._orig_rpos, self._orig_rsizes, bounds)
         else:
+            nodes = [n for n in self.nodes if not n.lockNode]
+            rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], nodes)
+            if len(rect_data) == 0:
+                return True
             self._move(logical_pos, rect_data, self._rel_positions)
         return True
 
@@ -1066,11 +1070,15 @@ class SelectBox(CanvasElement):
                                                 offset=pos_offset, dragged=True))
     
     def move_offset(self, offset: Vec2):
-        rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)
+        nodes = [n for n in self.nodes if not n.lockNode]
+        rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], nodes)
         pos = self.bounding_rect.position
-        rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes]
+        rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes if not n.lockNode]
         rel_comp_pos = [c.position * cstate.scale - pos for c in self.compartments]
         rel_positions = rel_comp_pos + rel_node_pos
+
+        if len(rect_data) == 0:
+            return
 
         self._move(pos + offset, rect_data, rel_positions)
         self._commit_move()

@@ -1,1 +1,1 @@
-__version__ = 'pre-alpha'
+__version__ = 'alpha'

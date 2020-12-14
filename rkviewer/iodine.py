@@ -66,8 +66,7 @@ class TNode:
     position: Vec2
     rectSize: Vec2
     floating : bool  # If false it means the node is a boundary node
-    #Jin_edit:
-    moving: bool #if false it means the node is locked
+    nodeLocked: bool #if false it means the node can be moved
     compi: int = -1
     fillColor: TColor = TColor(255, 150, 80, 255)
     outlineColor: TColor = TColor(255, 100, 80, 255)
@@ -519,8 +518,7 @@ def _pushUndoStack():
         netSetStack.push(networkDict)
 
 
-#Jin_edit:
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, movingNode: bool = True):
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, nodeLocked: bool = False):
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -541,8 +539,7 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
             return
 
         _pushUndoStack()
-        #Jin_edit:
-        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h), floatingNode, movingNode)
+        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked)
         n.addNode(newNode)
         networkDict[neti] = n
     finally:
@@ -689,10 +686,9 @@ def IsFloatingNode (neti : int, nodei : int):
 def IsBoundaryNode(neti : int, nodei : int):
     return not IsFloatingNode(neti, nodei)
 
-#Jin_edit
-def IsMovingNode (neti : int, nodei : int):
+def IsNodeLocked (neti : int, nodei : int):
     n = _getNetwork(neti)
-    return n.nodes[nodei].moving  
+    return n.nodes[nodei].nodeLocked  
 
 
 def getListOfNodeIDs(neti: int) -> List[str]:
@@ -1116,8 +1112,8 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
         elif x < lowerLimit or y < lowerLimit:
             errCode = -12
         else:
-            #Jin_edit:
-            if n.nodes[nodei].moving == True:
+
+            if n.nodes[nodei].nodeLocked == False:
                 _pushUndoStack()
                 n.nodes[nodei].position = Vec2(x, y)
                 return
@@ -1175,10 +1171,9 @@ def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
-#Jin_edit
-def setNodeMovingStatus (neti: int, nodei: int, movingStatus: bool):
+def setNodeLockedStatus (neti: int, nodei: int, lockedNode: bool):
     """
-    setNodeMovingStatus setNodeMovingStatus
+    setNodeLockedStatus setNodeLockedStatus
     errCode: -7: node index out of range
     -5: net index out of range
     -12: Variable out of range
@@ -1193,7 +1188,7 @@ def setNodeMovingStatus (neti: int, nodei: int, movingStatus: bool):
             errCode = -7
         else:
             _pushUndoStack()
-            n.nodes[nodei].moving = movingStatus
+            n.nodes[nodei].nodeLocked = lockedNode
             return
 
 

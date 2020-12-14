@@ -789,6 +789,8 @@ class NodeForm(EditPanelForm):
         fill_alpha: Optional[int]
         border: wx.Colour
         border_alpha: Optional[int]
+        floatingNode: bool
+        lockNode: bool
 
         if not self.contiguous:
             self.pos_ctrl.ChangeValue('?')
@@ -813,6 +815,8 @@ class NodeForm(EditPanelForm):
 
             fill, fill_alpha = self._GetMultiColor(list(n.fill_color for n in nodes))
             border, border_alpha = self._GetMultiColor(list(n.border_color for n in nodes))
+            floatingNode = all(n.floatingNode for n in nodes)
+            lockNode = all(n.lockNode for n in nodes)
 
         self.pos_ctrl.Enable(self.contiguous)
         self.size_ctrl.Enable(self.contiguous)
@@ -1164,6 +1168,7 @@ class ReactionForm(EditPanelForm):
             self.auto_center_ctrl.Disable()
             self.center_pos_ctrl.Disable()
             self._UpdateStoichFields(0, [], [])
+            bezierCurves = all(r.bezierCurves for r in reactions)
 
         stroke_width = self._GetMultiFloatText(set(r.thickness for r in reactions), prec)
 

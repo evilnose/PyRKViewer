@@ -272,7 +272,7 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def set_reaction_bezier_curves(self, neti: int, bezierCurves: bool) -> Reaction:
+    def set_reaction_bezier_curves(self, neti: int, reai: int, bezierCurves: bool) -> Reaction:
         pass
 
     @abc.abstractmethod

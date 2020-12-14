@@ -704,6 +704,8 @@ class Canvas(wx.ScrolledWindow):
                     self.drag_sel_nodes_idx = set()
                     self.drag_sel_rxns_idx = set()
                     self.drag_sel_comps_idx = set()
+                elif isinstance(self.dragged_element, SelectBox):
+                    self._FloatNodes()
             elif cstate.input_mode == InputMode.ADD_NODES:
                 size = Vec2(get_theme('node_width'), get_theme('node_height'))
 
@@ -1028,7 +1030,6 @@ class Canvas(wx.ScrolledWindow):
             if cstate.input_mode == InputMode.SELECT:
                 if evt.leftIsDown:  # dragging
                     if self.dragged_element is not None:
-                        self._FloatNodes()
                         rel_pos = logical_pos - self._last_drag_pos
                         if self.dragged_element.on_mouse_drag(logical_pos, rel_pos):
                             redraw = True
@@ -1042,33 +1043,36 @@ class Canvas(wx.ScrolledWindow):
                         overlay.OnMotion(device_pos, evt.LeftIsDown())
                         overlay.hovering = True
                         redraw = True
-                    else:
-                        hovered: Optional[CanvasElement] = None
-                        for el in reversed(self._elements):
-                            if not el.enabled:
-                                continue
-                            if el.pos_inside(logical_pos):
-                                hovered = el
-                                break
-
-                        if self.hovered_element is not hovered:
-                            if self.hovered_element is not None:
-                                self.hovered_element.on_mouse_leave(logical_pos)
-                            if hovered is not None:
-                                hovered.on_mouse_enter(logical_pos)
-                            redraw = True
-                            self.hovered_element = hovered
-                        elif hovered is not None:
-                            # still in the same hovered element
-                            moved = self.hovered_element.on_mouse_move(logical_pos)
-                            if moved:
-                                redraw = True
 
                     # un-hover all other overlays TODO keep track of the currently hovering overlay
                     for ol in self._overlays:
                         if ol is not overlay and ol.hovering:
                             ol.hovering = False
                             redraw = True
+
+
+                if self.hovered_element and self.hovered_element.pos_inside(logical_pos):
+                    # still in the same hovered element
+                    moved = self.hovered_element.on_mouse_move(logical_pos)
+                    if moved:
+                        redraw = True
+                else:
+                    # Likely hovering on something else
+                    hovered: Optional[CanvasElement] = None
+                    for el in reversed(self._elements):
+                        if not el.enabled:
+                            continue
+                        if el.pos_inside(logical_pos):
+                            hovered = el
+                            break
+
+                    assert(hovered is None or (self.hovered_element is not hovered))
+                    if self.hovered_element is not None:
+                        self.hovered_element.on_mouse_leave(logical_pos)
+                    if hovered is not None:
+                        hovered.on_mouse_enter(logical_pos)
+                    redraw = True
+                    self.hovered_element = hovered
         finally:
             if redraw:
                 self.LazyRefresh()

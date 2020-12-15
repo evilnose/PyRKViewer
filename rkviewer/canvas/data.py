@@ -8,8 +8,8 @@ import math
 from itertools import chain
 import numpy as np
 from scipy.special import comb
-from typing import Callable, Container, List, Optional, Sequence, Tuple
-from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segments_intersect
+from typing import Callable, Container, List, Optional, Sequence, Set, Tuple
+from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
 from ..config import get_setting, get_theme
 from ..utils import gchain, pairwise
@@ -158,10 +158,12 @@ class Reaction:
     dest_c_handle: HandleData
     handles: List[HandleData]
     bezierCurves : bool
+    modifiers: Set[int]
 
     def __init__(self, id: str, net_index: int, *, sources: List[int], targets: List[int],
                  handle_positions: List[Vec2], fill_color: wx.Colour,
-                 line_thickness: float, rate_law: str, center_pos: Optional[Vec2] = None, bezierCurves: bool = True,
+                 line_thickness: float, rate_law: str, center_pos: Optional[Vec2] = None,
+                 bezierCurves: bool = True, modifiers: Set[int] = None,
                  index: int = -1):
         """Constructor for a reaction.
 
@@ -188,6 +190,9 @@ class Reaction:
         self._targets = targets
         self._thickness = line_thickness
         self.bezierCurves = bezierCurves
+        if modifiers is None:
+            modifiers = set()
+        self.modifiers = modifiers
 
         assert len(handle_positions) == len(sources) + len(targets) + 1
         src_handle_pos = handle_positions[0]
@@ -335,12 +340,7 @@ class SpeciesBezier:
             self._extended_handle = node_center + handle_diff.normalized(long_dist)
             handle_segment = (node_center, self._extended_handle)
             # check for intersection on the side
-            sides = outer_rect.sides()
-            for side in sides:
-                x = segments_intersect(side, handle_segment)
-                if x is not None:
-                    self.node_intersection = x
-                    break
+            self.node_intersection = segment_rect_intersection(handle_segment, outer_rect)
 
             assert self.node_intersection is not None
 

@@ -25,7 +25,7 @@ from .geometry import (
     get_bounding_rect,
     padded_rect,
     pt_in_circle,
-    pt_in_rect,
+    pt_in_rect, segment_rect_intersection,
 )
 from .state import cstate
 from .utils import draw_rect
@@ -489,6 +489,46 @@ class ReactionElement(CanvasElement):
 
     def on_paint(self, gc: wx.GraphicsContext):
         self.bezier.do_paint(gc, self.reaction.fill_color, self.selected)
+
+        MOD_NODE_PAD = 10
+        RXN_PAD = 15
+        MODIFIER_RADIUS = 3
+
+        line_width = get_theme('modifier_line_width')
+        pen = gc.CreatePen(wx.GraphicsPenInfo(get_theme('modifier_line_color')).Width(line_width))
+        brush = gc.CreateBrush(wx.Brush(get_theme('modifier_line_color')))
+        gc.SetPen(pen)
+        gc.SetBrush(brush)
+        # Draw modifier lines
+        for modifier in self.reaction.modifiers:
+            mod_node = self.canvas.node_idx_map[modifier]
+            rect = mod_node.rect
+            clipping_rect = padded_rect(rect, MOD_NODE_PAD)
+
+            node_center = rect.center_point
+            rxn_center = self.bezier.real_center
+
+            # If too close, don't draw. Pad rectangle and circle with 1 to avoid floating point
+            # shenanigans
+            if pt_in_rect(rxn_center, padded_rect(clipping_rect, 1)):
+                continue
+            elif pt_in_circle(node_center, RXN_PAD + 1, rxn_center):
+                continue
+
+            # create segment
+            segment = (node_center, rxn_center)
+            diff = node_center - rxn_center
+            rxn_intersection = rxn_center + diff.normalized(RXN_PAD)
+            node_intersection = segment_rect_intersection(segment, clipping_rect)
+
+            # gc.StrokeLine(*node_intersection, *rxn_intersection)
+            path = gc.CreatePath()
+            path.MoveToPoint(*node_intersection)
+            path.AddLineToPoint(*rxn_intersection)
+            path.AddCircle(*rxn_intersection, MODIFIER_RADIUS)
+            gc.StrokePath(path)
+            gc.FillPath(path)
+            # path.MoveToPoint(0.0, 50.0)
 
 
 class CompartmentElt(CanvasElement):

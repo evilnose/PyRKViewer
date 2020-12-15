@@ -481,6 +481,15 @@ def segments_intersect(seg1: Tuple[Vec2, Vec2], seg2: Tuple[Vec2, Vec2]) -> Opti
             return p2 + lk * s
 
 
+def segment_rect_intersection(segment: Tuple[Vec2, Vec2], rect: Rect) -> Optional[Vec2]:
+    sides = rect.sides()
+    for side in sides:
+        x = segments_intersect(side, segment)
+        if x is not None:
+            return x
+    return None
+
+
 def linear_coefficients(p: Vec2, q: Vec2) -> Tuple[float, float]:
     """Given two points that define a line ax + c, return (a, c)"""
     delta = q - p

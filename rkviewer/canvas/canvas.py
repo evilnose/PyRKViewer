@@ -97,9 +97,9 @@ class Canvas(wx.ScrolledWindow):
     NODE_LAYER = 1
     REACTION_LAYER = 2
     COMPARTMENT_LAYER = 3
+    DRAGGED_NODE_LAYER = 9
     SELECT_BOX_LAYER = 10
     HANDLE_LAYER = 11
-    DRAGGED_NODE_LAYER = 12
     MILLIS_PER_REFRESH = 16  # serves as framerate cap
     KEY_MOVE_STRIDE: int = 1  #: Number of pixels to move when the user presses an arrow key.
     #: Larger move stride for convenience; used when SHIFT is pressed.
@@ -399,7 +399,6 @@ class Canvas(wx.ScrolledWindow):
         self._minimap.window_pos = Vec2(self.CalcUnscrolledPosition(0, 0)) / cstate.scale
         self._minimap.window_size = Vec2(self.GetSize()) / cstate.scale
         self._minimap.realsize = self.realsize
-        self._minimap.nodes = self._nodes
 
     def CreateNodeElement(self, node: Node, layers: Layer) -> NodeElement:
         return NodeElement(node, self, layers)
@@ -708,6 +707,8 @@ class Canvas(wx.ScrolledWindow):
                     self.drag_sel_nodes_idx = set()
                     self.drag_sel_rxns_idx = set()
                     self.drag_sel_comps_idx = set()
+                elif isinstance(self.dragged_element, SelectBox):
+                    self._FloatNodes()
             elif cstate.input_mode == InputMode.ADD_NODES:
                 size = Vec2(get_theme('node_width'), get_theme('node_height'))
 
@@ -1236,47 +1237,55 @@ class Canvas(wx.ScrolledWindow):
             if cstate.input_mode == InputMode.SELECT:
                 if evt.leftIsDown:  # dragging
                     if self.dragged_element is not None:
-                        self._FloatNodes()
                         rel_pos = logical_pos - self._last_drag_pos
                         if self.dragged_element.on_mouse_drag(logical_pos, rel_pos):
                             redraw = True
                         self._last_drag_pos = logical_pos
+                        # If redrawing, i.e. dragged element moved, return immediately. Otherwise
+                        # we need to check if the mouse is still inside the dragged element.
+                        # The early return is for performance.
+                        if redraw:
+                            return
                     elif self._minimap.dragging:
                         self._minimap.OnMotion(device_pos, evt.LeftIsDown())
                         redraw = True
+                        return
                 else:
                     overlay = self._InWhichOverlay(device_pos)
                     if overlay is not None:
                         overlay.OnMotion(device_pos, evt.LeftIsDown())
                         overlay.hovering = True
                         redraw = True
-                    else:
-                        hovered: Optional[CanvasElement] = None
-                        for el in reversed(self._elements):
-                            if not el.enabled:
-                                continue
-                            if el.pos_inside(logical_pos):
-                                hovered = el
-                                break
-
-                        if self.hovered_element is not hovered:
-                            if self.hovered_element is not None:
-                                self.hovered_element.on_mouse_leave(logical_pos)
-                            if hovered is not None:
-                                hovered.on_mouse_enter(logical_pos)
-                            redraw = True
-                            self.hovered_element = hovered
-                        elif hovered is not None:
-                            # still in the same hovered element
-                            moved = self.hovered_element.on_mouse_move(logical_pos)
-                            if moved:
-                                redraw = True
 
                     # un-hover all other overlays TODO keep track of the currently hovering overlay
                     for ol in self._overlays:
                         if ol is not overlay and ol.hovering:
                             ol.hovering = False
                             redraw = True
+
+
+                if self.hovered_element and self.hovered_element.pos_inside(logical_pos):
+                    # still in the same hovered element
+                    moved = self.hovered_element.on_mouse_move(logical_pos)
+                    if moved:
+                        redraw = True
+                else:
+                    # Likely hovering on something else
+                    hovered: Optional[CanvasElement] = None
+                    for el in reversed(self._elements):
+                        if not el.enabled:
+                            continue
+                        if el.pos_inside(logical_pos):
+                            hovered = el
+                            break
+
+                    assert(hovered is None or (self.hovered_element is not hovered))
+                    if self.hovered_element is not None:
+                        self.hovered_element.on_mouse_leave(logical_pos)
+                    if hovered is not None:
+                        hovered.on_mouse_enter(logical_pos)
+                    redraw = True
+                    self.hovered_element = hovered
         finally:
             if redraw:
                 self.LazyRefresh()
@@ -1548,6 +1557,10 @@ class Canvas(wx.ScrolledWindow):
         elements += [cast(CompartmentElt, e) for e in self._compartment_elements if e.compartment.index in
                      self.sel_compartments_idx]
         layers = max(e.layers for e in elements)
+        if isinstance(layers, int):
+            layers = (Canvas.SELECT_BOX_LAYER, layers)
+        else:
+            layers = (Canvas.SELECT_BOX_LAYER,) + layers
         self.ResetLayer(self._select_box, layers)
 
     def InWhichCompartment(self, nodes: List[Node]) -> int:

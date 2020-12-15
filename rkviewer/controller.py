@@ -7,7 +7,7 @@ from typing import Any, Collection, List, Optional, Set
 import rkviewer.iodine as iod
 import logging
 
-from rkviewer.iodine import TColor
+from rkviewer.iodine import TColor, getReactionModifiers
 from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidRedoEvent, DidUndoEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
@@ -219,6 +219,13 @@ class Controller(IController):
     @iod_setter
     def set_node_border_width(self, neti: int, nodei: int, width: float):
         iod.setNodeOutlineThickness(neti, nodei, width)
+
+    @iod_setter
+    def set_reaction_modifiers(self, neti: int, reai: int, modifiers: Set[int]):
+        iod.setReactionModifiers(neti, reai, modifiers)
+
+    def get_reaction_modifiers(self, neti: int, reai: int) -> Set[int]:
+        return iod.getReactionModifiers(neti, reai)
 
     @iod_setter
     def delete_node(self, neti: int, nodei: int):
@@ -441,7 +448,8 @@ class Controller(IController):
                         rate_law=iod.getReactionRateLaw(neti, reai),
                         handle_positions=items,
                         center_pos=iod.getReactionCenterPos(neti, reai),
-                        bezierCurves=iod.bezier_curves(neti, reai)
+                        bezierCurves=iod.bezier_curves(neti, reai),
+                        modifiers=iod.getReactionModifiers(neti, reai),
                         )
 
     def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:

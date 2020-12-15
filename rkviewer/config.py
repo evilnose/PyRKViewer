@@ -221,6 +221,8 @@ class ThemeSchema(Schema):
     comp_border_width = Dim(missing=2)
     comp_corner_radius = Dim(missing=6)
     reaction_radius = Dim(missing=6)
+    modifier_line_color = Color(missing=wx.Colour(202, 148, 255))
+    modifier_line_width = Dim(missing=2)
 
 
 class RootSchema(Schema):

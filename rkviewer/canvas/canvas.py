@@ -12,9 +12,12 @@ import typing
 from typing import Collection, DefaultDict, Dict, List, Optional, Set, Tuple, Union, cast
 from commentjson.commentjson import JSONLibraryException
 from marshmallow.exceptions import ValidationError
+from rkplugin import api
 
 from sortedcontainers import SortedKeyList
 import wx
+import os
+import math
 
 from ..config import get_setting, get_theme, pop_settings_err
 from ..events import (
@@ -858,7 +861,7 @@ class Canvas(wx.ScrolledWindow):
         total_selected = len(selected_nodes) + len(selected_reactions) + len(selected_comps)
         menu = wx.Menu()
 
-        def add_item(menu: wx.Menu, menu_name, callback):
+        def add_item(menu: wx.Menu, menu_name, callback): 
             id_ = menu.Append(-1, menu_name).Id
             menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
 
@@ -870,6 +873,7 @@ class Canvas(wx.ScrolledWindow):
             if len(owner_comps) == 1:
                 # Only allow alignment if all selected nodes are in the same compartment
                 # Add alignment options
+                
                 menu.AppendSeparator()
                 align_menu = wx.Menu()
                 add_item(align_menu, 'Align Left', lambda: self.AlignSelectedNodes(Alignment.LEFT))
@@ -882,19 +886,222 @@ class Canvas(wx.ScrolledWindow):
                 add_item(align_menu, 'Arrange Horizontally', lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))
                 add_item(align_menu, 'Arrange Vertically', lambda: self.AlignSelectedNodes(Alignment.VERTICAL))
                 menu.AppendSubMenu(align_menu, text='Align...')
-
-
+ 
+            
         # Must refresh before the context menu is displayed, otherwise the refresh won't occur
         self.Refresh()
         self.PopupMenu(menu)
         menu.Destroy()
 
+    def findMinX(self, l):
+        '''
+        Find the left-most node's x position
+        Args:
+            self
+            l: the list of indices of the selected nodes
+        '''
+        xpos = api.get_node_by_index(0, 0).position.x
+        for a in l:
+                cur = api.get_node_by_index(0, a)
+                newX = cur.position.x
+                if(newX < xpos):
+                    xpos = newX
+        return xpos
+
+    def findMaxX(self, l):
+        '''
+        Find the right-most node's x position
+        Args:
+            self
+            l: the list of indices of the selected nodes
+        '''
+        xpos = api.get_node_by_index(0, 0).position.x
+        for a in l:
+                cur = api.get_node_by_index(0, a)
+                newX = cur.position.x
+                if(newX > xpos):
+                    xpos = newX
+        return xpos
+
+    def findMinY(self, l):
+        '''
+        Find the left-most node's x position
+        Args:
+            self
+            l: the list of indices of the selected nodes
+        '''
+        ypos = api.get_node_by_index(0, 0).position.y
+        for a in l:
+            cur = api.get_node_by_index(0, a)
+            newY = cur.position.y
+            if(newY < ypos):
+                ypos = newY
+        return ypos
+
+    def findMaxY(self, l):
+        '''
+        Find the right-most node's x position
+        Args:
+            self
+            l: the list of indices of the selected nodes
+        '''
+        ypos = api.get_node_by_index(0, 0).position.y
+        for a in l:
+                cur = api.get_node_by_index(0, a)
+                newY = cur.position.y
+                if(newY > ypos):
+                    ypos = newY
+        return ypos
+
+    def setDefaultHandles(self):
+        with api.group_action():
+            for r in api.get_reactions(0):
+                handles = api.default_handle_positions(0, r.index) # centroid, sources, target
+                sources = r.sources
+                targets = r.targets
+                api.set_reaction_center_handle(0, r.index, handles[0])
+                count = 1
+                for s in sources:
+                    api.set_reaction_node_handle(0, r.index, s, True, handles[count])
+                    count += 1
+                for t in targets:
+                    api.set_reaction_node_handle(0, r.index, t, False, handles[count])
+                    count += 1
+
     def AlignSelectedNodes(self, alignment: Alignment):
         """Align the selected nodes. Should be called only when *only* nodes are selected."""
-
         # The selected nodes are self.sel_nodes
-        # To access a file in the resources folder, use  
-        raise NotImplementedError('Align Not Implemented!')
+        # To access a file in the resources folder, use
+        #Jin_edit:refer to plugins/arrange.py
+
+        if alignment == Alignment.LEFT:
+            '''
+            Align selected nodes to the left-most node's x position
+            '''
+            with api.group_action():
+                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                xpos = self.findMinX(s)
+                for a in s:
+                    cur = api.get_node_by_index(0, a)
+                    y = cur.position.y
+                    newPos = Vec2(xpos, y)
+                    api.move_node(0, a, newPos)
+                self.setDefaultHandles()
+  
+        if alignment == Alignment.RIGHT:
+            '''
+            Align selected nodes to the right-most node's x position
+            '''
+            with api.group_action():
+                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                xpos = self.findMaxX(s)
+                for a in s:
+                    cur = api.get_node_by_index(0, a)
+                    y = cur.position.y
+                    newPos = Vec2(xpos, y)
+                    api.move_node(0, a, newPos)
+                self.setDefaultHandles()
+
+        if alignment == Alignment.CENTER:
+            '''
+            Align selected nodes to the relative center of the x positions of the nodes
+            '''
+            with api.group_action():
+                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                xMin = self.findMinX(s)
+                xMax = self.findMaxX(s)
+                xpos = math.floor((xMax + xMin)/2)
+                for a in s:
+                    cur = api.get_node_by_index(0, a)
+                    y = cur.position.y
+                    newPos = Vec2(xpos, y)
+                    api.move_node(0, a, newPos)
+                self.setDefaultHandles()
+
+        if alignment == Alignment.TOP:
+            with api.group_action():
+                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                ypos = self.findMinY(s)
+                for a in s:
+                    cur = api.get_node_by_index(0, a)
+                    x = cur.position.x
+                    newPos = Vec2(x, ypos)
+                    api.move_node(0, a, newPos)
+                self.setDefaultHandles()
+
+        if alignment == Alignment.BOTTOM:
+            with api.group_action():
+                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                ypos = self.findMaxY(s)
+                for a in s:
+                    cur = api.get_node_by_index(0, a)
+                    x = cur.position.x
+                    newPos = Vec2(x, ypos)
+                    api.move_node(0, a, newPos)
+                self.setDefaultHandles()
+
+        if alignment == Alignment.MIDDLE:
+            '''
+            Align selected nodes to the relative center of the x positions of the nodes
+            '''
+            with api.group_action():
+                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                yMin = self.findMinY(s)
+                yMax = self.findMaxY(s)
+                ypos = math.floor((yMax + yMin)/2)
+                for a in s:
+                    cur = api.get_node_by_index(0, a)
+                    x = cur.position.x
+                    newPos = Vec2(x, ypos)
+                    api.move_node(0, a, newPos)
+                self.setDefaultHandles()
+
+        if alignment == Alignment.GRID:
+            '''
+            Align selected nodes in a net grid manner
+            '''
+            with api.group_action():
+                s = api.get_selected_node_indices(0)
+                x = 40
+                y = 40
+                count = 1
+                for a in s:
+                    api.move_node(0, a, position=Vec2(x, y))
+                    x = x + 130
+                    if count % 5 == 0:
+                        y = y + 130
+                        x = 40
+                    count = count + 1
+                self.setDefaultHandles() 
+
+        if alignment == Alignment.HORIZONTAL:
+            with api.group_action():
+                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                yMin = self.findMinY(s)
+                yMax = self.findMaxY(s)
+                ypos = math.floor((yMax + yMin)/2)
+                x = 40
+                for a in s:
+                    newPos = Vec2(x, ypos)
+                    api.move_node(0, a, newPos)
+                    x = x + 130
+                self.setDefaultHandles()
+
+        if alignment == Alignment.VERTICAL:
+            with api.group_action():
+                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                xMin = self.findMinX(s)
+                xMax = self.findMaxX(s)
+                xpos = math.floor((xMax + xMin)/2)
+                y = 40
+                for a in s:
+                    newPos = Vec2(xpos, y)
+                    api.move_node(0, a, newPos)
+                    y = y + 130
+                self.setDefaultHandles()
+
+
+        #raise NotImplementedError('Align Not Implemented!')
 
     # TODO improve this. we might want a special mouseLeftWindow event
     def _EndDrag(self, evt: wx.MouseEvent):

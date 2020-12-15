@@ -815,6 +815,7 @@ class NodeForm(EditPanelForm):
 
             fill, fill_alpha = self._GetMultiColor(list(n.fill_color for n in nodes))
             border, border_alpha = self._GetMultiColor(list(n.border_color for n in nodes))
+
             floatingNode = all(n.floatingNode for n in nodes)
             lockNode = all(n.lockNode for n in nodes)
 

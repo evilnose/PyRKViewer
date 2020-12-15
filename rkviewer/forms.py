@@ -880,7 +880,7 @@ class ReactionForm(EditPanelForm):
         self.auto_center_ctrl = wx.CheckBox(self)
         self.auto_center_ctrl.SetValue(True)
         self.auto_center_ctrl.Bind(wx.EVT_CHECKBOX, self._AutoCenterCallback)
-        self._AppendControl(sizer, 'auto-position', self.auto_center_ctrl)
+        self._AppendControl(sizer, 'auto center pos', self.auto_center_ctrl)
 
         self.center_pos_ctrl = wx.TextCtrl(self)
         self.center_pos_ctrl.Disable()
@@ -892,11 +892,17 @@ class ReactionForm(EditPanelForm):
         self.reactant_stoich_ctrls = list()
         self.product_stoich_ctrls = list()
 
-        states = ['Bezier Curve', 'Straight Line'] 
+        states = ['Bezier curve', 'Straight line'] 
         self.rxnStatusDropDown = wx.ComboBox(self, choices=states, style=wx.CB_READONLY)
-        self._AppendControl(sizer, 'Reaction Status', self.rxnStatusDropDown)
+        self._AppendControl(sizer, 'reaction status', self.rxnStatusDropDown)
         self.rxnStatusDropDown.Bind(wx.EVT_COMBOBOX, self.OnRxnStatusChoice)
 
+        self._modifiers = set()
+        self._nodes = list()
+        self._node_indices = set()
+        self.modifiers_ctrl = wx.CheckListBox(self, style=wx.LB_NEEDED_SB, size=(-1, 100))
+        self._AppendControl(sizer, 'modifiers', self.modifiers_ctrl)
+        self.modifiers_ctrl.Bind(wx.EVT_CHECKLISTBOX, self.OnModifierCheck)
 
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -1031,9 +1037,21 @@ class ReactionForm(EditPanelForm):
         post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.set_reaction_ratelaw(self.net_index, reai, ratelaw)
 
-    def UpdateReactions(self, reactions: List[Reaction]):
-        """Function called after the list of nodes have been updated."""
+    def OnModifierCheck(self, evt: wx.CommandEvent):
+        assert len(self._selected_idx) == 1
+        reactions = [r for r in self._reactions if r.index in self._selected_idx]
+        reaction = reactions[0]
+        new_modifiers = [self._nodes[i].index for i in self.modifiers_ctrl.GetCheckedItems()]
+        self.controller.set_reaction_modifiers(self.net_index, reaction.index, new_modifiers)
+
+    def CanvasUpdated(self, reactions: List[Reaction], nodes: List[Node]):
+        """Function called after the canvas has been updated."""
         self._reactions = reactions
+        self._nodes = nodes
+        new_node_indices = set(n.index for n in nodes)
+        # if new_node_indices != self._node_indices:
+        self._node_indices = new_node_indices
+        self._UpdateModifierList()
         self.ExternalUpdate()
 
     def UpdateSelection(self, selected_idx: List[int]):
@@ -1048,6 +1066,17 @@ class ReactionForm(EditPanelForm):
             self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
             self.UpdateAllFields()
         self.ExternalUpdate()
+
+    def _UpdateModifierList(self):
+        # NOTE if slightly better performance is wanted, we don't have to update this widget
+        # immediately. Rather we can have a dirty flag and update only when displaying
+        self.modifiers_ctrl.Set([n.id for n in self._nodes])
+        checked_indices = set(i for i, n in enumerate(self._nodes) if n.index in self._modifiers)
+        self._UpdateModifierSelection(checked_indices)
+
+    def _UpdateModifierSelection(self, new_modifiers: Set[int]):
+        self._modifiers = new_modifiers
+        self.modifiers_ctrl.SetCheckedItems(new_modifiers)
 
     def _UpdateStoichFields(self, reai: int, reactants: List[StoichInfo], products: List[StoichInfo]):
         sizer = self.GetSizer()
@@ -1160,6 +1189,8 @@ class ReactionForm(EditPanelForm):
             self.center_pos_ctrl.Enable(not auto_set)
 
             self._UpdateStoichFields(reai, self._GetSrcStoichs(reai), self._GetDestStoichs(reai))
+            self.modifiers_ctrl.Enable()
+            self._UpdateModifierSelection(reaction.modifiers)
         else:
             self.id_ctrl.Disable()
             fill, fill_alpha = self._GetMultiColor(list(r.fill_color for r in reactions))
@@ -1169,6 +1200,8 @@ class ReactionForm(EditPanelForm):
             self.center_pos_ctrl.Disable()
             self._UpdateStoichFields(0, [], [])
             bezierCurves = all(r.bezierCurves for r in reactions)
+            self.modifiers_ctrl.Disable()
+            self._UpdateModifierSelection(set())
 
         stroke_width = self._GetMultiFloatText(set(r.thickness for r in reactions), prec)
 

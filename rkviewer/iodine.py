@@ -147,6 +147,7 @@ class TReaction:
     thickness: float = 3.0
     centerHandlePos: Vec2 = Vec2()
     bezierCurves: bool = True  # If false it means a straight line
+    modifiers: Set[int] = field(default_factory=set)
 
 
 @dataclass
@@ -595,6 +596,11 @@ def deleteNode(neti: int, nodei: int):
                 else:
                     n.compartments[compi].node_indices.remove(nodei)
                 del n.nodes[nodei]
+
+                # Remove as a modifier
+                for rxn in n.reactions.values():
+                    if nodei in rxn.modifiers:
+                        rxn.modifiers.remove(nodei)
                 return
             else:
                 errCode = -4
@@ -2295,14 +2301,8 @@ def setReactionLineThickness(neti: int, reai: int, thickness: float):
 
 
 def bezier_curves(neti: int, reai: int):
-    errCode = 0
-    if neti not in networkDict:	   
-        errCode = -5    	          
-    r = networkDict[neti]
-    if r.reactions[reai].bezierCurves:	 
-       return True	       
-    else:	    
-       return False	
+    n = _getNetwork(neti)
+    return n.reactions[reai].bezierCurves
 
 def setReactionBezierCurves(neti: int, reai: int, bezierCurves: bool):
     """
@@ -2325,6 +2325,16 @@ def setReactionBezierCurves(neti: int, reai: int, bezierCurves: bool):
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
+
+
+def setReactionModifiers(neti: int, reai: int, modifiers: Set[int]):
+    r = _getReaction(neti, reai)
+    r.modifiers = copy.copy(modifiers)
+
+
+def getReactionModifiers(neti: int, reai: int) -> Set[int]:
+    r = _getReaction(neti, reai)
+    return copy.copy(r.modifiers)
 
 
 def setReactionCenterHandlePosition(neti: int, reai: int, centerHandlePosX: float, centerHandlePosY: float):
@@ -2652,9 +2662,6 @@ class NodeSchema(Schema):
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNode:
-        # return TNode(data['id'], data['position'], data['rectSize'],
-        #              data['compartment'], data['fillColor'], data['outlineColor'],
-        #              data['outlineThickness'], TFont())
         return TNode(**data)
 
 
@@ -2663,20 +2670,8 @@ class SpeciesNode(Schema):
     stoich = fields.Float()
     handlePos = Dim2()
 
-    # @pre_dump
-    # def pre_dump(self, data: TSpeciesNode, **kwargs):
-    #     assert isinstance(data, TSpeciesNode)
-    #     # TODO create schema for SpeciesNode
-    #     return {
-    #         'stoich': data.stoich,
-    #         'handlePos': (data.handlePos.x, data.handlePos.y),
-    #     }
-
     @post_load
     def post_load(self, data: Any, **kwargs) -> TSpeciesNode:
-        # return TNode(data['id'], data['position'], data['rectSize'],
-        #              data['compartment'], data['fillColor'], data['outlineColor'],
-        #              data['outlineThickness'], TFont())
         return TSpeciesNode(**data)
 
 
@@ -2688,20 +2683,6 @@ class ReactionSchema(Schema):
     fillColor = Color()
     thickness = Dim()
     centerHandlePos = Dim2()
-
-    # @pre_dump
-    # def pre_dump(self, data: TReaction, **kwargs):
-    #     assert isinstance(data, TReaction)
-    #     # TODO create schema for SpeciesNode
-    #     return {
-    #         'id': data.id,
-    #         'rateLaw': data.rateLaw,
-    #         'reactants': data.reactants,
-    #         'products': data.products,
-    #         'fillColor': data.fillColor,
-    #         'thickness': data.thickness,
-    #         'centerHandlePos': (data.centerHandlePos.x, data.centerHandlePos.y),
-    #     }
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TReaction:
@@ -2717,20 +2698,6 @@ class CompartmentSchema(Schema):
     fillColor = Color()
     outlineColor = Color()
     outlineThickness = Dim()
-
-    # @pre_dump
-    # def pre_dump(self, data: TCompartment, **kwargs):
-    #     assert isinstance(data, TCompartment)
-    #     return {
-    #         'id': data.id,
-    #         'position': (data.position.x, data.position.y),
-    #         'rectSize': (data.rectSize.x, data.rectSize.y),
-    #         'nodes': data.node_indices,
-    #         'volume': data.volume,
-    #         'fillColor': data.fillColor,
-    #         'outlineColor': data.outlineColor,
-    #         'outlineThickness': data.outlineThickness,
-    #     }
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TCompartment:

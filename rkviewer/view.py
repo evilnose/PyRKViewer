@@ -81,7 +81,7 @@ class EditPanel(fnb.FlatNotebook):
 
     def OnCanvasDidUpdate(self, evt):
         self.node_form.UpdateNodes(self.canvas.nodes)
-        self.reaction_form.UpdateReactions(self.canvas.reactions)
+        self.reaction_form.CanvasUpdated(self.canvas.reactions, self.canvas.nodes)
         self.comp_form.UpdateCompartments(self.canvas.compartments)
 
     def OnSelectionDidUpdate(self, evt):

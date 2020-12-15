@@ -28,7 +28,7 @@ from logging import Logger
 
 # TODO allow modification of theme and setting in the GUI
 
-_canvas: Optional[_canvas] = None
+_canvas: Optional[Canvas] = None
 _controller: Optional[IController] = None
 _plugin_logger = logging.getLogger('plugin')
 
@@ -146,6 +146,7 @@ class ReactionData:
     rate_law: str = field(default='')
     using_bezier: bool = field(default=True)
     index: int = field(default=-1)
+    modifiers: Set[int] = field(default_factory=set)
 
     @property
     def centroid(self) -> Vec2:
@@ -264,9 +265,9 @@ def window_position() -> Vec2:
     return Vec2(_canvas.CalcUnscrolledPosition(0, 0))
 
 
-def get_application_position() -> Vecr2:
+def get_application_position() -> Vec2:
     """ Return the absolute position of thetop left corner of the applcition"""
-    return _controller.get_application_position()
+    return Vec2(*_controller.get_application_position())
 
 
 def canvas_scale() -> float:
@@ -326,6 +327,7 @@ def _translate_reaction(reaction: Reaction) -> ReactionData:
         index=reaction.index,
         center_pos=reaction.center_pos,
         using_bezier=reaction.bezierCurves,
+        modifiers=reaction.modifiers,
     )
 
 
@@ -918,7 +920,7 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
         if not isinstance(center_pos, CustomNone):
             _controller.set_reaction_center(net_index, reaction_index, center_pos)
         if use_bezier is not None:
-            _controller.set_reaction_bezier_curves(net_index, use_bezier)
+            _controller.set_reaction_bezier_curves(net_index, reaction_index, use_bezier)
     
 
 def get_selected_node_indices(net_index: int) -> Set[int]:

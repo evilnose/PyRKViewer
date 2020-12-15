@@ -123,6 +123,14 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def set_reaction_modifiers(self, neti: int, reai: int, modifiers: List[int]):
+        pass
+
+    @abc.abstractmethod
+    def get_reaction_modifiers(self, neti: int, reai: int) -> List[int]:
+        pass
+
+    @abc.abstractmethod
     def delete_node(self, neti: int, nodei: int) -> bool:
         pass
 

@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 from rkplugin.plugins import CATEGORY_NAMES, PluginCategory
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import json
 
 # pylint: disable=maybe-no-member
@@ -316,6 +316,7 @@ class MainPanel(wx.Panel):
     mode_panel: ModePanel
     toolbar: TabbedToolbar
     edit_panel: EditPanel
+    last_save_path: Optional[str]
 
     def __init__(self, parent, controller: IController, manager: PluginManager):
         # ensure the parent's __init__ is called
@@ -377,6 +378,8 @@ class MainPanel(wx.Panel):
         # Set the sizer and *prevent the user from resizing it to a smaller size
         self.SetSizerAndFit(sizer)
 
+        self.last_save_path = None
+
     def ToggleEditPanel(self):
         sizer = self.GetSizer()
         if self.edit_panel.IsShown():
@@ -393,6 +396,7 @@ class MainPanel(wx.Panel):
 
 class MainFrame(wx.Frame):
     """The main frame."""
+    save_item: wx.MenuItem
 
     def __init__(self, controller: IController, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
@@ -427,8 +431,9 @@ class MainFrame(wx.Frame):
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Load...', 'Load network from JSON file',
                          lambda _: self.LoadFromJson(), entries, key=(wx.ACCEL_CTRL, ord('O')))
-        self.AddMenuItem(file_menu, '&Save', 'Save current network as a JSON file',
-                         lambda _: self.SaveJson(), entries, key=(wx.ACCEL_CTRL, ord('S')))
+        self.save_item = self.AddMenuItem(file_menu, '&Save', 'Save current network as a JSON file',
+                                          lambda _: self.SaveJson(), entries, key=(wx.ACCEL_CTRL, ord('S')))
+        self.save_item.Enable(False)
         self.AddMenuItem(file_menu, '&Save As...', 'Save current network as a JSON file',
                          lambda _: self.SaveAsJson(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('N')))
         file_menu.AppendSeparator()
@@ -545,7 +550,7 @@ class MainFrame(wx.Frame):
         self.Destroy()
 
     def AddMenuItem(self, menu: wx.Menu, text: str, help_text: str, callback: Callable,
-                    entries: List, key: Tuple[Any, int] = None, id_: int = None):
+                    entries: List, key: Tuple[Any, int] = None, id_: int = None) -> wx.MenuItem:
         if id_ is None:
             id_ = wx.NewIdRef(count=1)
 
@@ -558,6 +563,7 @@ class MainFrame(wx.Frame):
         item = menu.Append(id_, '{}\t{}'.format(text, shortcut), help_text)
         self.Bind(wx.EVT_MENU, callback, item)
         self.menu_events.append((callback, item))
+        return item
 
     def onAboutDlg(self, event):
         info = wx.adv.AboutDialogInfo()
@@ -655,9 +661,8 @@ class MainFrame(wx.Frame):
             start_file(os.path.join(GetConfigDir(), '.default-settings.json'))
 
     def NewNetwork(self):
-        self.controller.new_network()  # This doesn't work, so try different way
-        # self.canvas.SelectAll()
-        # self.canvas.DeleteSelectedItems()
+        self.save_item.Enable()
+        self.controller.new_network()
 
     def PrintNetwork(self):
         bmp = self.main_panel.canvas.DrawToBitmap()
@@ -667,7 +672,15 @@ class MainFrame(wx.Frame):
         self.main_panel.canvas.ShowWarningDialog("Export not yet implemented")
 
     def SaveJson(self):
-        self.main_panel.canvas.ShowWarningDialog("Not yet implemented")
+        if self.last_save_path is None:
+            return
+        try:
+            net_index = 0
+            net_json = self.controller.dump_network(net_index)
+            with open(self.last_save_path, 'w') as file:
+                json.dump(net_json, file, sort_keys=True, indent=4)
+        except IOError:
+            wx.LogError("Cannot save current data in file '{}'.".format(self.last_save_path))
 
     def SaveAsJson(self):
         with wx.FileDialog(self, "Save JSON file", wildcard="JSON files (*.json)|*.json",
@@ -682,7 +695,11 @@ class MainFrame(wx.Frame):
                 net_index = 0
                 net_json = self.controller.dump_network(net_index)
                 with open(pathname, 'w') as file:
-                    json.dump(net_json, file)
+                    json.dump(net_json, file, sort_keys=True, indent=4)
+
+                # Allow Save action, since we now know where to save to
+                self.last_save_path = pathname
+                self.save_item.Enable()
             except IOError:
                 wx.LogError("Cannot save current data in file '{}'.".format(pathname))
 

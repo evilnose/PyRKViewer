@@ -2624,10 +2624,12 @@ class Dim(fields.Float):
 
 
 class Dim2(fields.List):
-    def __init__(self):
-        super().__init__(Dim(), validate=validate.Length(equal=2))
+    def __init__(self, *args, **kw):
+        super().__init__(Dim(), *args, validate=validate.Length(equal=2), **kw)
 
     def _serialize(self, value: Vec2, attr, obj, **kwargs):
+        if value is None:
+            return None
         return (value.x, value.y)
 
     def _deserialize(self, value, attr, data, **kwargs):
@@ -2647,13 +2649,10 @@ class FontSchema(Schema):
 
 class NodeSchema(Schema):
     id = fields.Str()  # TODO assert unique
-    # x = Dim()  # TODO validate not out of range of canvas?
-    # y = Dim()
-    # w = fields.Float(validate=validate.Range(min=get_setting('min_node_width')))
-    # h = fields.Float(validate=validate.Range(min=get_setting('min_node_height')))
     position = Dim2()
     rectSize = Dim2()
     floating = fields.Bool()
+    nodeLocked = fields.Bool()
     compartment = fields.Int()
     fillColor = Color()
     outlineColor = Color()
@@ -2677,12 +2676,15 @@ class SpeciesNode(Schema):
 
 class ReactionSchema(Schema):
     id = fields.Str()
+    centerPos = Dim2(missing=None)
     rateLaw = fields.Str()
     reactants = fields.Dict(fields.Int(), fields.Nested(SpeciesNode))
     products = fields.Dict(fields.Int(), fields.Nested(SpeciesNode))
     fillColor = Color()
     thickness = Dim()
     centerHandlePos = Dim2()
+    bezierCurves = fields.Bool()
+    modifiers = fields.List(fields.Int())
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TReaction:

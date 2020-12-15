@@ -814,7 +814,7 @@ class NodeForm(EditPanelForm):
             fill, fill_alpha = self._GetMultiColor(list(n.fill_color for n in nodes))
             border, border_alpha = self._GetMultiColor(list(n.border_color for n in nodes))
             floatingNode = True
-            lockNode = True
+            lockNode = False
 
         self.pos_ctrl.Enable(self.contiguous)
         self.size_ctrl.Enable(self.contiguous)

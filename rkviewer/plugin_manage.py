@@ -132,7 +132,7 @@ Plugin!".format(handler_name)
     
     def register_menu(self, menu: wx.Menu):
         def _get_callback(plugin):
-            return lambda _: self.callbacks[plugin]
+            return lambda _: self.callbacks[plugin]()
         
         sorted_plugins = sorted(self.plugins, key=lambda p: p.metadata.name)
         for plugin in sorted_plugins:

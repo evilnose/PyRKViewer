@@ -431,6 +431,8 @@ class MainFrame(wx.Frame):
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Load...', 'Load network from JSON file',
                          lambda _: self.LoadFromJson(), entries, key=(wx.ACCEL_CTRL, ord('O')))
+        # TODO Load Recent...
+        file_menu.AppendSeparator()
         self.save_item = self.AddMenuItem(file_menu, '&Save', 'Save current network as a JSON file',
                                           lambda _: self.SaveJson(), entries, key=(wx.ACCEL_CTRL, ord('S')))
         self.save_item.Enable(False)
@@ -665,8 +667,12 @@ class MainFrame(wx.Frame):
         self.controller.new_network()
 
     def PrintNetwork(self):
-        bmp = self.main_panel.canvas.DrawToBitmap()
-        bmp.SaveFile('printout.png', type=wx.BITMAP_TYPE_PNG)
+        img = self.main_panel.canvas.DrawActiveRectToImage()
+        if img is None:
+            self.canvas.ShowWarningDialog(
+                'There are no relevant elements (nodes/reactions/compartments) on the canvas! Print aborted.')
+            return
+        img.SaveFile('printout.png', type=wx.BITMAP_TYPE_PNG)
 
     def ExportNetwork(self):
         self.main_panel.canvas.ShowWarningDialog("Export not yet implemented")

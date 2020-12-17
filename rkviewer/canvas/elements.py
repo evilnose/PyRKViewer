@@ -85,7 +85,7 @@ class CanvasElement:
     @abstractmethod
     def on_paint(self, gc: wx.GraphicsContext):
         """Paint the shape onto the given GraphicsContext.
-        
+
         This draws onto the scrolled canvas, i.e. the position of the drawn item will respond to
         scrolling, so you don't need to account for that.
         """
@@ -115,6 +115,10 @@ class CanvasElement:
         """Handler for when the mouse left button is springs up inside the shape."""
         return False
 
+    def bounding_rect(self) -> Rect:
+        """Return the bounding rectangle of the element."""
+        return Rect(Vec2(), Vec2())
+
 
 class NodeElement(CanvasElement):
     """CanvasElement for nodes."""
@@ -141,7 +145,7 @@ class NodeElement(CanvasElement):
 
         boundaryFactor = 1
         if not self.node.floatingNode:
-           boundaryFactor = 2  # Store this in a theme? 
+            boundaryFactor = 2  # Store this in a theme?
 
         s_aligned_rect = self.node.s_rect.aligned()
         aligned_border_width = max(even_round(
@@ -165,7 +169,8 @@ class NodeElement(CanvasElement):
                     tx, self.node.s_position.y + ty)
 
         if self.node.lockNode:
-            pen = gc.CreatePen(wx.GraphicsPenInfo(self.node.border_color).Width(aligned_border_width))
+            pen = gc.CreatePen(wx.GraphicsPenInfo(
+                self.node.border_color).Width(aligned_border_width))
             gc.SetPen(pen)
             path = gc.CreatePath()
             path.AddCircle(self.node.s_position.x, self.node.s_position.y, .1*height)
@@ -173,6 +178,9 @@ class NodeElement(CanvasElement):
 
     def on_left_down(self, _: Vec2):
         return True
+
+    def bounding_rect(self) -> Rect:
+        return self.node.rect
 
 
 class BezierHandle(CanvasElement):
@@ -211,12 +219,13 @@ class BezierHandle(CanvasElement):
 
     def pos_inside(self, logical_pos: Vec2):
         return pt_in_circle(logical_pos, BezierHandle.HANDLE_RADIUS, self.data.tip * cstate.scale)
-    
+
     def on_paint(self, gc: wx.GraphicsContext):
         """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
         assert self.data.base is not None
         if self.reaction.bezierCurves:
-            c = get_theme('highlighted_handle_color') if self.hovering else get_theme('handle_color')
+            c = get_theme('highlighted_handle_color') if self.hovering else get_theme(
+                'handle_color')
             brush = wx.Brush(c)
             pen = gc.CreatePen(wx.GraphicsPenInfo(c))
 
@@ -231,8 +240,8 @@ class BezierHandle(CanvasElement):
             # Draw handle circles
             gc.SetBrush(brush)
             gc.DrawEllipse(stip.x - BezierHandle.HANDLE_RADIUS,
-                       stip.y - BezierHandle.HANDLE_RADIUS,
-                       2 * BezierHandle.HANDLE_RADIUS, 2 * BezierHandle.HANDLE_RADIUS)
+                           stip.y - BezierHandle.HANDLE_RADIUS,
+                           2 * BezierHandle.HANDLE_RADIUS, 2 * BezierHandle.HANDLE_RADIUS)
 
     def on_mouse_enter(self, logical_pos: Vec2) -> bool:
         self.hovering = True
@@ -272,7 +281,7 @@ class ReactionCenter(CanvasElement):
         self.parent = parent
         self._moved = False
         self.hovering = False
-    
+
     def on_paint(self, gc: wx.GraphicsContext):
         # draw centroid
         color = self.parent.reaction.fill_color
@@ -328,6 +337,10 @@ class ReactionCenter(CanvasElement):
         self.hovering = False
         return True
 
+    def bounding_rect(self) -> Rect:
+        radius = get_theme('reaction_radius')
+        return Rect(self.parent.bezier.real_center - radius, Vec2.repeat(radius) * 2)
+
 
 # Uniquely identifies nodes in a reaction: (regular node index; whether the node is a reactant)
 RIndex = Tuple[int, bool]
@@ -355,7 +368,8 @@ class ReactionElement(CanvasElement):
     controller: IController
 
     # HACK no type for canvas since otherwise there is circular dependency
-    def __init__(self, reaction: Reaction, bezier: ReactionBezier, canvas, layers: Layer, handle_layer: Layer):
+    def __init__(self, reaction: Reaction, bezier: ReactionBezier, canvas, layers: Layer,
+                 handle_layer: Layer):
         super().__init__(layers)
         self.reaction = reaction
         self.bezier = bezier
@@ -530,6 +544,9 @@ class ReactionElement(CanvasElement):
             gc.FillPath(path)
             # path.MoveToPoint(0.0, 50.0)
 
+    def bounding_rect(self) -> Rect:
+        return self.bezier.get_bounding_rect()
+
 
 class CompartmentElt(CanvasElement):
     def __init__(self, compartment: Compartment, major_layer: int, minor_layer: int):
@@ -553,6 +570,9 @@ class CompartmentElt(CanvasElement):
             fill = change_opacity(fill.ChangeLightness(130), fill.Alpha())
         draw_rect(gc, rect, border=border,
                   border_width=self.compartment.border_width, fill=fill, corner_radius=get_theme('comp_corner_radius'))
+
+    def bounding_rect(self) -> Rect:
+        return self.compartment.rect
 
 
 class SelectBox(CanvasElement):
@@ -851,8 +871,9 @@ class SelectBox(CanvasElement):
         elif handle == -1:
             self._mode = SelectBox.Mode.MOVING
             # relative starting positions to the mouse positions
-            rel_node_pos = [n.position * cstate.scale - logical_pos for n in self.nodes if not n.lockNode]
-            rel_comp_pos = [c.position * cstate.scale - logical_pos for c in self.compartments ]
+            rel_node_pos = [n.position * cstate.scale -
+                            logical_pos for n in self.nodes if not n.lockNode]
+            rel_comp_pos = [c.position * cstate.scale - logical_pos for c in self.compartments]
             self._rel_positions = rel_comp_pos + rel_node_pos
             self._drag_rel = self.bounding_rect.position * cstate.scale - logical_pos
             return True
@@ -931,7 +952,7 @@ class SelectBox(CanvasElement):
             # Return True since we still want this to appear to be dragging, just not working.
             return True
         if self._mode == SelectBox.Mode.RESIZING:
-            rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)           
+            rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], self.nodes)
             # TODO move the orig_rpos, etc. code to update()
             bounds = self._bounds
             if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
@@ -1108,7 +1129,7 @@ class SelectBox(CanvasElement):
         if len(self.compartments) != 0:
             post_event(DidMoveCompartmentsEvent(compartment_indices=[c.index for c in self.compartments],
                                                 offset=pos_offset, dragged=True))
-    
+
     def move_offset(self, offset: Vec2):
         nodes = [n for n in self.nodes if not n.lockNode]
         rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], nodes)

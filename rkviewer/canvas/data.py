@@ -9,7 +9,7 @@ from itertools import chain
 import numpy as np
 from scipy.special import comb
 from typing import Callable, Container, List, Optional, Sequence, Set, Tuple
-from .geometry import Vec2, Rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
+from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
 from ..config import get_setting, get_theme
 from ..utils import gchain, pairwise
@@ -142,7 +142,6 @@ def init_bezier():
         INITIALIZED = True
 
 
-
 @dataclass
 class Reaction:
     id: str
@@ -157,7 +156,7 @@ class Reaction:
     src_c_handle: HandleData
     dest_c_handle: HandleData
     handles: List[HandleData]
-    bezierCurves : bool
+    bezierCurves: bool
     modifiers: Set[int]
 
     def __init__(self, id: str, net_index: int, *, sources: List[int], targets: List[int],
@@ -255,7 +254,6 @@ class HandleData:
         self.base = base
 
 
-
 class SpeciesBezier:
     """Class that keeps track of the Bezier curve associated with a reaction species.
 
@@ -304,7 +302,6 @@ class SpeciesBezier:
         self._paint_dirty = True
         self.update_curve(real_center)
         self.arrow_adjusted_coords = list()
-        self.bounding_box = None
         self.thickness = thickness
         self.bezierCurves = bezierCurves
 
@@ -315,8 +312,20 @@ class SpeciesBezier:
         self._collision_dirty = True
         self._paint_dirty = True
 
-    def _recompute(self, for_collision):
-        """Recompute everything that could have changed, but only recompute the curve if calc_curve.
+    def get_bounding_rect(self) -> Rect:
+        self._recompute(True)
+        top = min(pt.y for pt in self.bezier_points)
+        bottom = max(pt.y for pt in self.bezier_points)
+        left = min(pt.x for pt in self.bezier_points)
+        right = max(pt.x for pt in self.bezier_points)
+        return Rect(Vec2(left, top), Vec2(right - left, bottom - top))
+
+    def _recompute(self, for_collision: bool):
+        """Recompute everything that could have changed.
+
+        for_collision is an attempt at optimizing this function. If it is True, then the reaction
+        curve segments will be recalculated (the segments are for detecting if the user clicked
+        on them).
         """
         if self._collision_dirty or self._paint_dirty:
             # STEP 1, get intersection between handle and node outer padding
@@ -471,6 +480,7 @@ class ReactionBezier:
     """
     src_beziers: List[SpeciesBezier]
     dest_beziers: List[SpeciesBezier]
+    _bounding_rect: Rect
 
     def __init__(self, reaction: Reaction, reactants: List[Node], products: List[Node]):
         """Constructor.
@@ -551,6 +561,10 @@ class ReactionBezier:
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
         for bz in chain(self.src_beziers, self.dest_beziers):
             bz.do_paint(gc, fill, selected)
+
+    def get_bounding_rect(self):
+        return get_bounding_rect(
+            list(sb.get_bounding_rect() for sb in chain(self.src_beziers, self.dest_beziers)))
 
 
 @dataclass

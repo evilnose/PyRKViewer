@@ -519,6 +519,7 @@ def segment_intersects_line(seg: Tuple[Vec2, Vec2], line: Tuple[Vec2, Vec2]) -> 
     else:
         return None
 
+
 def rotate_unit(vec: Vec2, rad: float) -> Vec2:
     """Rotate a vector by rad radians and return the rotated *unit vector*.
     """

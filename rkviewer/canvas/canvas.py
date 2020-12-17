@@ -35,7 +35,7 @@ from .elements import CanvasElement, CompartmentElt, Layer, NodeElement, Reactio
 from .geometry import (
     Rect,
     Vec2, circle_bounds,
-    clamp_rect_pos,
+    clamp_rect_pos, get_bounding_rect,
     padded_rect,
     rects_overlap,
     pt_in_rect,
@@ -724,7 +724,7 @@ class Canvas(wx.ScrolledWindow):
                     border_color=get_theme('node_border'),
                     border_width=get_theme('node_border_width'),
                     comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
-                    floatingNode=True,                  
+                    floatingNode=True,
                     lockNode=False,
                 )
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
@@ -861,7 +861,7 @@ class Canvas(wx.ScrolledWindow):
         total_selected = len(selected_nodes) + len(selected_reactions) + len(selected_comps)
         menu = wx.Menu()
 
-        def add_item(menu: wx.Menu, menu_name, callback): 
+        def add_item(menu: wx.Menu, menu_name, callback):
             id_ = menu.Append(-1, menu_name).Id
             menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
 
@@ -873,25 +873,47 @@ class Canvas(wx.ScrolledWindow):
             if len(owner_comps) == 1:
                 # Only allow alignment if all selected nodes are in the same compartment
                 # Add alignment options
-                
+
                 menu.AppendSeparator()
                 align_menu = wx.Menu()
                 add_item(align_menu, 'Align Left', lambda: self.AlignSelectedNodes(Alignment.LEFT))
                 add_item(align_menu, 'Align Right', lambda: self.AlignSelectedNodes(Alignment.RIGHT))
-                add_item(align_menu, 'Align Center', lambda: self.AlignSelectedNodes(Alignment.CENTER))
+                add_item(align_menu, 'Align Center',
+                         lambda: self.AlignSelectedNodes(Alignment.CENTER))
                 add_item(align_menu, 'Align Top', lambda: self.AlignSelectedNodes(Alignment.TOP))
-                add_item(align_menu, 'Align Bottom', lambda: self.AlignSelectedNodes(Alignment.BOTTOM))
-                add_item(align_menu, 'Align Middle', lambda: self.AlignSelectedNodes(Alignment.MIDDLE))
+                add_item(align_menu, 'Align Bottom',
+                         lambda: self.AlignSelectedNodes(Alignment.BOTTOM))
+                add_item(align_menu, 'Align Middle',
+                         lambda: self.AlignSelectedNodes(Alignment.MIDDLE))
                 add_item(align_menu, 'Grid', lambda: self.AlignSelectedNodes(Alignment.GRID))
-                add_item(align_menu, 'Arrange Horizontally', lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))
-                add_item(align_menu, 'Arrange Vertically', lambda: self.AlignSelectedNodes(Alignment.VERTICAL))
+                add_item(align_menu, 'Arrange Horizontally',
+                         lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))
+                add_item(align_menu, 'Arrange Vertically',
+                         lambda: self.AlignSelectedNodes(Alignment.VERTICAL))
                 menu.AppendSubMenu(align_menu, text='Align...')
- 
-            
+
         # Must refresh before the context menu is displayed, otherwise the refresh won't occur
         self.Refresh()
         self.PopupMenu(menu)
         menu.Destroy()
+
+    def GetBoundingRect(self) -> Optional[Rect]:
+        """Get the bounding rectangle of all nodes, reactions, and compartments.
+
+        Returns None if there are no nodes, reactions, or compartments.
+        """
+        rects = list()
+        for el in self._node_elements:
+            rects.append(el.bounding_rect())
+        for el in self._reaction_elements:
+            rects.append(el.bounding_rect())
+        for el in self._compartment_elements:
+            rects.append(el.bounding_rect())
+
+        if len(rects) != 0:
+            return get_bounding_rect(rects)
+        else:
+            return None
 
     def findMinX(self, l):
         '''
@@ -902,10 +924,10 @@ class Canvas(wx.ScrolledWindow):
         '''
         xpos = api.get_node_by_index(0, 0).position.x
         for a in l:
-                cur = api.get_node_by_index(0, a)
-                newX = cur.position.x
-                if(newX < xpos):
-                    xpos = newX
+            cur = api.get_node_by_index(0, a)
+            newX = cur.position.x
+            if(newX < xpos):
+                xpos = newX
         return xpos
 
     def findMaxX(self, l):
@@ -917,10 +939,10 @@ class Canvas(wx.ScrolledWindow):
         '''
         xpos = api.get_node_by_index(0, 0).position.x
         for a in l:
-                cur = api.get_node_by_index(0, a)
-                newX = cur.position.x
-                if(newX > xpos):
-                    xpos = newX
+            cur = api.get_node_by_index(0, a)
+            newX = cur.position.x
+            if(newX > xpos):
+                xpos = newX
         return xpos
 
     def findMinY(self, l):
@@ -947,16 +969,16 @@ class Canvas(wx.ScrolledWindow):
         '''
         ypos = api.get_node_by_index(0, 0).position.y
         for a in l:
-                cur = api.get_node_by_index(0, a)
-                newY = cur.position.y
-                if(newY > ypos):
-                    ypos = newY
+            cur = api.get_node_by_index(0, a)
+            newY = cur.position.y
+            if(newY > ypos):
+                ypos = newY
         return ypos
 
     def setDefaultHandles(self):
         with api.group_action():
             for r in api.get_reactions(0):
-                handles = api.default_handle_positions(0, r.index) # centroid, sources, target
+                handles = api.default_handle_positions(0, r.index)  # centroid, sources, target
                 sources = r.sources
                 targets = r.targets
                 api.set_reaction_center_handle(0, r.index, handles[0])
@@ -972,14 +994,14 @@ class Canvas(wx.ScrolledWindow):
         """Align the selected nodes. Should be called only when *only* nodes are selected."""
         # The selected nodes are self.sel_nodes
         # To access a file in the resources folder, use
-        #Jin_edit:refer to plugins/arrange.py
+        # Jin_edit:refer to plugins/arrange.py
 
         if alignment == Alignment.LEFT:
             '''
             Align selected nodes to the left-most node's x position
             '''
             with api.group_action():
-                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                s = api.get_selected_node_indices(0)  # TODO: 2 of these
                 xpos = self.findMinX(s)
                 for a in s:
                     cur = api.get_node_by_index(0, a)
@@ -987,13 +1009,13 @@ class Canvas(wx.ScrolledWindow):
                     newPos = Vec2(xpos, y)
                     api.move_node(0, a, newPos)
                 self.setDefaultHandles()
-  
+
         if alignment == Alignment.RIGHT:
             '''
             Align selected nodes to the right-most node's x position
             '''
             with api.group_action():
-                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                s = api.get_selected_node_indices(0)  # TODO: 2 of these
                 xpos = self.findMaxX(s)
                 for a in s:
                     cur = api.get_node_by_index(0, a)
@@ -1007,7 +1029,7 @@ class Canvas(wx.ScrolledWindow):
             Align selected nodes to the relative center of the x positions of the nodes
             '''
             with api.group_action():
-                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                s = api.get_selected_node_indices(0)  # TODO: 2 of these
                 xMin = self.findMinX(s)
                 xMax = self.findMaxX(s)
                 xpos = math.floor((xMax + xMin)/2)
@@ -1020,7 +1042,7 @@ class Canvas(wx.ScrolledWindow):
 
         if alignment == Alignment.TOP:
             with api.group_action():
-                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                s = api.get_selected_node_indices(0)  # TODO: 2 of these
                 ypos = self.findMinY(s)
                 for a in s:
                     cur = api.get_node_by_index(0, a)
@@ -1031,7 +1053,7 @@ class Canvas(wx.ScrolledWindow):
 
         if alignment == Alignment.BOTTOM:
             with api.group_action():
-                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                s = api.get_selected_node_indices(0)  # TODO: 2 of these
                 ypos = self.findMaxY(s)
                 for a in s:
                     cur = api.get_node_by_index(0, a)
@@ -1045,7 +1067,7 @@ class Canvas(wx.ScrolledWindow):
             Align selected nodes to the relative center of the x positions of the nodes
             '''
             with api.group_action():
-                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                s = api.get_selected_node_indices(0)  # TODO: 2 of these
                 yMin = self.findMinY(s)
                 yMax = self.findMaxY(s)
                 ypos = math.floor((yMax + yMin)/2)
@@ -1072,11 +1094,11 @@ class Canvas(wx.ScrolledWindow):
                         y = y + 130
                         x = 40
                     count = count + 1
-                self.setDefaultHandles() 
+                self.setDefaultHandles()
 
         if alignment == Alignment.HORIZONTAL:
             with api.group_action():
-                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                s = api.get_selected_node_indices(0)  # TODO: 2 of these
                 yMin = self.findMinY(s)
                 yMax = self.findMaxY(s)
                 ypos = math.floor((yMax + yMin)/2)
@@ -1089,7 +1111,7 @@ class Canvas(wx.ScrolledWindow):
 
         if alignment == Alignment.VERTICAL:
             with api.group_action():
-                s = api.get_selected_node_indices(0) #TODO: 2 of these
+                s = api.get_selected_node_indices(0)  # TODO: 2 of these
                 xMin = self.findMinX(s)
                 xMax = self.findMaxX(s)
                 xpos = math.floor((xMax + xMin)/2)
@@ -1100,10 +1122,10 @@ class Canvas(wx.ScrolledWindow):
                     y = y + 130
                 self.setDefaultHandles()
 
-
         #raise NotImplementedError('Align Not Implemented!')
 
     # TODO improve this. we might want a special mouseLeftWindow event
+
     def _EndDrag(self, evt: wx.MouseEvent):
         """Send the updated node positions and sizes to the controller.
 
@@ -1263,7 +1285,6 @@ class Canvas(wx.ScrolledWindow):
                             ol.hovering = False
                             redraw = True
 
-
                 if self.hovered_element and self.hovered_element.pos_inside(logical_pos):
                     # still in the same hovered element
                     moved = self.hovered_element.on_mouse_move(logical_pos)
@@ -1328,13 +1349,24 @@ class Canvas(wx.ScrolledWindow):
 
         post_event(DidPaintCanvasEvent(gc))
 
+    def DrawActiveRectToImage(self):
+        """Draw to image only the active rectangle -- bounding rect of nodes, reactions, & compartments
+        """
+        bounding_rect = self.GetBoundingRect()
+        if bounding_rect is None:
+            return None
+        
+        bounding_rect = padded_rect(bounding_rect, padding=10)
+        bounding_rect = wx.Rect(*bounding_rect.position, *bounding_rect.size)
+        bounding_rect.Intersect(wx.Rect(0, 0, *self.realsize))
 
-    def DrawToBitmap(self):
         bmp = wx.Bitmap(*self.realsize)
         dc = wx.MemoryDC()
         dc.SelectObject(bmp)
         self.DrawToDC(dc)
-        return bmp
+        img = bmp.ConvertToImage()
+        ret = img.GetSubImage(bounding_rect)
+        return ret
 
     def DrawToDC(self, dc):
         # Create graphics context since we need transparency

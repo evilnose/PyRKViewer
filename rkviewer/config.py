@@ -172,7 +172,7 @@ class ThemeSchema(Schema):
     TODO more documentation under attributes and link to this document in Help or settings.json
     """
     # overall background of the application 
-    overall_bg = Color(missing=wx.Colour(255, 112, 0))
+    overall_bg = Color(missing=wx.Colour(255, 255, 180))
     canvas_bg = Color(missing=wx.Colour(255, 255, 255))
     toolbar_bg = Color(missing=wx.Colour(230, 230, 230))
     canvas_width = Pixel(missing=1000)

@@ -13,7 +13,7 @@ from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
-from .mvc import IController, IView, ModelError
+from .mvc import IController, IView, ModelError, ModifierTipStyle
 
 
 def iod_setter(controller_iod_setter):
@@ -226,6 +226,13 @@ class Controller(IController):
 
     def get_reaction_modifiers(self, neti: int, reai: int) -> Set[int]:
         return iod.getReactionModifiers(neti, reai)
+
+    @iod_setter
+    def set_modifier_tip_style(self, neti: int, reai: int, style: ModifierTipStyle):
+        iod.setModifierTipStyle(neti, reai, style)
+
+    def get_modifier_tip_style(self, neti: int, reai: int) -> ModifierTipStyle:
+        return iod.getModifierTipStyle(neti, reai)
 
     @iod_setter
     def delete_node(self, neti: int, nodei: int):
@@ -450,6 +457,7 @@ class Controller(IController):
                         center_pos=iod.getReactionCenterPos(neti, reai),
                         bezierCurves=iod.bezier_curves(neti, reai),
                         modifiers=iod.getReactionModifiers(neti, reai),
+                        modifier_tip_style=iod.getModifierTipStyle(neti, reai),
                         )
 
     def get_compartment_by_index(self, neti: int, compi: int) -> Compartment:

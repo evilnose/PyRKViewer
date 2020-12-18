@@ -1,9 +1,10 @@
 # pylint: disable=maybe-no-member
+from enum import Enum
 import wx
 import abc
 from typing import Any, List, Optional, Set
 from .canvas.geometry import Vec2
-from .canvas.data import Compartment, Node, Reaction
+from .canvas.data import Compartment, Node, Reaction, ModifierTipStyle
 
 
 class IController(abc.ABC):
@@ -128,6 +129,14 @@ class IController(abc.ABC):
 
     @abc.abstractmethod
     def get_reaction_modifiers(self, neti: int, reai: int) -> List[int]:
+        pass
+
+    @abc.abstractmethod
+    def set_modifier_tip_style(self, neti: int, reai: int, style: ModifierTipStyle):
+        pass
+
+    @abc.abstractmethod
+    def get_modifier_tip_style(self, neti: int, reai: int) -> ModifierTipStyle:
         pass
 
     @abc.abstractmethod

@@ -4,6 +4,7 @@ from abc import abstractmethod
 import enum
 from functools import partial
 from itertools import chain
+from math import pi
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
 
@@ -17,7 +18,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, Node, Reaction, ReactionBezier, RectData, SpeciesBezier
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier
 from .geometry import (
     Rect,
     Vec2,
@@ -25,7 +26,7 @@ from .geometry import (
     get_bounding_rect,
     padded_rect,
     pt_in_circle,
-    pt_in_rect, segment_rect_intersection,
+    pt_in_rect, rotate_unit, segment_rect_intersection,
 )
 from .state import cstate
 from .utils import draw_rect
@@ -507,6 +508,7 @@ class ReactionElement(CanvasElement):
         MOD_NODE_PAD = 10
         RXN_PAD = 15
         MODIFIER_RADIUS = 3
+        TEE_LENGTH = 5
 
         line_width = get_theme('modifier_line_width')
         pen = gc.CreatePen(wx.GraphicsPenInfo(get_theme('modifier_line_color')).Width(line_width))
@@ -539,7 +541,15 @@ class ReactionElement(CanvasElement):
             path = gc.CreatePath()
             path.MoveToPoint(*node_intersection)
             path.AddLineToPoint(*rxn_intersection)
-            path.AddCircle(*rxn_intersection, MODIFIER_RADIUS)
+            if self.reaction.modifier_tip_style == ModifierTipStyle.CIRCLE:
+                path.AddCircle(*rxn_intersection, MODIFIER_RADIUS)
+            elif self.reaction.modifier_tip_style == ModifierTipStyle.TEE:
+                # draw T-shaped tip
+                ortho = rotate_unit(diff, pi / 2)
+                pt1 = rxn_intersection + ortho * TEE_LENGTH * cstate.scale
+                pt2 = rxn_intersection - ortho * TEE_LENGTH * cstate.scale
+                path.MoveToPoint(*pt1)
+                path.AddLineToPoint(*pt2)
             gc.StrokePath(path)
             gc.FillPath(path)
             # path.MoveToPoint(0.0, 50.0)

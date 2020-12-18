@@ -12,7 +12,7 @@ from .config import get_theme, get_setting
 from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyReactionEvent,
                      DidMoveCompartmentsEvent, DidMoveNodesEvent, DidMoveReactionCenterEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, post_event)
-from .mvc import IController
+from .mvc import IController, ModifierTipStyle
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
 from .canvas.data import Compartment, Reaction, compute_centroid
@@ -379,6 +379,18 @@ class EditPanelForm(ScrolledPanel):
                 rgba.SetRGBA(next(iter(rgbaset)))
 
             return rgba, None
+
+    @classmethod
+    def _GetMultiEnum(cls, entries: List[Any], fallback):
+        """Similar to _GetMultiColor, but for enums.
+        
+        Need to specify a fallback value in case the entries are different.
+        """
+        entries_set = set(entries)
+        if len(entries_set) == 1:
+            return next(iter(entries_set))
+        else:
+            return fallback
 
     @classmethod
     def _GetMultiFloatText(cls, values: Set[float], precision: int) -> str:
@@ -898,6 +910,10 @@ class ReactionForm(EditPanelForm):
         self._AppendControl(sizer, 'reaction status', self.rxnStatusDropDown)
         self.rxnStatusDropDown.Bind(wx.EVT_COMBOBOX, self.OnRxnStatusChoice)
 
+        self.mod_tip_dropdown = wx.ComboBox(self, choices=[e.value for e in ModifierTipStyle], style=wx.CB_READONLY)
+        self._AppendControl(sizer, 'modifier tip', self.mod_tip_dropdown)
+        self.mod_tip_dropdown.Bind(wx.EVT_COMBOBOX, self.ModifierTipCallback)
+
         self._modifiers = set()
         self._nodes = list()
         self._node_indices = set()
@@ -941,7 +957,8 @@ class ReactionForm(EditPanelForm):
     def  OnRxnStatusChoice (self, evt):    
         """Callback for the change reaction status, bezier curve or straight line."""
         status = self.rxnStatusDropDown.GetValue()
-        if status == 'Bezier Curve':
+        # TODO this is hardcoded. If the text changes this wouldn't work
+        if status == 'Bezier curve':
            bezierCurves = True
         else:
            bezierCurves = False 
@@ -951,6 +968,26 @@ class ReactionForm(EditPanelForm):
         self.controller.start_group()
         for rxn in rxns:
             self.controller.set_reaction_bezier_curves(self.net_index, rxn.index, bezierCurves)
+        post_event(DidModifyReactionEvent(list(self._selected_idx)))
+        self.controller.end_group()
+
+    def ModifierTipCallback(self, evt):    
+        """Callback for the change reaction status, bezier curve or straight line."""
+        status = self.mod_tip_dropdown.GetValue()
+        entry: ModifierTipStyle
+        for e in ModifierTipStyle:
+            if e.value == status:
+                entry = e
+                break
+        else:
+            assert False, ('Unable to find corresponding enum entry to dropdown selection. ' +
+            'This is not supposed to happen.')
+
+        rxns = get_rxns_by_idx(self._reactions, self._selected_idx)
+        self._self_changes = True
+        self.controller.start_group()
+        for rxn in rxns:
+            self.controller.set_modifier_tip_style(self.net_index, rxn.index, entry)
         post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
 
@@ -1180,7 +1217,6 @@ class ReactionForm(EditPanelForm):
             reai = reaction.index
             self.id_ctrl.Enable()
             fill = reaction.fill_color
-            bezierCurves = reaction.bezierCurves
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
             self.ratelaw_ctrl.Enable()
@@ -1200,16 +1236,18 @@ class ReactionForm(EditPanelForm):
             self.auto_center_ctrl.Disable()
             self.center_pos_ctrl.Disable()
             self._UpdateStoichFields(0, [], [])
-            bezierCurves = all(r.bezierCurves for r in reactions)
             self.modifiers_ctrl.Disable()
             self._UpdateModifierSelection(set())
 
+        bezierCurves = all(r.bezierCurves for r in reactions)
+        mod_tip_style = self._GetMultiEnum(list(r.modifier_tip_style for r in reactions), ModifierTipStyle.CIRCLE)
         stroke_width = self._GetMultiFloatText(set(r.thickness for r in reactions), prec)
 
         self.id_ctrl.ChangeValue(id_text)
         self.fill_ctrl.SetColour(fill)
         self.ratelaw_ctrl.ChangeValue(ratelaw_text)
         self.stroke_width_ctrl.ChangeValue(stroke_width)
+        self.mod_tip_dropdown.SetValue(mod_tip_style.value)
 
         if on_msw():
             self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))

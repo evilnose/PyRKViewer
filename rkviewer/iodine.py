@@ -11,7 +11,7 @@ TODOs
 from __future__ import annotations
 
 from marshmallow.decorators import post_load
-from .mvc import (IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexError,
+from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexError,
                   ReactionIndexError, NodeIndexError, CompartmentIndexError, StoichError,
                   StackEmptyError, JSONError, FileError)
 from .canvas.geometry import Vec2
@@ -148,6 +148,7 @@ class TReaction:
     centerHandlePos: Vec2 = Vec2()
     bezierCurves: bool = True  # If false it means a straight line
     modifiers: Set[int] = field(default_factory=set)
+    tipStyle: ModifierTipStyle = ModifierTipStyle.CIRCLE
 
 
 @dataclass
@@ -2337,6 +2338,16 @@ def getReactionModifiers(neti: int, reai: int) -> Set[int]:
     return copy.copy(r.modifiers)
 
 
+def setModifierTipStyle(neti: int, reai: int, tipStyle: ModifierTipStyle):
+    r = _getReaction(neti, reai)
+    r.tipStyle = tipStyle
+
+
+def getModifierTipStyle(neti: int, reai: int) -> ModifierTipStyle:
+    r = _getReaction(neti, reai)
+    return r.tipStyle
+
+
 def setReactionCenterHandlePosition(neti: int, reai: int, centerHandlePosX: float, centerHandlePosY: float):
     """
     setReactionCenterHandlePosition setReactionCenterHandlePosition
@@ -2573,6 +2584,27 @@ def reset():
 '''Code for serialization/deserialization.'''
 
 
+class EnumField(fields.Field):
+    def __init__(self, enum_class):
+        super().__init__()
+        choices = [entry.value for entry in enum_class]
+        for choice in choices:
+            if not isinstance(choice, str):
+                raise ValueError('The enum class given to EnumField must have string values!')
+        self.enum_class = enum_class
+        self.str_field = fields.Str(validate=validate.OneOf(choices))
+
+    def _serialize(self, entry, attr, obj, **kwargs):
+        return entry.value
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        self.str_field.validate(value)
+        for entry in self.enum_class:
+            if entry.value == value:
+                return entry
+        assert False, "Not supposed to reach here"
+
+
 class Color(fields.Field):
     """Field that represents an RGBA color.
 
@@ -2685,6 +2717,7 @@ class ReactionSchema(Schema):
     centerHandlePos = Dim2()
     bezierCurves = fields.Bool()
     modifiers = fields.List(fields.Int())
+    tipStyle = EnumField(ModifierTipStyle)
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TReaction:

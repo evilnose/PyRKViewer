@@ -15,7 +15,7 @@ from rkviewer.config import DEFAULT_ARROW_TIP
 import wx
 import copy
 from contextlib import contextmanager
-from rkviewer.mvc import IController
+from rkviewer.mvc import IController, ModifierTipStyle
 from typing import KeysView, List, Optional, Set, Tuple, Union
 from rkviewer.canvas import data
 from rkviewer.canvas.state import cstate, ArrowTip
@@ -147,6 +147,7 @@ class ReactionData:
     using_bezier: bool = field(default=True)
     index: int = field(default=-1)
     modifiers: Set[int] = field(default_factory=set)
+    modifier_tip_style: ModifierTipStyle = field(default=ModifierTipStyle.CIRCLE)
 
     @property
     def centroid(self) -> Vec2:
@@ -328,6 +329,7 @@ def _translate_reaction(reaction: Reaction) -> ReactionData:
         center_pos=reaction.center_pos,
         using_bezier=reaction.bezierCurves,
         modifiers=reaction.modifiers,
+        modifier_tip_style=reaction.modifier_tip_style,
     )
 
 
@@ -869,7 +871,8 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
 def update_reaction(net_index: int, reaction_index: int, id: str = None,
                     fill_color: Color = None, thickness: float = None, ratelaw: str = None,
                     handle_positions: List[Vec2] = None,
-                    center_pos: Union[Vec2, CustomNone] = CustomNone(), use_bezier: bool = None):
+                    center_pos: Union[Vec2, CustomNone] = CustomNone(), use_bezier: bool = None,
+                    modifier_tip_style: ModifierTipStyle = ModifierTipStyle.CIRCLE):
     """
     Update one or multiple properties of a reaction.
 
@@ -887,6 +890,7 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
                     as nodes are moved.
         use_bezier: If specified, whether to use Bezier curves when drawing the reaction. If False,
                     simply use straight lines.
+        modifier_tip_style The modifier tip style.
 
     Note:
         This is *not* an atomic function, meaning if we failed to set one specific property, the
@@ -921,6 +925,8 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
             _controller.set_reaction_center(net_index, reaction_index, center_pos)
         if use_bezier is not None:
             _controller.set_reaction_bezier_curves(net_index, reaction_index, use_bezier)
+        if modifier_tip_style is not None:
+            _controller.set_modifier_tip_style(net_index, reaction_index, modifier_tip_style)
     
 
 def get_selected_node_indices(net_index: int) -> Set[int]:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 # pylint: disable=maybe-no-member
 from dataclasses import dataclass
+from enum import Enum
 import wx
 import copy
 import math
@@ -142,6 +143,11 @@ def init_bezier():
         INITIALIZED = True
 
 
+class ModifierTipStyle(Enum):
+    CIRCLE = 'circle'
+    TEE = 'tee'
+
+
 @dataclass
 class Reaction:
     id: str
@@ -158,12 +164,13 @@ class Reaction:
     handles: List[HandleData]
     bezierCurves: bool
     modifiers: Set[int]
+    modifier_tip_style: ModifierTipStyle
 
     def __init__(self, id: str, net_index: int, *, sources: List[int], targets: List[int],
                  handle_positions: List[Vec2], fill_color: wx.Colour,
                  line_thickness: float, rate_law: str, center_pos: Optional[Vec2] = None,
                  bezierCurves: bool = True, modifiers: Set[int] = None,
-                 index: int = -1):
+                 modifier_tip_style: ModifierTipStyle = ModifierTipStyle.CIRCLE, index: int = -1):
         """Constructor for a reaction.
 
         Args:
@@ -189,6 +196,7 @@ class Reaction:
         self._targets = targets
         self._thickness = line_thickness
         self.bezierCurves = bezierCurves
+        self.modifier_tip_style = modifier_tip_style
         if modifiers is None:
             modifiers = set()
         self.modifiers = modifiers

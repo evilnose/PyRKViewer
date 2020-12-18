@@ -532,8 +532,8 @@ class ReactionElement(CanvasElement):
             # create segment
             segment = (node_center, rxn_center)
             diff = node_center - rxn_center
-            rxn_intersection = rxn_center + diff.normalized(RXN_PAD)
-            node_intersection = segment_rect_intersection(segment, clipping_rect)
+            rxn_intersection = (rxn_center + diff.normalized(RXN_PAD)) * cstate.scale
+            node_intersection = segment_rect_intersection(segment, clipping_rect) * cstate.scale
 
             # gc.StrokeLine(*node_intersection, *rxn_intersection)
             path = gc.CreatePath()

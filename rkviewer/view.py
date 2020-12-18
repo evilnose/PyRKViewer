@@ -394,6 +394,23 @@ class MainPanel(wx.Panel):
         self.Layout()
 
 
+class NetworkPrintout(wx.Printout):
+    def __init__(self, img: wx.Image):
+        super().__init__()
+        self.image = img
+    
+    def OnPrintPage(self, pageNum: int):
+        if pageNum > 1:
+            return False
+
+        self.FitThisSizeToPage(self.image.GetSize())
+        dc = self.GetDC()
+        assert dc.CanDrawBitmap()
+        dc.DrawBitmap(wx.Bitmap(self.image), wx.Point(0, 0))
+
+        return True
+
+
 class MainFrame(wx.Frame):
     """The main frame."""
     save_item: wx.MenuItem
@@ -420,6 +437,10 @@ class MainFrame(wx.Frame):
         self.controller = controller
         self.canvas = canvas
 
+        def add_item(menu: wx.Menu, menu_name, callback):
+            id_ = menu.Append(-1, menu_name).Id
+            menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
+
         entries = list()
         menu_bar = wx.MenuBar()
 
@@ -444,8 +465,11 @@ class MainFrame(wx.Frame):
         self.AddMenuItem(file_menu, '&Reload Settings', 'Reload settings',
                          lambda _: self.ReloadSettings(),  entries)
         file_menu.AppendSeparator()
-        self.AddMenuItem(file_menu, '&Export...', 'Export Network as an image or pdf',
-                         lambda _: self.ExportNetwork(),  entries)
+        align_menu = wx.Menu()
+        add_item(align_menu, 'Export .png...', lambda: self.ExportAs(wx.BITMAP_TYPE_PNG, 'PNG', 'PNG files (.png)|.png'))
+        add_item(align_menu, 'Export .jpg...', lambda: self.ExportAs(wx.BITMAP_TYPE_JPEG, 'JPEG', 'JPEG files (.jpg)|.jpg'))
+        add_item(align_menu, 'Export .bmp...', lambda: self.ExportAs(wx.BITMAP_TYPE_BMP, 'BMP', 'BMP files (.bmp)|.bmp'))
+        file_menu.AppendSubMenu(align_menu, '&Export As...')
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Print...', 'Print Network',
                          lambda _: self.PrintNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('P')))
@@ -667,15 +691,50 @@ class MainFrame(wx.Frame):
         self.controller.new_network()
 
     def PrintNetwork(self):
+        img = self._GetExportImage()
+        if not img:
+            return
+
+        # Pass two printout objects: for preview, and possible printing.
+        printer = wx.Printer()
+        printout = NetworkPrintout(img)
+        printer.Print(self, printout, True)
+
+    def ExportNetwork(self):
+        self.main_panel.canvas.ShowWarningDialog("Export not yet implemented")
+
+    def _GetExportImage(self) -> Optional[wx.Image]:
         img = self.main_panel.canvas.DrawActiveRectToImage()
         if img is None:
             self.canvas.ShowWarningDialog(
                 'There are no relevant elements (nodes/reactions/compartments) on the canvas! Print aborted.')
-            return
-        img.SaveFile('printout.png', type=wx.BITMAP_TYPE_PNG)
+            return None
+        return img
 
-    def ExportNetwork(self):
-        self.main_panel.canvas.ShowWarningDialog("Export not yet implemented")
+    def ExportAs(self, btype, type_name: str, wildcard: str):
+        """Export as the type given by btype (wx.BitmapType). btype is passed to SaveFile()
+        """
+        img = self._GetExportImage()
+        if img is None:
+            return
+
+        with wx.FileDialog(self, "Save {} file".format(type_name), wildcard=wildcard,
+                           style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return  # the user changed their mind
+            pathname = fileDialog.GetPath()
+            try:
+                net_index = 0
+                net_json = self.controller.dump_network(net_index)
+                with open(pathname, 'w') as file:
+                    json.dump(net_json, file, sort_keys=True, indent=4)
+
+                # Allow Save action, since we now know where to save to
+                self.last_save_path = pathname
+                self.save_item.Enable()
+            except IOError:
+                wx.LogError("Cannot save current data in file '{}'.".format(pathname))
+            img.SaveFile(pathname, type=btype)
 
     def SaveJson(self):
         if self.last_save_path is None:

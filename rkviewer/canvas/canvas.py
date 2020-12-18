@@ -31,7 +31,7 @@ from ..events import (
 from ..mvc import IController
 from ..utils import even_round, opacity_mul, resource_path
 from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
-from .elements import CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
+from .elements import BezierHandle, CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
     Rect,
     Vec2, circle_bounds,
@@ -1285,22 +1285,19 @@ class Canvas(wx.ScrolledWindow):
                             ol.hovering = False
                             redraw = True
 
-                if self.hovered_element and self.hovered_element.pos_inside(logical_pos):
-                    # still in the same hovered element
-                    moved = self.hovered_element.on_mouse_move(logical_pos)
-                    if moved:
-                        redraw = True
-                else:
-                    # Likely hovering on something else
-                    hovered: Optional[CanvasElement] = None
-                    for el in reversed(self._elements):
-                        if not el.enabled:
-                            continue
-                        if el.pos_inside(logical_pos):
-                            hovered = el
-                            break
+                # Likely hovering on something else
+                hovered: Optional[CanvasElement] = None
+                for el in reversed(self._elements):
+                    if not el.enabled:
+                        continue
+                    if el.pos_inside(logical_pos):
+                        hovered = el
+                        break
 
-                    assert(hovered is None or (self.hovered_element is not hovered))
+                if hovered is not None and hovered is self.hovered_element:
+                    moved = self.hovered_element.on_mouse_move(logical_pos)
+                    redraw = moved
+                else:
                     if self.hovered_element is not None:
                         self.hovered_element.on_mouse_leave(logical_pos)
                     if hovered is not None:

@@ -23,7 +23,7 @@ metadata = PluginMetadata(
     author='Jin Xu, Herbert M Sauro',
     version='0.0.1',
     short_desc='Random network.',
-    long_desc='Display a random network.',
+    long_desc='Display a random network with certain number of species and reactions as input.',
     category=PluginCategory.UTILITIES
 )
 

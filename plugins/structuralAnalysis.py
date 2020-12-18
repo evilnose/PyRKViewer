@@ -20,9 +20,9 @@ from dataclasses import dataclass
 metadata = PluginMetadata(
     name='StructuralAnalysis',
     author='Jin Xu',
-    version='0.1',
+    version='0.0.1',
     short_desc='Structural Analysis.',
-    long_desc='Perform Structural Analysis.',
+    long_desc='StructuralAnalysis Plugin is to calculate and visualize the stoichiometry matrix and conserved moieties for the network.',
     category=PluginCategory.ANALYSIS
 )
 

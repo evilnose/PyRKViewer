@@ -57,6 +57,12 @@
             255
         ],
         "mode_panel_width": 100,
+        "modifier_line_color": [
+            202,
+            148,
+            255
+        ],
+        "modifier_line_width": 2.0,
         "node_border": [
             255,
             108,
@@ -80,9 +86,9 @@
         "node_height": 30.0,
         "node_width": 50.0,
         "overall_bg": [
-            255,
-            112,
-            0
+            240,
+            240,
+            240
         ],
         "product_border": [
             0,

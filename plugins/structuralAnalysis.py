@@ -1,5 +1,3 @@
-
-
 """
 Do the structural analysis.
 Version 0.01: Author: Jin Xu (2020)

@@ -18,9 +18,10 @@ import numpy as np
 import random
 from dataclasses import dataclass
 import networkx as nx
+import rkviewer.canvas.utils as cu
 
 metadata = PluginMetadata(
-    name='AutolayoutNetworkX',
+    name='Auto Layout',
     author='Carmen and Herbert M Sauro',
     version='0.5.2',
     short_desc='Auto Layout using networkX.',
@@ -97,7 +98,7 @@ class LayoutNetworkX(WindowedPlugin):
         originalPos = {}
         def generateGraph():
             nodes = np.array(list(api.get_node_indices(0)))
-            reactionsInd =  np.array(list(api.get_reaction_indices(0)))
+            #reactionsInd =  np.array(list(api.get_reaction_indices(0)))
             cStr = np.empty_like(reactionsInd, dtype=str)
             cStr[:,] = "c"
             centroidId = np.char.add(cStr, reactionsInd.astype(str))
@@ -133,23 +134,21 @@ class LayoutNetworkX(WindowedPlugin):
             for rea in api.get_reactions(0):
                 cent = api.compute_centroid(0, rea.sources, rea.targets)
                 #originalPos[centroidId[cn]] = list([cent.x, cent.y])
-                originalPos[centroidId[cn]] = list([random.randint(0,600), random.randint(0,600)])
+                originalPos[cn] = list([random.randint(0,600), random.randint(0,600)])
                 cn = cn + 1
-            cn = 0
+            
             for nod in api.get_nodes(0):
                 #originalPos[nodesId[cn]] = list([nod.position.x, nod.position.y])
                 # random.randint(0,500), nod.position.y+random.randint (0,500)])
-                originalPos[nodesId[cn]] = list([random.randint(0,600), random.randint (0,600)])
+                originalPos[cn] = list([random.randint(0,600), random.randint (0,600)])
                 cn = cn + 1
         generateGraph()
-        print(nx.to_dict_of_lists(G))
+        #print(nx.to_dict_of_lists(G))
         nodeIds = list (api.get_node_indices(0))
         with api.group_action():   
             for t in range(20):
                 pos = (nx.fruchterman_reingold_layout(G, k = self.kValue, iterations = self.MaxIterValue, scale = self.scaleValue, pos = originalPos))
                 positions = np.array(list(pos.values()))
-                centroids = positions[0: len(reactionsInd)]
-                nodes = positions[len(reactionsInd): len(positions)]
                 minX = 0
                 minY = 0
                 for p in positions:
@@ -157,7 +156,9 @@ class LayoutNetworkX(WindowedPlugin):
                         minX = p[0]
                     if p[1] < minY:
                         minY = p[1]
-                nodes = nodes - np.array([minX, minY])
+                positions = positions - np.array([minX, minY])
+                centroids = positions[0: len(reactionsInd)]
+                nodes = positions[len(reactionsInd): len(positions)]
                 count = 0
                 for n in nodes:
                     newX = float(n[0])
@@ -175,7 +176,11 @@ class LayoutNetworkX(WindowedPlugin):
                 '''
                 
                 for r in api.get_reactions(0):
-                    handles = api.default_handle_positions(0, r.index) # centroid, sources, target
+                    currCentroid = centroids[r.index]
+                    newX = float(currCentroid[0])
+                    newY = float(currCentroid[1])
+                    #api.update_reaction(0, r.index, center_pos=(Vec2(newX, newY)))
+                    handles = api.default_handle_positions(0, r.index)
                     api.set_reaction_center_handle(0, r.index, handles[0])
                     count = 1
                     for s in r.sources:

@@ -361,35 +361,41 @@ class RandomNetwork(WindowedPlugin):
 
             return antStr_tot      
 
-        net_index = 0
-        api.clear_network(net_index)
+        test_prob = self.probUniUniValue + self.probBiUniValue + self.probUniBiValue + self.probBiBiValue
+	
+        if test_prob != 1:
+            wx.MessageBox("The sum of probabilities should be one!", "Message", wx.OK | wx.ICON_INFORMATION)
 
-        rl = _generateReactionList (self.numSpecsValue, self.numRxnsValue)
-        st = _getFullStoichiometryMatrix (rl)
-        antStr = _getRateLaw (st[1], st[2], rl, isReversible=True)
-        numNodes = st.shape[0]
-        numRxns = st.shape[1]
+        else:
+            net_index = 0
+            api.clear_network(net_index)
 
-        nodeIdx = []
-        for i in range (numNodes):
-            nodeIdx.append ( api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 204, 153),
-                    border_color=api.Color(255, 108, 9),
-                    position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800))))
-       
-        for i in range (numRxns):
-            src = []
-            dest = []
-          
-            for j in range(numNodes):
-                if (st.item(j,i) == -1):
-                    src.append(nodeIdx[j])  
-                if (st.item(j,i) == 1):
-                    dest.append(nodeIdx[j])
-            r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(91, 176, 253))
+            rl = _generateReactionList (self.numSpecsValue, self.numRxnsValue)
+            st = _getFullStoichiometryMatrix (rl)
+            antStr = _getRateLaw (st[1], st[2], rl, isReversible=True)
+            numNodes = st.shape[0]
+            numRxns = st.shape[1]
+
+            nodeIdx = []
+            for i in range (numNodes):
+                nodeIdx.append ( api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 204, 153),
+                        border_color=api.Color(255, 108, 9),
+                        position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800))))
         
-        # Need to remove orphan nodes
-        for i in range (numNodes):
-            if _np.array_equal(st[i,:], _np.zeros(numRxns)):
-                api.delete_node(net_index, nodeIdx[i])
-       
+            for i in range (numRxns):
+                src = []
+                dest = []
+            
+                for j in range(numNodes):
+                    if (st.item(j,i) == -1):
+                        src.append(nodeIdx[j])  
+                    if (st.item(j,i) == 1):
+                        dest.append(nodeIdx[j])
+                r_idx = api.add_reaction(net_index, 'reaction_{}'.format(i), src, dest, fill_color=api.Color(91, 176, 253))
+            
+            # Need to remove orphan nodes
+            for i in range (numNodes):
+                if _np.array_equal(st[i,:], _np.zeros(numRxns)):
+                    api.delete_node(net_index, nodeIdx[i])
+        
 

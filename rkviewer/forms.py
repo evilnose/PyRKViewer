@@ -553,11 +553,11 @@ class NodeForm(EditPanelForm):
 
         self.nodeStates = ['Floating Node', 'Boundary Node'] 
         self.nodeStatusDropDown = wx.ComboBox(self, choices=self.nodeStates, style=wx.CB_READONLY)
-        self._AppendControl(sizer, 'Node Status', self.nodeStatusDropDown)
+        self._AppendControl(sizer, 'node status', self.nodeStatusDropDown)
         self.nodeStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeStatusChoice)
 
         self.lockNodeCheckBox = wx.CheckBox(self, label = '') 
-        self._AppendControl(sizer, 'Lock Node', self.lockNodeCheckBox)
+        self._AppendControl(sizer, 'lock node', self.lockNodeCheckBox)
         self.lockNodeCheckBox.Bind (wx.EVT_CHECKBOX, self.OnNodeLockCheckBox)
 
  
@@ -905,7 +905,7 @@ class ReactionForm(EditPanelForm):
         self.reactant_stoich_ctrls = list()
         self.product_stoich_ctrls = list()
 
-        states = ['Bezier curve', 'Straight line'] 
+        states = ['bezier curve', 'straight line'] 
         self.rxnStatusDropDown = wx.ComboBox(self, choices=states, style=wx.CB_READONLY)
         self._AppendControl(sizer, 'reaction status', self.rxnStatusDropDown)
         self.rxnStatusDropDown.Bind(wx.EVT_COMBOBOX, self.OnRxnStatusChoice)
@@ -958,7 +958,7 @@ class ReactionForm(EditPanelForm):
         """Callback for the change reaction status, bezier curve or straight line."""
         status = self.rxnStatusDropDown.GetValue()
         # TODO this is hardcoded. If the text changes this wouldn't work
-        if status == 'Bezier curve':
+        if status == 'bezier curve':
            bezierCurves = True
         else:
            bezierCurves = False 

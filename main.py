@@ -8,13 +8,14 @@ from rkviewer.view import View
 from rkviewer.controller import Controller
 # Import rkplugin stuff for PyInstaller to include the file in the bundle. For some reason, it's
 # only necessary to do so for rkplugin.events but not other rkplugin files.
-import rkplugin.events
+import os
+from pathlib import Path
 
 
 class ExceptionDialog(wx.MessageDialog):
     def __init__(self, msg):
         """Constructor"""
-        super().__init__(None, msg, "Unknown Exception", wx.OK|wx.ICON_ERROR)  
+        super().__init__(None, msg, "Unknown Exception", wx.OK | wx.ICON_ERROR)
 
 
 # for monkey-patching exceptions
@@ -22,6 +23,7 @@ def create_excepthook(old_excepthook):
     dlg = None
     # whether we've already displayed the dialog once, since wx might take some time to die
     over = False
+
     def custom_excepthook(etype, value, tb):
         nonlocal over, dlg
         if over:
@@ -34,8 +36,20 @@ def create_excepthook(old_excepthook):
         if dlg is None:
             dlg = ExceptionDialog(err_msg)
             dlg.ShowModal()
-            wx.GetApp().GetTopWindow().Destroy()
-            dlg.Destroy() 
+
+            # HACK get the parent directory of the file that threw the error. If that directory
+            # is "plugins", then don't terminate the program. This makes sure that a faulty
+            # plugin doesn't crash everything.
+            # But, this is a bit hacky since "plugins" is hardcoded.
+            origin_filepath = tb.tb_frame.f_code.co_filename  # Origin file of error
+            abs_path = os.path.abspath(origin_filepath)  # Absolute path
+            abs_path = Path(abs_path)
+            parent_dir = abs_path.parent  # Get full parent path of error file
+            parent_dir = getattr(parent_dir, "name")  # Get last part (directory) of parent
+            if parent_dir != 'plugins':
+                wx.GetApp().GetTopWindow().Destroy()
+
+            dlg.Destroy()
             dlg = None
 
     return custom_excepthook

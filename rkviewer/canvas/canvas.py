@@ -869,8 +869,9 @@ class Canvas(wx.ScrolledWindow):
             add_item(menu, 'Delete', self.DeleteSelectedItems)
 
         if len(selected_nodes) != 0:
-            owner_comps = set(node.comp_idx for node in self.sel_nodes)
-            if len(owner_comps) == 1:
+            # Only allow align when the none of the nodes are in a compartment. This prevents
+            # nodes inside a compartment being arranged outside.
+            if not any(node.comp_idx != -1 for node in self.sel_nodes):
                 # Only allow alignment if all selected nodes are in the same compartment
                 # Add alignment options
 

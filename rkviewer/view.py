@@ -242,6 +242,9 @@ class TabbedToolbar(wx.Notebook):
     def AddPluginPages(self):
         categories = self.manager.get_plugins_by_category()
         for cat in PluginCategory:
+            if len(categories[cat]) == 0:
+                continue
+
             tb = Toolbar(self)
             for name, callback, bitmap in categories[cat]:
                 if bitmap is None:

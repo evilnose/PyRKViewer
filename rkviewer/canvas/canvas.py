@@ -1097,6 +1097,7 @@ class Canvas(wx.ScrolledWindow):
             Align selected nodes in a net grid manner
             '''
             with api.group_action():
+                s = api.GetSelectedNodes(0)
                 s = api.get_selected_node_indices(0)
                 x = 40
                 y = 40
@@ -1111,33 +1112,53 @@ class Canvas(wx.ScrolledWindow):
                 self.setDefaultHandles()
 
         if alignment == Alignment.HORIZONTAL:
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                yMin = self.findMinY(s)
-                yMax = self.findMaxY(s)
-                ypos = math.floor((yMax + yMin)/2)
-                x = 40
-                for a in s:
-                    newPos = Vec2(x, ypos)
-                    api.move_node(0, a, newPos)
-                    x = x + 130
+
+           # Sort the selected nodes in x position ascending order
+           nodes = api.get_nodes(0)
+           nodes.sort(key=lambda x: x.position.x, reverse=False)
+           
+           # find the average distance beteeen the selected nodes
+           averageDistance = 0.0
+           for count in range (1, len (nodes)):
+               node2 = api.get_node_by_index (0, nodes[count-1].index)
+               node1 = api.get_node_by_index (0, nodes[count].index)             
+               averageDistance += (node1.position.x + node1.size.x) - node2.position.x
+           averageDistance = averageDistance / len (nodes)
+           
+           with api.group_action():
+                # x = Position of left most node
+                x = nodes[0].position.x
+                # Arrange nodes with equal distance between them
+                for count in range (len (nodes)):
+                    newPos = Vec2(x, nodes[count].position.y)
+                    api.move_node(0, nodes[count].index, newPos)
+                    x = x + averageDistance
                 self.setDefaultHandles()
 
         if alignment == Alignment.VERTICAL:
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                xMin = self.findMinX(s)
-                xMax = self.findMaxX(s)
-                xpos = math.floor((xMax + xMin)/2)
-                y = 40
-                for a in s:
-                    newPos = Vec2(xpos, y)
-                    api.move_node(0, a, newPos)
-                    y = y + 130
-                self.setDefaultHandles()
 
-        #raise NotImplementedError('Align Not Implemented!')
-
+           # Sort the selected nodes in y position ascending order
+           nodes = api.get_nodes(0)
+           nodes.sort(key=lambda x: x.position.y, reverse=False)
+           
+           # find the average distance beteeen the selected nodes
+           averageDistance = 0.0
+           for count in range (1, len (nodes)):
+               node2 = api.get_node_by_index (0, nodes[count-1].index)
+               node1 = api.get_node_by_index (0, nodes[count].index)             
+               averageDistance += (node1.position.y + node1.size.y) - node2.position.y
+           averageDistance = averageDistance / len (nodes)
+           
+           with api.group_action():
+                # y = Position of top most node
+                y = nodes[0].position.y
+                # Arrange nodes with equal distance between them
+                for count in range (len (nodes)):
+                    newPos = Vec2(nodes[count].position.x, y)
+                    api.move_node(0, nodes[count].index, newPos)
+                    y = y + averageDistance
+                self.setDefaultHandles()            
+            
     # TODO improve this. we might want a special mouseLeftWindow event
 
     def _EndDrag(self, evt: wx.MouseEvent):

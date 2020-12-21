@@ -861,12 +861,22 @@ class Canvas(wx.ScrolledWindow):
         total_selected = len(selected_nodes) + len(selected_reactions) + len(selected_comps)
         menu = wx.Menu()
 
-        def add_item(menu: wx.Menu, menu_name, callback):
-            id_ = menu.Append(-1, menu_name).Id
-            menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
+
+        #def add_item(menu: wx.Menu, menu_name, callback):
+        #    qmi = wx.MenuItem(menu, -1, menu_name)
+        #    #qmi.SetBitmap(wx.Bitmap('exit.png'))
+        #    id_ = menu.Append(qmi) # (-1, menu_name).Id
+        #    menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
+
+        def add_item(menu: wx.Menu, menu_name, image_name, callback):
+            item = menu.Append(-1, menu_name)
+
+            if image_name != '':
+               item.SetBitmap(wx.Bitmap(resource_path(image_name)))
+            menu.Bind(wx.EVT_MENU, lambda _: callback(), id=item.Id)
 
         if total_selected != 0:
-            add_item(menu, 'Delete', self.DeleteSelectedItems)
+            add_item(menu, 'Delete', '', self.DeleteSelectedItems)
 
         if len(selected_nodes) != 0:
             # Only allow align when the none of the nodes are in a compartment. This prevents
@@ -877,19 +887,22 @@ class Canvas(wx.ScrolledWindow):
 
                 menu.AppendSeparator()
                 align_menu = wx.Menu()
-                add_item(align_menu, 'Align Left', lambda: self.AlignSelectedNodes(Alignment.LEFT))
-                add_item(align_menu, 'Align Right', lambda: self.AlignSelectedNodes(Alignment.RIGHT))
-                add_item(align_menu, 'Align Center',
+                add_item(align_menu, 'Align Left', 'alignLeft_XP.png', lambda: self.AlignSelectedNodes(Alignment.LEFT))
+                add_item(align_menu, 'Align Right', 'alignRight_XP.png', lambda: self.AlignSelectedNodes(Alignment.RIGHT))
+                add_item(align_menu, 'Align Center', 'alignHorizCenter_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.CENTER))
-                add_item(align_menu, 'Align Top', lambda: self.AlignSelectedNodes(Alignment.TOP))
-                add_item(align_menu, 'Align Bottom',
+                align_menu.AppendSeparator()
+                add_item(align_menu, 'Align Top', 'alignTop_XP.png', lambda: self.AlignSelectedNodes(Alignment.TOP))
+                add_item(align_menu, 'Align Bottom', 'AlignBottom_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.BOTTOM))
-                add_item(align_menu, 'Align Middle',
+                add_item(align_menu, 'Align Middle', 'alignVertCenter_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.MIDDLE))
-                add_item(align_menu, 'Grid', lambda: self.AlignSelectedNodes(Alignment.GRID))
-                add_item(align_menu, 'Arrange Horizontally',
+                align_menu.AppendSeparator()
+                add_item(align_menu, 'Grid', 'alignOnGrid_XP.png', lambda: self.AlignSelectedNodes(Alignment.GRID))
+                align_menu.AppendSeparator()
+                add_item(align_menu, 'Arrange Horizontally', 'alignHorizEqually_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))
-                add_item(align_menu, 'Arrange Vertically',
+                add_item(align_menu, 'Arrange Vertically', 'alignVertEqually_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.VERTICAL))
                 menu.AppendSubMenu(align_menu, text='Align...')
 

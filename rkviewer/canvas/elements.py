@@ -284,6 +284,9 @@ class ReactionCenter(CanvasElement):
         self.hovering = False
 
     def on_paint(self, gc: wx.GraphicsContext):
+        if not self.parent.selected:
+           return
+
         # draw centroid
         color = self.parent.reaction.fill_color
         if self.parent.selected:

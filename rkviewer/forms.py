@@ -117,6 +117,17 @@ class EditPanelForm(ScrolledPanel):
     def CreateControls(self, sizer: wx.GridSizer):
         pass
 
+    def CreateTextCtrl(self, **kwargs):
+        """Create a text control that confirms to the theme."""
+        if get_theme('text_field_border'):
+            style = 0
+        else:
+            style = wx.BORDER_NONE
+        ctrl = wx.TextCtrl(self, style=style, **kwargs)
+        ctrl.SetBackgroundColour(get_theme('text_field_bg'))
+        ctrl.SetForegroundColour(get_theme('text_field_fg'))
+        return ctrl
+
     def ExternalUpdate(self):
         if len(self._selected_idx) != 0 and not self._self_changes:
             self.UpdateAllFields()
@@ -169,6 +180,7 @@ class EditPanelForm(ScrolledPanel):
 
         Returns the automaticaly created label and info badge (wx.StaticText for now).
         """
+
         label = wx.StaticText(self, label=label_str)
         label.SetFont(self._label_font)
         rows = sizer.GetRows()
@@ -281,7 +293,7 @@ class EditPanelForm(ScrolledPanel):
         if on_msw():
             # Windows does not support picking alpha in color picker. So we add an additional
             # field for that
-            alpha_ctrl = wx.TextCtrl(self)
+            alpha_ctrl = self.CreateTextCtrl()
             self._AppendControl(sizer, alpha_label, alpha_ctrl)
             callback = self._MakeFloatCtrlFunction(alpha_ctrl.GetId(), alpha_callback, alpha_range)
             alpha_ctrl.Bind(wx.EVT_TEXT, callback)
@@ -453,7 +465,7 @@ class NodeForm(EditPanelForm):
     border_ctrl: wx.ColourPickerCtrl
     border_alpha_ctrl: Optional[wx.TextCtrl]
     border_width_ctrl: wx.TextCtrl
-    nodeStatusDropDown : wx.ComboBox
+    nodeStatusDropDown : wx.Choice
     lockNodeCheckBox : wx.CheckBox
 
     _nodes: List[Node]  #: current list of nodes in canvas.
@@ -524,15 +536,15 @@ class NodeForm(EditPanelForm):
 
 
     def CreateControls(self, sizer: wx.GridSizer):
-        self.id_ctrl = wx.TextCtrl(self)
+        self.id_ctrl = self.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self._AppendControl(sizer, 'identifier', self.id_ctrl)
 
-        self.pos_ctrl = wx.TextCtrl(self)
+        self.pos_ctrl = self.CreateTextCtrl()
         self.pos_ctrl.Bind(wx.EVT_TEXT, self._OnPosText)
         self._AppendControl(sizer, 'position', self.pos_ctrl)
 
-        self.size_ctrl = wx.TextCtrl(self)
+        self.size_ctrl = self.CreateTextCtrl()
         self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
         self._AppendControl(sizer, 'size', self.size_ctrl)
 
@@ -546,16 +558,16 @@ class NodeForm(EditPanelForm):
             self._OnBorderColorChanged, self._BorderAlphaCallback,
             sizer)
 
-        self.border_width_ctrl = wx.TextCtrl(self)
+        self.border_width_ctrl = self.CreateTextCtrl()
         self._AppendControl(sizer, 'border width', self.border_width_ctrl)
         border_callback = self._MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
                                                       self._BorderWidthCallback, (1, 100))
         self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
 
         self.nodeStates = ['Floating Node', 'Boundary Node'] 
-        self.nodeStatusDropDown = wx.ComboBox(self, choices=self.nodeStates, style=wx.CB_READONLY)
+        self.nodeStatusDropDown = wx.Choice(self, choices=self.nodeStates)
         self._AppendControl(sizer, 'node status', self.nodeStatusDropDown)
-        self.nodeStatusDropDown.Bind (wx.EVT_COMBOBOX, self.OnNodeStatusChoice)
+        self.nodeStatusDropDown.Bind (wx.EVT_CHOICE, self.OnNodeStatusChoice)
 
         self.lockNodeCheckBox = wx.CheckBox(self, label = '') 
         self._AppendControl(sizer, 'lock node', self.lockNodeCheckBox)
@@ -699,11 +711,10 @@ class NodeForm(EditPanelForm):
             self.controller.end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
-    # ####
     def  OnNodeStatusChoice (self, evt):    
         """Callback for the change node status, floating or boundary."""
-        status = self.nodeStatusDropDown.GetValue()
-        if status == 'Floating Node':
+        selected = self.nodeStatusDropDown.GetSelection()
+        if selected == 0:
            floatingStatus = True
         else:
            floatingStatus = False 
@@ -848,9 +859,9 @@ class NodeForm(EditPanelForm):
         self.border_width_ctrl.ChangeValue(border_width)
 
         if floatingNode:
-           self.nodeStatusDropDown.SetValue('Floating Node')
+           self.nodeStatusDropDown.SetSelection(0)
         else:
-           self.nodeStatusDropDown.SetValue('Boundary Node')   
+           self.nodeStatusDropDown.SetSelection(1)
 
         if lockNode:
             self.lockNodeCheckBox.SetValue (True)
@@ -872,11 +883,11 @@ class ReactionForm(EditPanelForm):
         self.InitLayout()
 
     def CreateControls(self, sizer: wx.GridSizer):
-        self.id_ctrl = wx.TextCtrl(self)
+        self.id_ctrl = self.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self._AppendControl(sizer, 'identifier', self.id_ctrl)
 
-        self.ratelaw_ctrl = wx.TextCtrl(self)
+        self.ratelaw_ctrl = self.CreateTextCtrl()
         self.ratelaw_ctrl.Bind(wx.EVT_TEXT, self._OnRateLawText)
         self._AppendControl(sizer, 'rate law', self.ratelaw_ctrl)
 
@@ -884,7 +895,7 @@ class ReactionForm(EditPanelForm):
             'fill color', 'fill opacity',
             self._OnFillColorChanged, self._FillAlphaCallback, sizer)
 
-        self.stroke_width_ctrl = wx.TextCtrl(self)
+        self.stroke_width_ctrl = self.CreateTextCtrl()
         stroke_cb = self._MakeFloatCtrlFunction(self.stroke_width_ctrl.GetId(),
                                                 self._StrokeWidthCallback, (0.1, 100))
         self.stroke_width_ctrl.Bind(wx.EVT_TEXT, stroke_cb)
@@ -896,7 +907,7 @@ class ReactionForm(EditPanelForm):
         self.auto_center_ctrl.Bind(wx.EVT_CHECKBOX, self._AutoCenterCallback)
         self._AppendControl(sizer, 'auto center pos', self.auto_center_ctrl)
 
-        self.center_pos_ctrl = wx.TextCtrl(self)
+        self.center_pos_ctrl = self.CreateTextCtrl()
         self.center_pos_ctrl.Disable()
         self.center_pos_ctrl.Bind(wx.EVT_TEXT, self._CenterPosCallback)
         self._AppendControl(sizer, 'center position', self.center_pos_ctrl)
@@ -907,9 +918,9 @@ class ReactionForm(EditPanelForm):
         self.product_stoich_ctrls = list()
 
         states = ['bezier curve', 'straight line'] 
-        self.rxnStatusDropDown = wx.ComboBox(self, choices=states, style=wx.CB_READONLY)
+        self.rxnStatusDropDown = wx.Choice(self, choices=states)
         self._AppendControl(sizer, 'reaction status', self.rxnStatusDropDown)
-        self.rxnStatusDropDown.Bind(wx.EVT_COMBOBOX, self.OnRxnStatusChoice)
+        self.rxnStatusDropDown.Bind(wx.EVT_CHOICE, self.OnRxnStatusChoice)
 
         self.mod_tip_dropdown = wx.ComboBox(self, choices=[e.value for e in ModifierTipStyle], style=wx.CB_READONLY)
         self._AppendControl(sizer, 'modifier tip', self.mod_tip_dropdown)
@@ -957,9 +968,9 @@ class ReactionForm(EditPanelForm):
 
     def  OnRxnStatusChoice (self, evt):    
         """Callback for the change reaction status, bezier curve or straight line."""
-        status = self.rxnStatusDropDown.GetValue()
+        selection = self.rxnStatusDropDown.GetSelection()
         # TODO this is hardcoded. If the text changes this wouldn't work
-        if status == 'bezier curve':
+        if selection == 0:
            bezierCurves = True
         else:
            bezierCurves = False 
@@ -1150,7 +1161,7 @@ class ReactionForm(EditPanelForm):
             # add back the fields
             self._reactant_subtitle = self._AppendSubtitle(sizer, 'Reactants')
             for stoich in reactants:
-                stoich_ctrl = wx.TextCtrl(self, value=no_rzeros(stoich.stoich, precision=2))
+                stoich_ctrl = self.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
                 node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
                 self._AppendControl(sizer, node_id, stoich_ctrl)
                 inner_callback = self._MakeSetSrcStoichFunction(reai, stoich.nodei)
@@ -1160,7 +1171,7 @@ class ReactionForm(EditPanelForm):
 
             self._product_subtitle = self._AppendSubtitle(sizer, 'Products')
             for stoich in products:
-                stoich_ctrl = wx.TextCtrl(self, value=no_rzeros(stoich.stoich, precision=2))
+                stoich_ctrl = self.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
                 node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
                 self._AppendControl(sizer, node_id, stoich_ctrl)
                 inner_callback = self._MakeSetDestStoichFunction(reai, stoich.nodei)
@@ -1255,9 +1266,9 @@ class ReactionForm(EditPanelForm):
          
         # HMS Replaced stings with contants 
         if bezierCurves:
-           self.rxnStatusDropDown.SetValue('Bezier Curve')
+           self.rxnStatusDropDown.SetSelection(0)
         else:
-           self.rxnStatusDropDown.SetValue('Straight Line')
+           self.rxnStatusDropDown.SetSelection(1)
 
 
 
@@ -1273,19 +1284,19 @@ class CompartmentForm(EditPanelForm):
         self.InitLayout()
 
     def CreateControls(self, sizer: wx.GridSizer):
-        self.id_ctrl = wx.TextCtrl(self)
+        self.id_ctrl = self.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self._AppendControl(sizer, 'identifier', self.id_ctrl)
 
-        self.pos_ctrl = wx.TextCtrl(self)
+        self.pos_ctrl = self.CreateTextCtrl()
         self.pos_ctrl.Bind(wx.EVT_TEXT, self._OnPosText)
         self._AppendControl(sizer, 'position', self.pos_ctrl)
 
-        self.size_ctrl = wx.TextCtrl(self)
+        self.size_ctrl = self.CreateTextCtrl()
         self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
         self._AppendControl(sizer, 'size', self.size_ctrl)
 
-        self.volume_ctrl = wx.TextCtrl(self)
+        self.volume_ctrl = self.CreateTextCtrl()
         self._AppendControl(sizer, 'volume', self.volume_ctrl)
         volume_callback = self._MakeFloatCtrlFunction(self.volume_ctrl.GetId(),
                                                       self._VolumeCallback, (0, None), left_incl=False)
@@ -1301,7 +1312,7 @@ class CompartmentForm(EditPanelForm):
             self._OnBorderColorChanged, self._BorderAlphaCallback,
             sizer)
 
-        self.border_width_ctrl = wx.TextCtrl(self)
+        self.border_width_ctrl = self.CreateTextCtrl()
         self._AppendControl(sizer, 'border width', self.border_width_ctrl)
         border_callback = self._MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
                                                       self._BorderWidthCallback, (1, 100))

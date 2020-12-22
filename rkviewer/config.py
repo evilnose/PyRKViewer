@@ -301,6 +301,12 @@ class ThemeSchema(Schema):
     reaction_radius = Dim(missing=6)
     modifier_line_color = ColorField(missing=wx.Colour(202, 148, 255))
     modifier_line_width = Dim(missing=2)
+    active_tab_fg = ColorField(missing=wx.Colour(0, 0, 0))  
+    text_field_bg = ColorField(missing=wx.Colour(255, 255, 255))
+    text_field_fg = ColorField(missing=wx.Colour(0, 0, 0))
+    text_field_border = fields.Boolean(missing=True)
+    # using ribbon style for notebooks, so no need for this
+    # active_tab_bg = ColorField(missing=wx.Colour(100, 100, 100))
     # panel_font = FontField(missing=Font(pointSize=))
 
 

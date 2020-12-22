@@ -45,10 +45,14 @@ class EditPanel(fnb.FlatNotebook):
     reaction_form: ReactionForm
     comp_form: CompartmentForm
     null_message: wx.Panel
-    FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | fnb.FNB_NODRAG | fnb.FNB_VC8 | fnb.FNB_DROPDOWN_TABS_LIST
+    FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | fnb.FNB_NODRAG |  fnb.FNB_DROPDOWN_TABS_LIST | fnb.FNB_RIBBON_TABS
 
     def __init__(self, parent, canvas: Canvas, controller: IController, **kw):
         super().__init__(parent, agwStyle=EditPanel.FNB_STYLE, **kw)
+        self.SetTabAreaColour(get_theme('toolbar_bg'))
+        self.SetNonActiveTabTextColour(get_theme('toolbar_fg'))
+        self.SetActiveTabTextColour(get_theme('active_tab_fg'))
+        # self.SetActiveTabColour(get_theme('active_tab_bg'))
 
         self.canvas = canvas
 
@@ -217,14 +221,13 @@ class Toolbar(wx.Panel):
         self.sizer.Layout()
 
 
-# TODO change to FlatNotebook?
-class TabbedToolbar(wx.Notebook):
+class TabbedToolbar(fnb.FlatNotebook):
     """Toolbar with multiple tabs, at the top of the app."""
     manager: PluginManager
 
     def __init__(self, parent, controller: IController, canvas: Canvas, edit_panel_callback,
                  manager: PluginManager, **kw):
-        super().__init__(parent, **kw)
+        super().__init__(parent, agwStyle=fnb.FNB_NO_X_BUTTON | fnb.FNB_NODRAG | fnb.FNB_NO_TAB_FOCUS | fnb.FNB_RIBBON_TABS, **kw)
         self.manager = manager
         file_tb = Toolbar(self)
         file_tb.SetForegroundColour (wx.RED)
@@ -287,9 +290,9 @@ class ModePanel(wx.Panel):
 
     def AppendModeButton(self, label: str, mode: InputMode, sizer: wx.Sizer):
         if get_theme ('btn_border'):
-           btn = wx.ToggleButton(self, label=label)
+            btn = wx.ToggleButton(self, label=label)
         else:
-           btn = wx.ToggleButton(self, label=label, style=wx.BORDER_NONE)
+            btn = wx.ToggleButton(self, label=label, style=wx.BORDER_NONE)
 
         btn.SetBackgroundColour(get_theme ('btn_bg')) 
         #font = wx.Font(11, wx.FONTFAMILY_MODERN, 0, 90, underline = False,  faceName ="") # <- if we want to change font style
@@ -387,6 +390,10 @@ class MainPanel(wx.Panel):
         # listview.SetSize(100, 200)
         self.toolbar.SetForegroundColour(get_theme('toolbar_fg'))
         self.toolbar.SetBackgroundColour(get_theme('toolbar_bg'))
+        self.toolbar.SetTabAreaColour(get_theme('toolbar_bg'))
+        self.toolbar.SetNonActiveTabTextColour(get_theme('toolbar_fg'))
+        self.toolbar.SetActiveTabTextColour(get_theme('active_tab_fg'))
+        # self.toolbar.SetActiveTabColour(get_theme('active_tab_bg'))
 
         self.edit_panel = EditPanel(self, self.canvas, self.controller,
                                     size=(get_theme('edit_panel_width'),

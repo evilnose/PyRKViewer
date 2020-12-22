@@ -1,6 +1,8 @@
 """Configuration parameters.
 """
 # pylint: disable=maybe-no-member
+from __future__ import annotations
+from dataclasses import dataclass
 from typing import Any
 from commentjson.commentjson import JSONLibraryException
 from rkviewer.utils import get_local_path
@@ -26,6 +28,43 @@ def GetConfigDir ():
 
 def GetThemeSettingsPath ():
     return os.path.join(config_dir, 'settings.json')
+
+
+@dataclass(frozen=True)
+class Color:
+    r: int
+    g: int
+    b: int
+    a: int = 255
+
+    def swapped(self, r: int = None, g: int = None, b: int = None, a: int = None) -> Color:
+        if r is None:
+            r = self.r
+        if g is None:
+            g = self.g
+        if b is None:
+            b = self.b
+        if a is None:
+            a = self.a
+        return Color(r, g, b, a)
+
+
+@dataclass
+class Font:
+    pointSize: int
+    color: Color
+    # family: str  # TODO change to enum
+    # style: str
+    # weight: str
+    # name: str
+
+    # def __init__(self):
+    #     self.pointSize = 20
+    #     self.color = Color(0, 0, 0, 255)
+    #     #self.family = "default"
+    #     #self.style = "normal"
+    #     #self.weight = "default"
+    #     #self.name = ""
 
 
 # Application based settings stored in an ini file
@@ -76,7 +115,7 @@ class AppSettings:
 
 
 # TODO merge these schema with those in iodine?
-class Color(fields.Field):
+class ColorField(fields.Field):
     """Field that represents an RGBA color.
     
     To represent the color red, you would write:
@@ -103,7 +142,7 @@ class Color(fields.Field):
     def _deserialize(self, value, attr, data, **kwargs):
         self.list_field.validate(value)
         for val in value:
-            Color.range_validate(val)
+            ColorField.range_validate(val)
         return wx.Colour(*value)
 
 
@@ -123,6 +162,35 @@ class Dim(fields.Float):
     def __init__(self, **kwargs):
         # TODO should we allow 0? Also decide for pixel
         super().__init__(validate=validate.Range(min=0), **kwargs)
+
+
+class Dim2(fields.List):
+    def __init__(self, *args, **kw):
+        super().__init__(Dim(), *args, validate=validate.Length(equal=2), **kw)
+
+    def _serialize(self, value: Vec2, attr, obj, **kwargs):
+        if value is None:
+            return None
+        return (value.x, value.y)
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        self._validate(value)
+        return Vec2(value)
+
+
+class FontField(fields.Field):
+    def __init__(self, *args, **kw):
+        pass
+
+    def _serialize(self, value: Font, attr, obj, **kwargs):
+        return vars(value)
+
+    def _validate(self, value):
+        print('hi')  # TODO 
+        pass
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        return Font(**value)
 
 
 class ThemeSchema(Schema):
@@ -148,8 +216,8 @@ class ThemeSchema(Schema):
         select_outline_width: Width of the selection outlines (i.e. outline around each selected
                               item).
         select_outline_padding: Padding of the selection outlines.
-        handle_color: Color of the Reaction Bezier curves.
-        highlighted_handle_color: Color of the Reaction Bezier curves when the cursor hovers over it
+        handle_color: ColorField of the Reaction Bezier curves.
+        highlighted_handle_color: ColorField of the Reaction Bezier curves when the cursor hovers over it
         select_box_padding: Padding of the selection rectangle (i.e. the large rectangle that
                             encompasses all the selected items).
         select_handle_length: Side length of the squares one uses to resize nodes/compartments.
@@ -172,57 +240,61 @@ class ThemeSchema(Schema):
     TODO more documentation under attributes and link to this document in Help or settings.json
     """
     # overall background of the application 
-    overall_bg = Color(missing=wx.Colour(240, 240, 240))
-    canvas_bg = Color(missing=wx.Colour(255, 255, 255))
-    toolbar_bg = Color(missing=wx.Colour(230, 230, 230))
+    overall_bg = ColorField(missing=wx.Colour(240, 240, 240))
+    canvas_bg = ColorField(missing=wx.Colour(255, 255, 255))
+    # Background color of the toolbars (i.e. panels around the canvas)
+    toolbar_bg = ColorField(missing=wx.Colour(230, 230, 230))
+    # Text color of the toolbars (i.e. panels around the canvas)
+    toolbar_fg = ColorField(missing=wx.Colour(0, 0, 0))
     canvas_width = Pixel(missing=1000)
     canvas_height = Pixel(missing=620)
     # vertical gap between toolbars and canvas
     vgap = Pixel(missing=2)
     # horizontal gap between toolbars and canvas
     hgap = Pixel(missing=2)
-    canvas_outside_bg = Color(missing=wx.Colour(160, 160, 160))
+    canvas_outside_bg = ColorField(missing=wx.Colour(160, 160, 160))
     mode_panel_width = Pixel(missing=100)
     toolbar_height = Pixel(missing=75)
     edit_panel_width = Pixel(missing=260)
-    node_fill = Color(missing=wx.Colour(255, 204, 153, 200))
-    node_border = Color(missing=wx.Colour(255, 108, 9))
+    node_fill = ColorField(missing=wx.Colour(255, 204, 153, 200))
+    node_border = ColorField(missing=wx.Colour(255, 108, 9))
     node_width = Dim(missing=50)
     node_height = Dim(missing=30)
     node_corner_radius = Pixel(missing=6)
     node_border_width = Pixel(missing=2)
     node_font_size = Pixel(missing=10)
-    node_font_color = Color(missing=wx.Colour(255, 0, 0, 100))
+    node_font_color = ColorField(missing=wx.Colour(255, 0, 0, 100))
     # Width of the outline around each selected node
     select_outline_width = Pixel(missing=2)
     # Padding of the outline around each selected node
     select_outline_padding = Pixel(missing=3)
-    # Color of control handles, e.g. resize handles, Bezier handles
-    handle_color = Color(missing=wx.Colour(0, 140, 255))
-    # Color of control handles when they are highlighted, if applicable
-    highlighted_handle_color = Color(missing=wx.Colour(128, 198, 255))
+    # ColorField of control handles, e.g. resize handles, Bezier handles
+    handle_color = ColorField(missing=wx.Colour(0, 140, 255))
+    # ColorField of control handles when they are highlighted, if applicable
+    highlighted_handle_color = ColorField(missing=wx.Colour(128, 198, 255))
     # Padding of the select box, relative to the mininum possible bbox
     select_box_padding = Pixel(missing=5)
     # Length of the squares one uses to drag resize nodes
     select_handle_length = Pixel(missing=8)
-    zoom_slider_bg = Color(missing=wx.Colour(180, 180, 180))
-    drag_fill = Color(missing=wx.Colour(0, 140, 255, 20))
-    drag_border = Color(missing=wx.Colour(0, 140, 255))
+    zoom_slider_bg = ColorField(missing=wx.Colour(180, 180, 180))
+    drag_fill = ColorField(missing=wx.Colour(0, 140, 255, 20))
+    drag_border = ColorField(missing=wx.Colour(0, 140, 255))
     drag_border_width = Pixel(missing=1)
     react_node_padding = Pixel(missing=5)
     react_node_border_width = Pixel(missing=3)
-    reactant_border = Color(missing=wx.Colour(255, 100, 100))
-    product_border = Color(missing=wx.Colour(0, 214, 125))
-    reaction_fill = Color(missing=wx.Colour(91, 176, 253))
+    reactant_border = ColorField(missing=wx.Colour(255, 100, 100))
+    product_border = ColorField(missing=wx.Colour(0, 214, 125))
+    reaction_fill = ColorField(missing=wx.Colour(91, 176, 253))
     reaction_line_thickness = Dim(missing=2)
-    selected_reaction_fill = Color(missing=wx.Colour(0, 140, 255))
-    comp_fill = Color(missing=wx.Colour(158, 169, 255, 200))
-    comp_border = Color(missing=wx.Colour(0, 29, 255))
+    selected_reaction_fill = ColorField(missing=wx.Colour(0, 140, 255))
+    comp_fill = ColorField(missing=wx.Colour(158, 169, 255, 200))
+    comp_border = ColorField(missing=wx.Colour(0, 29, 255))
     comp_border_width = Dim(missing=2)
     comp_corner_radius = Dim(missing=6)
     reaction_radius = Dim(missing=6)
-    modifier_line_color = Color(missing=wx.Colour(202, 148, 255))
+    modifier_line_color = ColorField(missing=wx.Colour(202, 148, 255))
     modifier_line_width = Dim(missing=2)
+    # panel_font = FontField(missing=Font(pointSize=))
 
 
 class RootSchema(Schema):

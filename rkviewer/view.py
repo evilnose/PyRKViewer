@@ -181,6 +181,7 @@ class ToolbarItem(wx.Panel):
                                    wx.ALIGN_CENTER_HORIZONTAL, size=(size[0], 20))
         fontinfo = wx.FontInfo(8)
         label_text.SetFont(wx.Font(fontinfo))
+        label_text.SetForegroundColour(get_theme('toolbar_fg'))
 
         sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_HORIZONTAL)
         self.sizer.Add(button, sizerflags.Border(wx.TOP, 5))
@@ -214,6 +215,7 @@ class Toolbar(wx.Panel):
         self.sizer.Layout()
 
 
+# TODO change to FlatNotebook?
 class TabbedToolbar(wx.Notebook):
     """Toolbar with multiple tabs, at the top of the app."""
     manager: PluginManager
@@ -280,8 +282,7 @@ class ModePanel(wx.Panel):
 
     def AppendModeButton(self, label: str, mode: InputMode, sizer: wx.Sizer):
         btn = wx.ToggleButton(self, label=label)
-        sizer.Add(btn, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
         self.btn_group.AddButton(btn, mode)
 
     def AppendNormalButton(self, label: str, callback, sizer: wx.Sizer, tooltip: str = None):
@@ -300,6 +301,7 @@ class ModePanel(wx.Panel):
 class BottomBar(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
+        self.SetForegroundColour(get_theme('toolbar_fg'))
         self.SetBackgroundColour(get_theme('toolbar_bg'))
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.SetSizer(self.sizer)
@@ -350,6 +352,7 @@ class MainPanel(wx.Panel):
                                     canvas=self.canvas,
                                     )
 
+        self.mode_panel.SetForegroundColour(get_theme('toolbar_fg'))
         self.mode_panel.SetBackgroundColour(get_theme('toolbar_bg'))
 
         # Note: setting the width to 0 doesn't matter since GridBagSizer is in control of the
@@ -358,11 +361,18 @@ class MainPanel(wx.Panel):
                                      self.ToggleEditPanel, manager,
                                      size=(0, get_theme('toolbar_height')))
 
+        # listview = self.toolbar.GetListView()
+        # listview.SetFont(wx.Font(wx.FontInfo(10.5)))
+        # listview.SetForegroundColour(get_theme('toolbar_fg'))
+        # listview.SetBackgroundColour(get_theme('toolbar_bg'))
+        # listview.SetSize(100, 200)
+        self.toolbar.SetForegroundColour(get_theme('toolbar_fg'))
         self.toolbar.SetBackgroundColour(get_theme('toolbar_bg'))
 
         self.edit_panel = EditPanel(self, self.canvas, self.controller,
                                     size=(get_theme('edit_panel_width'),
                                           get_theme('canvas_height')))
+        self.edit_panel.SetForegroundColour(get_theme('toolbar_fg'))
         self.edit_panel.SetBackgroundColour(get_theme('toolbar_bg'))
 
         # and create a sizer to manage the layout of child widgets

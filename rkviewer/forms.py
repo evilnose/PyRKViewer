@@ -89,6 +89,7 @@ class EditPanelForm(ScrolledPanel):
 
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, style=wx.VSCROLL)
+        self.SetForegroundColour(get_theme('toolbar_fg'))
         self.canvas = canvas
         self.controller = controller
         self.net_index = 0

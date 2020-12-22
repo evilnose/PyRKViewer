@@ -7,7 +7,7 @@ from typing import Any, Collection, List, Optional, Set
 import rkviewer.iodine as iod
 import logging
 
-from rkviewer.iodine import TColor, getReactionModifiers
+from rkviewer.iodine import Color, getReactionModifiers
 from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidRedoEvent, DidUndoEvent, post_event
 from .canvas.data import Compartment, Node, Reaction
@@ -139,10 +139,10 @@ class Controller(IController):
     def get_application_position(self) -> wx.Point:
         return self.initial_position
 
-    def wx_to_tcolor(self, color: wx.Colour) -> TColor:
-        return TColor(color.Red(), color.Green(), color.Blue(), color.Alpha())
+    def wx_to_tcolor(self, color: wx.Colour) -> Color:
+        return Color(color.Red(), color.Green(), color.Blue(), color.Alpha())
 
-    def tcolor_to_wx(self, color: TColor) -> wx.Colour:
+    def tcolor_to_wx(self, color: Color) -> wx.Colour:
         return wx.Colour(color.r, color.g, color.b, color.a)
 
     def add_compartment_g(self, neti: int, compartment: Compartment) -> int:

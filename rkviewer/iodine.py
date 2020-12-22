@@ -14,6 +14,7 @@ from marshmallow.decorators import post_load
 from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexError,
                   ReactionIndexError, NodeIndexError, CompartmentIndexError, StoichError,
                   StackEmptyError, JSONError, FileError)
+from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField
 from .canvas.geometry import Vec2
 import copy
 from dataclasses import dataclass, field
@@ -24,42 +25,6 @@ from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
 
 
-@dataclass(frozen=True)
-class TColor:
-    r: int
-    g: int
-    b: int
-    a: int = 255
-
-    def swapped(self, r: int = None, g: int = None, b: int = None, a: int = None) -> TColor:
-        if r is None:
-            r = self.r
-        if g is None:
-            g = self.g
-        if b is None:
-            b = self.b
-        if a is None:
-            a = self.a
-        return TColor(r, g, b, a)
-
-
-class TFont:
-    pointSize: int
-    family: str  # TODO change to enum
-    style: str
-    weight: str
-    name: str
-    color: TColor
-
-    def __init__(self):
-        self.pointSize = 20
-        self.family = "default"
-        self.style = "normal"
-        self.weight = "default"
-        self.name = ""
-        self.color = TColor(0, 0, 0, 255)
-
-
 @dataclass
 class TNode:
     id: str
@@ -68,10 +33,10 @@ class TNode:
     floating : bool  # If false it means the node is a boundary node
     nodeLocked: bool #if false it means the node can be moved
     compi: int = -1
-    fillColor: TColor = TColor(255, 150, 80, 255)
-    outlineColor: TColor = TColor(255, 100, 80, 255)
+    fillColor: Color = Color(255, 150, 80, 255)
+    outlineColor: Color = Color(255, 100, 80, 255)
     outlineThickness: float = 3
-    font: TFont = TFont()
+    font: Font = Font(18, Color(0, 0, 0))  # TODO implement this
 
 
 class TNetwork:
@@ -143,7 +108,7 @@ class TReaction:
     rateLaw: str = ""
     reactants: Dict[int, TSpeciesNode] = field(default_factory=dict)
     products: Dict[int, TSpeciesNode] = field(default_factory=dict)
-    fillColor: TColor = TColor(255, 150, 80, 255)
+    fillColor: Color = Color(255, 150, 80, 255)
     thickness: float = 3.0
     centerHandlePos: Vec2 = Vec2()
     bezierCurves: bool = True  # If false it means a straight line
@@ -164,8 +129,8 @@ class TCompartment:
     rectSize: Vec2
     node_indices: Set[int] = field(default_factory=set)
     volume: float = 1
-    fillColor: TColor = TColor(0, 247, 255, 255)
-    outlineColor: TColor = TColor(0, 106, 255, 255)
+    fillColor: Color = Color(0, 247, 255, 255)
+    outlineColor: Color = Color(0, 106, 255, 255)
     outlineThickness: float = 2
 
 
@@ -749,7 +714,7 @@ def getNodeCoordinateAndSize(neti: int, nodei: int):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-# TODO make this return TColor
+# TODO make this return Color
 def getNodeFillColor(neti: int, nodei: int):
     """
     getNodeFillColor  rgba tulple format, rgb range int[0,255] alpha range float[0,1]
@@ -938,7 +903,8 @@ def getNodeFontFamily(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].font.family
+            raise NotImplementedError()
+            # return n.nodes[nodei].font.family
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -958,7 +924,8 @@ def getNodeFontStyle(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].font.style
+            raise NotImplementedError()
+            # return n.nodes[nodei].font.style
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -978,7 +945,8 @@ def getNodeFontWeight(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].font.weight
+            raise NotImplementedError()
+            # return n.nodes[nodei].font.weight
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -998,7 +966,8 @@ def getNodeFontName(neti: int, nodei: int):
         if nodei not in n.nodes:
             errCode = -7
         else:
-            return n.nodes[nodei].font.name
+            raise NotImplementedError()
+            # return n.nodes[nodei].font.name
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1368,7 +1337,8 @@ def setNodeFontFamily(neti: int, nodei: int, fontFamily: str):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].font.family = fontFamily
+            raise NotImplementedError()
+            # n.nodes[nodei].font.family = fontFamily
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1394,7 +1364,8 @@ def setNodeFontStyle(neti: int, nodei: int, fontStyle: str):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].font.style = fontStyle
+            raise NotImplementedError()
+            # n.nodes[nodei].font.style = fontStyle
             return
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1419,7 +1390,8 @@ def setNodeFontWeight(neti: int, nodei: int, fontWeight: str):
             errCode = -12
         else:
             _pushUndoStack()
-            n.nodes[nodei].font.weight = fontWeight
+            raise NotImplementedError()
+            # n.nodes[nodei].font.weight = fontWeight
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1442,7 +1414,8 @@ def setNodeFontName(neti: int, nodei: int, fontName: str):
             errCode = -7
         else:
             _pushUndoStack()
-            n.nodes[nodei].font.name = fontName
+            raise NotImplementedError()
+            # n.nodes[nodei].font.name = fontName
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -2494,23 +2467,23 @@ def getCompartmentID(neti: int, compi: int) -> str:
     return _getCompartment(neti, compi).id
 
 
-# TODO note that this returns a TColor instead of tuples of numbers. Should change the node &
+# TODO note that this returns a Color instead of tuples of numbers. Should change the node &
 # reaction color functions to do the same.
-def setCompartmentFillColor(neti: int, compi: int, color: TColor):
+def setCompartmentFillColor(neti: int, compi: int, color: Color):
     _pushUndoStack()
     _getCompartment(neti, compi).fillColor = color
 
 
-def getCompartmentFillColor(neti: int, compi: int) -> TColor:
+def getCompartmentFillColor(neti: int, compi: int) -> Color:
     return _getCompartment(neti, compi).fillColor
 
 
-def setCompartmentOutlineColor(neti: int, compi: int, color: TColor):
+def setCompartmentOutlineColor(neti: int, compi: int, color: Color):
     _pushUndoStack()
     _getCompartment(neti, compi).outlineColor = color
 
 
-def getCompartmentOutlineColor(neti: int, compi: int) -> TColor:
+def getCompartmentOutlineColor(neti: int, compi: int) -> Color:
     return _getCompartment(neti, compi).outlineColor
 
 
@@ -2603,71 +2576,7 @@ class EnumField(fields.Field):
             if entry.value == value:
                 return entry
         assert False, "Not supposed to reach here"
-
-
-class Color(fields.Field):
-    """Field that represents an RGBA color.
-
-    To represent the color red, you would write:
-    >>> { "some_color": [255, 0, 0] }
-
-    You may also specify its opacity. To make the color red half transparent:
-    >>> { "some": [255, 0, 0, 127] }
-
-    In short, you may specify four integer arguments RGBA in an array, which the alpha value
-    being optional and defaulting to 255, or fully opaque. Each value must be in range [0, 255].
-    """
-    list_field = fields.List(fields.Int(), validate=validate.Length(min=3, max=4))
-    range_validate = validate.Range(min=0, max=255, error='RGBA values must be between 0 and 255.')
-
-    def __init__(self, **kw):
-        super().__init__(**kw)
-
-    def _serialize(self, value: TColor, attr, obj, **kwargs):
-        ret = [value.r, value.g, value.b]
-        if value.a != 255:
-            ret += [value.a]
-        return ret
-
-    def _deserialize(self, value, attr, data, **kwargs):
-        self.list_field.validate(value)
-        for val in value:
-            Color.range_validate(val)
-        return TColor(*value)
-
-
-class Pixel(fields.Int):
-    """Field that represents some length in pixels.
-
-    The only current restriction is that this must be a nonnegative integer, or
-    >>> { "some_width": 23 }
-    """
-
-    def __init__(self):
-        super().__init__(validate=validate.Range(min=0))
-
-
-class Dim(fields.Float):
-    """Field that represents some real dimension (length)."""
-
-    def __init__(self):
-        # TODO should we allow 0? Also decide for pixel
-        super().__init__(validate=validate.Range(min=0))
-
-
-class Dim2(fields.List):
-    def __init__(self, *args, **kw):
-        super().__init__(Dim(), *args, validate=validate.Length(equal=2), **kw)
-
-    def _serialize(self, value: Vec2, attr, obj, **kwargs):
-        if value is None:
-            return None
-        return (value.x, value.y)
-
-    def _deserialize(self, value, attr, data, **kwargs):
-        self._validate(value)
-        return Vec2(value)
-
+    
 
 class FontSchema(Schema):
     # TODO use this after implemented
@@ -2676,7 +2585,7 @@ class FontSchema(Schema):
     style: str
     weight: str
     name: str
-    color: TColor
+    color: Color
 
 
 class NodeSchema(Schema):
@@ -2686,10 +2595,10 @@ class NodeSchema(Schema):
     floating = fields.Bool()
     nodeLocked = fields.Bool()
     compartment = fields.Int()
-    fillColor = Color()
-    outlineColor = Color()
+    fillColor = ColorField()
+    outlineColor = ColorField()
     outlineThickness = Dim()
-    # font: TFont
+    # font: Font
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNode:
@@ -2712,7 +2621,7 @@ class ReactionSchema(Schema):
     rateLaw = fields.Str()
     reactants = fields.Dict(fields.Int(), fields.Nested(SpeciesNode))
     products = fields.Dict(fields.Int(), fields.Nested(SpeciesNode))
-    fillColor = Color()
+    fillColor = ColorField()
     thickness = Dim()
     centerHandlePos = Dim2()
     bezierCurves = fields.Bool()
@@ -2730,8 +2639,8 @@ class CompartmentSchema(Schema):
     rectSize = Dim2()
     nodes = fields.List(fields.Int())
     volume = Dim()
-    fillColor = Color()
-    outlineColor = Color()
+    fillColor = ColorField()
+    outlineColor = ColorField()
     outlineThickness = Dim()
 
     @post_load

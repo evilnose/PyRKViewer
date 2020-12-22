@@ -16,18 +16,20 @@ from pathlib import Path
 
 
 # TODO rename get_local_path
-config_dir = "" #get_local_path('.rkviewer')  # This will be set by either appsettings (see below) or CreateConfigDir in view.poy
+#config_dir = "" #get_local_path('.rkviewer')  # This will be set by either appsettings (see below) or CreateConfigDir in view.poy
 #settings_theme_path = os.path.join(config_dir, 'settings.json')
 #default_settings_path = os.path.join(config_dir, '.default-settings.json')
 
 
 def GetConfigDir ():
-    global config_dir
-    return config_dir
+    sp = wx.StandardPaths.Get()
+    return sp.GetUserConfigDir()
 
 
 def GetThemeSettingsPath ():
-    return os.path.join(config_dir, 'settings.json')
+    sp = wx.StandardPaths.Get()
+    config_dir = sp.GetUserConfigDir()
+    return os.path.join(config_dir, 'rkViewer', 'settings.json')
 
 
 @dataclass(frozen=True)
@@ -200,6 +202,9 @@ class ThemeSchema(Schema):
         overall_bg: Overall background color of the application.
         canvas_bg: Background color of the canvas.
         toolbar_bg: Background color of the toolbar.
+        btn_bg : Background color of a button
+        btn_fg: Foreground color of a button, ie the color used by the button text
+        btn_border: True for border, false for no border
         canvas_width: Starting (and minimum) width of the canvas.
         canvas_height: Starting (and minimum) height of the canvas.
         vgap: Vertical gap between toolbars and canvas.
@@ -213,8 +218,7 @@ class ThemeSchema(Schema):
         node_border_width: Default node border width.
         node_font_size: Default font size of the node.
         node_font_color: Default font color of the node.
-        select_outline_width: Width of the selection outlines (i.e. outline around each selected
-                              item).
+        select_outline_width: Width of the selection outlines (i.e. outline around each selected item).
         select_outline_padding: Padding of the selection outlines.
         handle_color: ColorField of the Reaction Bezier curves.
         highlighted_handle_color: ColorField of the Reaction Bezier curves when the cursor hovers over it
@@ -248,6 +252,9 @@ class ThemeSchema(Schema):
     toolbar_fg = ColorField(missing=wx.Colour(0, 0, 0))
     canvas_width = Pixel(missing=1000)
     canvas_height = Pixel(missing=620)
+    btn_bg = ColorField(missing=wx.Colour(240,240,240))
+    btn_fg  = ColorField(missing=wx.BLACK)
+    btn_border = fields.Boolean(missing=True) 
     # vertical gap between toolbars and canvas
     vgap = Pixel(missing=2)
     # horizontal gap between toolbars and canvas
@@ -417,7 +424,8 @@ def get_setting(setting_attr) -> Any:
 
 def get_theme(theme_attr) -> Any:
     global _theme
-    return _theme[theme_attr]
+    tmp = _theme[theme_attr]
+    return tmp
 
 
 def add_plugin_schema(name: str, schema: Schema):

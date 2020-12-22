@@ -861,12 +861,22 @@ class Canvas(wx.ScrolledWindow):
         total_selected = len(selected_nodes) + len(selected_reactions) + len(selected_comps)
         menu = wx.Menu()
 
-        def add_item(menu: wx.Menu, menu_name, callback):
-            id_ = menu.Append(-1, menu_name).Id
-            menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
+
+        #def add_item(menu: wx.Menu, menu_name, callback):
+        #    qmi = wx.MenuItem(menu, -1, menu_name)
+        #    #qmi.SetBitmap(wx.Bitmap('exit.png'))
+        #    id_ = menu.Append(qmi) # (-1, menu_name).Id
+        #    menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
+
+        def add_item(menu: wx.Menu, menu_name, image_name, callback):
+            item = menu.Append(-1, menu_name)
+
+            if image_name != '':
+               item.SetBitmap(wx.Bitmap(resource_path(image_name)))
+            menu.Bind(wx.EVT_MENU, lambda _: callback(), id=item.Id)
 
         if total_selected != 0:
-            add_item(menu, 'Delete', self.DeleteSelectedItems)
+            add_item(menu, 'Delete', '', self.DeleteSelectedItems)
 
         if len(selected_nodes) != 0:
             # Only allow align when the none of the nodes are in a compartment. This prevents
@@ -877,19 +887,22 @@ class Canvas(wx.ScrolledWindow):
 
                 menu.AppendSeparator()
                 align_menu = wx.Menu()
-                add_item(align_menu, 'Align Left', lambda: self.AlignSelectedNodes(Alignment.LEFT))
-                add_item(align_menu, 'Align Right', lambda: self.AlignSelectedNodes(Alignment.RIGHT))
-                add_item(align_menu, 'Align Center',
+                add_item(align_menu, 'Align Left', 'alignLeft_XP.png', lambda: self.AlignSelectedNodes(Alignment.LEFT))
+                add_item(align_menu, 'Align Right', 'alignRight_XP.png', lambda: self.AlignSelectedNodes(Alignment.RIGHT))
+                add_item(align_menu, 'Align Center', 'alignHorizCenter_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.CENTER))
-                add_item(align_menu, 'Align Top', lambda: self.AlignSelectedNodes(Alignment.TOP))
-                add_item(align_menu, 'Align Bottom',
+                align_menu.AppendSeparator()
+                add_item(align_menu, 'Align Top', 'alignTop_XP.png', lambda: self.AlignSelectedNodes(Alignment.TOP))
+                add_item(align_menu, 'Align Bottom', 'AlignBottom_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.BOTTOM))
-                add_item(align_menu, 'Align Middle',
+                add_item(align_menu, 'Align Middle', 'alignVertCenter_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.MIDDLE))
-                add_item(align_menu, 'Grid', lambda: self.AlignSelectedNodes(Alignment.GRID))
-                add_item(align_menu, 'Arrange Horizontally',
+                align_menu.AppendSeparator()
+                add_item(align_menu, 'Grid', 'alignOnGrid_XP.png', lambda: self.AlignSelectedNodes(Alignment.GRID))
+                align_menu.AppendSeparator()
+                add_item(align_menu, 'Arrange Horizontally', 'alignHorizEqually_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))
-                add_item(align_menu, 'Arrange Vertically',
+                add_item(align_menu, 'Arrange Vertically', 'alignVertEqually_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.VERTICAL))
                 menu.AppendSubMenu(align_menu, text='Align...')
 
@@ -1098,33 +1111,53 @@ class Canvas(wx.ScrolledWindow):
                 self.setDefaultHandles()
 
         if alignment == Alignment.HORIZONTAL:
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                yMin = self.findMinY(s)
-                yMax = self.findMaxY(s)
-                ypos = math.floor((yMax + yMin)/2)
-                x = 40
-                for a in s:
-                    newPos = Vec2(x, ypos)
-                    api.move_node(0, a, newPos)
-                    x = x + 130
+
+           # Sort the selected nodes in x position ascending order
+           nodes = api.get_nodes(0)
+           nodes.sort(key=lambda x: x.position.x, reverse=False)
+           
+           # find the average distance beteeen the selected nodes
+           averageDistance = 0.0
+           for count in range (1, len (nodes)):
+               node2 = api.get_node_by_index (0, nodes[count-1].index)
+               node1 = api.get_node_by_index (0, nodes[count].index)             
+               averageDistance += (node1.position.x + node1.size.x) - node2.position.x
+           averageDistance = averageDistance / len (nodes)
+           
+           with api.group_action():
+                # x = Position of left most node
+                x = nodes[0].position.x
+                # Arrange nodes with equal distance between them
+                for count in range (len (nodes)):
+                    newPos = Vec2(x, nodes[count].position.y)
+                    api.move_node(0, nodes[count].index, newPos)
+                    x = x + averageDistance
                 self.setDefaultHandles()
 
         if alignment == Alignment.VERTICAL:
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                xMin = self.findMinX(s)
-                xMax = self.findMaxX(s)
-                xpos = math.floor((xMax + xMin)/2)
-                y = 40
-                for a in s:
-                    newPos = Vec2(xpos, y)
-                    api.move_node(0, a, newPos)
-                    y = y + 130
-                self.setDefaultHandles()
 
-        #raise NotImplementedError('Align Not Implemented!')
-
+           # Sort the selected nodes in y position ascending order
+           nodes = api.get_nodes(0)
+           nodes.sort(key=lambda x: x.position.y, reverse=False)
+           
+           # find the average distance beteeen the selected nodes
+           averageDistance = 0.0
+           for count in range (1, len (nodes)):
+               node2 = api.get_node_by_index (0, nodes[count-1].index)
+               node1 = api.get_node_by_index (0, nodes[count].index)             
+               averageDistance += (node1.position.y + node1.size.y) - node2.position.y
+           averageDistance = averageDistance / len (nodes)
+           
+           with api.group_action():
+                # y = Position of top most node
+                y = nodes[0].position.y
+                # Arrange nodes with equal distance between them
+                for count in range (len (nodes)):
+                    newPos = Vec2(nodes[count].position.x, y)
+                    api.move_node(0, nodes[count].index, newPos)
+                    y = y + averageDistance
+                self.setDefaultHandles()            
+            
     # TODO improve this. we might want a special mouseLeftWindow event
 
     def _EndDrag(self, evt: wx.MouseEvent):

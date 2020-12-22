@@ -179,6 +179,7 @@ class ToolbarItem(wx.Panel):
         # button.SetWindowStyleFlag(wx.SIMPLE_BORDER)
         label_text = wx.StaticText(self, label=label, style=wx.ST_ELLIPSIZE_END |
                                    wx.ALIGN_CENTER_HORIZONTAL, size=(size[0], 20))
+        label_text.SetForegroundColour (get_theme ('btn_fg'))
         fontinfo = wx.FontInfo(8)
         label_text.SetFont(wx.Font(fontinfo))
 
@@ -223,7 +224,8 @@ class TabbedToolbar(wx.Notebook):
         super().__init__(parent, **kw)
         self.manager = manager
         file_tb = Toolbar(self)
-        # file_tb.SetBackgroundColour(wx.RED)
+        file_tb.SetForegroundColour (wx.RED)
+        file_tb.SetBackgroundColour(get_theme ('toolbar_bg'))
         file_tb.AppendTool('Undo', controller.undo,
                            wx.ArtProvider.GetBitmap(wx.ART_UNDO, wx.ART_MENU))
         file_tb.AppendTool('Redo', controller.redo,
@@ -250,6 +252,8 @@ class TabbedToolbar(wx.Notebook):
                 if bitmap is None:
                     bitmap = wx.ArtProvider.GetBitmap(wx.ART_MISSING_IMAGE, wx.ART_MENU)
                 tb.AppendTool(name, callback, bitmap)
+            tb.SetForegroundColour (wx.RED)
+            tb.SetBackgroundColour (get_theme ('toolbar_bg'))         
             self.AddPage(tb, text=CATEGORY_NAMES[cat])
 
 
@@ -279,18 +283,31 @@ class ModePanel(wx.Panel):
         self.SetSizer(sizer)
 
     def AppendModeButton(self, label: str, mode: InputMode, sizer: wx.Sizer):
-        btn = wx.ToggleButton(self, label=label)
-        sizer.Add(btn, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        if get_theme ('btn_border'):
+           btn = wx.ToggleButton(self, label=label)
+        else:
+           btn = wx.ToggleButton(self, label=label, style=wx.BORDER_NONE)
+
+        btn.SetBackgroundColour(get_theme ('btn_bg')) 
+        #font = wx.Font(11, wx.FONTFAMILY_MODERN, 0, 90, underline = False,  faceName ="") # <- if we want to change font style
+        btn.SetForegroundColour(get_theme ('btn_fg')) 
+        #btn.SetFont (font)
+        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
         self.btn_group.AddButton(btn, mode)
 
+# ####
     def AppendNormalButton(self, label: str, callback, sizer: wx.Sizer, tooltip: str = None):
-        btn = wx.Button(self, label=label)
+        if get_theme ('btn_border'):        
+           btn = wx.Button(self, label=label)
+        else:
+           btn = wx.Button(self, label=label, style=wx.BORDER_NONE)
+
+        btn.SetBackgroundColour(get_theme ('btn_bg')) 
+        btn.SetForegroundColour(get_theme ('btn_fg')) 
         if tooltip is not None:
             btn.SetToolTip(tooltip)
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
-        sizer.Add(btn, wx.SizerFlags().Align(
-            wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
     def AppendSeparator(self, sizer: wx.Sizer):
         line = wx.StaticLine(self, style=wx.LI_HORIZONTAL)
@@ -670,14 +687,14 @@ class MainFrame(wx.Frame):
         if not self.CreateConfigDir(GetConfigDir()):
             return
 
-        if os.path.exists(os.path.join(GetConfigDir(), '.default-settings.json')) and not os.path.isfile(os.path.join(GetConfigDir(), '.default-settings.json')):
+        if os.path.exists(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json')) and not os.path.isfile(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json')):
             self.main_panel.canvas.ShowWarningDialog('Could not open default settings file '
                                                      'since a directory already exists at path '
-                                                     '{}.'.format(os.path.join(GetConfigDir(), '.default-settings.json')))
+                                                     '{}.'.format(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json')))
             return
         # TODO prepopulate file with help text, i.e link to docs about schema
         json_str = json.dumps(get_default_raw_settings(), indent=4, sort_keys=True)
-        with open(os.path.join(GetConfigDir(), '.default-settings.json'), 'w') as fp:
+        with open(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json'), 'w') as fp:
             fp.write(DEFAULT_SETTING_FMT.format(json_str))
 
         # If we're running windows use notepad
@@ -685,7 +702,7 @@ class MainFrame(wx.Frame):
             # Doing it this way allows python to regain control even though notepad hasn't been clsoed
             import subprocess
             _pid = subprocess.Popen(['notepad.exe', os.path.join(
-                GetConfigDir(), '.default-settings.json')]).pid
+                GetConfigDir(), 'rkViewer', '.default-settings.json')]).pid
         else:
             start_file(os.path.join(GetConfigDir(), '.default-settings.json'))
 

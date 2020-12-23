@@ -294,14 +294,25 @@ class ModePanel(wx.Panel):
         else:
             btn = wx.ToggleButton(self, label=label, style=wx.BORDER_NONE)
 
-        btn.SetBackgroundColour(get_theme ('btn_bg')) 
+        def enter_func(evt):
+            btn.SetBackgroundColour(get_theme('btn_hover_bg'))
+            btn.SetForegroundColour(get_theme('btn_hover_fg'))
+
+        def exit_func(evt):
+            btn.SetBackgroundColour(get_theme('btn_bg'))
+            btn.SetForegroundColour(get_theme('btn_fg')) 
+
+        btn.Bind(wx.EVT_ENTER_WINDOW, enter_func)
+        btn.Bind(wx.EVT_LEAVE_WINDOW, exit_func)
+
+        btn.SetBackgroundColour(get_theme('btn_bg')) 
         #font = wx.Font(11, wx.FONTFAMILY_MODERN, 0, 90, underline = False,  faceName ="") # <- if we want to change font style
-        btn.SetForegroundColour(get_theme ('btn_fg')) 
+        btn.SetForegroundColour(get_theme('btn_fg')) 
         #btn.SetFont (font)
+
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
         self.btn_group.AddButton(btn, mode)
 
-# ####
     def AppendNormalButton(self, label: str, callback, sizer: wx.Sizer, tooltip: str = None):
         if get_theme ('btn_border'):        
            btn = wx.Button(self, label=label)
@@ -316,8 +327,7 @@ class ModePanel(wx.Panel):
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
     def AppendSeparator(self, sizer: wx.Sizer):
-        line = wx.StaticLine(self, style=wx.LI_HORIZONTAL)
-        sizer.Add(line, wx.SizerFlags().Expand().Border(wx.TOP, 10))
+        sizer.Add((0, 10))
 
 
 class BottomBar(wx.Panel):

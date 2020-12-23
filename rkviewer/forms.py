@@ -209,8 +209,7 @@ class EditPanelForm(ScrolledPanel):
 
     def _AppendSubtitle(self, sizer: wx.GridSizer, text: str) -> wx.StaticText:
         self._AppendSpacer(sizer, 3)
-        line = wx.StaticLine(self, style=wx.HORIZONTAL)
-        sizer.Add(line, wx.GBPosition(sizer.GetRows(), 0), wx.GBSpan(1, 5), flag=wx.EXPAND)
+        sizer.Add(0, 0, wx.GBPosition(sizer.GetRows(), 0))
         statictext = wx.StaticText(self, label=text)
         font = wx.Font(wx.FontInfo(9))
         statictext.SetFont(font)

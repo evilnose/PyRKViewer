@@ -204,6 +204,11 @@ class ThemeSchema(Schema):
         toolbar_bg: Background color of the toolbar.
         btn_bg : Background color of a button
         btn_fg: Foreground color of a button, ie the color used by the button text
+        btn_hover_bg: BG color of a button when the mouse is hovering over it. By default
+                      this should be equal to the normal BG since MSW already provides a faint
+                      blue hovering effect. But in the case that btn_border is False, the native
+                      hovering effects vanish, so this is needed as a replacement visual indicator.
+        btn_hover_fg: FG color of a button when the mouse is hovering over it. See btn_hover_bg.
         btn_border: True for border, false for no border
         canvas_width: Starting (and minimum) width of the canvas.
         canvas_height: Starting (and minimum) height of the canvas.
@@ -240,6 +245,12 @@ class ThemeSchema(Schema):
         comp_border: The default border color of compartments.
         comp_border_width: The default border width of compartments.
         reaction_radius: The radius of the reaction centroid circles.
+        active_tab_fg: The foreground (font) color of the active tab in a FlatNotebook. There is
+                       no option to set the BG color since the BG color is always a brighter version
+                       of the toolbar BG.
+        text_field_bg: The background color of text fields.
+        text_field_fg: The foreground (font) color of text fields
+        text_field_border: Whether the border of text fields should be drawn.
 
     TODO more documentation under attributes and link to this document in Help or settings.json
     """
@@ -253,7 +264,9 @@ class ThemeSchema(Schema):
     canvas_width = Pixel(missing=1000)
     canvas_height = Pixel(missing=620)
     btn_bg = ColorField(missing=wx.Colour(240,240,240))
-    btn_fg  = ColorField(missing=wx.BLACK)
+    btn_fg = ColorField(missing=wx.BLACK)
+    btn_hover_bg = ColorField(missing=wx.Colour(240,240,240))
+    btn_hover_fg = ColorField(missing=wx.BLACK)
     btn_border = fields.Boolean(missing=True) 
     # vertical gap between toolbars and canvas
     vgap = Pixel(missing=2)

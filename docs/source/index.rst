@@ -3,14 +3,17 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to RKViewer's Plugin API documentation!
+RK VIEWER PLATFORM DOCUMENTATION
 ================================================
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 7
    :caption: Contents: 
-
-   pluginsModules
-   rkpluginModules
+   
+   QuickStart
+   Tutorial
+   CodeDocumentation
+   ForDevelopers
+   Acknowledgements
    events
    config

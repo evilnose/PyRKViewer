@@ -60,9 +60,9 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
 * Utilities: Here you will find Add Reaction, Random Network, and Autolayout. 
 
-  - Add Reaction: This allows you to add reactions choosing the type in a quick way. First you want to select all the nodes that you want as reactants and then select them as reactant on the panel on the left, then select your desired products, and again, click products on the left. Finally, you want to click the Add Reaction utility and simply choose which type of reaction you want these sets of products and reactants to form.
+- Add Reaction: This allows you to add reactions choosing the type in a quick way. First you want to select all the nodes that you want as reactants and then select them as reactant on the panel on the left, then select your desired products, and again, click products on the left. Finally, you want to click the Add Reaction utility and simply choose which type of reaction you want these sets of products and reactants to form.
 
-  - Random Network: This utility lets you create a completely random network with personalized parameters. **NOTE: This will erase your current canvas, not add to it. If you want to save your work you can do so under File in the Navigation Bar.** After You create the random network you will be able to modify it at your own will, including adding and deleting nodes. To customize the parameters:
+- Random Network: This utility lets you create a completely random network with personalized parameters. **NOTE: This will erase your current canvas, not add to it. If you want to save your work you can do so under File in the Navigation Bar.** After You create the random network you will be able to modify it at your own will, including adding and deleting nodes. To customize the parameters:
 
 .. image:: ../fotos/S5.png
 *(Figure 5)*
@@ -76,10 +76,10 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
     + Random Seed: The randomizing seed for the code. This is a setting you won’t need to worry about too much unless you purposely want a lot of different random networks with the same features.
   
 
-  - Auto Layout: This utility automatically gives you a “nice” layout of your network. NOTE: This has not been implemented for multiple compartments, and doesn’t behave well for complex reactions. This is under work, and will be cleaned by version 2. The parameters:
+- Auto Layout: This utility automatically gives you a “nice” layout of your network. NOTE: This has not been implemented for multiple compartments, and doesn’t behave well for complex reactions. This is under work, and will be cleaned by version 2. The parameters:
   
-.. image:: ../fotos/S5.png
-*(Figure 5)*
+.. image:: ../fotos/S6.png
+*(Figure 6)*
 
     + Maximum number of iterations: This will help make the layout more neat. 100-120 is a good default value range. If you have a very high number of nodes then you’re going to want to increase this number. Computationally, it may take a bit longer when this number is increased by a lot.
     

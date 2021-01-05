@@ -28,5 +28,3 @@ PyRKViewer is a visualization tool for drawing the reaction networks written by 
    CodeDocumentation
    ForDevelopers
    Acknowledgements
-   events
-   config

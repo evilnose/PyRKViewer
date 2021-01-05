@@ -19,6 +19,7 @@ Here you will find all of the necessary utilities and information to use this ap
 
 .. image:: ../fotos/S2.png
 
+
     4. Click File in the Navigation Bar
     5. Select Edit Settings
     6. Paste the copied settings to change.
@@ -26,10 +27,12 @@ Here you will find all of the necessary utilities and information to use this ap
 
 .. image:: ../fotos/S3.png
 
+
     8. Close both NotePads and Select File again. (Click save if you haven’t already saved them).
     9. Click Reload Settings or simply exit the application and open it again.
 
     To restore default settings simple erase all changes made under File -> Edit Settings so that it looks  like the following:
+
 
 .. image:: ../fotos/S4.png
 

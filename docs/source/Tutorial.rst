@@ -46,6 +46,31 @@ Here you will find all of the necessary utilities and information to use this ap
 
 * Plugins: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, but you’ll have: Add Reaction, Arrow Designer, Auto Layout, Random Network and Structural Analysis.
 
+-----------------
+2. Applicaions Menu
+-----------------
+
+A lot of the functionalities found here are also in the Navigation Bar. However, they are organized according to their different uses, allowing you to access them in a more structured way.
+
+* Main: We find Undo, Redo, Zoom in, and Zoom out.
+
+* Analysis: We find Structural analysis, a function used is to calculate and visualize the stoichiometry matrix and conserved moieties for the network. When the user clicks on the “Compute Conservation Laws” button, the plugin will derive the stoichiometry matrix for the current network on canvas. It also computes any conserved moieties for the network. By selecting the moieties in the plugin, it can highlight the nodes on the network by changing their colors according to the user’s preference. Finally, unhighlighting the nodes is also possible by clicking the “Clear” button.
+
+* Appearance: We have Arrow Designer. This allows you to personalize the arrows that appear in the reactions. A window will pop up where you will be able to move the circles to your desired visual. This will be implemented when you click Save. To restore the default arrow you may click arrow designer once again and click Restore Default.
+
+* Utilities: Here you will find Add Reaction, Random Network, and Autolayout. 
+
+    - Add Reaction: This allows you to add reactions choosing the type in a quick way. First you want to select all the nodes that you want as reactants and then select them as reactant on the panel on the left, then select your desired products, and again, click products on the left. Finally, you want to click the Add Reaction utility and simply choose which type of reaction you want these sets of products and reactants to form.
+
+    - Random Network: This utility lets you create a completely random network with personalized parameters. **NOTE: This will erase your current canvas, not add to it. If you want to save your work you can do so under File in the Navigation Bar.** After You create the random network you will be able to modify it at your own will, including adding and deleting nodes. To customize the parameters:
+
+        + Number of species: The number of nodes that you want featured in your network.
+
+        + Number of reactions: The number of reactions you want to create from the given species.
+
+        + Probabilities: The probability of each type of reaction being featured. These must add to 1.
+
+        + Random Seed: The randomizing seed for the code. This is a setting you won’t need to worry about too much unless you purposely want a lot of different random networks with the same features.
 
 
 

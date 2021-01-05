@@ -13,7 +13,7 @@ Once you have completed all applicable steps in `Quick Start <QS>`_ run the appl
 --------------------
 Here you will find all of the necessary utilities and information to use this application. 
 
-* File: you’ll find commands to help edit some settings, load or save your canvas, export your work or exit the application. The application will save files to and load files from the directory in which your app is found. To change the settings (such as appearance of the platform) you must follow these steps:
+**- File**: you’ll find commands to help edit some settings, load or save your canvas, export your work or exit the application. The application will save files to and load files from the directory in which your app is found. To change the settings (such as appearance of the platform) you must follow these steps:
 
     1. Select Help in the same Navigation Bar.
     2. Select Default Settings.
@@ -38,13 +38,13 @@ Here you will find all of the necessary utilities and information to use this ap
 .. image:: ../fotos/S4.png
 *(Figure 4)*
 
-* Edit: you find basic commands like copy, paste, undo and redo, along with their keyboard shortcuts. 
+**- Edit**: you find basic commands like copy, paste, undo and redo, along with their keyboard shortcuts. 
 
-* Select: you find some shortcuts to help you select parts of the canvas such as all of the nodes. Note that select all will select all nodes and reactions. These commands will select all of the indicated, regardless of the compartment the nodes or reactions are in.
+**- Select**: you find some shortcuts to help you select parts of the canvas such as all of the nodes. Note that select all will select all nodes and reactions. These commands will select all of the indicated, regardless of the compartment the nodes or reactions are in.
 
-* Reaction: provides quick options to generate your reactions. These help us select multiple nodes and name them as reactants or products rather than go one by one using the creating panel (explained below). 
+**- Reaction**: provides quick options to generate your reactions. These help us select multiple nodes and name them as reactants or products rather than go one by one using the creating panel (explained below). 
 
-* Plugins: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, but you’ll have: Add Reaction, Arrow Designer, Auto Layout, Random Network and Structural Analysis.
+**- Plugins**: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, but you’ll have: Add Reaction, Arrow Designer, Auto Layout, Random Network and Structural Analysis.
 
 -----------------
 2. Applicaions Menu
@@ -76,7 +76,7 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
     + Random Seed: The randomizing seed for the code. This is a setting you won’t need to worry about too much unless you purposely want a lot of different random networks with the same features.
   
 
-- Auto Layout: This utility automatically gives you a “nice” layout of your network. NOTE: This has not been implemented for multiple compartments, and doesn’t behave well for complex reactions. This is under work, and will be cleaned by version 2. The parameters:
+- Auto Layout: This utility automatically gives you a “nice” layout of your network. **NOTE**: This has not been implemented for multiple compartments, and doesn’t behave well for complex reactions. This is under work, and will be cleaned by version 2. The parameters:
   
 .. image:: ../fotos/S6.png
 *(Figure 6)*
@@ -109,4 +109,41 @@ This panel allows you to select and create nodes and reactions. This is the basi
 * Create Rxn will let you create reactions AFTER you have selected one or more nodes as reactants and one or more nodes as products. You can move the centers of the reaction to look as you desire. 
 
 Note: you will note be able to delete a node that is in a reaction.
+
+-----------
+4. Canvas
+-----------
+
+This is your visual workspace. Here you will be able to see your created nodes, compartments and reactions. You can move freely through the canvas as well as move nodes and reactions at your will. 
+
+You can right click on a node or on a selection of nodes to delete the selection. You also have an align option: This will let you align a set or nodes in the manners described.
+
+.. image:: ../fotos/S7.png
+*(Figure 7)*
+
+* Align Left will align all of your nodes vertically to be at the level of the left-most node in the selection.
+
+* Align Right will align all of your nodes vertically to be at the level of the right-most node in the selection.
+
+* Align center will align all of your nodes vertically to be at the level of the center (horizontally - x value) of all of the nodes in the selection.
+
+* Align Top will align all of your nodes vertically to be at the level of the top node in the selection.
+
+* Align Bottom will align all of your nodes vertically to be at the level of the bottom node in the selection.
+
+* Align Middle will align all of your nodes vertically to be at the level of the center (vertically - y value) of all of the nodes in the selection.
+
+* Grid will create a grid view of all the nodes by rows.
+
+* Arrange Horizontally will arrange all nodes so that they are evenly spaced out horizontally along the x position of the center of all the nodes.
+
+* Arrange Vertically will arrange all nodes so that they are evenly spaced out vertically along the y position of the center of all the nodes.
+
+
+-----------
+Information Panel
+-----------
+
+This is key to personalizing your nodes and reactions. Through this panel you will be able to add information to and about your networks. **NOTE**: The information panel will only show when something is selected (nodes, reactions, or compartments).
+
 

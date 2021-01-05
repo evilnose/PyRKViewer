@@ -12,6 +12,7 @@ Once you have completed all applicable steps in `Quick Start <QS>`_ run the appl
 1. Navigation Bar
 --------------------
 Here you will find all of the necessary utilities and information to use this application. 
+
 * File: you’ll find commands to help edit some settings, load or save your canvas, export your work or exit the application. The application will save files to and load files from the directory in which your app is found. To change the settings (such as appearance of the platform) you must follow these steps:
 
     1. Select Help in the same Navigation Bar.
@@ -36,6 +37,15 @@ Here you will find all of the necessary utilities and information to use this ap
 
 .. image:: ../fotos/S4.png
 *(Figure 4)*
+
+* Edit: you find basic commands like copy, paste, undo and redo, along with their keyboard shortcuts. 
+
+* Select: you find some shortcuts to help you select parts of the canvas such as all of the nodes. Note that select all will select all nodes and reactions. These commands will select all of the indicated, regardless of the compartment the nodes or reactions are in.
+
+* Reaction: provides quick options to generate your reactions. These help us select multiple nodes and name them as reactants or products rather than go one by one using the creating panel (explained below). 
+
+* Plugins: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, but you’ll have: Add Reaction, Arrow Designer, Auto Layout, Random Network and Structural Analysis.
+
 
 
 

@@ -64,13 +64,13 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
   - Random Network: This utility lets you create a completely random network with personalized parameters. **NOTE: This will erase your current canvas, not add to it. If you want to save your work you can do so under File in the Navigation Bar.** After You create the random network you will be able to modify it at your own will, including adding and deleting nodes. To customize the parameters:
 
-  + Number of species: The number of nodes that you want featured in your network.
+    + Number of species: The number of nodes that you want featured in your network.
 
-  + Number of reactions: The number of reactions you want to create from the given species.
+    + Number of reactions: The number of reactions you want to create from the given species.
 
-  + Probabilities: The probability of each type of reaction being featured. These must add to 1.
+    + Probabilities: The probability of each type of reaction being featured. These must add to 1.
 
-  + Random Seed: The randomizing seed for the code. This is a setting you won’t need to worry about too much unless you purposely want a lot of different random networks with the same features.
+    + Random Seed: The randomizing seed for the code. This is a setting you won’t need to worry about too much unless you purposely want a lot of different random networks with the same features.
   
   
 * a bullet point using "*"

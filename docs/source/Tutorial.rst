@@ -146,4 +146,53 @@ Information Panel
 
 This is key to personalizing your nodes and reactions. Through this panel you will be able to add information to and about your networks. **NOTE**: The information panel will only show when something is selected (nodes, reactions, or compartments).
 
+.. image:: ../fotos/S8.png
+*(Figure 8)*
+
+You will modify independently the reactions selected and the nodes selected.
+
+**- Nodes:** Let’s go over the case where you select a single node. You can adjust settings for multiple nodes at once but some of the features are locked, like identifier, to avoid internal conflict.
+
+.. image:: ../fotos/S9.png
+*(Figure 9)*
+
+    * Identifiers: This allows you to change the name of the node in question. E.g. say we want to name it H, we type H into the box.
+    
+    * Position: this helps you select exactly what canvas coordinate you want the node to be in. Note: the top left corner is the position (0,0).
+    
+    * Size: This lets you modify the node’s size, it is coherent with the canvas coordinate system. 
+    
+    * Fill color, fill opacity, border color, border opacity, border width: You can customize these values to your own taste. Note: if you want to change all of the nodes to a specific color you can select all and modify accordingly, you don’t need to go one by one.
+    
+    * Node status: lets you identify a node as floating or border. This comes with a double border, to help you identify this type of node at a glance.
+    
+    * Lock node: when this box is clicked, it indicates that the node is not to be moved. The program will not let you (or other utilities) drag or move this node. You will see a circle appear at the top left of your node to help you identify locked nodes at a glance.
+    
+Here is an example of some of the values being changed and the end result (in contrast to the default values).
+    
+.. image:: ../fotos/S10.png
+*(Figure 10)*
+
+**- Reactions:** Each case will be very unique, let’s go over a simple scenario.
+
+.. image:: ../fotos/S11.png
+*(Figure 11)*
+
+    * Identifier: the reaction’s name.
+    
+    * Rate law: you can specify if any applies. I left this empty since it is irrelevant to our simple example.
+    
+    * Fill color, fill opacity, line width: the color and appearance of the curve of the reaction. I chose red, the default is light blue. You won’t be able to see the change until you have stopped selecting. If you choose an opacity of 0 you will not be able to see the reaction.
+    
+    * Auto Center position: if checked, it will automatically move the center circle to its default position. If not clicked you may move it manually or assign it a coordinate position.
+    
+    * Reaction status: Straight line will make your reaction have simple straight lines, whereas bezier curve will calculate and draw the modifiable bezier curve. On the canvas you can move the handles around to get the exact visuals that you like.
+    
+    * Modifier tip: you can have the modifier’s tip to be circle or flat. 
+    
+    * Modifiers: this lets you select which of all of the existing nodes in the canvas, in our out of the reaction, to be modifiers of the reaction you are modifying. They will be represented by a fine lilac line with the chosen tip. They will automatically move when the reactions or nodes involved are moved.
+    
+    * Reactants and products lets you state how many of each you have. It is also a good overview of the reaction when it gets complicated.
+
+
 

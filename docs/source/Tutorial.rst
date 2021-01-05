@@ -29,7 +29,7 @@ Here you will find all of the necessary utilities and information to use this ap
     8. Close both NotePads and Select File again. (Click save if you haven’t already saved them).
     9. Click Reload Settings or simply exit the application and open it again.
 
-    To restore default settings simple erase all changes made under File -> Edit Settings so that it looks like the following:
+    To restore default settings simple erase all changes made under File -> Edit Settings so that it looks  like the following:
 
 .. image:: ../fotos/S4.png
 

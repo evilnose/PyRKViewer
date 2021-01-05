@@ -19,6 +19,7 @@ Here you will find all of the necessary utilities and information to use this ap
 
 .. image:: ../fotos/S2.png
 
+hello
 
     4. Click File in the Navigation Bar
     5. Select Edit Settings

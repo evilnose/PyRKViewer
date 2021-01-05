@@ -71,6 +71,15 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
   + Probabilities: The probability of each type of reaction being featured. These must add to 1.
 
   + Random Seed: The randomizing seed for the code. This is a setting you won’t need to worry about too much unless you purposely want a lot of different random networks with the same features.
+  
+  
+* a bullet point using "*"
+
+  - a sub-list using "-"
+
+    + yet another sub-list
+
+  - another item
 
 
 

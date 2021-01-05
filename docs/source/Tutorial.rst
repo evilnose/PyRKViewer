@@ -10,7 +10,8 @@ Once you have completed all applicable steps in `Quick Start <QS>`_ run the appl
 1. Navigation Bar
 Here you will find all of the necessary utilities and information to use this application. 
 * File: you’ll find commands to help edit some settings, load or save your canvas, export your work or exit the application. The application will save files to and load files from the directory in which your app is found. To change the settings (such as appearance of the platform) you must follow these steps:
-1. Select Help in the same Navigation Bar. 
+
+1. Select Help in the same Navigation Bar.
 2. Select Default Settings.
 3. Copy the setting(s) that you wish to change.
 

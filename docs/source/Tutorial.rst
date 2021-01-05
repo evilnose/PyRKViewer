@@ -64,6 +64,9 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
   - Random Network: This utility lets you create a completely random network with personalized parameters. **NOTE: This will erase your current canvas, not add to it. If you want to save your work you can do so under File in the Navigation Bar.** After You create the random network you will be able to modify it at your own will, including adding and deleting nodes. To customize the parameters:
 
+.. image:: ../fotos/S5.png
+*(Figure 5)*
+
     + Number of species: The number of nodes that you want featured in your network.
 
     + Number of reactions: The number of reactions you want to create from the given species.
@@ -72,12 +75,16 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
     + Random Seed: The randomizing seed for the code. This is a setting you won’t need to worry about too much unless you purposely want a lot of different random networks with the same features.
   
+
+  - Auto Layout: This utility automatically gives you a “nice” layout of your network. NOTE: This has not been implemented for multiple compartments, and doesn’t behave well for complex reactions. This is under work, and will be cleaned by version 2. The parameters:
+  
 .. image:: ../fotos/S5.png
 *(Figure 5)*
 
-  - Auto Layout: This utility automatically gives you a “nice” layout of your network. NOTE: This has not been implemented for multiple compartments, and doesn’t behave well for complex reactions. This is under work, and will be cleaned by version 2. The parameters:
     + Maximum number of iterations: This will help make the layout more neat. 100-120 is a good default value range. If you have a very high number of nodes then you’re going to want to increase this number. Computationally, it may take a bit longer when this number is increased by a lot.
+    
     + K: must be a float (no decimals allowed). This represents (in a way) the distance between nodes. If the number of nodes isn’t very large this number won’t have a big impact. Anything between 60-100 is a reasonable default.
+    
     + Scale of the layout: This will modify the extension that the layout will cover. Again, this will not affect the layout too much if it is very large or very small. 500-1000 is a reasonable range.
 
 

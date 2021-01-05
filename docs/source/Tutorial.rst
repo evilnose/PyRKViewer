@@ -141,7 +141,7 @@ You can right click on a node or on a selection of nodes to delete the selection
 
 
 -----------
-Information Panel
+5. Information Panel
 -----------
 
 This is key to personalizing your nodes and reactions. Through this panel you will be able to add information to and about your networks. **NOTE**: The information panel will only show when something is selected (nodes, reactions, or compartments).
@@ -195,4 +195,8 @@ Here is an example of some of the values being changed and the end result (in co
     * Reactants and products lets you state how many of each you have. It is also a good overview of the reaction when it gets complicated.
 
 
+-----------
+6. Zoom Control
+-----------
 
+You can visualize the location of your nodes on the little square, and scroll through the bar to zoom in or out.

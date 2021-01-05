@@ -58,7 +58,7 @@ ii. Analysis: We find Structural analysis, a function used is to calculate and v
 
 iii. Appearance: We have Arrow Designer. This allows you to personalize the arrows that appear in the reactions. A window will pop up where you will be able to move the circles to your desired visual. This will be implemented when you click Save. To restore the default arrow you may click arrow designer once again and click Restore Default.
 
-iv. tilities: Here you will find Add Reaction, Random Network, and Autolayout. 
+iv. Utilities: Here you will find Add Reaction, Random Network, and Autolayout. 
 
 - Add Reaction: This allows you to add reactions choosing the type in a quick way. First you want to select all the nodes that you want as reactants and then select them as reactant on the panel on the left, then select your desired products, and again, click products on the left. Finally, you want to click the Add Reaction utility and simply choose which type of reaction you want these sets of products and reactants to form.
 
@@ -87,4 +87,26 @@ iv. tilities: Here you will find Add Reaction, Random Network, and Autolayout.
     
     + Scale of the layout: This will modify the extension that the layout will cover. Again, this will not affect the layout too much if it is very large or very small. 500-1000 is a reasonable range.
 
+
+------------
+3. Creation Panel
+------------
+
+This panel allows you to select and create nodes and reactions. This is the basic command center for building your networks.
+
+* The select button allows you to choose nodes that are already in the canvas. 
+
+* Selecting +Nodes will let you click anywhere on the canvas where you want a node to be. These nodes are movable.
+
+* +Compt will allow you to create compartments in which you can add nodes and reactions.
+
+* Zoom lets you zoom in and out.
+
+* Reactants will denote the selected nodes as reactants. To create a reaction with multiple reactants, click Select and maintain Ctrl in your keyboard pressed to select multiple.
+
+* Products will denote the selected nodes as products. To create a reaction with multiple products, click Select and maintain Ctrl in your keyboard pressed to select multiple.
+
+* Create Rxn will let you create reactions AFTER you have selected one or more nodes as reactants and one or more nodes as products. You can move the centers of the reaction to look as you desire. 
+
+Note: you will note be able to delete a node that is in a reaction.
 

@@ -1,5 +1,5 @@
 =================================================
-FOR DEVELOPERS: BASIC OVERVIEW OF CODE STRUCTURES
+For Developers: Basic Overview of Code Structures
 =================================================
 
 -------------------------------------------------

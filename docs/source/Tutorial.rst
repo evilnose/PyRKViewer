@@ -1,5 +1,5 @@
 ===============================
-TUTORIAL
+Tutorial
 ===============================
 A brief guide to help you use and understand version 1.
 

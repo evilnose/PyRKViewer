@@ -180,6 +180,7 @@ class LayoutNetworkX(WindowedPlugin):
                     newX = float(currCentroid[0])
                     newY = float(currCentroid[1])
                     #api.update_reaction(0, r.index, center_pos=(Vec2(newX, newY)))
+                    api.update_reaction(0, r.index, center_pos=None)
                     handles = api.default_handle_positions(0, r.index)
                     api.set_reaction_center_handle(0, r.index, handles[0])
                     count = 1

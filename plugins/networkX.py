@@ -159,8 +159,8 @@ class LayoutNetworkX(WindowedPlugin):
         #print(nx.to_dict_of_lists(G))
         #nodeIds = list (api.get_node_indices(0))
         with api.group_action():   
-            for t in range(20):
-                pos = (nx.fruchterman_reingold_layout(G, k = self.kValue, iterations = self.MaxIterValue, scale = self.scaleValue, pos = originalPos))
+            for t in range(1):
+                pos = (nx.fruchterman_reingold_layout(G, k = self.kValue, iterations = self.MaxIterValue, scale = self.scaleValue, pos = originalPos, weight=1))
                 positions = np.array(list(pos.values()))
                 minX = 0
                 minY = 0

@@ -577,6 +577,9 @@ class MainFrame(wx.Frame):
                          key=(wx.ACCEL_CTRL, ord('R')))
 
         plugins_menu = wx.Menu()
+        self.AddMenuItem(plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
+                         key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
+        plugins_menu.AppendSeparator()
         self.manager.register_menu(plugins_menu)
 
         help_menu = wx.Menu()
@@ -584,9 +587,6 @@ class MainFrame(wx.Frame):
                          'Show about dialog', self.onAboutDlg, entries)  # self.ShowAbout, entries)
         self.AddMenuItem(help_menu, '&Default settings...', 'View default settings',
                          lambda _: self.ShowDefaultSettings(), entries)
-        help_menu.AppendSeparator()
-        self.AddMenuItem(help_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
-                         key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
 
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')

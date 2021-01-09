@@ -157,7 +157,7 @@ class ReactionData:
     @property
     def real_center(self) -> Vec2:
         """The position of the reaction center circle.
-        
+
         If the center has been manually moved by the user, then this would be equal to center_pos.
         Otherwise this is equal to the dynamically computed centeroid position.
         """
@@ -338,7 +338,7 @@ def _translate_compartment(compartment: Compartment) -> CompartmentData:
     return CompartmentData(
         id=compartment.id,
         net_index=compartment.net_index,
-        nodes = compartment.nodes,
+        nodes=compartment.nodes,
         position=compartment.position,
         size=compartment.size,
         volume=compartment.volume,
@@ -614,7 +614,7 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
 
 
 def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
-             border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode : bool = True, lockNode: bool = False) -> int:
+             border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode: bool = True, lockNode: bool = False) -> int:
     """Adds a node to the given network.
 
     The node indices are assigned in increasing order, regardless of deletion.
@@ -660,7 +660,7 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
     return _controller.add_node_g(net_index, node)
 
 
-def move_node(net_index: int, node_index: int, position: Vec2, allowNegativeCoordinates: bool=False):
+def move_node(net_index: int, node_index: int, position: Vec2, allowNegativeCoordinates: bool = False):
     """Change the position of a node."""
     _controller.move_node(net_index, node_index, position, allowNegativeCoordinates)
 
@@ -749,14 +749,14 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
         if size is not None:
             _controller.set_node_size(net_index, node_index, size)
         if floatingNode is not None:
-            _controller.set_node_floating_status (net_index, node_index, floatingNode)
+            _controller.set_node_floating_status(net_index, node_index, floatingNode)
         if lockNode is not None:
-            _controller.set_node_locked_status (net_index, node_index, lockNode)
+            _controller.set_node_locked_status(net_index, node_index, lockNode)
 
 
 def compute_centroid(net_index: int, reactants: List[int], products: List[int]):
     """Compute the centroid of the given sets of reactant and product nodes.
-    
+
     The centroid is used as the position of the center circle of reactions.
 
     Args:
@@ -871,7 +871,8 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
 def update_reaction(net_index: int, reaction_index: int, id: str = None,
                     fill_color: Color = None, thickness: float = None, ratelaw: str = None,
                     handle_positions: List[Vec2] = None,
-                    center_pos: Union[Vec2, CustomNone] = CustomNone(), use_bezier: bool = None,
+                    center_pos: Union[Optional[Vec2], CustomNone] = CustomNone(),
+                    use_bezier: bool = None,
                     modifier_tip_style: ModifierTipStyle = ModifierTipStyle.CIRCLE):
     """
     Update one or multiple properties of a reaction.
@@ -927,17 +928,17 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
             _controller.set_reaction_bezier_curves(net_index, reaction_index, use_bezier)
         if modifier_tip_style is not None:
             _controller.set_modifier_tip_style(net_index, reaction_index, modifier_tip_style)
-    
+
 
 def get_selected_node_indices(net_index: int) -> Set[int]:
     """Return the set of selected node indices."""
     return _canvas.sel_nodes_idx.item_copy()
-    
+
 
 def get_selected_reaction_indices() -> Set[int]:
     """Return the set of selected reaction indices."""
     return _canvas.sel_reactions_idx.item_copy()
-    
+
 
 def get_selected_compartment_indices() -> Set[int]:
     """Return the set of selected compartment indices."""
@@ -956,7 +957,7 @@ def get_reactions_as_product(net_index: int, node_index: int) -> Set[int]:
 
 def is_reactant(net_index: int, node_index: int, reaction_index: int) -> bool:
     """Return whether the given node is a reactant of the given reaction.
-    
+
     This runs linearly to number of reactants of the given reaction. If your reaction
     is very very large, then construct a set from its reactants and test for membership manually.
 
@@ -970,7 +971,7 @@ def is_reactant(net_index: int, node_index: int, reaction_index: int) -> bool:
 
 def is_product(net_index: int, node_index: int, reaction_index: int) -> bool:
     """Return whether the given node is a product of the given reaction.
-    
+
     This runs linearly to the number of products of the given reaction. If your reaction
     is very very large, then construct a set from its products and test for membership manually.
     """
@@ -1254,12 +1255,12 @@ def translate_network(net_index: int, offset: Vec2, check_bounds: bool = True) -
         for node in nodes:
             newpos = node.position + offset
             if newpos.x < 0 or newpos.y < 0 or newpos.x + node.size.x >= bounds.x or \
-                newpos.y + node.size.y >= bounds.y:
+                    newpos.y + node.size.y >= bounds.y:
                 return False
         for comp in comps:
             newpos = comp.position + offset
             if newpos.x < 0 or newpos.y < 0 or newpos.x + comp.size.x >= bounds.x or \
-                newpos.y + comp.size.y >= bounds.y:
+                    newpos.y + comp.size.y >= bounds.y:
                 return False
 
     with group_action():
@@ -1269,7 +1270,12 @@ def translate_network(net_index: int, offset: Vec2, check_bounds: bool = True) -
             move_compartment(net_index, comp.index, comp.position + offset)
         for reaction in _controller.get_list_of_reactions(net_index):
             handles = reaction.handles
-            new_handle_pos = [reaction.src_c_handle.tip + offset] + [h.tip + offset for h in handles]
-            update_reaction(net_index, reaction.index, handle_positions=new_handle_pos)
+            new_handle_pos = [reaction.src_c_handle.tip +
+                              offset] + [h.tip + offset for h in handles]
+            new_center_pos = None
+            if reaction.center_pos is not None:
+                new_center_pos = reaction.center_pos + offset
+            update_reaction(net_index, reaction.index,
+                            handle_positions=new_handle_pos, center_pos=new_center_pos)
 
     return True

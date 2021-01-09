@@ -93,10 +93,11 @@ class LayoutNetworkX(WindowedPlugin):
            
     def Apply(self, evt):
         G = nx.Graph()
-        nodes = np.array(list(api.get_node_indices(0)))
+        nodesInd = np.array(list(api.get_node_indices(0)))
         reactionsInd =  np.array(list(api.get_reaction_indices(0)))
         originalPos = {}
         def generateGraph():
+            # add nodes and centroids as "nodes" for networkX
             nodes = np.array(list(api.get_node_indices(0)))
             #reactionsInd =  np.array(list(api.get_reaction_indices(0)))
             cStr = np.empty_like(reactionsInd, dtype=str)
@@ -105,8 +106,9 @@ class LayoutNetworkX(WindowedPlugin):
             G.add_nodes_from(centroidId)
             nStr = np.empty_like(nodes, dtype=str)
             nStr[:,] = "n"
-            nodesId = np.array(list(np.char.add(nStr, nodes.astype(str))))
+            nodesId = np.array(list(np.char.add(nStr, nodesInd.astype(str))))
             G.add_nodes_from(nodesId)
+            '''
             for n in nodes:
                 centroidsTo = np.array(list(api.get_reactions_as_product(0, n))) # Gets the reactions in which it is a product -> TO 
                 cStr = np.empty_like(centroidsTo, dtype=str)
@@ -130,24 +132,35 @@ class LayoutNetworkX(WindowedPlugin):
                 edgesFrom = np.array(list(zip(nodeIndArrayFrom, centroidsFromIn)))
                 G.add_edges_from(edgesTo)
                 G.add_edges_from(edgesFrom)
+            '''
+
+            # Add edges from reactant to centroid and centroid to product (undirected)
+            edges = list()
+            for reaction in api.get_reactions(0):
+                for s in reaction.sources:
+                    edges.append(('n' + str(s), 'c' + str(reaction.index)))
+                for t in reaction.targets:
+                    edges.append(('c' + str(reaction.index), 'n' + str(t)))
+                        
+            G.add_edges_from(edges)
             cn = 0
             for rea in api.get_reactions(0):
                 cent = api.compute_centroid(0, rea.sources, rea.targets)
                 #originalPos[centroidId[cn]] = list([cent.x, cent.y])
-                originalPos[cn] = list([random.randint(0,600), random.randint(0,600)])
+                originalPos['c' + str(rea)] = list([random.randint(0,600), random.randint(0,600)])
                 cn = cn + 1
             
             for nod in api.get_nodes(0):
                 #originalPos[nodesId[cn]] = list([nod.position.x, nod.position.y])
                 # random.randint(0,500), nod.position.y+random.randint (0,500)])
-                originalPos[cn] = list([random.randint(0,600), random.randint (0,600)])
+                originalPos['n' + str(nod)] = list([random.randint(0,600), random.randint (0,600)])
                 cn = cn + 1
         generateGraph()
         #print(nx.to_dict_of_lists(G))
-        nodeIds = list (api.get_node_indices(0))
+        #nodeIds = list (api.get_node_indices(0))
         with api.group_action():   
-            for t in range(20):
-                pos = (nx.fruchterman_reingold_layout(G, k = self.kValue, iterations = self.MaxIterValue, scale = self.scaleValue, pos = originalPos))
+            for t in range(1):
+                pos = (nx.fruchterman_reingold_layout(G, k = self.kValue, iterations = self.MaxIterValue, scale = self.scaleValue, pos = originalPos, weight=1))
                 positions = np.array(list(pos.values()))
                 minX = 0
                 minY = 0
@@ -163,15 +176,24 @@ class LayoutNetworkX(WindowedPlugin):
                 for n in nodes:
                     newX = float(n[0])
                     newY = float(n[1])
-                    api.move_node(0, nodeIds[count], position = Vec2(newX, newY), allowNegativeCoordinates=True)   
+                    api.move_node(0, nodesInd[count], position = Vec2(newX, newY), allowNegativeCoordinates=True)   
                     count = count + 1
                 
-                '''
                 count = 0
                 for c in centroids:
                     newX = float(c[0])
                     newY = float(c[1])
-                    api.update_reaction(0, reactionsInd[count], center_pos= Vec2(newX, newY))  
+                    r = api.get_reaction_by_index(0, reactionsInd[count])
+                    api.update_reaction(0, r.index, center_pos=Vec2(newX, newY))  
+                    handles = api.default_handle_positions(0, r.index)
+                    api.set_reaction_center_handle(0, r.index, handles[0])
+                    idx = 1
+                    for s in r.sources:
+                        api.set_reaction_node_handle(0, r.index, s, True, handles[idx])
+                        idx += 1
+                    for t in r.targets:
+                        api.set_reaction_node_handle(0, r.index, t, False, handles[idx])
+                        idx += 1
                     count = count + 1
                 '''
                 
@@ -179,8 +201,8 @@ class LayoutNetworkX(WindowedPlugin):
                     currCentroid = centroids[r.index]
                     newX = float(currCentroid[0])
                     newY = float(currCentroid[1])
-                    #api.update_reaction(0, r.index, center_pos=(Vec2(newX, newY)))
-                    api.update_reaction(0, r.index, center_pos=None)
+                    api.update_reaction(0, r.index, center_pos=(Vec2(newX, newY)))
+                    #api.update_reaction(0, r.index, center_pos=None)
                     handles = api.default_handle_positions(0, r.index)
                     api.set_reaction_center_handle(0, r.index, handles[0])
                     count = 1
@@ -191,6 +213,7 @@ class LayoutNetworkX(WindowedPlugin):
                         api.set_reaction_node_handle(0, r.index, t, False, handles[count])
                         count += 1
                 
+                '''
 
             ws = api.window_size()
             offset = Vec2(ws.x/4, ws.y/4)

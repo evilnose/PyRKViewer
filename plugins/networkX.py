@@ -46,26 +46,52 @@ class LayoutNetworkX(WindowedPlugin):
             dialog
         '''
         # TODO: k, gravity, useMagnetism, useBoundary, useGrid
-        window = wx.Panel(dialog, pos=(5,100), size=(350, 200))
-        MaxIter = wx.StaticText(window, -1, 'Maximum Number of Iterations', (20 , 20))
-        self.MaxIterText = wx.TextCtrl(window, -1, "100", (220, 20), size=(100, -1))
+        self.window = wx.Panel(dialog, pos=(5,100), size=(350, 220))
+        self.sizer = wx.FlexGridSizer(cols=2, vgap=10, hgap=0)
+        self.sizer.AddGrowableCol(0, 0.6)
+        self.sizer.AddGrowableCol(1, 0.4)
+
+        self.sizer.Add((0, 10))
+        self.sizer.Add((0, 10))
+
+        self.MaxIterText = wx.TextCtrl(self.window, -1, "100", size=(100, -1))
         self.MaxIterText.SetInsertionPoint(0)
         self.MaxIterText.Bind(wx.EVT_TEXT, self.OnText_MaxIter)
         self.MaxIterValue = int(self.MaxIterText.GetValue())
-        k = wx.StaticText(window, -1, 'k (float > 0)', (20 , 50))
-        self.kText = wx.TextCtrl(window, -1, "70", (220, 50), size=(100, -1))
+        self.AddField('Max Number of Iterations', self.MaxIterText)
+
+        self.kText = wx.TextCtrl(self.window, -1, "70", size=(100, -1))
         self.kText.SetInsertionPoint(0)
         self.kText.Bind(wx.EVT_TEXT, self.OnText_k)
         self.kValue = float(self.kText.GetValue())        
-        scale = wx.StaticText(window, -1, 'Scale of Layout', (20 , 80))
-        self.scaleText = wx.TextCtrl(window, -1, "550", (220, 80), size=(100, -1))
+
+        self.AddField('k (float > 0)', self.kText)
+
+        self.scaleText = wx.TextCtrl(self.window, -1, "550", size=(100, -1))
         self.scaleText.SetInsertionPoint(0)
         self.scaleText.Bind(wx.EVT_TEXT, self.OnText_scale)
-        self.scaleValue = float(self.scaleText.GetValue())  
-        apply_btn = wx.Button(window, -1, 'Run', (220, 130))
+        self.scaleValue = float(self.scaleText.GetValue())
+
+        self.AddField('Scale of Layout', self.scaleText)
+
+        self.useCentroid = False
+        self.centroidCheckBox = wx.CheckBox(self.window)
+        self.centroidCheckBox.Bind(wx.EVT_CHECKBOX, self.OnCheckUseCentroid)
+
+        self.AddField('Also Arrange Centroids', self.centroidCheckBox)
+
+        # add spacer left of button
+        self.sizer.Add((0, 0))
+        apply_btn = wx.Button(self.window, -1, 'Run', (220, 130))
         apply_btn.Bind(wx.EVT_BUTTON, self.Apply)
-        window.SetPosition (wx.Point(10,10))
-        return window
+        self.sizer.Add(apply_btn)
+        self.window.SetPosition (wx.Point(10,10))
+        self.window.SetSizer(self.sizer)
+        return self.window
+
+    def AddField(self, text, field):
+        self.sizer.Add(wx.StaticText(self.window, label=text), wx.SizerFlags().Border(wx.LEFT, 20))
+        self.sizer.Add(field)
 
     def OnText_MaxIter(self, evt):
         try:
@@ -90,8 +116,14 @@ class LayoutNetworkX(WindowedPlugin):
               self.scaleValue = float(self.scaleText.GetValue())
         except ValueError:
            wx.MessageBox('Value must be a number', 'Error', wx.OK | wx.ICON_INFORMATION)
+
+    def OnCheckUseCentroid(self, evt):
+        cb = evt.GetEventObject() 
+        self.useCentroid = cb.GetValue()
            
     def Apply(self, evt):
+        if api.node_count(0) == 0:
+            return
         G = nx.Graph()
         nodesInd = np.array(list(api.get_node_indices(0)))
         reactionsInd =  np.array(list(api.get_reaction_indices(0)))
@@ -179,22 +211,21 @@ class LayoutNetworkX(WindowedPlugin):
                     api.move_node(0, nodesInd[count], position = Vec2(newX, newY), allowNegativeCoordinates=True)   
                     count = count + 1
                 
-                count = 0
-                for c in centroids:
-                    newX = float(c[0])
-                    newY = float(c[1])
-                    r = api.get_reaction_by_index(0, reactionsInd[count])
-                    api.update_reaction(0, r.index, center_pos=Vec2(newX, newY))  
-                    handles = api.default_handle_positions(0, r.index)
-                    api.set_reaction_center_handle(0, r.index, handles[0])
-                    idx = 1
-                    for s in r.sources:
-                        api.set_reaction_node_handle(0, r.index, s, True, handles[idx])
-                        idx += 1
-                    for t in r.targets:
-                        api.set_reaction_node_handle(0, r.index, t, False, handles[idx])
-                        idx += 1
-                    count = count + 1
+                if self.useCentroid:
+                    count = 0
+                    for c in centroids:
+                        newX = float(c[0])
+                        newY = float(c[1])
+                        r = api.get_reaction_by_index(0, reactionsInd[count])
+                        handles = api.default_handle_positions(0, r.index)
+                        api.update_reaction(0, r.index, center_pos=Vec2(newX, newY), handle_positions=handles)  
+                        count = count + 1
+                else:
+                    for index in api.get_reaction_indices(0):
+                        api.update_reaction(0, index, center_pos=None)
+                        handles = api.default_handle_positions(0, index)
+                        api.update_reaction(0, index, handle_positions=handles)
+
                 '''
                 
                 for r in api.get_reactions(0):

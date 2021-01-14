@@ -98,7 +98,7 @@ class Plugin:
     metadata: PluginMetadata
     ptype: PluginType
 
-    def __init__(self, metadata: PluginMetadata, ptype: PluginType):
+    def __init__(self, ptype: PluginType):
         """
         Creating a Plugin object.
 
@@ -107,7 +107,6 @@ class Plugin:
             metadata (PluginMetadata): metadata information of plugin.
             ptype (PluginType): defines the type of plugin to create.
         """
-        self.metadata = metadata
         self.ptype = ptype
 
     def get_settings_schema(self):
@@ -217,8 +216,8 @@ class CommandPlugin(Plugin, abc.ABC):
         metadata (PluginMetadata): metadata information of plugin.
     """
 
-    def __init__(self, metadata: PluginMetadata):
-        super().__init__(metadata, PluginType.COMMAND)
+    def __init__(self):
+        super().__init__(PluginType.COMMAND)
 
     @abc.abstractmethod
     def run(self):
@@ -245,8 +244,8 @@ class WindowedPlugin(Plugin, abc.ABC):
     """
     dialog: Optional[wx.Dialog]
 
-    def __init__(self, metadata: PluginMetadata):
-        super().__init__(metadata, PluginType.WINDOWED)
+    def __init__(self):
+        super().__init__(PluginType.WINDOWED)
         self.dialog = None
 
     @abc.abstractmethod

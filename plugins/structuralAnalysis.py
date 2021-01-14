@@ -16,16 +16,6 @@ import numpy as _np
 import copy as _copy
 from dataclasses import dataclass
 
-
-metadata = PluginMetadata(
-    name='StructuralAnalysis',
-    author='Jin Xu',
-    version='0.0.1',
-    short_desc='Structural Analysis.',
-    long_desc='StructuralAnalysis Plugin is to calculate and visualize the stoichiometry matrix and conserved moieties for the network.',
-    category=PluginCategory.ANALYSIS
-)
-
 class TabOne(wx.Panel):
     def __init__(self, parent):
         wx.Panel.__init__(self, parent, wx.EXPAND|wx.ALL)
@@ -55,14 +45,21 @@ class TabTwo(wx.Panel):
         self.SetSizer(sizer)
 
 class StructuralAnalysis(WindowedPlugin):
+    metadata = PluginMetadata(
+        name='StructuralAnalysis',
+        author='Jin Xu',
+        version='0.0.1',
+        short_desc='Structural Analysis.',
+        long_desc='StructuralAnalysis Plugin is to calculate and visualize the stoichiometry matrix and conserved moieties for the network.',
+        category=PluginCategory.ANALYSIS
+    )
     def __init__(self):
         """
         Initialize the StructuralAnalysis Plugin.
         Args:
             self
         """
-        
-        super().__init__(metadata)
+        super().__init__()
         self.index_list=[]
 
 

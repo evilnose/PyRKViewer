@@ -32,22 +32,11 @@ def create_excepthook(old_excepthook):
         err_msg = ''.join(traceback.format_exception(etype, value, tb))
         logging.error(err_msg)
         #old_excepthook(etype, value, traceback)
-
         if dlg is None:
             dlg = ExceptionDialog(err_msg)
             dlg.ShowModal()
 
-            # HACK get the parent directory of the file that threw the error. If that directory
-            # is "plugins", then don't terminate the program. This makes sure that a faulty
-            # plugin doesn't crash everything.
-            # But, this is a bit hacky since "plugins" is hardcoded.
-            origin_filepath = tb.tb_frame.f_code.co_filename  # Origin file of error
-            abs_path = os.path.abspath(origin_filepath)  # Absolute path
-            abs_path = Path(abs_path)
-            parent_dir = abs_path.parent  # Get full parent path of error file
-            parent_dir = getattr(parent_dir, "name")  # Get last part (directory) of parent
-            if parent_dir != 'plugins':
-                wx.GetApp().GetTopWindow().Destroy()
+            wx.GetApp().GetTopWindow().Destroy()
 
             dlg.Destroy()
             dlg = None

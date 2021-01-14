@@ -12,6 +12,9 @@ import os
 import sys
 from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 from marshmallow.schema import Schema
+import logging
+import inspect
+import traceback
 
 # pylint: disable=no-name-in-module
 import wx
@@ -59,6 +62,15 @@ class PluginManager:
         bind_handler(DidModifyCompartmentsEvent, self.make_notify('on_did_modify_compartments'))
         bind_handler(DidChangeCompartmentOfNodesEvent,
                      self.make_notify('on_did_change_compartment_of_nodes'))
+        self.logger = logging.getLogger('plugin-manager')
+        self.error_callback = lambda _: None  # By default don't do anything
+
+    def bind_error_callback(self, callback):
+        """Bind a dialog callback for when there is an error.
+        
+        If an error occurs before such a callback is bound, it is only logged.
+        """
+        self.error_callback = callback
 
     # Also TODO might want a more sophisticated file system structure, including data storage and
     # temp folder
@@ -80,13 +92,47 @@ class PluginManager:
             loader.exec_module(mod)
 
             def pred(o): return o.__module__ == mod_name and issubclass(o, Plugin)
+            def wrap_exception(pname, method):
+                def ret(*args, **kwargs):
+                    try:
+                        return method(*args, **kwargs)
+                    except Exception as e:
+                        errmsg = ''.join(traceback.format_exception(None, e, e.__traceback__))
+                        errmsg = "Caught error in plugin '{}'".format(pname) + errmsg
+                        self.logger.error(errmsg)
+                        self.error_callback(errmsg)
+                return ret
+
             cur_classes = [m[1] for m in inspect.getmembers(mod, inspect.isclass) if pred(m[1])]
             for cls in cur_classes:
                 if inspect.isabstract(cls):
-                    raise ValueError("In file {}, {} is an abstract class", f)
-            plugin_classes += cur_classes
+                    logging.warning("Plugin in file '{}' is an abstract class. Did not load.".format(f))
+                    continue
 
-        self.plugins = [cls() for cls in plugin_classes]
+                if not hasattr(cls, 'metadata'):
+                    logging.warning("Plugin in file '{}' does not have a `metadata` class attribute. "
+                        "Did not load. See plugin documentation for more information.".format(f))
+                    continue
+                
+                for method_name, method in inspect.getmembers(cls, inspect.isroutine):
+                    setattr(cls, method_name, wrap_exception(cls.metadata.name, method))
+
+                plugin_classes.append(cls)
+
+        logging.getLogger('plugin').info("Found {} valid plugins in '{}'. Loading plugins...".format(
+            len(plugin_classes), dir_path))
+        
+        self.plugins = list()
+        for cls in plugin_classes:
+            try:
+                plugin = cls()
+                if not hasattr(plugin, 'ptype'):
+                    logging.warning("Plugin '{}' has no `ptype` attribute. Did not load. "
+                        "Did you forget to call `super().__init__()`?".format(cls.metadata.name))
+                    continue
+                self.plugins.append(cls())
+            except Exception as e:
+                self.logger.error('Error when creating plugin object: {}'.format(e))
 
         # Duplicate names
         if len(set(p.metadata.name for p in self.plugins)) < len(self.plugins):
@@ -129,11 +175,11 @@ Plugin!".format(handler_name)
             # self.controller.end_group()
 
         return ret
-    
+
     def register_menu(self, menu: wx.Menu):
         def _get_callback(plugin):
             return lambda _: self.callbacks[plugin]()
-        
+
         sorted_plugins = sorted(self.plugins, key=lambda p: p.metadata.name)
         for plugin in sorted_plugins:
             item = menu.Append(wx.ID_ANY, plugin.metadata.name)
@@ -189,14 +235,15 @@ Plugin!".format(handler_name)
 
     def get_plugins_by_category(self) -> Dict[PluginCategory, List[Tuple[str, Callable[[], None], Optional[wx.Bitmap]]]]:
         """Returns a dictionary that maps each category to the list of plugins.
-        
+
         Each plugin in the lists is a tuple (short_name, bitmap, callback). The 
         """
         ret = defaultdict(list)
         for plugin in self.plugins:
             sname = plugin.metadata.short_name if plugin.metadata.short_name else plugin.metadata.name
             assert isinstance(plugin.metadata.category, PluginCategory)
-            ret[plugin.metadata.category].append((sname, self.callbacks[plugin], plugin.metadata.icon))
+            ret[plugin.metadata.category].append(
+                (sname, self.callbacks[plugin], plugin.metadata.icon))
         return ret
 
 

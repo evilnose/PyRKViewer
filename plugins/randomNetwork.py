@@ -18,15 +18,6 @@ from dataclasses import dataclass
 
 
 
-metadata = PluginMetadata(
-    name='RandomNetwork',
-    author='Jin Xu, Herbert M Sauro',
-    version='0.0.1',
-    short_desc='Random network.',
-    long_desc='Display a random network with certain number of species and reactions as input.',
-    category=PluginCategory.UTILITIES
-)
-
 @dataclass
 class DefaultValues:
     maxSpecies = 15
@@ -39,6 +30,14 @@ class DefaultValues:
 
 
 class RandomNetwork(WindowedPlugin):
+    metadata = PluginMetadata(
+        name='RandomNetwork',
+        author='Jin Xu, Herbert M Sauro',
+        version='0.0.1',
+        short_desc='Random network.',
+        long_desc='Display a random network with certain number of species and reactions as input.',
+        category=PluginCategory.UTILITIES
+    )
     def __init__(self):
         """
         Initialize the RandomNetwork.
@@ -47,7 +46,7 @@ class RandomNetwork(WindowedPlugin):
             self
 
         """
-        super().__init__(metadata)
+        super().__init__()
         
 
     def create_window(self, dialog):

@@ -13,15 +13,6 @@ from rkplugin import api
 from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin.api import Vec2
 
-metadata = PluginMetadata(
-    name='ArrowDesigner',
-    author='Gary Geng',
-    version='0.0.1',
-    short_desc='Arrow tip designer for reactions.',
-    long_desc='Arrow tip designer for reactions.',
-    category=PluginCategory.APPEARANCE,
-)
-
 
 class DesignerWindow(wx.Window):
     """
@@ -251,8 +242,16 @@ class ArrowDesigner(WindowedPlugin):
     """
     The ArrowDesigner plugin that subclasses WindowedPlugin.
     """
+    metadata = PluginMetadata(
+        name='ArrowDesigner',
+        author='Gary Geng',
+        version='0.0.1',
+        short_desc='Arrow tip designer for reactions.',
+        long_desc='Arrow tip designer for reactions.',
+        category=PluginCategory.APPEARANCE,
+    )
     def __init__(self):
-        super().__init__(metadata)
+        super().__init__()
         self.arrow_tip = api.get_arrow_tip()
 
     def create_window(self, dialog):

@@ -5,6 +5,7 @@ Based on THOMAS M. J. FRUCHTERMAN AND EDWARD M. REINGOLD's Graph Drawing by Forc
 SOFTWARE—PRACTICE AND EXPERIENCE, VOL. 21(1 1), 1129-1164 (NOVEMBER 1991)
 Using python's networkx
 '''
+# pylint: disable=maybe-no-member
 import wx
 from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
@@ -20,23 +21,15 @@ from dataclasses import dataclass
 import networkx as nx
 import rkviewer.canvas.utils as cu
 
-metadata = PluginMetadata(
-    name='Auto Layout',
-    author='Carmen and Herbert M Sauro',
-    version='0.5.2',
-    short_desc='Auto Layout using networkX.',
-    long_desc='Rearrange a random network into a neat auto layout',
-    category=PluginCategory.UTILITIES,
-)
-
 class LayoutNetworkX(WindowedPlugin):
-    def __init__(self):
-        '''
-        Initialize the RandomNetwork.
-        Args:
-            self
-        '''
-        super().__init__(metadata)
+    metadata = PluginMetadata(
+        name='Auto Layout',
+        author='Carmen and Herbert M Sauro',
+        version='0.5.2',
+        short_desc='Auto Layout using networkX.',
+        long_desc='Rearrange a random network into a neat auto layout',
+        category=PluginCategory.UTILITIES,
+    )
 
     def create_window(self, dialog):
         '''

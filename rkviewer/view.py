@@ -479,6 +479,7 @@ class MainFrame(wx.Frame):
         self.CreateStatusBar(len(get_setting('status_fields')))
         self.SetStatusWidths([width for _, width in status_fields])
         self.main_panel = MainPanel(self, controller, manager)
+        self.manager.bind_error_callback(lambda msg: self.main_panel.canvas.ShowWarningDialog(msg, caption='Plugin Error'))
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.main_panel, 1, wx.EXPAND)
 

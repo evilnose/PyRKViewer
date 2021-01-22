@@ -10,7 +10,7 @@ from rkviewer.controller import Controller
 # only necessary to do so for rkplugin.events but not other rkplugin files.
 import os
 from pathlib import Path
-
+import simplesbml
 
 class ExceptionDialog(wx.MessageDialog):
     def __init__(self, msg):

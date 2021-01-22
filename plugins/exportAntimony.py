@@ -22,15 +22,6 @@ class ExportAntimony(WindowedPlugin):
         long_desc='Export the Antimony String from the network on canvas.',
         category=PluginCategory.ANALYSIS
     )
-    def __init__(self):
-        """
-        Initialize the ExportAntimony Plugin.
-        Args:
-            self
-        """
-        
-        super().__init__(metadata)
-
 
     def create_window(self, dialog):
         """

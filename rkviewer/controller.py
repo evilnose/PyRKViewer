@@ -128,6 +128,7 @@ class Controller(IController):
                                    node.border_color.Green(), node.border_color.Blue())
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
         iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
+        iod.setNodeFloatingStatus(neti, nodei, node.floatingNode)
 
         post_event(DidAddNodeEvent(nodei))
         self.end_group()

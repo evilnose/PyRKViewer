@@ -135,17 +135,17 @@ class ColorField(fields.Field):
     def __init__(self, **kw):
         super().__init__(**kw)
 
-    def _serialize(self, value: wx.Colour, attr, obj, **kwargs):
-        ret = [value.Red(), value.Green(), value.Blue()]
-        if value.Alpha() != 255:
-            ret += [value.Alpha()]
+    def _serialize(self, value: Color, attr, obj, **kwargs):
+        ret = [value.r, value.g, value.b]
+        if value.a != 255:
+            ret += [value.a]
         return ret
 
-    def _deserialize(self, value, attr, data, **kwargs):
+    def _deserialize(self, value, attr, data, **kwargs) -> Color:
         self.list_field.validate(value)
         for val in value:
             ColorField.range_validate(val)
-        return wx.Colour(*value)
+        return Color(*value)
 
 
 class Pixel(fields.Int):
@@ -444,6 +444,9 @@ def get_setting(setting_attr) -> Any:
 def get_theme(theme_attr) -> Any:
     global _theme
     tmp = _theme[theme_attr]
+    # automatically convert Color to wx.Colour
+    if isinstance(tmp, Color):
+        tmp = wx.Colour(tmp.r, tmp.g, tmp.b, tmp.a)
     return tmp
 
 

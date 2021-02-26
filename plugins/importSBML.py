@@ -8,7 +8,6 @@ Version 0.01: Author: Jin Xu (2021)
 
 from inspect import Parameter
 from libsbml import KineticLaw
-#from tesbml.libsbml import BoundaryCondition
 import wx
 from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
@@ -94,9 +93,6 @@ class ExportSBML(WindowedPlugin):
             mplugin = (model_layout.getPlugin("layout"))
 
             if mplugin is None:
-                #print(
-                #    "[Fatal Error] Layout Extension Level " + layoutns.getLevel() + " Version " + layoutns.getVersion() + " package version " + layoutns.getPackageVersion() + " is not registered.")
-                #sys.exit(1)
                 wx.MessageBox("There is no layout information, so positions are randomly assigned.", "Message", wx.OK | wx.ICON_INFORMATION)
 
             #
@@ -146,13 +142,6 @@ class ExportSBML(WindowedPlugin):
             Comps_ids = model.getListOfCompartmentIds()
             numNodes = numFloatingNodes + numBoundaryNodes
 
-
-            # add_compartment(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
-            #     border_width: float = None, position: Vec2 = None, size: Vec2 = None,
-            #     volume: float = None, nodes: List[int] = None) 
-
-            #layout info: position, size, can not add nodes
-
             for i in range(numComps):
                 temp_id = Comps_ids[i]
                 vol= model.getCompartmentVolume(i)
@@ -168,13 +157,6 @@ class ExportSBML(WindowedPlugin):
 
                 comp_idx = api.add_compartment(net_index, id=temp_id, volume = vol,
                 size=Vec2(dimension[0],dimension[1]),position=Vec2(position[0],position[1]))
-
-
-            # add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
-            #     border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode: bool = True, lockNode: bool = False)
-
-            # layout info: position, size
-            # compartment might need to add first instead of adding nodes first
 
             comp_node_list = [0]*numComps
 
@@ -230,7 +212,6 @@ class ExportSBML(WindowedPlugin):
                             comp_node_list[j].append(nodeIdx_temp)
 
 
-            # set_compartment_of_node(net_index: int, node_index: int, comp_index: int)
             for i in range(numComps):
                 temp_id = Comps_ids[i]
                 for j in range(numComps):
@@ -239,12 +220,6 @@ class ExportSBML(WindowedPlugin):
                 for j in range(len(node_list_temp)):
                     api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[j], comp_index=i)
 
-            
-            # add_reaction(net_index: int, id: str, reactants: List[int], products: List[int],
-            #     fill_color: Color = None, line_thickness: float = None,
-            #     rate_law: str = '', handle_positions: List[Vec2] = None,
-            #     center_pos: Vec2 = None, use_bezier: bool = True)
- 
             #handle_positions, center_pos was set as the default
 
             numNodes = api.node_count(net_index)

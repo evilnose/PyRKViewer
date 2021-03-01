@@ -2,18 +2,22 @@
 """
 # pylint: disable=maybe-no-member
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Any
-from commentjson.commentjson import JSONLibraryException
-from rkviewer.utils import get_local_path
-import wx
-import os
-from marshmallow import Schema, fields, validate, missing as missing_, ValidationError
-from rkviewer.canvas.geometry import Vec2
-import copy
-import commentjson
-from pathlib import Path
 
+import copy
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, List, Tuple
+
+import commentjson
+import wx
+from commentjson.commentjson import JSONLibraryException
+from marshmallow import Schema, ValidationError, fields
+from marshmallow import missing as missing_
+from marshmallow import validate
+
+from rkviewer.canvas.geometry import Rect, Vec2
+from rkviewer.utils import get_local_path
 
 # TODO rename get_local_path
 #config_dir = "" #get_local_path('.rkviewer')  # This will be set by either appsettings (see below) or CreateConfigDir in view.poy

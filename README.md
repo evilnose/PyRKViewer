@@ -55,3 +55,24 @@ Usually snake_case is used for function names. However, to retain some degree of
 * REFACTOR: Refactor Minimap so that it's a CanvasElement. We also need CanvasElement functions to accept both a logical_pos and a device_pos as arguments.
 * ENHANCEMENT: Add support for multiple net IDs. Currently all net IDs are set to 0 by default.
 
+### Roadmap for Shape Engine
+A shape "engine" allows the user to specify custom composite shapes for nodes and compartments.
+Composite shapes are constructed out of primitives such as circles, (rounded) rectangles, polygons,
+etc.
+
+RKViewer provides a default list of (composite) shapes, but the user may also create their own
+shapes out of primitives. A (composite) shape is formed out of one or many primitives, each
+scaled, rotated, and translated by certain amounts. User-created shapes will be
+associated with each model in the exported `.json` files.
+
+A shape-creation plugin may be created in the future to facilitate the process of designing
+complex shapes.
+
+Here is the roadmap for the shape engine:
+* Create preliminary list of primitives and a default list of shapes. Allow model loader/saver to
+reference that list.
+* Modify renderer to be able to render these default shapes.
+* Modify inspector to allow the user to change the properties of the primitives in the shape, such
+as colors, border thickness, etc.
+* Modify model loader/saver to allow users to create custom shape lists manually.
+* Write shape-creation plugin?

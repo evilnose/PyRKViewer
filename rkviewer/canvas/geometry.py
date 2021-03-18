@@ -549,16 +549,30 @@ class Shape(Primitive):
         self.border_color = border_color
         self.border_width = border_width
 
-
 # TODO implement this with an additional parameter of corner radius (rounded rectangle)
 class RectanglePrim(Shape):
-    pass
+    def __init__(self, bg_color: wx.Colour, border_color: wx.Colour, border_width: float, corner_radius: float):
+        Shape.__init__(self, bg_color, border_color, border_width)
+        self.corner_radius = corner_radius
+    def draw_to_gc(self, gc):
+        pen = wx.Pen(self.border_color, self.border_width)
+        gc.SetPen(pen)
+        gc.SetBrush(wx.Brush(self.bg_color))
+        gc.DrawRoundedRectangle(0.0, 0.0, 0.5, 1.0, self.corner_radius)
 
 
 # TODO implement this
 class CirclePrim(Shape):
-    pass
-
+    #def __init__(self, bg_color: wx.Colour, border_color: wx.Colour, border_width: float):
+        #Shape.__init__(self, bg_color, border_color, border_width)
+    def draw_to_gc(self, gc):
+        pen = wx.Pen(self.border_color, self.border_width)
+        gc.SetPen(pen)
+        gc.SetBrush(wx.Brush(self.bg_color))
+        path = gc.CreatePath()
+        path.AddCircle(0.0, 0.0, 0.5)
+        gc.DrawPath(path)
+        
 
 class Transform:
     def __init__(self, scale: Vec2, rotation: float, translation: Vec2):
@@ -571,13 +585,21 @@ class Transform:
             translation: The translation (x, y) of the transform, from the top-left corner. x and
                          y should be between 0 and 1, relative to a bounding box.
         """
-        pass # TODO
+        #pass # TODO
+        self.scale= scale  
+        self.rotation = rotation
+        self.translation = translation 
+
 
     def apply_to_gc(self, gc: wx.GraphicsContext, bounding_rect: Rect):
         # TODO: implement this
-        pass
+        gc.Translate(self.translation.x, self.translation.y)
+        gc.Translate(bounding_rect.position.x, bounding_rect.position.y)
+        gc.Scale(self.scale.x, self.scale.y)
+        gc.Scale(bounding_rect.size.x, bounding_rect.size.y)
+        gc.Rotate(self.rotation)
 
-
+        
 class CompositeShape:
     items: List[Tuple[Primitive, Transform]]
     def __init__(self, items: List[Tuple[Primitive, Transform]]):
@@ -588,13 +610,13 @@ class CompositeShape:
                    is rendered first. The transform is applied before each primitive is drawn.
         """
         self.items = items
-
     def draw(self, gc: wx.GraphicsContext, bounding_rect: Rect):
         """Draw the list of primitives in order."""
         for primitive, transform in self.items:
             # TODO: apply the transform to the gc, based on the bounding_rect
             # The drawing should be translated based on the position of the bounding_rect as well
             # as the relative translation amount from the transform.
-            transform.apply_to_gc(gc, bounding_rect)
+            gc.PushState()
+            transform.apply_to_gc(gc, bounding_rect) 
             primitive.draw_to_gc(gc)
-            pass
+            gc.PopState()

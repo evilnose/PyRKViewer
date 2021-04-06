@@ -55,6 +55,12 @@ Usually snake_case is used for function names. However, to retain some degree of
 * REFACTOR: Refactor Minimap so that it's a CanvasElement. We also need CanvasElement functions to accept both a logical_pos and a device_pos as arguments.
 * ENHANCEMENT: Add support for multiple net IDs. Currently all net IDs are set to 0 by default.
 
+### Shapes TODOs
+* Add form fields for changing the CompositeShape and for setting primitive properties
+* Add API functions for setting/getting shapes
+* Add convenience API functions for creating rectangle nodes or circle nodes
+* Serialize/deserialize shape properties
+
 ### Roadmap for Shape Engine
 A shape "engine" allows the user to specify custom composite shapes for nodes and compartments.
 Composite shapes are constructed out of primitives such as circles, (rounded) rectangles, polygons,

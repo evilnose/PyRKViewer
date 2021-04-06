@@ -566,7 +566,7 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
                     border_width: float = None, position: Vec2 = None, size: Vec2 = None,
                     volume: float = None, nodes: List[int] = None) -> int:
     """ 
-    Adds a compartment. TODO modify this after add_node() and add_reaction().
+    Adds a compartment.
 
     The Compartment indices are assigned in increasing order, regardless of deletion.
 
@@ -614,7 +614,8 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
 
 
 def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
-             border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode: bool = True, lockNode: bool = False) -> int:
+             border_width: float = None, position: Vec2 = None, size: Vec2 = None,
+             floatingNode: bool = True, lockNode: bool = False) -> int:
     """Adds a node to the given network.
 
     The node indices are assigned in increasing order, regardless of deletion.

@@ -1,6 +1,7 @@
 """Implementation of a controller.
 """
 # pylint: disable=maybe-no-member
+from numpy.core.fromnumeric import shape
 import wx
 import traceback
 from typing import Any, Collection, List, Optional, Set
@@ -10,7 +11,7 @@ import logging
 from rkviewer.iodine import Color, getReactionModifiers
 from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidRedoEvent, DidUndoEvent, post_event
-from .canvas.data import Compartment, Node, Reaction
+from .canvas.data import Compartment, Node, Reaction, TCompositeShape
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView, ModelError, ModifierTipStyle
@@ -129,6 +130,7 @@ class Controller(IController):
         iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
         iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
         iod.setNodeFloatingStatus(neti, nodei, node.floatingNode)
+        iod.setNodeShapeIndex(neti, nodei, node.shape_index)
 
         post_event(DidAddNodeEvent(nodei))
         self.end_group()
@@ -139,6 +141,26 @@ class Controller(IController):
 
     def get_application_position(self) -> wx.Point:
         return self.initial_position
+
+    def get_composite_shape_list(self, neti: int) -> List[TCompositeShape]:
+        return iod.getListOfCompositeShapes(neti)
+
+    def get_composite_shape_at(self, neti: int, shapei: int) -> TCompositeShape:
+        return iod.getCompositeShapeAt(neti, shapei)
+
+    def get_node_shape(self, neti: int, nodei: int) -> TCompositeShape:
+        return iod.getNodeShape(neti, nodei)
+
+    def get_node_shape_index(self, neti: int, nodei: int) -> int:
+        return iod.getNodeShapeIndex(neti, nodei)
+
+    @iod_setter
+    def set_node_shape_index(self, neti: int, nodei: int, shapei: int):
+        iod.setNodeShapeIndex(neti, nodei, shapei)
+    
+    @iod_setter
+    def set_node_primitive_property(self, neti: int, nodei: int, primitive_index: int, prop_name: str, prop_value):
+        iod.setNodePrimitiveProperty(neti, nodei, primitive_index, prop_name, prop_value)
 
     def wx_to_tcolor(self, color: wx.Colour) -> Color:
         return Color(color.Red(), color.Green(), color.Blue(), color.Alpha())
@@ -431,6 +453,8 @@ class Controller(IController):
             comp_idx=iod.getCompartmentOfNode(neti, nodei),
             floatingNode=iod.IsFloatingNode (neti, nodei),
             lockNode=iod.IsNodeLocked(neti, nodei),
+            shape_index=iod.getNodeShapeIndex(neti, nodei),
+            composite_shape=iod.getNodeShape(neti, nodei),
         )
 
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:

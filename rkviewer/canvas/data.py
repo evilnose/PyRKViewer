@@ -9,10 +9,10 @@ import math
 from itertools import chain
 import numpy as np
 from scipy.special import comb
-from typing import Callable, Container, List, Optional, Sequence, Set, Tuple
+from typing import Any, Callable, Container, List, Optional, Sequence, Set, Tuple
 from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
-from ..config import get_setting, get_theme
+from ..config import get_setting, get_theme, Color
 from ..utils import gchain, pairwise
 
 
@@ -21,6 +21,41 @@ HANDLE_RADIUS = 5  # Radius of the contro lhandle
 HANDLE_BUFFER = 2
 NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
 TIP_DISPLACEMENT = 4
+
+
+@dataclass
+class TTransform:
+    translation: Vec2 = Vec2()
+    rotation: float = 0
+    scale: Vec2 = Vec2(1, 1)
+
+
+class TPrimitive:
+    pass
+
+
+@dataclass
+class TCirclePrim(TPrimitive):
+    fill_color: Color = Color(255, 0, 0, 255)
+    border_color: Color = Color(0, 255, 0, 255)
+    border_width: float = 2
+
+
+@dataclass
+class TRectanglePrim(TPrimitive):
+    # TODO change defaults
+    fill_color: Color = Color(255, 0, 0, 255)
+    border_color: Color = Color(0, 255, 0, 255)
+    border_width: float = 2
+    corner_radius: float = 0
+
+
+class TCompositeShape:
+    def __init__(self, items: List[Tuple[Any, TTransform]]):
+        self.items = items
+
+    def __copy__(self):
+        return TCompositeShape(copy.deepcopy(self.items))
 
 
 class RectData:
@@ -53,10 +88,17 @@ class Node(RectData):
     net_index: int
     floatingNode: bool
     lockNode: bool  # Prevent users from moving the node
+    shape_index: int
+    composite_shape: Optional[TCompositeShape]
 
     # force keyword-only arguments
     def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, floatingNode: bool = True, lockNode: bool = False, index: int = -1):
+                 border_color: wx.Colour, border_width: float, comp_idx: int = -1,
+                 floatingNode: bool = True,
+                 lockNode: bool = False,
+                 shape_index: int = 0,
+                 composite_shape: Optional[TCompositeShape] = None,
+                 index: int = -1):
         self.index = index
         self.net_index = net_index
         self.id = id
@@ -68,6 +110,8 @@ class Node(RectData):
         self.comp_idx = comp_idx
         self.floatingNode = floatingNode
         self.lockNode = lockNode
+        self.shape_index = shape_index
+        self.composite_shape = composite_shape
 
     @property
     def s_position(self):

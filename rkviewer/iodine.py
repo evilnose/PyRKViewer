@@ -9,6 +9,7 @@ TODOs
     * Phase out errCode, or at least provide more detalis in error messages.
 """
 from __future__ import annotations
+from re import S
 
 from marshmallow.decorators import post_load
 from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexError,
@@ -16,6 +17,7 @@ from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeE
                   StackEmptyError, JSONError, FileError)
 from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField
 from .canvas.geometry import Vec2
+from .canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform
 import copy
 from dataclasses import dataclass, field
 import json
@@ -23,6 +25,12 @@ from typing import Any, DefaultDict, Dict, MutableSet, Optional, Set, Tuple, Lis
 from enum import Enum
 from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
+
+
+# NOTE this should be completely immutable
+defaultShapes = [
+    TCompositeShape([(TRectanglePrim(), TTransform())]),
+]
 
 
 @dataclass
@@ -37,6 +45,8 @@ class TNode:
     outlineColor: Color = Color(255, 100, 80, 255)
     outlineThickness: float = 3
     font: Font = Font(18, Color(0, 0, 0))  # TODO implement this
+    shapei: int = 0
+    shape: TCompositeShape = copy.copy(defaultShapes[0])
 
 
 class TNetwork:
@@ -50,6 +60,7 @@ class TNetwork:
     lastNodeIdx: int
     lastReactionIdx: int
     lastCompartmentIdx: int
+    compositeShapes: List[TCompositeShape]
 
     def __init__(self, id: str, nodes: Dict[int, TNode] = None,
                  reactions: Dict[int, TReaction] = None,
@@ -77,6 +88,7 @@ class TNetwork:
         self.lastNodeIdx = max(nodes.keys(), default=-1) + 1
         self.lastReactionIdx = max(reactions.keys(), default=-1) + 1
         self.lastCompartmentIdx = max(compartments.keys(), default=-1) + 1
+        self.compositeShapes = copy.deepcopy(defaultShapes)
 
     def addNode(self, node: TNode):
         self.nodes[self.lastNodeIdx] = node
@@ -2505,6 +2517,54 @@ def createUniUni(neti: int, reaID: str, rateLaw: str, srci: int, desti: int, src
     setReactionDestNodeStoich(neti, reai, desti, destStoich)
     setRateLaw(neti, reai, rateLaw)
     endGroup()
+
+
+# TODO allow modification of this list later
+def getListOfCompositeShapes(neti: int):
+    return copy.deepcopy(_getNetwork(neti).compositeShapes)
+
+
+def getCompositeShapeAt(neti: int, shapei: int):
+    return copy.copy(_getNetwork(neti).compositeShapes[shapei])
+
+
+def getNodeShape(neti: int, nodei: int) -> TCompositeShape:
+    return copy.copy(_getNode(neti, nodei).shape)
+
+
+def getNodeShapeIndex(neti: int, nodei: int) -> int:
+    return _getNode(neti, nodei).shapei
+
+
+def setNodeShapeIndex(neti: int, nodei: int, shapei: int):
+    net = _getNetwork(neti)
+    node = _getNode(neti, nodei)
+    shape = net.compositeShapes[shapei]
+    node.shapei = shapei
+    node.shape = copy.copy(shape)
+
+
+def setNodePrimitiveProperty(neti: int, nodei: int, prim_index: int, prop_name: str, prop_value: Any):
+    '''Set an individual property of a node's primitive.
+
+    Args:
+        neti:       The network index
+        nodei:      The node index
+        prim_index: The index of the primitive, in the node's shape.
+        prop_name:  The name of the primitive's property.
+        prop_value: The value of the primitives's property
+    '''
+    node = _getNode(neti, nodei)
+    if prim_index >= len(node.shape.items):
+        raise ValueError('Primitive index out of range for the shape of node {} in network {}'.format(nodei, neti))
+
+    primitive, _transform = node.shape.items[prim_index]
+
+    if prop_name not in primitive.__dataclass_fields__:
+        raise ValueError('`{}` is not a property of primitive `{}`'.format(prop_name, primitive.__class__.__name__))
+
+    # This is not very safe, but this is very simple to implement, so it shall be like this for now
+    setattr(primitive, prop_name, prop_value)
 
 
 def CreateUniBi(neti: int, reaID: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich: float, dest2Stoich: float):

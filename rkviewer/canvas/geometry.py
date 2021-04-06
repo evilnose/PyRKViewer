@@ -1,7 +1,7 @@
 from __future__ import annotations
 from functools import partial
 from re import S
-from rkviewer.utils import int_round
+from rkviewer.utils import T, int_round
 import abc
 # pylint: disable=maybe-no-member
 import wx
@@ -528,97 +528,3 @@ def rotate_unit(vec: Vec2, rad: float) -> Vec2:
     angle = math.atan2(vec.y, vec.x)
     angle += rad
     return Vec2(math.cos(angle), math.sin(angle))
-
-
-class Primitive(abc.ABC):
-    """Abstract Base Class for 2D graphiccal primitives such as circles, rectangles, etc.
-    
-    A shape would be constructed from a list of primitives in the order in which they are drawn.
-    There should not be nested primitives.
-    """
-    @abc.abstractmethod
-    def draw_to_gc(self, gc):
-        """Draw to the given graphics context, assuming the bounding box spans from (0, 0) to (1, 1)."""
-        pass
-
-
-class Shape(Primitive):
-    """Abstract class representing a polygon primitive."""
-    def __init__(self, bg_color: wx.Colour, border_color: wx.Colour, border_width: float):
-        self.bg_color = bg_color
-        self.border_color = border_color
-        self.border_width = border_width
-
-
-class RectanglePrim(Shape):
-    def __init__(self, bg_color: wx.Colour, border_color: wx.Colour, border_width: float,
-                 corner_radius: float = 0):
-        Shape.__init__(self, bg_color, border_color, border_width)
-        self.corner_radius = corner_radius
-    def draw_to_gc(self, gc):
-        pen = gc.CreatePen(wx.GraphicsPenInfo(self.border_color, self.border_width))
-        brush = gc.CreateBrush(wx.Brush(self.bg_color))
-        gc.SetPen(pen)
-        gc.SetBrush(brush)
-        gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, self.corner_radius)
-
-
-class CirclePrim(Shape):
-    def __init__(self, bg_color: wx.Colour, border_color: wx.Colour, border_width: float):
-        super().__init__(bg_color, border_color, border_width)
-
-    def draw_to_gc(self, gc):
-        pen = gc.CreatePen(wx.GraphicsPenInfo(self.border_color, self.border_width))
-        brush = gc.CreateBrush(wx.Brush(self.bg_color))
-        gc.SetPen(pen)
-        gc.SetBrush(brush)
-        path = gc.CreatePath()
-        path.AddCircle(0.0, 0.0, 0.5)
-        gc.DrawPath(path)
-        
-
-class Transform:
-    def __init__(self, scale: Vec2, rotation: float, translation: Vec2):
-        """Creates a 2D non-affine transformation, relative to a bounding box.
-        
-        Args:
-            scale: The scale (x, y) of the transform. x and y should be between 0 and 1, relative
-                   to a bounding box.
-            rotation: The rotation in radians (counter-clockwise).
-            translation: The translation (x, y) of the transform, from the top-left corner. x and
-                         y should be between 0 and 1, relative to a bounding box.
-        """
-        self.scale = scale  
-        self.rotation = rotation
-        self.translation = translation 
-
-    def apply_to_gc(self, gc: wx.GraphicsContext):
-        gc.Translate(*self.translation)
-        gc.Scale(*self.scale)
-        gc.Rotate(self.rotation)
-
-        
-class CompositeShape:
-    items: List[Tuple[Primitive, Transform]]
-    def __init__(self, items: List[Tuple[Primitive, Transform]]):
-        """Create a composite shape out of transformed primitives.
-        
-        Args:
-            items: List of (primitive, transform) pairs in ascending z-order, i.e. first primitive
-                   is rendered first. The transform is applied before each primitive is drawn.
-        """
-        self.items = items
-
-    def draw(self, gc: wx.GraphicsContext, bounding_rect: Rect):
-        """Draw the list of primitives in order."""
-        gc.PushState()
-        gc.Translate(*bounding_rect.position)
-        gc.Scale(*bounding_rect.size)
-        for primitive, transform in self.items:
-            gc.PushState()
-            transform.apply_to_gc(gc) 
-            # gc.Scale(*bounding_rect.size)
-            # gc.Translate(*bounding_rect.position)
-            primitive.draw_to_gc(gc)
-            gc.PopState()
-        gc.PopState()

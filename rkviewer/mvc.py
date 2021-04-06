@@ -1,10 +1,13 @@
 # pylint: disable=maybe-no-member
+from dataclasses import dataclass
 from enum import Enum
+from rkviewer.config import Color
 import wx
 import abc
-from typing import Any, List, Optional, Set
+import copy
+from typing import Any, List, Optional, Set, Tuple
 from .canvas.geometry import Vec2
-from .canvas.data import Compartment, Node, Reaction, ModifierTipStyle
+from .canvas.data import Compartment, Node, Reaction, ModifierTipStyle, TCompositeShape
 
 
 class IController(abc.ABC):
@@ -337,6 +340,27 @@ class IController(abc.ABC):
     @abc.abstractmethod
     def get_application_position(self) -> wx.Point:
         pass
+
+    @abc.abstractmethod
+    def get_composite_shape_list(self, neti: int) -> List[TCompositeShape]:
+        pass
+
+    @abc.abstractmethod
+    def get_composite_shape_at(self, neti: int, shapei: int) -> List[TCompositeShape]:
+        pass
+
+    @abc.abstractmethod
+    def get_node_shape(self, neti: int, nodei: int) -> TCompositeShape:
+        pass
+
+    @abc.abstractmethod
+    def get_node_shape_index(self, neti: int, nodei: int) -> int:
+        pass
+
+    @abc.abstractmethod
+    def set_node_shape_index(self, neti: int, nodei: int, shapei: int):
+        pass
+
 
 class IView(abc.ABC):
     """The inteface class for a controller

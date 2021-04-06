@@ -7,6 +7,7 @@ from itertools import chain
 from math import pi
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
+from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform
 
 import wx
 
@@ -1181,3 +1182,53 @@ class SelectBox(CanvasElement):
 
         post_event(DidCommitDragEvent())
         self.controller.end_group()
+
+
+class Property:
+    field_name: str
+
+
+class ColorProperty(Property):
+    pass
+
+
+def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
+    pen = gc.CreatePen(wx.GraphicsPenInfo(circle.border_color, circle.border_width))
+    brush = gc.CreateBrush(wx.Brush(circle.fill_color))
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
+    path = gc.CreatePath()
+    path.AddCircle(0.0, 0.0, 0.5)
+    gc.DrawPath(path)
+
+
+def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim):
+    pen = gc.CreatePen(wx.GraphicsPenInfo(rect.border_color, rect.border_width))
+    brush = gc.CreateBrush(wx.Brush(rect.fill_color))
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
+    gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
+
+
+draw_fn_map = {
+    TCirclePrim: draw_circle_to_gc,
+    TRectanglePrim: draw_rect_to_gc,
+}
+
+
+def apply_transform_to_gc(gc: wx.GraphicsContext, transform: TTransform):
+    gc.Translate(*transform.translation)
+    gc.Rotate(transform.rotation)
+    gc.Scale(*transform.scale)
+
+
+def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, shape: TCompositeShape):
+    gc.PushState()
+    gc.Translate(*bounding_rect.position)
+    gc.Scale(*bounding_rect.size)
+    for primitive, transform in shape.items:
+        gc.PushState()
+        apply_transform_to_gc(gc, transform)
+        draw_fn_map[primitive.__class__](gc, primitive)
+        gc.PopState()
+    gc.PopState()

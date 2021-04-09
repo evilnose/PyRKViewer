@@ -1417,15 +1417,15 @@ class Canvas(wx.ScrolledWindow):
                 fill=get_theme('canvas_bg'),
             )
 
-            transform = Transform(Vec2(0.5, 0.5), 0, Vec2(0.5, 0.5))
-            primitives = [
-                (CirclePrim(wx.RED, wx.BLUE, 0.02), transform),
-                (RectanglePrim(wx.YELLOW, wx.CYAN, 0.02), Transform(Vec2(0.5, 1), 0, Vec2(0, 0))),
-            ]
-            shape = CompositeShape(primitives)
-            bounding_rect = Rect(Vec2(100, 100), Vec2(100, 100))
-            draw_rect(gc, bounding_rect, fill=wx.GREEN)
-            shape.draw(gc, bounding_rect)
+            #transform = Transform(Vec2(0.5, 0.5), 0, Vec2(0.5, 0.5))
+            #primitives = [
+            #    (CirclePrim(wx.RED, wx.BLUE, 0.02), transform),
+            #    (RectanglePrim(wx.YELLOW, wx.CYAN, 0.02), Transform(Vec2(0.5, 1), 0, Vec2(0, 0))),
+            #]
+            # shape = CompositeShape(primitives)
+            # bounding_rect = Rect(Vec2(100, 100), Vec2(100, 100))
+            # draw_rect(gc, bounding_rect, fill=wx.GREEN)
+            # shape.draw(gc, bounding_rect)
 
             # Draw nodes
             within_comp = None

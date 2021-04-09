@@ -572,6 +572,10 @@ class NodeForm(EditPanelForm):
         self._AppendControl(sizer, 'lock node', self.lockNodeCheckBox)
         self.lockNodeCheckBox.Bind (wx.EVT_CHECKBOX, self.OnNodeLockCheckBox)
 
+        self.compositeShapes = ['','Rectangle', 'Circle']
+        self.compositeShapesDropDown = wx.Choice(self, choices = self.compositeShapes)
+        self._AppendControl(sizer, 'composite shapes', self.compositeShapesDropDown)
+        self.compositeShapesDropDown.Bind(wx.EVT_CHECKBOX, self.OnCompositeShapesChoice)
  
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -726,6 +730,18 @@ class NodeForm(EditPanelForm):
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
+    def OnCompositeShapesChoice(self, evt):
+        """Callback for the change node shapes"""
+        selected = self.compositeShapesDropDown.GetSelection()
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        self._self_changes = True
+        self.controller.start_group()
+        for node in nodes:
+            self.controller....(self.net_index, node.index, )   ## ?
+        post_event(DidModifyNodesEvent(list(self._selected_idx)))
+        self.controller.end_group()
+
+
     def OnNodeLockCheckBox (self, evt):
         """Callback for the change node status, floating or boundary."""
         cb = evt.GetEventObject() 
@@ -872,7 +888,6 @@ class StoichInfo:
     """Helper class that stores node stoichiometry info for reaction form"""
     nodei: int
     stoich: float
-
 
 class ReactionForm(EditPanelForm):
     def __init__(self, parent, canvas: Canvas, controller: IController):

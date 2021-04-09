@@ -27,9 +27,11 @@ from .geometry import (
     padded_rect,
     pt_in_circle,
     pt_in_rect, rotate_unit, segment_rect_intersection,
+    CirclePrim, CompositeShape, Rect, RectanglePrim, Transform
 )
 from .state import cstate
 from .utils import draw_rect
+import math
 
 
 SetCursorFn = Callable[[wx.Cursor], None]
@@ -125,6 +127,7 @@ class NodeElement(CanvasElement):
     """CanvasElement for nodes."""
     node: Node
     canvas: Any
+    shape: CompositeShape
 
     # HACK no type specified for canvas since otherwise there would be circular dependency
     def __init__(self, node: Node, canvas, layers: Layer):
@@ -133,6 +136,22 @@ class NodeElement(CanvasElement):
         self.canvas = canvas
         self.gfont = None  # In the future
         self.font_scale = 1
+
+        #position = Vec2(20+200*i, 200)
+        #size = Vec2(100,100)
+        #bounding_rect= Rect(position, size)
+        
+        
+        #dc.DrawRectangle(*list(bounding_rect.to_wx_rect()))
+
+        rec1 = RectanglePrim(wx.BLUE, wx.BLUE, 0.5, 0.2)
+        circle2 = CirclePrim(wx.ColourDatabase().Find("orange"), wx.ColourDatabase().Find("orange"), 0.5)
+        rec3 = RectanglePrim(wx.GREEN, wx.GREEN, 0.5, 0.2)
+        
+        transform1 = Transform(Vec2(0.3, 0.3), .0, Vec2(1, 1))
+        transform2 = Transform(Vec2(0.3,0.3), 2*math.pi/2, Vec2(1,1))   
+        transform3 = Transform(Vec2(0.3, 0.3), 45*math.pi/180 , Vec2(1,1))
+        self.shape = CompositeShape([(rec1, transform1), (circle2, transform2), (rec3, transform3)])
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return pt_in_rect(logical_pos, self.node.s_rect)
@@ -152,15 +171,15 @@ class NodeElement(CanvasElement):
         aligned_border_width = max(even_round(
             self.node.border_width * boundaryFactor * cstate.scale), 2)
         width, height = s_aligned_rect.size
-        draw_rect(
-            gc,
-            s_aligned_rect,
-            fill=self.node.fill_color,
-            border=self.node.border_color,
-            border_width=aligned_border_width,
-            corner_radius=get_theme('node_corner_radius')
-        )
-
+        # draw_rect(
+        #     gc,
+        #     s_aligned_rect,
+        #     fill=self.node.fill_color,
+        #     border=self.node.border_color,
+        #     border_width=aligned_border_width,
+        #     corner_radius=get_theme('node_corner_radius')
+        # )
+        self.shape.draw(gc, self.bounding_rect())
         # draw text
         tw, th, _, _ = gc.GetFullTextExtent(
             self.node.id)  # optimize by caching?

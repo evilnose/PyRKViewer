@@ -42,6 +42,7 @@ use that Python installation for building.
 * To run all tests, go to project root and run `python -m unittest`.
 * To run a particular test, run e.g. `python -m unittest test.rkplugin.test_api`.
 * To profile the application, run `python -m cProfile -o rkviewer.stat main.py`.
+* To visualize the profile result, run `tuna rkviewer.stat`.
 
 ### Building Local Docs
 * Run `sphinx-build -b html docs\source docs\build`.
@@ -52,6 +53,9 @@ Usually snake_case is used for function names. However, to retain some degree of
 ### TODOs
 * BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip those values.
 * OPTIMIZE: Do not rebuild reaction forms. Instead, keep them all in a dict() and only make the currently used one visible.
+* OPTIMIZE (only if necessary): If it becomes a common usage for people to use huge networks with large parts
+    not visible to the viewer at one time, then implement selective drawing/testing: if an element is outside
+    of the visible bounding box, then do not draw it for test it for cursor overlap.
 * REFACTOR: Refactor Minimap so that it's a CanvasElement. We also need CanvasElement functions to accept both a logical_pos and a device_pos as arguments.
 * ENHANCEMENT: Add support for multiple net IDs. Currently all net IDs are set to 0 by default.
 

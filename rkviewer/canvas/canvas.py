@@ -163,6 +163,7 @@ class Canvas(wx.ScrolledWindow):
         # ensure the parent's __init__ is called
         super().__init__(*args, style=wx.DEFAULT_FRAME_STYLE & ~wx.MAXIMIZE_BOX ^ wx.RESIZE_BORDER,
                          **kw)
+        self.last_motion = 0
         err = pop_settings_err()
         if err is not None:
             if isinstance(err, JSONLibraryException):
@@ -203,7 +204,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnWindowDestroy)
-        self.Bind(wx.EVT_IDLE, self.OnIdle)
+        # self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)  # Don't erase background
         self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
 
@@ -1241,6 +1242,11 @@ class Canvas(wx.ScrolledWindow):
         return Vec2(self.CalcUnscrolledPosition(wx.Point(0, 0))) + pos
 
     def OnMotion(self, evt):
+        now = time.time()
+        if now - self.last_motion < 0.016:
+            return
+        self.last_motion = now
+
         assert isinstance(evt, wx.MouseEvent)
         redraw = False
         try:

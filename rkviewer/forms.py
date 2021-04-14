@@ -18,6 +18,7 @@ from .canvas.canvas import Canvas, Node
 from .canvas.data import Compartment, Reaction, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
+from .canvas.data import TCirclePrim, TRectanglePrim, TCompositeShape
 
 
 def parse_num_pair(text: str) -> Optional[Tuple[float, float]]:
@@ -465,6 +466,7 @@ class NodeForm(EditPanelForm):
     border_alpha_ctrl: Optional[wx.TextCtrl]
     border_width_ctrl: wx.TextCtrl
     nodeStatusDropDown : wx.Choice
+    compositeShapesDropDown: wx.Choice
     lockNodeCheckBox : wx.CheckBox
 
     _nodes: List[Node]  #: current list of nodes in canvas.
@@ -572,6 +574,10 @@ class NodeForm(EditPanelForm):
         self._AppendControl(sizer, 'lock node', self.lockNodeCheckBox)
         self.lockNodeCheckBox.Bind (wx.EVT_CHECKBOX, self.OnNodeLockCheckBox)
 
+        self.compositeShapes = [_.name for _ in self.controller.get_composite_shape_list(self.net_index)]
+        self.compositeShapesDropDown = wx.Choice(self, choices=self.compositeShapes)
+        self._AppendControl(sizer, 'composite shapes', self.compositeShapesDropDown)
+        self.compositeShapesDropDown.Bind (wx.EVT_CHOICE, self.OnCompositeShapes)
  
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -726,6 +732,21 @@ class NodeForm(EditPanelForm):
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
+    def  OnCompositeShapes (self, evt):
+        selected = self.compositeShapesDropDown.GetStringSelection()
+
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        shapes = self.controller.get_composite_shape_list(self.net_index)
+        self._self_changes = True
+        self.controller.start_group()
+        for node in nodes:
+            for shapei, shape in enumerate(self.compositeShapes):
+                if selected == shape:
+                    self.controller.set_node_shape_index(self.net_index, node.index, shapei)
+            
+        post_event(DidModifyNodesEvent(list(self._selected_idx)))
+        self.controller.end_group()
+
     def OnNodeLockCheckBox (self, evt):
         """Callback for the change node status, floating or boundary."""
         cb = evt.GetEventObject() 
@@ -814,6 +835,7 @@ class NodeForm(EditPanelForm):
         border_alpha: Optional[int]
         floatingNode: bool
         lockNode: bool
+        compositeShape: TCompositeShape
 
         if not self.contiguous:
             self.pos_ctrl.ChangeValue('?')
@@ -832,6 +854,7 @@ class NodeForm(EditPanelForm):
             border_alpha = node.border_color.Alpha()
             floatingNode = node.floatingNode
             lockNode = node.lockNode
+            compositeShape = [node.composite_shape]
         else:
             self.id_ctrl.Enable(False)
             id_text = '; '.join(sorted(list(n.id for n in nodes)))
@@ -841,6 +864,7 @@ class NodeForm(EditPanelForm):
 
             floatingNode = all(n.floatingNode for n in nodes)
             lockNode = all(n.lockNode for n in nodes)
+            compositeShape = [n.composite_shape for n in nodes]
 
         self.pos_ctrl.Enable(self.contiguous)
         self.size_ctrl.Enable(self.contiguous)
@@ -866,6 +890,9 @@ class NodeForm(EditPanelForm):
             self.lockNodeCheckBox.SetValue (True)
         else:
            self.lockNodeCheckBox.SetValue (False)
+
+        for shape in compositeShape:
+            self.compositeShapesDropDown.SetString(0, shape.name)
 
 @dataclass
 class StoichInfo:

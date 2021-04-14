@@ -51,11 +51,12 @@ class TRectanglePrim(TPrimitive):
 
 
 class TCompositeShape:
-    def __init__(self, items: List[Tuple[Any, TTransform]]):
+    def __init__(self, items: List[Tuple[Any, TTransform]], name: str):
         self.items = items
+        self.name = name
 
     def __copy__(self):
-        return TCompositeShape(copy.deepcopy(self.items))
+        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.name))
 
 
 class RectData:
@@ -638,3 +639,7 @@ class Compartment(RectData):
         """The same as s_rect, but the rectangle is unscaled.
         """
         return Rect(self.position, self.size)
+
+class text_alignment():
+    ## also implement wypython text to see positions/ style
+    pass

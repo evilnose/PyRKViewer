@@ -153,14 +153,20 @@ class NodeElement(CanvasElement):
         aligned_border_width = max(even_round(
             self.node.border_width * boundaryFactor * cstate.scale), 2)
         width, height = s_aligned_rect.size
-        draw_rect(
+        # draw_rect(
+        #     gc,
+        #     s_aligned_rect,
+        #     fill=self.node.fill_color,
+        #     border=self.node.border_color,
+        #     border_width=aligned_border_width,
+        #     corner_radius=get_theme('node_corner_radius')
+        # )
+        
+
+        draw_composite_shape(
             gc,
-            s_aligned_rect,
-            fill=self.node.fill_color,
-            border=self.node.border_color,
-            border_width=aligned_border_width,
-            corner_radius=get_theme('node_corner_radius')
-        )
+            self.node.rect,
+            self.node.composite_shape)
 
         # draw text
         tw, th, _, _ = gc.GetFullTextExtent(
@@ -1191,10 +1197,12 @@ class Property:
 class ColorProperty(Property):
     pass
 
+def to_wxcolour(color: Color) -> wx.Colour:
+    return wx.Colour(color.r, color.g, color.b, color.a)
 
 def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
-    pen = gc.CreatePen(wx.GraphicsPenInfo(circle.border_color, circle.border_width))
-    brush = gc.CreateBrush(wx.Brush(circle.fill_color))
+    pen = gc.CreatePen(wx.GraphicsPenInfo(to_wxcolour(circle.border_color), circle.border_width))
+    brush = gc.CreateBrush(wx.Brush(to_wxcolour(circle.fill_color)))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     path = gc.CreatePath()
@@ -1203,8 +1211,8 @@ def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
 
 
 def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim):
-    pen = gc.CreatePen(wx.GraphicsPenInfo(rect.border_color, rect.border_width))
-    brush = gc.CreateBrush(wx.Brush(rect.fill_color))
+    pen = gc.CreatePen(wx.GraphicsPenInfo(to_wxcolour(rect.border_color), rect.border_width))
+    brush = gc.CreateBrush(wx.Brush(to_wxcolour(rect.fill_color)))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
@@ -1232,3 +1240,7 @@ def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, shape: TCo
         draw_fn_map[primitive.__class__](gc, primitive)
         gc.PopState()
     gc.PopState()
+
+
+def draw_text_to_gc():
+    pass

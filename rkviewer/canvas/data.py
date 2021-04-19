@@ -117,20 +117,20 @@ class Node(RectData):
     @property
     def s_position(self):
         """The scaled position of the node obtained by multiplying the scale."""
-        return self.position * cstate.scale
+        return self.position
 
     @s_position.setter
     def s_position(self, val: Vec2):
-        self.position = val / cstate.scale
+        self.position = val
 
     @property
     def s_size(self):
         """The scaled size of the node obtained by multiplying the scale."""
-        return self.size * cstate.scale
+        return self.size
 
     @s_size.setter
     def s_size(self, val: Vec2):
-        self.size = val / cstate.scale
+        self.size = val
 
     @property
     def s_rect(self):
@@ -459,12 +459,13 @@ class SpeciesBezier:
         """Check if position is on curve; pos is scaled logical position."""
         self._recompute(for_collision=True)
         if self.bezierCurves:
-            return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos,
+            return any(pt_on_line(p1, p2, pos,
                                   CURVE_SLACK + self.thickness / 2)
                        for p1, p2 in pairwise(self.bezier_points))
         else:
-            return pt_on_line(self.node_intersection * cstate.scale,
-                              self.real_center * cstate.scale, pos,
+            assert self.node_intersection is not None
+            return pt_on_line(self.node_intersection,
+                              self.real_center, pos,
                               CURVE_SLACK + self.thickness / 2)
 
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
@@ -481,7 +482,7 @@ class SpeciesBezier:
         gc.SetPen(pen)
         # gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
         path = gc.CreatePath()
-        points = [p * cstate.scale for p in (self.node_intersection,
+        points = [p for p in (self.node_intersection,
                                              self.handle.tip,
                                              self.centroid_handle.tip,
                                              self.real_center)]
@@ -506,7 +507,7 @@ class SpeciesBezier:
             "Arrow adjusted coords is not of length 4: {}".format(self.arrow_adjusted_coords)
         gc.SetPen(gc.CreatePen(wx.GraphicsPenInfo(fill)))
         gc.SetBrush(wx.Brush(fill))
-        gc.DrawLines([wx.Point2D(*(coord * cstate.scale))
+        gc.DrawLines([wx.Point2D(*(coord))
                       for coord in self.arrow_adjusted_coords])
 
 

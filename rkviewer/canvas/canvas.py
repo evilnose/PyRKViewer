@@ -223,7 +223,7 @@ class Canvas(wx.ScrolledWindow):
         self._scroll_off = Vec2(scroll_width, scroll_height)
         self.SetVirtualSize(*self.realsize)
 
-        bounds = Rect(BOUNDS_EPS_VEC, self.realsize * cstate.scale - BOUNDS_EPS_VEC)
+        bounds = Rect(BOUNDS_EPS_VEC, self.realsize - BOUNDS_EPS_VEC)
         self._select_box = SelectBox(self, [], [], bounds, self.controller, self._net_index,
                                      Canvas.SELECT_BOX_LAYER)
         self.sel_nodes_idx = SetSubject()
@@ -515,7 +515,6 @@ class Canvas(wx.ScrolledWindow):
 
     def SetOriginPos(self, pos: Vec2):
         """Set the origin position (position of the topleft corner) to pos by scrolling."""
-        pos *= cstate.scale
         # check if out of bounds
         pos = pos.map(lambda e: max(e, 0))
 
@@ -610,7 +609,7 @@ class Canvas(wx.ScrolledWindow):
     def OnLeftDown(self, evt):
         try:
             device_pos = Vec2(evt.GetPosition())
-            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition())) / cstate.scale
 
             # Check if clicked on overlay using device_pos
             overlay = self._InWhichOverlay(device_pos)
@@ -712,7 +711,7 @@ class Canvas(wx.ScrolledWindow):
             elif cstate.input_mode == InputMode.ADD_NODES:
                 size = Vec2(get_theme('node_width'), get_theme('node_height'))
 
-                unscaled_pos = logical_pos / cstate.scale
+                unscaled_pos = logical_pos
                 adj_pos = unscaled_pos - size / 2
 
                 node = Node(
@@ -796,7 +795,7 @@ class Canvas(wx.ScrolledWindow):
         than by the individual elements.
         """
         device_pos = Vec2(evt.GetPosition())
-        logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+        logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition())) / cstate.scale
 
         overlay = self._InWhichOverlay(device_pos)
         if overlay is not None:
@@ -1187,14 +1186,14 @@ class Canvas(wx.ScrolledWindow):
             elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                 id = self._GetUniqueName('c', [c.id for c in self._compartments])
 
-                size = self._drag_rect.size / cstate.scale
+                size = self._drag_rect.size
                 # make sure the compartment is at least of some size
                 adj_size = Vec2(max(size.x, get_setting('min_comp_width')),
                                 max(size.y, get_setting('min_comp_height')))
                 # compute position
                 size_diff = adj_size - self._drag_rect.size
                 # center position if drag_rect size has been adjusted
-                pos = self._drag_rect.position / cstate.scale - size_diff / 2
+                pos = self._drag_rect.position - size_diff / 2
 
                 comp = Compartment(id,
                                    index=self.comp_index,
@@ -1213,7 +1212,7 @@ class Canvas(wx.ScrolledWindow):
         elif cstate.input_mode == InputMode.SELECT:
             # perform left_up on dragged_element if it exists, or just find the node under the
             # cursor
-            logical_pos = self.CalcScrolledPositionFloat(device_pos)
+            logical_pos = self.CalcScrolledPositionFloat(device_pos) / cstate.scale
             if self.dragged_element is not None:
                 self.dragged_element.on_left_up(logical_pos)
                 self.dragged_element = None
@@ -1251,7 +1250,7 @@ class Canvas(wx.ScrolledWindow):
         redraw = False
         try:
             device_pos = Vec2(evt.GetPosition())
-            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition())) / cstate.scale
             self._cursor_logical_pos = logical_pos
             rxn_radius = get_theme('reaction_radius')
 
@@ -1266,10 +1265,10 @@ class Canvas(wx.ScrolledWindow):
                     selected_nodes = [n for n in self._nodes
                                       if rects_overlap(n.s_rect, self._drag_rect)]
                     selected_comps = [c for c in self._compartments
-                                      if rects_overlap(c.rect * cstate.scale, self._drag_rect)]
+                                      if rects_overlap(c.rect, self._drag_rect)]
                     selected_rxns = [re.reaction for re in self._reaction_elements
                                      if rects_overlap(circle_bounds(
-                                         re.bezier.real_center * cstate.scale, rxn_radius * cstate.scale),
+                                         re.bezier.real_center, rxn_radius),
                                          self._drag_rect)]
                     new_drag_sel_nodes_idx = set(n.index for n in selected_nodes)
                     new_drag_sel_rxns_idx = set(r.index for r in selected_rxns)
@@ -1408,118 +1407,122 @@ class Canvas(wx.ScrolledWindow):
         # Create graphics context since we need transparency
         gc = wx.GraphicsContext.Create(dc)
 
-        if gc:
-            # Draw gray background
+        assert gc is not None
+
+        # Draw gray background
+        draw_rect(
+            gc,
+            Rect(Vec2(), Vec2(self.GetVirtualSize()) + Vec2(10, 10)),
+            fill=get_theme('canvas_outside_bg'),
+        )
+        gc.PushState()
+        gc.Scale(cstate.scale, cstate.scale)
+        # Draw background
+        draw_rect(
+            gc,
+            Rect(Vec2(), self.realsize),
+            fill=get_theme('canvas_bg'),
+        )
+
+        # transform = Transform(Vec2(0.5, 0.5), 0, Vec2(0.5, 0.5))
+        # primitives = [
+        #     (CirclePrim(wx.RED, wx.BLUE, 0.02), transform),
+        #     (RectanglePrim(wx.YELLOW, wx.CYAN, 0.02), Transform(Vec2(0.5, 1), 3.1415/4, Vec2(0, 0))),
+        # ]
+        # shape = CompositeShape(primitives)
+        # bounding_rect = Rect(Vec2(100, 100), Vec2(100, 100))
+        # draw_rect(gc, bounding_rect, fill=wx.GREEN)
+        # shape.draw(gc, bounding_rect)
+
+        # Draw nodes
+        within_comp = None
+        if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
+            size = Vec2(get_theme('node_width'), get_theme('node_height'))
+            pos = self._cursor_logical_pos - size/2
+            within_comp = self.RectInWhichCompartment(Rect(pos, size))
+        elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
+            within_comp = self.InWhichCompartment(self._select_box.nodes)
+
+        # create font for nodes
+        for el in self._elements:
+            if not el.enabled:
+                continue
+            if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
+                # Highlight compartment that will be dropped in.
+                el.on_paint(gc, highlight=True)
+            else:
+                el.on_paint(gc)
+
+        # TODO Put this in SelectionChanged
+        sel_rects = ([n.rect for n in self.sel_nodes] +
+                        [c.rect for c in self.sel_comps])
+
+        # If we are not drag-selecting, don't draw selection outlines if there is only one rect
+        # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
+        # documented in _UpdateSelectedLists())
+        if len(sel_rects) > 1 or self.drawing_drag:
+            for rect in sel_rects:
+                rect = rect.aligned()
+                # Draw selection outlines
+                rect = padded_rect(rect, get_theme('select_outline_padding'))
+                # draw rect
+                draw_rect(gc, rect, border=get_theme('handle_color'),
+                            border_width=get_theme('select_outline_width'),
+                            corner_radius=0)
+
+        # Draw reactant and product marker outlines
+        def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):
             draw_rect(
                 gc,
-                Rect(Vec2(), Vec2(self.GetVirtualSize())),
-                fill=get_theme('canvas_outside_bg'),
+                padded_rect(node.s_rect.aligned(), padding),
+                fill=None,
+                border=color,
+                border_width=max(even_round(get_theme('react_node_border_width')), 2),
+                border_style=wx.PENSTYLE_LONG_DASH,
             )
-            # Draw background
+
+        reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
+        for node in reactants:
+            draw_reaction_outline(node, get_theme('reactant_border'),
+                                    get_theme('react_node_padding'))
+
+        products = get_nodes_by_idx(self._nodes, self._product_idx)
+        for node in products:
+            pad = get_theme('react_node_border_width') + \
+                3 if node.index in self._reactant_idx else 0
+            draw_reaction_outline(node, get_theme('product_border'),
+                                    pad + get_theme('react_node_padding'))
+
+        # Draw drag-selection rect
+        if self._drag_selecting:
+            fill: wx.Colour
+            border: Optional[wx.Colour]
+            bwidth: int
+            if cstate.input_mode == InputMode.SELECT:
+                fill = get_theme('drag_fill')
+                border = get_theme('drag_border')
+                bwidth = get_theme('drag_border_width')
+                corner_radius = 0
+            elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
+                fill = opacity_mul(get_theme('comp_fill'), 0.3)
+                border = opacity_mul(get_theme('comp_border'), 0.3)
+                bwidth = get_theme('comp_border_width')
+                corner_radius = get_theme('comp_corner_radius')
+            else:
+                assert False, "Should not be _drag_selecting in any other input mode."
+
+            if bwidth == 0:
+                border = None
+
             draw_rect(
                 gc,
-                Rect(Vec2(), self.realsize * cstate.scale),
-                fill=get_theme('canvas_bg'),
+                self._drag_rect,
+                fill=fill,
+                border=border,
+                border_width=bwidth,
+                corner_radius=corner_radius,
             )
-
-            # transform = Transform(Vec2(0.5, 0.5), 0, Vec2(0.5, 0.5))
-            # primitives = [
-            #     (CirclePrim(wx.RED, wx.BLUE, 0.02), transform),
-            #     (RectanglePrim(wx.YELLOW, wx.CYAN, 0.02), Transform(Vec2(0.5, 1), 3.1415/4, Vec2(0, 0))),
-            # ]
-            # shape = CompositeShape(primitives)
-            # bounding_rect = Rect(Vec2(100, 100), Vec2(100, 100))
-            # draw_rect(gc, bounding_rect, fill=wx.GREEN)
-            # shape.draw(gc, bounding_rect)
-
-            # Draw nodes
-            within_comp = None
-            if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
-                size = Vec2(get_theme('node_width'), get_theme('node_height'))
-                pos = self._cursor_logical_pos - size/2
-                within_comp = self.RectInWhichCompartment(Rect(pos, size))
-            elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
-                within_comp = self.InWhichCompartment(self._select_box.nodes)
-
-            # create font for nodes
-            for el in self._elements:
-                if not el.enabled:
-                    continue
-                if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
-                    # Highlight compartment that will be dropped in.
-                    el.on_paint(gc, highlight=True)
-                else:
-                    el.on_paint(gc)
-
-            # TODO Put this in SelectionChanged
-            sel_rects = ([n.rect * cstate.scale for n in self.sel_nodes] +
-                         [c.rect * cstate.scale for c in self.sel_comps])
-
-            # If we are not drag-selecting, don't draw selection outlines if there is only one rect
-            # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
-            # documented in _UpdateSelectedLists())
-            if len(sel_rects) > 1 or self.drawing_drag:
-                for rect in sel_rects:
-                    rect = rect.aligned()
-                    # Draw selection outlines
-                    rect = padded_rect(rect, get_theme('select_outline_padding'))
-                    # draw rect
-                    draw_rect(gc, rect, border=get_theme('handle_color'),
-                              border_width=get_theme('select_outline_width'),
-                              corner_radius=0)
-
-            # Draw reactant and product marker outlines
-            def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):
-                draw_rect(
-                    gc,
-                    padded_rect(node.s_rect.aligned(), padding),
-                    fill=None,
-                    border=color,
-                    border_width=max(even_round(get_theme('react_node_border_width')), 2),
-                    border_style=wx.PENSTYLE_LONG_DASH,
-                )
-
-            reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
-            for node in reactants:
-                draw_reaction_outline(node, get_theme('reactant_border'),
-                                      get_theme('react_node_padding'))
-
-            products = get_nodes_by_idx(self._nodes, self._product_idx)
-            for node in products:
-                pad = get_theme('react_node_border_width') + \
-                    3 if node.index in self._reactant_idx else 0
-                draw_reaction_outline(node, get_theme('product_border'),
-                                      pad + get_theme('react_node_padding'))
-
-            # Draw drag-selection rect
-            if self._drag_selecting:
-                fill: wx.Colour
-                border: Optional[wx.Colour]
-                bwidth: int
-                if cstate.input_mode == InputMode.SELECT:
-                    fill = get_theme('drag_fill')
-                    border = get_theme('drag_border')
-                    bwidth = get_theme('drag_border_width')
-                    corner_radius = 0
-                elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
-                    fill = opacity_mul(get_theme('comp_fill'), 0.3)
-                    border = opacity_mul(get_theme('comp_border'), 0.3)
-                    bwidth = get_theme('comp_border_width')
-                    corner_radius = get_theme('comp_corner_radius')
-                else:
-                    assert False, "Should not be _drag_selecting in any other input mode."
-
-                if bwidth == 0:
-                    border = None
-
-                draw_rect(
-                    gc,
-                    self._drag_rect,
-                    fill=fill,
-                    border=border,
-                    border_width=bwidth,
-                    corner_radius=corner_radius,
-                )
+        gc.PopState()
         return gc
 
     def ResetLayer(self, elt: CanvasElement, layers: Layer):

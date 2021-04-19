@@ -3,6 +3,7 @@
 # pylint: disable=maybe-no-member
 from sortedcontainers.sortedlist import SortedKeyList
 from rkviewer.canvas.elements import CanvasElement, CompartmentElt, NodeElement
+from rkviewer.canvas.state import cstate
 import wx
 import abc
 from typing import Callable, List, cast
@@ -191,7 +192,7 @@ class Minimap(CanvasOverlay):
                 self._drag_rel = pos - self.window_pos * scale
             else:
                 topleft = pos - self.window_size * scale / 2
-                self._callback(topleft / scale)
+                self._callback(topleft / scale * cstate.scale)
 
     def OnLeftUp(self, _: Vec2):
         self._dragging = False
@@ -203,7 +204,7 @@ class Minimap(CanvasOverlay):
         if is_down:
             if not self._dragging:
                 topleft = pos - self.window_size * scale / 2
-                self._callback(topleft / scale)
+                self._callback(topleft / scale * cstate.scale)
             else:
                 actual_pos = pos - self._drag_rel
-                self._callback(actual_pos / scale)
+                self._callback(actual_pos / scale * cstate.scale)

@@ -29,7 +29,8 @@ from marshmallow import Schema, fields, validate, missing as missing_, Validatio
 
 # NOTE this should be completely immutable
 defaultShapes = [
-    TCompositeShape([(TRectanglePrim(), TTransform())]),
+    TCompositeShape([(TRectanglePrim(), TTransform())], 'rectangle'),
+    TCompositeShape([(TCirclePrim(), TTransform())], 'circle')
 ]
 
 

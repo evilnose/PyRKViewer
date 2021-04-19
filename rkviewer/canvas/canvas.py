@@ -1466,7 +1466,7 @@ class Canvas(wx.ScrolledWindow):
                     # draw rect
                     draw_rect(gc, rect, border=get_theme('handle_color'),
                               border_width=get_theme('select_outline_width'),
-                              corner_radius=get_theme('node_corner_radius'))
+                              corner_radius=0)
 
             # Draw reactant and product marker outlines
             def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):

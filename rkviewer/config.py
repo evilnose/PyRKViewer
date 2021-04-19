@@ -54,6 +54,9 @@ class Color:
             a = self.a
         return Color(r, g, b, a)
 
+    def to_wxcolour(self):
+        return wx.Colour(self.r, self.g, self.b, self.a)
+
 
 @dataclass
 class Font:

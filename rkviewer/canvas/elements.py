@@ -11,7 +11,7 @@ from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, T
 
 import wx
 
-from ..config import get_setting, get_theme
+from ..config import Color, get_setting, get_theme
 from ..events import (
     CanvasEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidMoveBezierHandleEvent, DidMoveReactionCenterEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
     DidMoveNodesEvent, bind_handler,
@@ -162,7 +162,7 @@ class NodeElement(CanvasElement):
         #     corner_radius=get_theme('node_corner_radius')
         # )
         
-
+        assert self.node.composite_shape is not None
         draw_composite_shape(
             gc,
             self.node.rect,
@@ -1197,12 +1197,10 @@ class Property:
 class ColorProperty(Property):
     pass
 
-def to_wxcolour(color: Color) -> wx.Colour:
-    return wx.Colour(color.r, color.g, color.b, color.a)
 
 def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
-    pen = gc.CreatePen(wx.GraphicsPenInfo(to_wxcolour(circle.border_color), circle.border_width))
-    brush = gc.CreateBrush(wx.Brush(to_wxcolour(circle.fill_color)))
+    pen = gc.CreatePen(wx.GraphicsPenInfo(circle.border_color.to_wxcolour(), circle.border_width))
+    brush = gc.CreateBrush(wx.Brush(circle.fill_color.to_wxcolour()))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     path = gc.CreatePath()
@@ -1211,8 +1209,8 @@ def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
 
 
 def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim):
-    pen = gc.CreatePen(wx.GraphicsPenInfo(to_wxcolour(rect.border_color), rect.border_width))
-    brush = gc.CreateBrush(wx.Brush(to_wxcolour(rect.fill_color)))
+    pen = gc.CreatePen(wx.GraphicsPenInfo(rect.border_color.to_wxcolour(), rect.border_width))
+    brush = gc.CreateBrush(wx.Brush(rect.fill_color.to_wxcolour()))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)

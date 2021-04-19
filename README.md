@@ -52,10 +52,6 @@ Usually snake_case is used for function names. However, to retain some degree of
  
 ### TODOs
 * BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip those values.
-* OPTIMIZE: Do not rebuild reaction forms. Instead, keep them all in a dict() and only make the currently used one visible.
-* OPTIMIZE (only if necessary): If it becomes a common usage for people to use huge networks with large parts
-    not visible to the viewer at one time, then implement selective drawing/testing: if an element is outside
-    of the visible bounding box, then do not draw it for test it for cursor overlap.
 * REFACTOR: Refactor Minimap so that it's a CanvasElement. We also need CanvasElement functions to accept both a logical_pos and a device_pos as arguments.
 * ENHANCEMENT: Add support for multiple net IDs. Currently all net IDs are set to 0 by default.
 
@@ -63,7 +59,9 @@ Usually snake_case is used for function names. However, to retain some degree of
 * Add form fields for changing the CompositeShape and for setting primitive properties
 * Add API functions for setting/getting shapes
 * Add convenience API functions for creating rectangle nodes or circle nodes
-* Serialize/deserialize shape properties
+* Serialize/deserialize shape properties (don't serialize shape list for now), use field like Color | str
+* Events (NodeModified)
+* Consideration for later: allow shape properties to get values from settings, such as default colors
 
 ### Roadmap for Shape Engine
 A shape "engine" allows the user to specify custom composite shapes for nodes and compartments.

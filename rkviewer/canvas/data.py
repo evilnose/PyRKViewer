@@ -38,7 +38,7 @@ class TPrimitive:
 class TCirclePrim(TPrimitive):
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
-    border_width: float = 2
+    border_width: float = 0.05
 
 
 @dataclass
@@ -46,7 +46,7 @@ class TRectanglePrim(TPrimitive):
     # TODO change defaults
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
-    border_width: float = 2
+    border_width: float = 0.05
     corner_radius: float = 0
 
 
@@ -177,7 +177,7 @@ def init_bezier():
         for ti in range(MAXSEGS+1):
             t = ti/MAXSEGS
             for i in range(4):  # i = 0, 1, 2, 3
-                BezJ[ti, i] = comb(3, i) * math.pow(t, i) * math.pow(1-t, 3-i)
+                BezJ[ti, i] = float(comb(3, i)) * math.pow(t, i) * math.pow(1-t, 3-i)
             # At the moment hard-wired for n = 3
             tm = 1 - t
             BezJPrime[ti, 0] = -3*tm*tm

@@ -12,7 +12,7 @@ from scipy.special import comb
 from typing import Any, Callable, Container, List, Optional, Sequence, Set, Tuple
 from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
-from ..config import get_setting, get_theme, Color
+from ..config import get_setting, get_theme, Color, Font
 from ..utils import gchain, pairwise
 
 
@@ -49,20 +49,39 @@ class TRectanglePrim(TPrimitive):
     border_width: float = 2
     corner_radius: float = 0
 
+@dataclass
+class TTextPrim(TPrimitive):
+    # text: str
+    # bg_color: Color = Color(0,0,0,200)
+    # font_color: Color = Color(0,0,0,0)
+    # font_size: int = 11
+    # font_name: str = "Calibri"
+
+    def __init__(self, bg_color: Color = Color(255, 255, 255 ,200),
+                 font_color: Color = Color(0,0,0,200),
+                 font_size: int = 11, font_name: str = "Calibri",
+                 alignment: str = "left align"):
+        #self.font = wx.FontInfo(font_size).FaceName(font_name)
+        self.font_size = font_size
+        self.font_name = font_name
+        self.font_color = font_color
+        self.bg_color = bg_color
+        self.alignment = alignment
 
 class TCompositeShape:
-    def __init__(self, items: List[Tuple[Any, TTransform]], name: str):
+    def __init__(self, items: List[Tuple[Any, TTransform]], text_items: Tuple[Any, TTextPrim], name: str):
         self.items = items
         self.name = name
-
+        self.text_items = text_items
     def __copy__(self):
-        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.name))
+        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.text_items), copy.deepcopy(self.name))
 
 
 class RectData:
     position: Vec2
     size: Vec2
 
+ALIGNMENT_CHOICES = ("left align", "center", "right align")
 
 class Node(RectData):
     """Class that represents a Node for rendering purposes.
@@ -640,6 +659,3 @@ class Compartment(RectData):
         """
         return Rect(self.position, self.size)
 
-class text_alignment():
-    ## also implement wypython text to see positions/ style
-    pass

@@ -17,7 +17,7 @@ from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeE
                   StackEmptyError, JSONError, FileError)
 from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField
 from .canvas.geometry import Vec2
-from .canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform
+from .canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform, TTextPrim
 import copy
 from dataclasses import dataclass, field
 import json
@@ -29,8 +29,8 @@ from marshmallow import Schema, fields, validate, missing as missing_, Validatio
 
 # NOTE this should be completely immutable
 defaultShapes = [
-    TCompositeShape([(TRectanglePrim(), TTransform())], 'rectangle'),
-    TCompositeShape([(TCirclePrim(), TTransform())], 'circle')
+    TCompositeShape([(TRectanglePrim(), TTransform())], (TTextPrim(), TTransform()), 'rectangle'),
+    TCompositeShape([(TCirclePrim(), TTransform())], (TTextPrim(), TTransform()), 'circle')
 ]
 
 

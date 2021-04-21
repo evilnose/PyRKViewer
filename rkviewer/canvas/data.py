@@ -12,7 +12,7 @@ from scipy.special import comb
 from typing import Any, Callable, Container, List, Optional, Sequence, Set, Tuple
 from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
-from ..config import get_setting, get_theme, Color
+from ..config import get_setting, get_theme, Color, Font
 from ..utils import gchain, pairwise
 
 
@@ -49,20 +49,39 @@ class TRectanglePrim(TPrimitive):
     border_width: float = 2
     corner_radius: float = 0
 
+@dataclass
+class TTextPrim(TPrimitive):
+    # text: str
+    # bg_color: Color = Color(0,0,0,200)
+    # font_color: Color = Color(0,0,0,0)
+    # font_size: int = 11
+    # font_name: str = "Calibri"
+
+    def __init__(self, bg_color: Color = Color(255, 255, 255 ,200),
+                 font_color: Color = Color(0,0,0,200),
+                 font_size: int = 11, font_name: str = "Calibri",
+                 alignment: str = "left align"):
+        #self.font = wx.FontInfo(font_size).FaceName(font_name)
+        self.font_size = font_size
+        self.font_name = font_name
+        self.font_color = font_color
+        self.bg_color = bg_color
+        self.alignment = alignment
 
 class TCompositeShape:
-    def __init__(self, items: List[Tuple[Any, TTransform]], name: str):
+    def __init__(self, items: List[Tuple[Any, TTransform]], text_items: Tuple[Any, TTextPrim], name: str):
         self.items = items
         self.name = name
-
+        self.text_items = text_items
     def __copy__(self):
-        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.name))
+        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.text_items), copy.deepcopy(self.name))
 
 
 class RectData:
     position: Vec2
     size: Vec2
 
+ALIGNMENT_CHOICES = ("left align", "center", "right align")
 
 class Node(RectData):
     """Class that represents a Node for rendering purposes.
@@ -640,6 +659,82 @@ class Compartment(RectData):
         """
         return Rect(self.position, self.size)
 
-class text_alignment():
-    ## also implement wypython text to see positions/ style
-    pass
+
+
+# @dataclass
+# class Text(RectData):
+#     ## also implement wypython text to see positions/ style
+#     id: str
+#     fill_color: wx.Colour
+#     position: Vec2
+#     size: Vec2
+#     comp_idx: int
+#     index: int
+#     floatingNode: bool
+#     net_index: int
+#     lockNode: bool  # Prevent users from moving the node
+#     shape_index: int
+#     alignment: str
+#     def __init__(self, node_idx: int, id: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
+#                  comp_idx: int = -1, alignment: str,
+#                  floatingNode: bool = True,
+#                  lockNode: bool = False,
+#                  shape_index: int = 0,
+#                  index: int = -1):
+#         self.index = index
+#         self.net_index = net_index
+#         self.id = id
+#         self.position = pos
+#         self.size = size
+#         self.fill_color = fill_color
+#         self.comp_idx = comp_idx
+#         self.floatingNode = floatingNode
+#         self.lockNode = lockNode
+#         self.shape_index = shape_index
+#         self.alignment = alignment
+#         self.node_idx = node_idx
+
+#     @property
+#     def s_position(self):
+#         """The scaled position of the node obtained by multiplying the scale."""
+#         return self.position * cstate.scale
+
+#     @s_position.setter
+#     def s_position(self, val: Vec2):
+#         self.position = val / cstate.scale
+    
+#     @property
+#     def s_size(self):
+#         """The scaled size of the node obtained by multiplying the scale."""
+#         return self.size * cstate.scale
+
+#     @s_size.setter
+#     def s_size(self, val: Vec2):
+#         self.size = val / cstate.scale
+
+#     @property
+#     def s_rect(self):
+#         """Return scaled position/size as Rect.
+
+#         Note that the fields of the returned rect is copied, so one cannot modify this node through
+#         the rect.
+#         """
+#         return Rect(copy.copy(self.s_position), copy.copy(self.s_size))
+
+#     def alignment(self, gc):
+
+#         tw, th, _, _ = gc.GetFullTextExtent(
+#            self.node_idx)  # optimize by caching?
+
+#         if self.alignment == "center":
+#             tx = (width - tw) / 2
+#             ty = (height - th) / 2
+#             self.s_position.x +=ty
+#             self.s_position.y += tx
+#         if self.alignment =="left align":
+#             tx = (width - tw) / 2
+#             ty = (height) / 2
+#             self.s_position.x +=ty
+#             self.s_position.y += tx
+#         #gc.DrawText(self.node_idx, self.node.s_position.x +
+#         #           tx, self.node.s_position.y + ty)

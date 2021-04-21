@@ -13,7 +13,6 @@ class InputMode(Enum):
     """Enum for the current input mode of the canvas."""
     SELECT = 'Select'
     ADD_NODES = 'Add Nodes'
-    ADD_SHAPES = 'Drop Down List'
     ADD_COMPARTMENTS = 'Add Compartments'
     ZOOM = 'Zoom'
 

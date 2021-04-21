@@ -17,7 +17,7 @@ from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeE
                   StackEmptyError, JSONError, FileError)
 from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField
 from .canvas.geometry import Vec2
-from .canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform
+from .canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform, TTextPrim
 import copy
 from dataclasses import dataclass, field
 import json
@@ -29,8 +29,8 @@ from marshmallow import Schema, fields, validate, missing as missing_, Validatio
 
 # NOTE this should be completely immutable
 defaultShapes = [
-    TCompositeShape([(TRectanglePrim(), TTransform())], 'rectangle'),
-    TCompositeShape([(TCirclePrim(), TTransform())], 'circle')
+    TCompositeShape([(TRectanglePrim(), TTransform())], (TTextPrim(), TTransform()), 'rectangle'),
+    TCompositeShape([(TCirclePrim(), TTransform())], (TTextPrim(), TTransform()), 'circle')
 ]
 
 
@@ -2457,21 +2457,27 @@ def setNodePrimitiveProperty(neti: int, nodei: int, prim_index: int, prop_name: 
     Args:
         neti:       The network index
         nodei:      The node index
-        prim_index: The index of the primitive, in the node's shape.
+        prim_index: The index of the primitive, in the node's shape. If -1, then update the text
+                    primitive instead.
         prop_name:  The name of the primitive's property.
         prop_value: The value of the primitives's property
     '''
     node = _getNode(neti, nodei)
-    if prim_index >= len(node.shape.items):
+    if prim_index >= len(node.shape.items) or prim_index < -1:
         raise ValueError('Primitive index out of range for the shape of node {} in network {}'.format(nodei, neti))
-
-    primitive, _transform = node.shape.items[prim_index]
+    
+    if prim_index == -1:
+        primitive, _transform = node.shape.text_item
+    else:
+        primitive, _transform = node.shape.items[prim_index]
 
     if prop_name not in primitive.__dataclass_fields__:
-        raise ValueError('`{}` is not a property of primitive `{}`'.format(prop_name, primitive.__class__.__name__))
+        raise ValueError('`{}` is not a property of primitive `{}`'.format(
+            prop_name, primitive.__class__.__name__))
 
     # This is not very safe, but this is very simple to implement, so it shall be like this for now
     setattr(primitive, prop_name, prop_value)
+
 
 
 def CreateUniBi(neti: int, reaID: str, rateLaw: str, srci: int, dest1i: int, dest2i: int, srcStoich: float, dest1Stoich: float, dest2Stoich: float):

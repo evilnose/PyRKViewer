@@ -7,7 +7,7 @@ from itertools import chain
 from math import pi
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
-from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform
+from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform, TTextPrim
 
 import wx
 
@@ -152,28 +152,12 @@ class NodeElement(CanvasElement):
         # aligned_border_width = max(even_round(
         #     self.node.border_width * boundaryFactor), 2)
         width, height = s_aligned_rect.size
-        # draw_rect(
-        #     gc,
-        #     s_aligned_rect,
-        #     fill=self.node.fill_color,
-        #     border=self.node.border_color,
-        #     border_width=aligned_border_width,
-            # corner_radius=get_theme('node_corner_radius')
-        # )
         
         assert self.node.composite_shape is not None
         draw_composite_shape(
             gc,
             self.node.rect,
-            self.node.composite_shape)
-
-        # draw text
-        tw, th, _, _ = gc.GetFullTextExtent(
-            self.node.id)  # optimize by caching?
-        tx = (width - tw) / 2
-        ty = (height - th) / 2
-        gc.DrawText(self.node.id, self.node.s_position.x +
-                    tx, self.node.s_position.y + ty)
+            self.node)
 
         if self.node.lockNode:
             lock_color = self.node.border_color or Color(255, 0, 0)
@@ -1218,7 +1202,7 @@ def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim):
 
 draw_fn_map = {
     TCirclePrim: draw_circle_to_gc,
-    TRectanglePrim: draw_rect_to_gc,
+    TRectanglePrim: draw_rect_to_gc
 }
 
 
@@ -1228,17 +1212,54 @@ def apply_transform_to_gc(gc: wx.GraphicsContext, transform: TTransform):
     gc.Scale(*transform.scale)
 
 
-def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, shape: TCompositeShape):
+def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node):
+    shape = node.composite_shape
     gc.PushState()
     gc.Translate(*bounding_rect.position)
     gc.Scale(*bounding_rect.size)
     for primitive, transform in shape.items:
         gc.PushState()
         apply_transform_to_gc(gc, transform)
+        #if text: Draw_text
+        #if isinstance(primitive, TTextPrim):
         draw_fn_map[primitive.__class__](gc, primitive)
+        
         gc.PopState()
     gc.PopState()
 
+    gc.PushState()
+    apply_transform_to_gc(gc, node.composite_shape.text_item[1])
+    draw_text_to_gc(gc, bounding_rect, node.id, node.composite_shape.text_item)
+    gc.PopState()
 
-def draw_text_to_gc():
-    pass
+def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TTextPrim, TTransform]):
+    primitive, transform = text_item
+
+    # Maybe cache this?
+    fg_color = primitive.font_color.to_wxcolour()
+    font = wx.Font(wx.FontInfo(primitive.font_size).Family(primitive.font_family))
+    gfont = gc.CreateFont(font, fg_color)
+    gc.SetFont(gfont)
+    brush = gc.CreateBrush(wx.Brush(primitive.bg_color.to_wxcolour()))
+
+    width, height = bounding_rect.size
+    tw, th, _, _ = gc.GetFullTextExtent(
+           text_string)
+    # remaining x and y
+    rx = width - tw
+    ry = height - th
+    text_pos = bounding_rect.position + transform.translation
+
+    if primitive.alignment =="left align":
+        draw_pos = text_pos + Vec2(0, ry / 2)
+    elif primitive.alignment =="center":
+        draw_pos = text_pos + Vec2(rx, ry) / 2
+    elif primitive.alignment =="right align":
+        draw_pos = text_pos + Vec2(rx, ry / 2)
+    else:
+        assert False, "This should not happen"
+
+    gc.DrawText(text_string, draw_pos.x, draw_pos.y, brush)
+
+    
+    

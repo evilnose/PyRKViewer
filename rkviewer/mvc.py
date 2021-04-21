@@ -365,6 +365,7 @@ class IController(abc.ABC):
     def set_node_primitive_property(self, neti: int, nodei: int, primitive_index: int, prop_name: str, prop_value):
         pass
 
+
 class IView(abc.ABC):
     """The inteface class for a controller
 

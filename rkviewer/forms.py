@@ -3,12 +3,12 @@
 # pylint: disable=maybe-no-member
 from itertools import chain, compress
 import wx
-from wx.core import NOT_FOUND
+from wx.core import EVT_CHOICE, NOT_FOUND
 from wx.lib.scrolledpanel import ScrolledPanel
 from abc import abstractmethod
 import copy
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, cast
 from .config import get_theme, get_setting, Color
 from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyReactionEvent,
                      DidMoveCompartmentsEvent, DidMoveNodesEvent, DidMoveReactionCenterEvent, DidResizeCompartmentsEvent,
@@ -16,7 +16,7 @@ from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyR
 from .mvc import IController, ModifierTipStyle
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
-from .canvas.data import Compartment, Reaction, TPrimitive, compute_centroid
+from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, Reaction, TPrimitive, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import TCirclePrim, TRectanglePrim, TCompositeShape
@@ -130,6 +130,17 @@ class EditPanelForm(ScrolledPanel):
         ctrl.SetForegroundColour(get_theme('text_field_fg'))
         return ctrl
 
+    def CreateSpinCtrl(self, **kwargs):
+        """Create a text control that confirms to the theme."""
+        if get_theme('text_field_border'):
+            style = 0
+        else:
+            style = wx.BORDER_NONE
+        ctrl = wx.SpinCtrl(self, style=style, **kwargs)
+        ctrl.SetBackgroundColour(get_theme('text_field_bg'))
+        ctrl.SetForegroundColour(get_theme('text_field_fg'))
+        return ctrl
+
     def ExternalUpdate(self):
         if len(self._selected_idx) != 0 and not self._self_changes:
             self.UpdateAllFields()
@@ -209,6 +220,17 @@ class EditPanelForm(ScrolledPanel):
         rows = sizer.GetRows()
         sizer.Add(0, height, wx.GBPosition(rows, 0), wx.GBSpan(1, 5))
 
+    def _AppendLine(self, sizer: wx.GridSizer):
+        """Append a horizontal spacer with the given height.
+
+        Note:
+            The VGAP value still applies, i.e. there is an additional gap between the spacer and
+            the next row.
+        """
+        rows = sizer.GetRows()
+        line = wx.StaticLine(self)
+        sizer.Add(line, wx.GBPosition(rows, 0), wx.GBSpan(1, 5))
+
     def _AppendSubtitle(self, sizer: wx.GridSizer, text: str) -> wx.StaticText:
         self._AppendSpacer(sizer, 3)
         sizer.Add(0, 0, wx.GBPosition(sizer.GetRows(), 0))
@@ -260,13 +282,15 @@ class EditPanelForm(ScrolledPanel):
             ctrl_id: The ID of the control.
             message: The message displayed, if the control is not valid.
         """
+        self.Freeze()
         badge = self.badges[ctrl_id]
         if good:
             badge.Show(False)
         else:
             badge.Show(True)
             badge.SetToolTip(message)
-        self.GetSizer().Layout()
+        self.Layout()
+        self.Thaw()
 
     def _CreateColorControl(self, label: str, alpha_label: str,
                             color_callback: ColorCallback, alpha_callback: FloatCallback,
@@ -421,6 +445,14 @@ class EditPanelForm(ScrolledPanel):
         See _GetMultiColor for more detail.
         """
         return no_rzeros(next(iter(values)), precision) if len(values) == 1 else '?'
+
+    @classmethod
+    def _GetMultiInt(cls, values: Set[int]) -> Optional[int]:
+        """Returns the common float value if the set has only one element, otherwise return "?".
+
+        See _GetMultiColor for more detail.
+        """
+        return next(iter(values)) if len(values) == 1 else None
 
     @classmethod
     def _AlphaToText(cls, alpha: Optional[int], prec: int) -> str:
@@ -757,6 +789,10 @@ class NodeForm(EditPanelForm):
 
     def _ColorPrimitiveControl(self, label: str, alpha_label: str, prop_name: str,
                                 prims: List[TPrimitive], prim_index: int, node_indices: List[int]):
+        '''Create a control for a color property.
+
+        If prim_index is -1, then update the text primitive instead.
+        '''
         old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
 
         def color_callback(value: wx.Colour):
@@ -787,6 +823,10 @@ class NodeForm(EditPanelForm):
 
     def _FloatPrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
                                prim_index: int, node_indices: List[int]):
+        '''Create a control for a floating point property.
+
+        If prim_index is -1, then update the text primitive instead.
+        '''
         old_values = [getattr(p, prop_name) for p in prims]
         for val in old_values:
             assert isinstance(val, float) or isinstance(val, int)
@@ -805,10 +845,72 @@ class NodeForm(EditPanelForm):
         sizer = self.GetSizer()
         text_ctrl = self.CreateTextCtrl()
         outer_callback = self._MakeFloatCtrlFunction(text_ctrl.GetId(),
-                                                    callback, (0, None), left_incl=False)
+                                                     callback, (0, None), left_incl=False)
         text_ctrl.ChangeValue(placeholder_value)
         text_ctrl.Bind(wx.EVT_TEXT, outer_callback)
         self._AppendControl(sizer, label, text_ctrl)
+
+    def _IntPrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
+                             prim_index: int, node_indices: List[int], min_=0, max_=100):
+        '''Create a control for a floating point property.
+
+        If prim_index is -1, then update the text primitive instead.
+        '''
+        old_values = [getattr(p, prop_name) for p in prims]
+        for val in old_values:
+            assert isinstance(val, float) or isinstance(val, int)
+
+        def callback(e):
+            value = e.GetPosition()
+            self._self_changes = True
+            self.controller.start_group()
+            for nodei in node_indices:
+                # only update the RGB, not alpha
+                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
+                                                            prop_name, value)
+            self.controller.end_group()
+            
+        initial_value = self._GetMultiInt(set(old_values)) or 0
+        sizer = self.GetSizer()
+        int_ctrl = self.CreateSpinCtrl(min=min_, max=max_, initial=initial_value)
+        int_ctrl.Bind(wx.EVT_SPINCTRL, callback)
+        self._AppendControl(sizer, label, int_ctrl)
+
+    def _ChoicePrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
+                                prim_index: int, node_indices: List[int],
+                                choice_items: List[ChoiceItem]):
+        # TODO set original value
+        def callback(e):
+            index = e.GetInt()
+            value = choice_items[index].value
+            self._self_changes = True
+            self.controller.start_group()
+            for nodei in node_indices:
+                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
+                                                            prop_name, value)
+            self.controller.end_group()
+
+        old_values = set(getattr(prim, prop_name) for prim in prims)
+
+        sizer = self.GetSizer()
+        texts = [item.text for item in choice_items]
+        choice_ctrl = wx.Choice(self, choices=texts)
+
+        # Set commonly selected item
+        if len(old_values) == 1:
+            # Find choice item with given value
+            sel_ind = None
+            old_value = next(iter(old_values))
+            for index, item in enumerate(choice_items):
+                if item.value == old_value:
+                    sel_ind = index
+                    break
+            else:
+                assert False, "This should never happen"
+            choice_ctrl.SetSelection(sel_ind)
+
+        choice_ctrl.Bind(wx.EVT_CHOICE, callback)
+        self._AppendControl(sizer, label, choice_ctrl)
 
     def _UpdatePrimitiveFields(self, com_shapes: List[TCompositeShape], nodes: List[Node]):
         sizer = self.GetSizer()
@@ -846,7 +948,7 @@ class NodeForm(EditPanelForm):
             for prim_index in range(len(com_shapes[0].items)):
                 primitives = [cs.items[prim_index][0] for cs in com_shapes]
                 one_prim = primitives[0]
-                subtitle_text = '{}. {}'.format(prim_index + 1, one_prim.name)
+                subtitle_text = '{name} ({idx})'.format(idx=prim_index + 1, name=one_prim.name)
                 self._AppendSubtitle(sizer, subtitle_text)
                 if isinstance(one_prim, TRectanglePrim):
                     self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
@@ -864,10 +966,22 @@ class NodeForm(EditPanelForm):
                                                 primitives, prim_index, node_indices)
                     self._FloatPrimitiveControl('border width', 'border_width',
                                                 primitives, prim_index, node_indices)
+            subtitle_text = 'Text'
+            self._AppendSubtitle(sizer, subtitle_text)
+            # Create text primitive
+            primitives = [cast(TPrimitive, cs.text_item[0]) for cs in com_shapes]
+            self._IntPrimitiveControl('font size', 'font_size', primitives, -1, node_indices, min_=1, max_=100)
+            self._ColorPrimitiveControl('font color', 'font opacity', 'font_color',
+                                        primitives, -1, node_indices)
+            self._ColorPrimitiveControl('highlight color', 'highlight opacity', 'bg_color',
+                                        primitives, -1, node_indices)
+            self._ChoicePrimitiveControl('font family', 'font_family', primitives, -1,
+                                         node_indices, FONT_FAMILY_CHOICES)
+
         else:
             self.primitives_start_row = None
 
-        sizer.Layout()
+        self.Layout()
         self.Thaw()
 
     def UpdateAllFields(self):
@@ -1245,7 +1359,7 @@ class ReactionForm(EditPanelForm):
                     stoich_ctrl.GetId(), inner_callback, (0, None), left_incl=False)
                 stoich_ctrl.Bind(wx.EVT_TEXT, callback)
 
-        sizer.Layout()
+        self.Layout()
         self.Thaw()
 
     def _MakeSetSrcStoichFunction(self, reai: int, nodei: int):

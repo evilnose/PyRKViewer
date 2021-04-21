@@ -9,10 +9,13 @@ import math
 from itertools import chain
 import numpy as np
 from scipy.special import comb
-from typing import Any, Callable, ClassVar, Container, List, Optional, Sequence, Set, Tuple
+from typing import Any, Callable, ClassVar, Container, List, NamedTuple, Optional, Sequence, Set, Tuple
+from collections import namedtuple
+
+from wx.core import FONTFAMILY_DEFAULT
 from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
-from ..config import get_setting, get_theme, Color
+from ..config import get_setting, get_theme, Color, Font
 from ..utils import gchain, pairwise
 
 
@@ -36,7 +39,7 @@ class TPrimitive:
 
 @dataclass
 class TCirclePrim(TPrimitive):
-    name: ClassVar[str] = 'circle'
+    name: ClassVar[str] = 'Circle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
     border_width: float = 0.05
@@ -45,25 +48,54 @@ class TCirclePrim(TPrimitive):
 @dataclass
 class TRectanglePrim(TPrimitive):
     # TODO change defaults
-    name: ClassVar[str] = 'rectangle'
+    name: ClassVar[str] = 'Rectangle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
     border_width: float = 0.05
     corner_radius: float = 0.15
 
 
+class ChoiceItem(NamedTuple):
+    value: Any
+    text: str
+
+
+FONT_FAMILY_CHOICES = [
+    ChoiceItem(wx.FONTFAMILY_DEFAULT, 'default'),
+    ChoiceItem(wx.FONTFAMILY_MODERN, 'modern'),
+    ChoiceItem(wx.FONTFAMILY_ROMAN, 'Roman'),
+]
+
+
+@dataclass
+class TTextPrim(TPrimitive):
+    name: ClassVar[str] = 'text'
+    bg_color: Color = Color(255, 255, 0, 0)
+    font_color: Color = Color(0, 0, 0, 255)
+    font_size: int = 11
+    font_family: int = wx.FONTFAMILY_DEFAULT
+    font_style: int = wx.FONTSTYLE_NORMAL
+    font_weight: int = wx.FONTWEIGHT_MEDIUM
+    alignment: str = "center"
+
+
 class TCompositeShape:
-    def __init__(self, items: List[Tuple[Any, TTransform]], name: str):
+    def __init__(self, items: List[Tuple[Any, TTransform]],
+                 text_item: Tuple[TTextPrim, TTransform], name: str):
         self.items = items
         self.name = name
+        self.text_item = text_item
 
     def __copy__(self):
-        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.name))
+        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.text_item), self.name)
 
 
 class RectData:
     position: Vec2
     size: Vec2
+
+
+ALIGNMENT_CHOICES = ("left align", "center", "right align")
 
 
 class Node(RectData):
@@ -500,9 +532,9 @@ class SpeciesBezier:
         # gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
         path = gc.CreatePath()
         points = [p for p in (self.node_intersection,
-                                             self.handle.tip,
-                                             self.centroid_handle.tip,
-                                             self.real_center)]
+                              self.handle.tip,
+                              self.centroid_handle.tip,
+                              self.real_center)]
         path.MoveToPoint(*points[0])
         if self.bezierCurves:
             path.AddCurveToPoint(*points[1], *points[2], *points[3])
@@ -657,7 +689,3 @@ class Compartment(RectData):
         """The same as s_rect, but the rectangle is unscaled.
         """
         return Rect(self.position, self.size)
-
-class text_alignment():
-    ## also implement wypython text to see positions/ style
-    pass

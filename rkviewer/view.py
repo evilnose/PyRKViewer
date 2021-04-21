@@ -62,6 +62,8 @@ class EditPanel(fnb.FlatNotebook):
 
         self.null_message = wx.Panel(self)
         self.null_message.SetForegroundColour(get_theme('toolbar_fg'))
+        self.SetBackgroundColour(get_theme('toolbar_bg'))
+        self.null_message.SetBackgroundColour(get_theme('toolbar_bg'))
         text = wx.StaticText(
             self.null_message, label="Nothing is selected.", style=wx.ALIGN_CENTER)
         null_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -408,8 +410,6 @@ class MainPanel(wx.Panel):
         self.edit_panel = EditPanel(self, self.canvas, self.controller,
                                     size=(get_theme('edit_panel_width'),
                                           get_theme('canvas_height')))
-        self.edit_panel.SetForegroundColour(get_theme('toolbar_fg'))
-        self.edit_panel.SetBackgroundColour(get_theme('toolbar_bg'))
 
         # and create a sizer to manage the layout of child widgets
         sizer = wx.GridBagSizer(vgap=get_theme('vgap'), hgap=get_theme('hgap'))

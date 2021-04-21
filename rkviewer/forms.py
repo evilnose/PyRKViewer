@@ -1,5 +1,6 @@
 """All sorts of form widgets, mainly those used in EditPanel.
 """
+from __future__ import annotations
 # pylint: disable=maybe-no-member
 from itertools import chain, compress
 import wx
@@ -20,6 +21,141 @@ from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, Reaction,
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import TCirclePrim, TRectanglePrim, TCompositeShape
+
+
+ColorCallback = Callable[[wx.Colour], None]
+FloatCallback = Callable[[float], None]
+
+
+def GetMultiEnum(entries: List[Any], fallback):
+    """Similar to _GetMultiColor, but for enums.
+
+    Need to specify a fallback value in case the entries are different.
+    """
+    entries_set = set(entries)
+    if len(entries_set) == 1:
+        return next(iter(entries_set))
+    else:
+        return fallback
+
+
+def GetMultiFloatText(values: Set[float], precision: int) -> str:
+    """Returns the common float value if the set has only one element, otherwise return "?".
+
+    See _GetMultiColor for more detail.
+    """
+    return no_rzeros(next(iter(values)), precision) if len(values) == 1 else '?'
+
+
+def GetMultiInt(values: Set[int]) -> Optional[int]:
+    """Returns the common float value if the set has only one element, otherwise return "?".
+
+    See _GetMultiColor for more detail.
+    """
+    return next(iter(values)) if len(values) == 1 else None
+
+
+def GetMultiColor(colors: List[wx.Colour]) -> Tuple[wx.Colour, Optional[int]]:
+    """Helper method for producing one single color from a list of colors.
+
+    Editing programs that allows selection of multiple entities usually support editing all of
+    the selected entities at once. When a property of all the selected entities are the same,
+    the displayed value of that property is that single value precisely. However, if they are
+    not the same, usually a "null" or default value is shown on the form. Following this scheme,
+    this helper returns the common color/alpha if all values are the same, or a default value
+    if not.
+
+    Note:
+        On Windows the RGB and the alpha are treated as different fields due to the lack of
+        alpha field in the color picker screen. Therefore, the RGB and the alpha fields are
+        considered different fields as far as uniqueness is considered.
+    """
+    if on_msw():
+        rgbset = set(c.GetRGB() for c in colors)
+        rgb = copy.copy(wx.Colour(127, 127, 127))
+        if len(rgbset) == 1:
+            rgb.SetRGB(next(iter(rgbset)))
+
+        alphaset = set(c.Alpha() for c in colors)
+        alpha = next(iter(alphaset)) if len(alphaset) == 1 else None
+        return rgb, alpha
+    else:
+        rgbaset = set(c.GetRGBA() for c in colors)
+        rgba = copy.copy(wx.Colour(127, 127, 127))
+        if len(rgbaset) == 1:
+            rgba.SetRGBA(next(iter(rgbaset)))
+
+        return rgba, None
+
+
+def AlphaToText(alpha: Optional[int], prec: int) -> str:
+    """Simple helper for converting an alpha value ~[0, 255] to the range [0, 1].
+
+    Args:
+        alpha: The alpha value in range 0-255. If None, "?" will be returned.
+        precision: The precision of the float string returned.
+    """
+    if alpha is None:
+        return '?'
+    else:
+        return no_rzeros(alpha / 255, prec)
+
+
+def _SetBestInsertion(ctrl: wx.TextCtrl, orig_text: str, orig_insertion: int):
+    """Set the most natural insertion point for a paired-number text control.
+
+    The format of the text control must be "X,Y" where X, Y are numbers, allowing whitespace.
+    This should be called after the text control is autoly changed by View during user's
+    editing. Normally if the text changes the caret will be reset to the 0th position, but this
+    calculates a smarter position to place the caret to produce a more natural behavior.
+
+    Args:
+        ctrl: The text control, whose value is already programmatically changed.
+        orig_text: The value of the text control before it was changed.
+        orig_insertion: The original caret position from GetInsertionPoint().
+    """
+    new_text = ctrl.GetValue()
+    try:
+        mid = orig_text.index(',')
+    except ValueError:
+        # can't find comma; directly return
+        return
+
+    if orig_insertion > mid:
+        ctrl.SetInsertionPoint(len(new_text))
+    else:
+        tokens = new_text.split(',')
+        assert len(tokens) == 2
+
+        left = tokens[0].strip()
+        lstart = new_text.index(left)
+        lend = lstart + len(left)
+        ctrl.SetInsertionPoint(lend)
+
+
+def ChangePairValue(ctrl: wx.TextCtrl, new_val: Vec2, prec: int):
+    """Helper for updating the value of a paired number TextCtrl.
+
+    The TextCtrl accepts text in the format "X, Y" where X and Y are floats. The control is
+    not updated if the new and old values are identical (considering precision).
+
+    Args:
+        ctrl: The TextCtrl widget.
+        new_val: The new pair of floats to update the control with.
+        prec: The precision of the numbers. The new value is rounded to this precision.
+    """
+    old_text = ctrl.GetValue()
+    old_val = Vec2(parse_num_pair(old_text))
+
+    # round old_val to desired precision. We don't want to refresh value when user is typing,
+    # even if their value exceeded our precision
+    if old_val != new_val:
+        if ctrl.HasFocus():
+            orig_insertion = ctrl.GetInsertionPoint()
+            wx.CallAfter(
+                lambda: _SetBestInsertion(ctrl, old_text, orig_insertion))
+        ctrl.ChangeValue('{} , {}'.format(
+            no_rzeros(new_val.x, prec), no_rzeros(new_val.y, prec)))
 
 
 def parse_num_pair(text: str) -> Optional[Tuple[float, float]]:
@@ -65,96 +201,26 @@ def parse_precisions(text: str) -> Tuple[int, int]:
     return (x_prec, y_prec)
 
 
-class EditPanelForm(ScrolledPanel):
-    """Base class for a form to be displayed on the edit panel.
-
-    Attributes:
-        ColorCallback: Callback type for when a color input is changed.
-        FloatCallback: Callback type for when a float input is changed.
-        canvas: The associated canvas.
-        controller: The associated controller.
-        net_index: The current network index. For now it is 0 since there is only one tab.
-    """
-    ColorCallback = Callable[[wx.Colour], None]
-    FloatCallback = Callable[[float], None]
-
-    canvas: Canvas
-    controller: IController
-    net_index: int
-    labels: Dict[str, wx.Window]
-    badges: Dict[str, wx.Window]
-    _label_font: wx.Font  #: font for the form input label.
-    _info_bitmap: wx.Bitmap  # :  bitmap for the info badge (icon), for when an input is invalid.
-    _info_length: int  #: length of the square reserved for _info_bitmap
-    _title: wx.StaticText  #: title of the form
-    _self_changes: bool  #: flag for if edits were made but the controller hasn't updated the view yet
-
-    def __init__(self, parent, canvas: Canvas, controller: IController):
-        super().__init__(parent, style=wx.VSCROLL)
+class FieldGrid(wx.Window):
+    def __init__(self, parent, form: EditPanelForm):
+        super().__init__(parent)
         self.SetForegroundColour(get_theme('toolbar_fg'))
-        self.canvas = canvas
-        self.controller = controller
-        self.net_index = 0
+        self.SetBackgroundColour(get_theme('toolbar_bg'))
+        self.form = form
         self.labels = dict()
         self.badges = dict()
         self._label_font = wx.Font(wx.FontInfo().Bold())
         info_image = wx.Image(resource_path('info-2-16.png'), wx.BITMAP_TYPE_PNG)
         self._info_bitmap = wx.Bitmap(info_image)
         self._info_length = 16
-        self._title = wx.StaticText(self)  # only displayed when node(s) are selected
-        title_font = wx.Font(wx.FontInfo(10))
-        self._title.SetFont(title_font)
-        self._self_changes = False
-        self._selected_idx = set()
-
-    @property
-    def selected_idx(self):
-        return self._selected_idx
-
-    @abstractmethod
-    def UpdateAllFields(self):
-        pass
-
-    @abstractmethod
-    def CreateControls(self, sizer: wx.GridSizer):
-        pass
-
-    def CreateTextCtrl(self, **kwargs):
-        """Create a text control that confirms to the theme."""
-        if get_theme('text_field_border'):
-            style = 0
-        else:
-            style = wx.BORDER_NONE
-        ctrl = wx.TextCtrl(self, style=style, **kwargs)
-        ctrl.SetBackgroundColour(get_theme('text_field_bg'))
-        ctrl.SetForegroundColour(get_theme('text_field_fg'))
-        return ctrl
-
-    def CreateSpinCtrl(self, **kwargs):
-        """Create a text control that confirms to the theme."""
-        if get_theme('text_field_border'):
-            style = 0
-        else:
-            style = wx.BORDER_NONE
-        ctrl = wx.SpinCtrl(self, style=style, **kwargs)
-        ctrl.SetBackgroundColour(get_theme('text_field_bg'))
-        ctrl.SetForegroundColour(get_theme('text_field_fg'))
-        return ctrl
-
-    def ExternalUpdate(self):
-        if len(self._selected_idx) != 0 and not self._self_changes:
-            self.UpdateAllFields()
-
-        # clear validation errors
-        for id in self.badges.keys():
-            self._SetValidationState(True, id)
-        self._self_changes = False
 
     def InitLayout(self):
         sizer = self.InitAndGetSizer()
-        self.CreateControls(sizer)
+
+        # TODO re-add title, in EditPanelForm, but this tmie using a vertical sizer
+        # sizer.Add(self._title, wx.GBPosition(1, 0), wx.GBSpan(1, 5), flag=wx.ALIGN_CENTER)
+        self.AppendSpacer(0, sizer=sizer)
         self.SetSizer(sizer)
-        self.SetupScrolling()
 
     def InitAndGetSizer(self) -> wx.GridSizer:
         VGAP = 8
@@ -183,16 +249,14 @@ class EditPanelForm(ScrolledPanel):
         sizer.Add(int(right_width), 0, wx.GBPosition(0, 2), wx.GBSpan(1, 1))
         sizer.AddGrowableCol(0, 3)
         sizer.AddGrowableCol(1, 7)
-
-        sizer.Add(self._title, wx.GBPosition(1, 0), wx.GBSpan(1, 5), flag=wx.ALIGN_CENTER)
-        self._AppendSpacer(sizer, 0)
         return sizer
 
-    def _AppendControl(self, sizer: wx.GridSizer, label_str: str, ctrl: wx.Control):
+    def AppendControl(self, label_str: str, ctrl: wx.Control):
         """Append a control, its label, and its info badge to the last row of the sizer.
 
         Returns the automaticaly created label and info badge (wx.StaticText for now).
         """
+        sizer = self.GetSizer()
 
         label = wx.StaticText(self, label=label_str)
         label.SetFont(self._label_font)
@@ -205,76 +269,47 @@ class EditPanelForm(ScrolledPanel):
 
         info_badge = wx.StaticBitmap(self, bitmap=self._info_bitmap)
         info_badge.Show(False)
-        sizer.Add(info_badge, wx.GBPosition(rows, 3), wx.GBSpan(1, 1),
-                  flag=wx.ALIGN_CENTER)
+        sizer.Add(info_badge, wx.GBPosition(rows, 3), wx.GBSpan(1, 1), flag=wx.ALIGN_CENTER)
         self.labels[ctrl.GetId()] = label
         self.badges[ctrl.GetId()] = info_badge
 
-    def _AppendSpacer(self, sizer: wx.GridSizer, height: int):
+    def AppendSpacer(self, height: int, sizer=None):
         """Append a horizontal spacer with the given height.
 
         Note:
             The VGAP value still applies, i.e. there is an additional gap between the spacer and
             the next row.
         """
+        if sizer is None:
+            sizer = self.GetSizer()
         rows = sizer.GetRows()
         sizer.Add(0, height, wx.GBPosition(rows, 0), wx.GBSpan(1, 5))
 
-    def _AppendLine(self, sizer: wx.GridSizer):
+    def AppendLine(self):
         """Append a horizontal spacer with the given height.
 
         Note:
             The VGAP value still applies, i.e. there is an additional gap between the spacer and
             the next row.
         """
+        sizer = self.GetSizer()
         rows = sizer.GetRows()
         line = wx.StaticLine(self)
         sizer.Add(line, wx.GBPosition(rows, 0), wx.GBSpan(1, 5))
 
-    def _AppendSubtitle(self, sizer: wx.GridSizer, text: str) -> wx.StaticText:
-        self._AppendSpacer(sizer, 3)
+    def AppendSubtitle(self, text: str) -> wx.StaticText:
+        sizer = self.GetSizer()
+        self.AppendSpacer(3)
         sizer.Add(0, 0, wx.GBPosition(sizer.GetRows(), 0))
         statictext = wx.StaticText(self, label=text)
         font = wx.Font(wx.FontInfo(9))
         statictext.SetFont(font)
         sizer.Add(statictext, wx.GBPosition(sizer.GetRows(), 0),
                   wx.GBSpan(1, 5), flag=wx.ALIGN_CENTER)
-        self._AppendSpacer(sizer, 0)
+        self.AppendSpacer(0)
         return statictext
 
-    @classmethod
-    def _SetBestInsertion(cls, ctrl: wx.TextCtrl, orig_text: str, orig_insertion: int):
-        """Set the most natural insertion point for a paired-number text control.
-
-        The format of the text control must be "X,Y" where X, Y are numbers, allowing whitespace.
-        This should be called after the text control is autoly changed by View during user's
-        editing. Normally if the text changes the caret will be reset to the 0th position, but this
-        calculates a smarter position to place the caret to produce a more natural behavior.
-
-        Args:
-            ctrl: The text control, whose value is already programmatically changed.
-            orig_text: The value of the text control before it was changed.
-            orig_insertion: The original caret position from GetInsertionPoint().
-        """
-        new_text = ctrl.GetValue()
-        try:
-            mid = orig_text.index(',')
-        except ValueError:
-            # can't find comma; directly return
-            return
-
-        if orig_insertion > mid:
-            ctrl.SetInsertionPoint(len(new_text))
-        else:
-            tokens = new_text.split(',')
-            assert len(tokens) == 2
-
-            left = tokens[0].strip()
-            lstart = new_text.index(left)
-            lend = lstart + len(left)
-            ctrl.SetInsertionPoint(lend)
-
-    def _SetValidationState(self, good: bool, ctrl_id: str, message: str = ""):
+    def SetValidationState(self, good: bool, ctrl_id: str, message: str = ""):
         """Set the validation state for a control.
 
         Args:
@@ -292,10 +327,32 @@ class EditPanelForm(ScrolledPanel):
         self.Layout()
         self.Thaw()
 
-    def _CreateColorControl(self, label: str, alpha_label: str,
-                            color_callback: ColorCallback, alpha_callback: FloatCallback,
-                            sizer: wx.GridSizer, alpha_range: Tuple[float, float] = (0, 1),
-                            placeholder: wx.Colour = wx.Colour(127, 127, 127), placeholder_alpha=None) \
+    def CreateTextCtrl(self, **kwargs):
+        """Create a text control that confirms to the theme."""
+        if get_theme('text_field_border'):
+            style = 0
+        else:
+            style = wx.BORDER_NONE
+        ctrl = wx.TextCtrl(self, style=style, **kwargs)
+        ctrl.SetBackgroundColour(get_theme('text_field_bg'))
+        ctrl.SetForegroundColour(get_theme('text_field_fg'))
+        return ctrl
+
+    def CreateSpinCtrl(self, **kwargs):
+        """Create a text control that confirms to the theme."""
+        if get_theme('text_field_border'):
+            style = 0
+        else:
+            style = wx.BORDER_NONE
+        ctrl = wx.SpinCtrl(self, style=style, **kwargs)
+        ctrl.SetBackgroundColour(get_theme('text_field_bg'))
+        ctrl.SetForegroundColour(get_theme('text_field_fg'))
+        return ctrl
+
+    def CreateColorControl(self, label: str, alpha_label: str,
+                           color_callback: ColorCallback, alpha_callback: FloatCallback,
+                           alpha_range: Tuple[float, float] = (0, 1),
+                           placeholder: wx.Colour = wx.Colour(127, 127, 127), placeholder_alpha=None) \
             -> Tuple[wx.ColourPickerCtrl, Optional[wx.TextCtrl]]:
         """Helper method for creating a color control and adding it to the form.
 
@@ -318,24 +375,24 @@ class EditPanelForm(ScrolledPanel):
         ctrl = wx.ColourPickerCtrl(self)
         ctrl.SetColour(placeholder)
         ctrl.Bind(wx.EVT_COLOURPICKER_CHANGED, lambda e: color_callback(e.GetColour()))
-        self._AppendControl(sizer, label, ctrl)
+        self.AppendControl(label, ctrl)
 
         alpha_ctrl = None
 
         if on_msw():
             # Windows does not support picking alpha in color picker. So we add an additional
             # field for that
-            alpha_text = self._AlphaToText(placeholder_alpha, 2)
+            alpha_text = AlphaToText(placeholder_alpha, 2)
             alpha_ctrl = self.CreateTextCtrl(value=alpha_text)
-            self._AppendControl(sizer, alpha_label, alpha_ctrl)
-            callback = self._MakeFloatCtrlFunction(alpha_ctrl.GetId(), alpha_callback, alpha_range)
+            self.AppendControl(alpha_label, alpha_ctrl)
+            callback = self.MakeFloatCtrlFunction(alpha_ctrl.GetId(), alpha_callback, alpha_range)
             alpha_ctrl.Bind(wx.EVT_TEXT, callback)
 
         return ctrl, alpha_ctrl
 
-    def _MakeFloatCtrlFunction(self, ctrl_id: str, callback: FloatCallback,
-                               range_: Tuple[Optional[float], Optional[float]],
-                               left_incl: bool = True, right_incl: bool = True):
+    def MakeFloatCtrlFunction(self, ctrl_id: str, callback: FloatCallback,
+                              range_: Tuple[Optional[float], Optional[float]],
+                              left_incl: bool = True, right_incl: bool = True):
         """Helper method that creates a validation function for a TextCtrl that only allows floats.
 
         Args:
@@ -354,7 +411,7 @@ class EditPanelForm(ScrolledPanel):
             try:
                 value = float(text)
             except ValueError:
-                self._SetValidationState(False, ctrl_id, "Value must be a number")
+                self.SetValidationState(False, ctrl_id, "Value must be a number")
                 return
 
             good = True
@@ -385,111 +442,85 @@ class EditPanelForm(ScrolledPanel):
                     else:
                         incl_text = 'or equal to' if right_incl else ''
                         err_msg = "Value must less than {} {}".format(incl_text, hi)
-                self._SetValidationState(False, ctrl_id, err_msg)
+                self.SetValidationState(False, ctrl_id, err_msg)
                 return
 
             callback(value)
-            self._SetValidationState(True, ctrl_id)
+            self.SetValidationState(True, ctrl_id)
 
         return float_ctrl_fn
 
-    @classmethod
-    def _GetMultiColor(cls, colors: List[wx.Colour]) -> Tuple[wx.Colour, Optional[int]]:
-        """Helper method for producing one single color from a list of colors.
 
-        Editing programs that allows selection of multiple entities usually support editing all of
-        the selected entities at once. When a property of all the selected entities are the same,
-        the displayed value of that property is that single value precisely. However, if they are
-        not the same, usually a "null" or default value is shown on the form. Following this scheme,
-        this helper returns the common color/alpha if all values are the same, or a default value
-        if not.
+class EditPanelForm(ScrolledPanel):
+    """Base class for a form to be displayed on the edit panel.
 
-        Note:
-            On Windows the RGB and the alpha are treated as different fields due to the lack of
-            alpha field in the color picker screen. Therefore, the RGB and the alpha fields are
-            considered different fields as far as uniqueness is considered.
-        """
-        if on_msw():
-            rgbset = set(c.GetRGB() for c in colors)
-            rgb = copy.copy(wx.Colour(127, 127, 127))
-            if len(rgbset) == 1:
-                rgb.SetRGB(next(iter(rgbset)))
+    Attributes:
+        ColorCallback: Callback type for when a color input is changed.
+        FloatCallback: Callback type for when a float input is changed.
+        canvas: The associated canvas.
+        controller: The associated controller.
+        net_index: The current network index. For now it is 0 since there is only one tab.
+    """
 
-            alphaset = set(c.Alpha() for c in colors)
-            alpha = next(iter(alphaset)) if len(alphaset) == 1 else None
-            return rgb, alpha
-        else:
-            rgbaset = set(c.GetRGBA() for c in colors)
-            rgba = copy.copy(wx.Colour(127, 127, 127))
-            if len(rgbaset) == 1:
-                rgba.SetRGBA(next(iter(rgbaset)))
+    canvas: Canvas
+    controller: IController
+    net_index: int
+    labels: Dict[str, wx.Window]
+    badges: Dict[str, wx.Window]
+    sections: List[FieldGrid]
+    _label_font: wx.Font  #: font for the form input label.
+    _info_bitmap: wx.Bitmap  # :  bitmap for the info badge (icon), for when an input is invalid.
+    _info_length: int  #: length of the square reserved for _info_bitmap
+    _title: wx.StaticText  #: title of the form
+    _self_changes: bool  #: flag for if edits were made but the controller hasn't updated the view yet
 
-            return rgba, None
+    def __init__(self, parent, canvas: Canvas, controller: IController):
+        super().__init__(parent, style=wx.VSCROLL)
+        self.SetForegroundColour(get_theme('toolbar_fg'))
+        self.SetBackgroundColour(get_theme('toolbar_bg'))
+        self.canvas = canvas
+        self.controller = controller
+        self.net_index = 0
+        self._title = wx.StaticText(self)  # only displayed when node(s) are selected
+        title_font = wx.Font(wx.FontInfo(10))
+        self._title.SetFont(title_font)
+        self._self_changes = False
+        self._selected_idx = set()
 
-    @classmethod
-    def _GetMultiEnum(cls, entries: List[Any], fallback):
-        """Similar to _GetMultiColor, but for enums.
-        
-        Need to specify a fallback value in case the entries are different.
-        """
-        entries_set = set(entries)
-        if len(entries_set) == 1:
-            return next(iter(entries_set))
-        else:
-            return fallback
+    @property
+    def selected_idx(self):
+        return self._selected_idx
 
-    @classmethod
-    def _GetMultiFloatText(cls, values: Set[float], precision: int) -> str:
-        """Returns the common float value if the set has only one element, otherwise return "?".
+    def SetupSections(self):
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizerflags = wx.SizerFlags().Expand()
 
-        See _GetMultiColor for more detail.
-        """
-        return no_rzeros(next(iter(values)), precision) if len(values) == 1 else '?'
+        for section in self.sections:
+            section.InitLayout()
+            sizer.Add(section, sizerflags)
+        self.CreateControls()
 
-    @classmethod
-    def _GetMultiInt(cls, values: Set[int]) -> Optional[int]:
-        """Returns the common float value if the set has only one element, otherwise return "?".
+        self.SetSizer(sizer)
+        self.SetupScrolling()
 
-        See _GetMultiColor for more detail.
-        """
-        return next(iter(values)) if len(values) == 1 else None
+    @abstractmethod
+    def UpdateAllFields(self):
+        pass
 
-    @classmethod
-    def _AlphaToText(cls, alpha: Optional[int], prec: int) -> str:
-        """Simple helper for converting an alpha value ~[0, 255] to the range [0, 1].
+    @abstractmethod
+    def CreateControls(self):
+        pass
 
-        Args:
-            alpha: The alpha value in range 0-255. If None, "?" will be returned.
-            precision: The precision of the float string returned.
-        """
-        if alpha is None:
-            return '?'
-        else:
-            return no_rzeros(alpha / 255, prec)
+    def ExternalUpdate(self):
+        if len(self._selected_idx) != 0 and not self._self_changes:
+            self.UpdateAllFields()
 
-    def _ChangePairValue(self, ctrl: wx.TextCtrl, new_val: Vec2, prec: int):
-        """Helper for updating the value of a paired number TextCtrl.
-
-        The TextCtrl accepts text in the format "X, Y" where X and Y are floats. The control is
-        not updated if the new and old values are identical (considering precision).
-
-        Args:
-            ctrl: The TextCtrl widget.
-            new_val: The new pair of floats to update the control with.
-            prec: The precision of the numbers. The new value is rounded to this precision.
-        """
-        old_text = ctrl.GetValue()
-        old_val = Vec2(parse_num_pair(old_text))
-
-        # round old_val to desired precision. We don't want to refresh value when user is typing,
-        # even if their value exceeded our precision
-        if old_val != new_val:
-            if ctrl.HasFocus():
-                orig_insertion = ctrl.GetInsertionPoint()
-                wx.CallAfter(
-                    lambda: self._SetBestInsertion(ctrl, old_text, orig_insertion))
-            ctrl.ChangeValue('{} , {}'.format(
-                no_rzeros(new_val.x, prec), no_rzeros(new_val.y, prec)))
+        # clear validation errors
+        # TODO
+        for section in self.sections:
+            for id in section.badges.keys():
+                section.SetValidationState(True, id)
+        self._self_changes = False
 
 
 class NodeForm(EditPanelForm):
@@ -501,9 +532,9 @@ class NodeForm(EditPanelForm):
     id_ctrl: wx.TextCtrl
     pos_ctrl: wx.TextCtrl
     size_ctrl: wx.TextCtrl
-    nodeStatusDropDown : wx.Choice
+    nodeStatusDropDown: wx.Choice
     compositeShapesDropDown: wx.Choice
-    lockNodeCheckBox : wx.CheckBox
+    lockNodeCheckBox: wx.CheckBox
 
     _nodes: List[Node]  #: current list of nodes in canvas.
     _selected_idx: Set[int]  #: current list of selected indices in canvas.
@@ -512,12 +543,15 @@ class NodeForm(EditPanelForm):
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
         self._nodes = list()
+        self.main_section = FieldGrid(self, self)
+        self.sections = [self.main_section]
         self._bounding_rect = None  # No padding
         # boolean to indicate whether only nodes are selected, and only nodes from the same
         # compartment are selected
         self.contiguous = True
         self.primitives_start_row = None
-        self.InitLayout()
+
+        self.SetupSections()
 
     def UpdateNodes(self, nodes: List[Node]):
         """Function called after the list of nodes have been updated."""
@@ -533,8 +567,8 @@ class NodeForm(EditPanelForm):
         if len(self.selected_idx) != 0:
             self._UpdateBoundingRect()
             prec = 2
-            self._ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
-            self._ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
+            ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
+            ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
 
     def _UpdateBoundingRect(self):
         """Update bounding rectangle; mixed indicates whether both nodes and comps are selected.
@@ -566,39 +600,40 @@ class NodeForm(EditPanelForm):
             self._title.SetLabel(title_label)
 
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
-            self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
+            self.main_section.labels[self.id_ctrl.GetId()].SetLabel(id_text)
 
             size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
-            self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
+            self.main_section.labels[self.size_ctrl.GetId()].SetLabel(size_text)
         self.ExternalUpdate()
 
-    def CreateControls(self, sizer: wx.GridSizer):
-        self.id_ctrl = self.CreateTextCtrl()
+    def CreateControls(self):
+        self.id_ctrl = self.main_section.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
-        self._AppendControl(sizer, 'identifier', self.id_ctrl)
+        self.main_section.AppendControl('identifier', self.id_ctrl)
 
-        self.pos_ctrl = self.CreateTextCtrl()
+        self.pos_ctrl = self.main_section.CreateTextCtrl()
         self.pos_ctrl.Bind(wx.EVT_TEXT, self._OnPosText)
-        self._AppendControl(sizer, 'position', self.pos_ctrl)
+        self.main_section.AppendControl('position', self.pos_ctrl)
 
-        self.size_ctrl = self.CreateTextCtrl()
+        self.size_ctrl = self.main_section.CreateTextCtrl()
         self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
-        self._AppendControl(sizer, 'size', self.size_ctrl)
+        self.main_section.AppendControl('size', self.size_ctrl)
 
-        self.nodeStates = ['Floating Node', 'Boundary Node'] 
-        self.nodeStatusDropDown = wx.Choice(self, choices=self.nodeStates)
-        self._AppendControl(sizer, 'node status', self.nodeStatusDropDown)
+        self.nodeStates = ['Floating Node', 'Boundary Node']
+        self.nodeStatusDropDown = wx.Choice(self.main_section, choices=self.nodeStates)
+        self.main_section.AppendControl('node status', self.nodeStatusDropDown)
         self.nodeStatusDropDown.Bind(wx.EVT_CHOICE, self.OnNodeStatusChoice)
 
-        self.lockNodeCheckBox = wx.CheckBox(self, label = '') 
-        self._AppendControl(sizer, 'lock node', self.lockNodeCheckBox)
+        self.lockNodeCheckBox = wx.CheckBox(self.main_section, label='')
+        self.main_section.AppendControl('lock node', self.lockNodeCheckBox)
         self.lockNodeCheckBox.Bind(wx.EVT_CHECKBOX, self.OnNodeLockCheckBox)
 
-        self.compositeShapes = [_.name for _ in self.controller.get_composite_shape_list(self.net_index)]
-        self.compositeShapesDropDown = wx.Choice(self, choices=self.compositeShapes)
-        self._AppendControl(sizer, 'shape', self.compositeShapesDropDown)
+        self.compositeShapes = [
+            _.name for _ in self.controller.get_composite_shape_list(self.net_index)]
+        self.compositeShapesDropDown = wx.Choice(self.main_section, choices=self.compositeShapes)
+        self.main_section.AppendControl('shape', self.compositeShapesDropDown)
         self.compositeShapesDropDown.Bind(wx.EVT_CHOICE, self.OnCompositeShapes)
- 
+
     def _OnIdText(self, evt):
         """Callback for the ID control."""
         new_id = evt.GetString()
@@ -606,12 +641,12 @@ class NodeForm(EditPanelForm):
         [nodei] = self._selected_idx
         ctrl_id = self.id_ctrl.GetId()
         if len(new_id) == 0:
-            self._SetValidationState(False, ctrl_id, "ID cannot be empty")
+            self.main_section.SetValidationState(False, ctrl_id, "ID cannot be empty")
             return
         else:
             for node in self._nodes:
                 if node.id == new_id:
-                    self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
+                    self.main_section.SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
             else:
                 # loop terminated fine. There is no duplicate ID
@@ -620,7 +655,7 @@ class NodeForm(EditPanelForm):
                 self.controller.rename_node(self.net_index, nodei, new_id)
                 post_event(DidModifyNodesEvent([nodei]))
                 self.controller.end_group()
-        self._SetValidationState(True, self.id_ctrl.GetId())
+        self.main_section.SetValidationState(True, self.id_ctrl.GetId())
 
     def _OnPosText(self, evt):
         """Callback for the position control."""
@@ -629,12 +664,13 @@ class NodeForm(EditPanelForm):
         xy = parse_num_pair(text)
         ctrl_id = self.pos_ctrl.GetId()
         if xy is None:
-            self._SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
+            self.main_section.SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
             return
 
         pos = Vec2(xy)
         if pos.x < 0 or pos.y < 0:
-            self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
+            self.main_section.SetValidationState(
+                False, ctrl_id, 'Position coordinates should be non-negative')
             return
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         # limit position to within the compartment
@@ -668,7 +704,7 @@ class NodeForm(EditPanelForm):
                 for node in nodes:
                     self.controller.move_node(self.net_index, node.index, node.position)
                 self.controller.end_group()
-        self._SetValidationState(True, self.pos_ctrl.GetId())
+        self.main_section.SetValidationState(True, self.pos_ctrl.GetId())
 
     def _OnSizeText(self, evt):
         """Callback for the size control."""
@@ -677,7 +713,8 @@ class NodeForm(EditPanelForm):
         text = evt.GetString()
         wh = parse_num_pair(text)
         if wh is None:
-            self._SetValidationState(False, ctrl_id, 'Should be in the form "width, height"')
+            self.main_section.SetValidationState(
+                False, ctrl_id, 'Should be in the form "width, height"')
             return
 
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
@@ -702,13 +739,13 @@ class NodeForm(EditPanelForm):
             message = 'The size of {} needs to be at least ({}, {})'.format(
                 'bounding box' if len(nodes) > 1 else 'node',
                 no_rzeros(min_size.x, 2), no_rzeros(min_size.y, 2))
-            self._SetValidationState(False, ctrl_id, message)
+            self.main_section.SetValidationState(False, ctrl_id, message)
             return
 
         # if size.x > max_size.x or size.y > max_size.y:
         #     message = 'The size of bounding box cannot exceed ({}, {})'.format(
         #         no_rzeros(max_size.x, 2), no_rzeros(max_size.y, 2))
-        #     self._SetValidationState(False, ctrl_id, message)
+        #     self.main_section.SetValidationState(False, ctrl_id, message)
         #     return
 
         # NOTE clamp max size automatically rather than show error
@@ -734,15 +771,15 @@ class NodeForm(EditPanelForm):
                 self.controller.move_node(self.net_index, node.index, node.position)
                 self.controller.set_node_size(self.net_index, node.index, node.size)
             self.controller.end_group()
-        self._SetValidationState(True, self.size_ctrl.GetId())
+        self.main_section.SetValidationState(True, self.size_ctrl.GetId())
 
-    def OnNodeStatusChoice(self, evt):    
+    def OnNodeStatusChoice(self, evt):
         """Callback for the change node status, floating or boundary."""
         selected = self.nodeStatusDropDown.GetSelection()
         if selected == 0:
-           floatingStatus = True
+            floatingStatus = True
         else:
-           floatingStatus = False 
+            floatingStatus = False
 
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         self._self_changes = True
@@ -763,7 +800,7 @@ class NodeForm(EditPanelForm):
             for shapei, shape in enumerate(self.compositeShapes):
                 if selected == shape:
                     self.controller.set_node_shape_index(self.net_index, node.index, shapei)
-            
+
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
@@ -773,11 +810,11 @@ class NodeForm(EditPanelForm):
 
     def OnNodeLockCheckBox(self, evt):
         """Callback for the change node status, floating or boundary."""
-        cb = evt.GetEventObject() 
+        cb = evt.GetEventObject()
         if cb.GetValue():
-             nodeLocked = True
+            nodeLocked = True
         else:
-             nodeLocked= False
+            nodeLocked = False
 
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         self._self_changes = True
@@ -785,10 +822,10 @@ class NodeForm(EditPanelForm):
         for node in nodes:
             self.controller.set_node_locked_status(self.net_index, node.index, nodeLocked)
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
-        self.controller.end_group()  
+        self.controller.end_group()
 
     def _ColorPrimitiveControl(self, label: str, alpha_label: str, prop_name: str,
-                                prims: List[TPrimitive], prim_index: int, node_indices: List[int]):
+                               prims: List[TPrimitive], prim_index: int, node_indices: List[int]):
         '''Create a control for a color property.
 
         If prim_index is -1, then update the text primitive instead.
@@ -811,15 +848,16 @@ class NodeForm(EditPanelForm):
             self.controller.start_group()
             for i, nodei in enumerate(node_indices):
                 old_color = old_colors[i]
-                new_color = Color(old_color.Red(), old_color.Green(), old_color.Blue(), int(255 * value))
+                new_color = Color(old_color.Red(), old_color.Green(),
+                                  old_color.Blue(), int(255 * value))
                 self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
                                                             prop_name, new_color)
             self.controller.end_group()
 
-        color_union, alpha_union = self._GetMultiColor(old_colors)
-        self._CreateColorControl(label, alpha_label, color_callback, alpha_callback, 
-                                 self.GetSizer(), placeholder=color_union,
-                                 placeholder_alpha=alpha_union)
+        color_union, alpha_union = GetMultiColor(old_colors)
+        self.main_section.CreateColorControl(label, alpha_label, color_callback, alpha_callback,
+                                             placeholder=color_union,
+                                             placeholder_alpha=alpha_union)
 
     def _FloatPrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
                                prim_index: int, node_indices: List[int]):
@@ -831,7 +869,7 @@ class NodeForm(EditPanelForm):
         for val in old_values:
             assert isinstance(val, float) or isinstance(val, int)
 
-        placeholder_value = self._GetMultiFloatText(set(old_values), 2)
+        placeholder_value = GetMultiFloatText(set(old_values), 2)
 
         def callback(value: float):
             self._self_changes = True
@@ -841,14 +879,14 @@ class NodeForm(EditPanelForm):
                 self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
                                                             prop_name, value)
             self.controller.end_group()
-            
+
         sizer = self.GetSizer()
-        text_ctrl = self.CreateTextCtrl()
-        outer_callback = self._MakeFloatCtrlFunction(text_ctrl.GetId(),
-                                                     callback, (0, None), left_incl=False)
+        text_ctrl = self.main_section.CreateTextCtrl()
+        outer_callback = self.main_section.MakeFloatCtrlFunction(text_ctrl.GetId(),
+                                                                 callback, (0, None), left_incl=False)
         text_ctrl.ChangeValue(placeholder_value)
         text_ctrl.Bind(wx.EVT_TEXT, outer_callback)
-        self._AppendControl(sizer, label, text_ctrl)
+        self.main_section.AppendControl(label, text_ctrl)
 
     def _IntPrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
                              prim_index: int, node_indices: List[int], min_=0, max_=100):
@@ -869,12 +907,12 @@ class NodeForm(EditPanelForm):
                 self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
                                                             prop_name, value)
             self.controller.end_group()
-            
-        initial_value = self._GetMultiInt(set(old_values)) or 0
+
+        initial_value = GetMultiInt(set(old_values)) or 0
         sizer = self.GetSizer()
-        int_ctrl = self.CreateSpinCtrl(min=min_, max=max_, initial=initial_value)
+        int_ctrl = self.main_section.CreateSpinCtrl(min=min_, max=max_, initial=initial_value)
         int_ctrl.Bind(wx.EVT_SPINCTRL, callback)
-        self._AppendControl(sizer, label, int_ctrl)
+        self.main_section.AppendControl(label, int_ctrl)
 
     def _ChoicePrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
                                 prim_index: int, node_indices: List[int],
@@ -894,7 +932,7 @@ class NodeForm(EditPanelForm):
 
         sizer = self.GetSizer()
         texts = [item.text for item in choice_items]
-        choice_ctrl = wx.Choice(self, choices=texts)
+        choice_ctrl = wx.Choice(self.main_section, choices=texts)
 
         # Set commonly selected item
         if len(old_values) == 1:
@@ -910,76 +948,77 @@ class NodeForm(EditPanelForm):
             choice_ctrl.SetSelection(sel_ind)
 
         choice_ctrl.Bind(wx.EVT_CHOICE, callback)
-        self._AppendControl(sizer, label, choice_ctrl)
+        self.main_section.AppendControl(label, choice_ctrl)
 
     def _UpdatePrimitiveFields(self, com_shapes: List[TCompositeShape], nodes: List[Node]):
         sizer = self.GetSizer()
 
         self.Freeze()
 
-        if self.primitives_start_row:
-            start_row = self.primitives_start_row - 1
+        # TODO restore this
+        # if self.primitives_start_row:
+        #     start_row = self.primitives_start_row - 1
 
-            index = 0
-            while index < sizer.GetItemCount():
-                pos = sizer.GetItemPosition(index)
-                if pos.GetRow() >= start_row:
-                    item = sizer.GetItem(index)
-                    if item.IsWindow():
-                        window = item.GetWindow()
-                        winid = window.GetId()
-                        if winid in self.badges:
-                            del self.badges[winid]
-                            del self.labels[winid]
-                        item.GetWindow().Destroy()
-                    else:
-                        sizer.Remove(index)
-                else:
-                    index += 1
+        #     index = 0
+        #     while index < sizer.GetItemCount():
+        #         pos = sizer.GetItemPosition(index)
+        #         if pos.GetRow() >= start_row:
+        #             item = sizer.GetItem(index)
+        #             if item.IsWindow():
+        #                 window = item.GetWindow()
+        #                 winid = window.GetId()
+        #                 if winid in self.badges:
+        #                     del self.badges[winid]
+        #                     del self.labels[winid]
+        #                 item.GetWindow().Destroy()
+        #             else:
+        #                 sizer.Remove(index)
+        #         else:
+        #             index += 1
 
-            # reset rows
-            sizer.SetRows(start_row)
+        #     # reset rows
+        #     sizer.SetRows(start_row)
 
-        if len(com_shapes) != 0:
-            # self._primitives_heading = self._AppendSubtitle(sizer, 'Shape properties')
-            self._AppendSpacer(sizer, 0)
-            self.primitives_start_row = self.GetSizer().GetRows()
-            node_indices = [n.index for n in nodes]
-            for prim_index in range(len(com_shapes[0].items)):
-                primitives = [cs.items[prim_index][0] for cs in com_shapes]
-                one_prim = primitives[0]
-                subtitle_text = '{name} ({idx})'.format(idx=prim_index + 1, name=one_prim.name)
-                self._AppendSubtitle(sizer, subtitle_text)
-                if isinstance(one_prim, TRectanglePrim):
-                    self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
-                                                primitives, prim_index, node_indices)
-                    self._ColorPrimitiveControl('border color', 'border opacity', 'border_color',
-                                                primitives, prim_index, node_indices)
-                    self._FloatPrimitiveControl('border width', 'border_width',
-                                                primitives, prim_index, node_indices)
-                    self._FloatPrimitiveControl('corner radius', 'corner_radius',
-                                                primitives, prim_index, node_indices)
-                elif isinstance(one_prim, TCirclePrim):
-                    self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
-                                                primitives, prim_index, node_indices)
-                    self._ColorPrimitiveControl('border color', 'border opacity', 'border_color',
-                                                primitives, prim_index, node_indices)
-                    self._FloatPrimitiveControl('border width', 'border_width',
-                                                primitives, prim_index, node_indices)
-            subtitle_text = 'Text'
-            self._AppendSubtitle(sizer, subtitle_text)
-            # Create text primitive
-            primitives = [cast(TPrimitive, cs.text_item[0]) for cs in com_shapes]
-            self._IntPrimitiveControl('font size', 'font_size', primitives, -1, node_indices, min_=1, max_=100)
-            self._ColorPrimitiveControl('font color', 'font opacity', 'font_color',
-                                        primitives, -1, node_indices)
-            self._ColorPrimitiveControl('highlight color', 'highlight opacity', 'bg_color',
-                                        primitives, -1, node_indices)
-            self._ChoicePrimitiveControl('font family', 'font_family', primitives, -1,
-                                         node_indices, FONT_FAMILY_CHOICES)
+        # if len(com_shapes) != 0:
+        #     # self._primitives_heading = self.main_section.AppendSubtitle('Shape properties')
+        #     self.main_section.AppendSpacer(0)
+        #     self.primitives_start_row = self.GetSizer().GetRows()
+        #     node_indices = [n.index for n in nodes]
+        #     for prim_index in range(len(com_shapes[0].items)):
+        #         primitives = [cs.items[prim_index][0] for cs in com_shapes]
+        #         one_prim = primitives[0]
+        #         subtitle_text = '{name} ({idx})'.format(idx=prim_index + 1, name=one_prim.name)
+        #         self.main_section.AppendSubtitle(subtitle_text)
+        #         if isinstance(one_prim, TRectanglePrim):
+        #             self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
+        #                                         primitives, prim_index, node_indices)
+        #             self._ColorPrimitiveControl('border color', 'border opacity', 'border_color',
+        #                                         primitives, prim_index, node_indices)
+        #             self._FloatPrimitiveControl('border width', 'border_width',
+        #                                         primitives, prim_index, node_indices)
+        #             self._FloatPrimitiveControl('corner radius', 'corner_radius',
+        #                                         primitives, prim_index, node_indices)
+        #         elif isinstance(one_prim, TCirclePrim):
+        #             self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
+        #                                         primitives, prim_index, node_indices)
+        #             self._ColorPrimitiveControl('border color', 'border opacity', 'border_color',
+        #                                         primitives, prim_index, node_indices)
+        #             self._FloatPrimitiveControl('border width', 'border_width',
+        #                                         primitives, prim_index, node_indices)
+        #     subtitle_text = 'Text'
+        #     self.main_section.AppendSubtitle(subtitle_text)
+        #     # Create text primitive
+        #     primitives = [cast(TPrimitive, cs.text_item[0]) for cs in com_shapes]
+        #     self._IntPrimitiveControl('font size', 'font_size', primitives, -1, node_indices, min_=1, max_=100)
+        #     self._ColorPrimitiveControl('font color', 'font opacity', 'font_color',
+        #                                 primitives, -1, node_indices)
+        #     self._ColorPrimitiveControl('highlight color', 'highlight opacity', 'bg_color',
+        #                                 primitives, -1, node_indices)
+        #     self._ChoicePrimitiveControl('font family', 'font_family', primitives, -1,
+        #                                  node_indices, FONT_FAMILY_CHOICES)
 
-        else:
-            self.primitives_start_row = None
+        # else:
+        #     self.primitives_start_row = None
 
         self.Layout()
         self.Thaw()
@@ -999,8 +1038,8 @@ class NodeForm(EditPanelForm):
             self.pos_ctrl.ChangeValue('?')
             self.size_ctrl.ChangeValue('?')
         else:
-            self._ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
-            self._ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
+            ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
+            ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
 
         if len(self._selected_idx) == 1:
             [node] = nodes
@@ -1034,19 +1073,20 @@ class NodeForm(EditPanelForm):
         self.id_ctrl.ChangeValue(id_text)
 
         if floatingNode:
-           self.nodeStatusDropDown.SetSelection(0)
+            self.nodeStatusDropDown.SetSelection(0)
         else:
-           self.nodeStatusDropDown.SetSelection(1)
+            self.nodeStatusDropDown.SetSelection(1)
 
         if lockNode:
             self.lockNodeCheckBox.SetValue(True)
         else:
-           self.lockNodeCheckBox.SetValue(False)
+            self.lockNodeCheckBox.SetValue(False)
 
         if shape_name:
             self.compositeShapesDropDown.SetStringSelection(shape_name)
         else:
             self.compositeShapesDropDown.SetSelection(NOT_FOUND)
+
 
 @dataclass
 class StoichInfo:
@@ -1060,57 +1100,61 @@ class ReactionForm(EditPanelForm):
         super().__init__(parent, canvas, controller)
 
         self._reactions = list()
-        self.InitLayout()
+        self.main_section = FieldGrid(self, self)
+        self.sections = [self.main_section]
 
-    def CreateControls(self, sizer: wx.GridSizer):
-        self.id_ctrl = self.CreateTextCtrl()
+        self.SetupSections()
+
+    def CreateControls(self):
+        self.id_ctrl = self.main_section.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
-        self._AppendControl(sizer, 'identifier', self.id_ctrl)
+        self.main_section.AppendControl('identifier', self.id_ctrl)
 
-        self.ratelaw_ctrl = self.CreateTextCtrl()
+        self.ratelaw_ctrl = self.main_section.CreateTextCtrl()
         self.ratelaw_ctrl.Bind(wx.EVT_TEXT, self._OnRateLawText)
-        self._AppendControl(sizer, 'rate law', self.ratelaw_ctrl)
+        self.main_section.AppendControl('rate law', self.ratelaw_ctrl)
 
-        self.fill_ctrl, self.fill_alpha_ctrl = self._CreateColorControl(
+        self.fill_ctrl, self.fill_alpha_ctrl = self.main_section.CreateColorControl(
             'fill color', 'fill opacity',
-            self._OnFillColorChanged, self._FillAlphaCallback, sizer)
+            self._OnFillColorChanged, self._FillAlphaCallback)
 
-        self.stroke_width_ctrl = self.CreateTextCtrl()
-        stroke_cb = self._MakeFloatCtrlFunction(self.stroke_width_ctrl.GetId(),
-                                                self._StrokeWidthCallback, (0.1, 100))
+        self.stroke_width_ctrl = self.main_section.CreateTextCtrl()
+        stroke_cb = self.main_section.MakeFloatCtrlFunction(self.stroke_width_ctrl.GetId(),
+                                                            self._StrokeWidthCallback, (0.1, 100))
         self.stroke_width_ctrl.Bind(wx.EVT_TEXT, stroke_cb)
-        self._AppendControl(sizer, 'line width', self.stroke_width_ctrl)
+        self.main_section.AppendControl('line width', self.stroke_width_ctrl)
 
         # Whether the center position should be autoly set?
         self.auto_center_ctrl = wx.CheckBox(self)
         self.auto_center_ctrl.SetValue(True)
         self.auto_center_ctrl.Bind(wx.EVT_CHECKBOX, self._AutoCenterCallback)
-        self._AppendControl(sizer, 'auto center pos', self.auto_center_ctrl)
+        self.main_section.AppendControl('auto center pos', self.auto_center_ctrl)
 
-        self.center_pos_ctrl = self.CreateTextCtrl()
+        self.center_pos_ctrl = self.main_section.CreateTextCtrl()
         self.center_pos_ctrl.Disable()
         self.center_pos_ctrl.Bind(wx.EVT_TEXT, self._CenterPosCallback)
-        self._AppendControl(sizer, 'center position', self.center_pos_ctrl)
+        self.main_section.AppendControl('center position', self.center_pos_ctrl)
 
         self._reactant_subtitle = None
         self._product_subtitle = None
         self.reactant_stoich_ctrls = list()
         self.product_stoich_ctrls = list()
 
-        states = ['bezier curve', 'straight line'] 
-        self.rxnStatusDropDown = wx.Choice(self, choices=states)
-        self._AppendControl(sizer, 'reaction status', self.rxnStatusDropDown)
+        states = ['bezier curve', 'straight line']
+        self.rxnStatusDropDown = wx.Choice(self.main_section, choices=states)
+        self.main_section.AppendControl('reaction status', self.rxnStatusDropDown)
         self.rxnStatusDropDown.Bind(wx.EVT_CHOICE, self.OnRxnStatusChoice)
 
-        self.mod_tip_dropdown = wx.ComboBox(self, choices=[e.value for e in ModifierTipStyle], style=wx.CB_READONLY)
-        self._AppendControl(sizer, 'modifier tip', self.mod_tip_dropdown)
+        self.mod_tip_dropdown = wx.ComboBox(
+            self.main_section, choices=[e.value for e in ModifierTipStyle], style=wx.CB_READONLY)
+        self.main_section.AppendControl('modifier tip', self.mod_tip_dropdown)
         self.mod_tip_dropdown.Bind(wx.EVT_COMBOBOX, self.ModifierTipCallback)
 
         self._modifiers = set()
         self._nodes = list()
         self._node_indices = set()
-        self.modifiers_ctrl = wx.CheckListBox(self, style=wx.LB_NEEDED_SB, size=(-1, 100))
-        self._AppendControl(sizer, 'modifiers', self.modifiers_ctrl)
+        self.modifiers_ctrl = wx.CheckListBox(self.main_section, style=wx.LB_NEEDED_SB, size=(-1, 100))
+        self.main_section.AppendControl('modifiers', self.modifiers_ctrl)
         self.modifiers_ctrl.Bind(wx.EVT_CHECKLISTBOX, self.OnModifierCheck)
 
     def _OnIdText(self, evt):
@@ -1121,12 +1165,12 @@ class ReactionForm(EditPanelForm):
         [reai] = self._selected_idx
         ctrl_id = self.id_ctrl.GetId()
         if len(new_id) == 0:
-            self._SetValidationState(False, ctrl_id, "ID cannot be empty")
+            self.main_section.SetValidationState(False, ctrl_id, "ID cannot be empty")
             return
         else:
             for rxn in self._reactions:
                 if rxn.id == new_id:
-                    self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
+                    self.main_section.SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
 
             # loop terminated fine. There is no duplicate ID
@@ -1135,7 +1179,7 @@ class ReactionForm(EditPanelForm):
             self.controller.rename_reaction(self.net_index, reai, new_id)
             post_event(DidModifyReactionEvent(list(self._selected_idx)))
             self.controller.end_group()
-            self._SetValidationState(True, ctrl_id)
+            self.main_section.SetValidationState(True, ctrl_id)
 
     def _StrokeWidthCallback(self, width: float):
         reactions = [r for r in self._reactions if r.index in self._selected_idx]
@@ -1146,14 +1190,14 @@ class ReactionForm(EditPanelForm):
         post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
 
-    def  OnRxnStatusChoice (self, evt):    
+    def OnRxnStatusChoice(self, evt):
         """Callback for the change reaction status, bezier curve or straight line."""
         selection = self.rxnStatusDropDown.GetSelection()
         # TODO this is hardcoded. If the text changes this wouldn't work
         if selection == 0:
-           bezierCurves = True
+            bezierCurves = True
         else:
-           bezierCurves = False 
+            bezierCurves = False
 
         rxns = get_rxns_by_idx(self._reactions, self._selected_idx)
         self._self_changes = True
@@ -1163,7 +1207,7 @@ class ReactionForm(EditPanelForm):
         post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.end_group()
 
-    def ModifierTipCallback(self, evt):    
+    def ModifierTipCallback(self, evt):
         """Callback for the change reaction status, bezier curve or straight line."""
         status = self.mod_tip_dropdown.GetValue()
         entry: ModifierTipStyle
@@ -1173,7 +1217,7 @@ class ReactionForm(EditPanelForm):
                 break
         else:
             assert False, ('Unable to find corresponding enum entry to dropdown selection. ' +
-            'This is not supposed to happen.')
+                           'This is not supposed to happen.')
 
         rxns = get_rxns_by_idx(self._reactions, self._selected_idx)
         self._self_changes = True
@@ -1199,7 +1243,8 @@ class ReactionForm(EditPanelForm):
             if reaction.center_pos is not None:
                 offset = centroid - reaction.center_pos
                 if offset != Vec2():
-                    self.controller.set_center_handle(self.net_index, reaction.index, reaction.src_c_handle.tip + offset)
+                    self.controller.set_center_handle(
+                        self.net_index, reaction.index, reaction.src_c_handle.tip + offset)
             self.controller.end_group()
             self.center_pos_ctrl.Disable()
         else:
@@ -1208,20 +1253,21 @@ class ReactionForm(EditPanelForm):
                 no_rzeros(centroid.x, prec), no_rzeros(centroid.y, prec)
             ))
             self.controller.set_reaction_center(self.net_index, reaction.index, centroid)
-    
+
     def _CenterPosCallback(self, evt):
         text = evt.GetString()
         xy = parse_num_pair(text)
         ctrl_id = self.center_pos_ctrl.GetId()
         if xy is None:
-            self._SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
+            self.main_section.SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
             return
 
         pos = Vec2(xy)
         if pos.x < 0 or pos.y < 0:
-            self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
+            self.main_section.SetValidationState(
+                False, ctrl_id, 'Position coordinates should be non-negative')
             return
-        
+
         assert len(self._selected_idx) == 1
         reaction = self.canvas.reaction_idx_map[next(iter(self._selected_idx))]
         if reaction.center_pos != pos:
@@ -1231,7 +1277,7 @@ class ReactionForm(EditPanelForm):
             self.controller.set_reaction_center(self.net_index, reaction.index, pos)
             post_event(DidMoveReactionCenterEvent(self.net_index, reaction.index, offset, False))
             self.controller.end_group()
-        self._SetValidationState(True, ctrl_id)
+        self.main_section.SetValidationState(True, ctrl_id)
 
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
@@ -1293,7 +1339,7 @@ class ReactionForm(EditPanelForm):
             self._title.SetLabel(title_label)
 
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
-            self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
+            self.main_section.labels[self.id_ctrl.GetId()].SetLabel(id_text)
             self.UpdateAllFields()
         self.ExternalUpdate()
 
@@ -1312,57 +1358,58 @@ class ReactionForm(EditPanelForm):
         sizer = self.GetSizer()
 
         self.Freeze()
-        if self._reactant_subtitle is not None:
-            start_row = sizer.GetItemPosition(self._reactant_subtitle).GetRow() - 2
+        # TODO
+        # if self._reactant_subtitle is not None:
+        #     start_row = sizer.GetItemPosition(self._reactant_subtitle).GetRow() - 2
 
-            index = 0
-            while index < sizer.GetItemCount():
-                pos = sizer.GetItemPosition(index)
-                if pos.GetRow() >= start_row:
-                    item = sizer.GetItem(index)
-                    if item.IsWindow():
-                        window = item.GetWindow()
-                        winid = window.GetId()
-                        if winid in self.badges:
-                            del self.badges[winid]
-                            del self.labels[winid]
-                        item.GetWindow().Destroy()
-                    else:
-                        sizer.Remove(index)
-                else:
-                    index += 1
+        #     index = 0
+        #     while index < sizer.GetItemCount():
+        #         pos = sizer.GetItemPosition(index)
+        #         if pos.GetRow() >= start_row:
+        #             item = sizer.GetItem(index)
+        #             if item.IsWindow():
+        #                 window = item.GetWindow()
+        #                 winid = window.GetId()
+        #                 if winid in self.badges:
+        #                     del self.badges[winid]
+        #                     del self.labels[winid]
+        #                 item.GetWindow().Destroy()
+        #             else:
+        #                 sizer.Remove(index)
+        #         else:
+        #             index += 1
 
-            self._reactant_subtitle = None
-            self._product_subtitle = None
-            # reset rows
-            sizer.SetRows(start_row)
+        #     self._reactant_subtitle = None
+        #     self._product_subtitle = None
+        #     # reset rows
+        #     sizer.SetRows(start_row)
 
-        if len(reactants) != 0:
-            # add back the fields
-            self._reactant_subtitle = self._AppendSubtitle(sizer, 'Reactants')
-            for stoich in reactants:
-                stoich_ctrl = self.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
-                node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
-                self._AppendControl(sizer, node_id, stoich_ctrl)
-                inner_callback = self._MakeSetSrcStoichFunction(reai, stoich.nodei)
-                callback = self._MakeFloatCtrlFunction(stoich_ctrl.GetId(), inner_callback, (0, None),
-                                                       left_incl=False)
-                stoich_ctrl.Bind(wx.EVT_TEXT, callback)
+        # if len(reactants) != 0:
+        #     # add back the fields
+        #     self._reactant_subtitle = self.main_section.AppendSubtitle('Reactants')
+        #     for stoich in reactants:
+        #         stoich_ctrl = self.main_section.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
+        #         node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
+        #         self.main_section.AppendControl(node_id, stoich_ctrl)
+        #         inner_callback = self.MakeSetSrcStoichFunction(reai, stoich.nodei)
+        #         callback = self.main_section.MakeFloatCtrlFunction(stoich_ctrl.GetId(), inner_callback, (0, None),
+        #                                                left_incl=False)
+        #         stoich_ctrl.Bind(wx.EVT_TEXT, callback)
 
-            self._product_subtitle = self._AppendSubtitle(sizer, 'Products')
-            for stoich in products:
-                stoich_ctrl = self.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
-                node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
-                self._AppendControl(sizer, node_id, stoich_ctrl)
-                inner_callback = self._MakeSetDestStoichFunction(reai, stoich.nodei)
-                callback = self._MakeFloatCtrlFunction(
-                    stoich_ctrl.GetId(), inner_callback, (0, None), left_incl=False)
-                stoich_ctrl.Bind(wx.EVT_TEXT, callback)
+        #     self._product_subtitle = self.main_section.AppendSubtitle('Products')
+        #     for stoich in products:
+        #         stoich_ctrl = self.main_section.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
+        #         node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
+        #         self.main_section.AppendControl(node_id, stoich_ctrl)
+        #         inner_callback = self.MakeSetDestStoichFunction(reai, stoich.nodei)
+        #         callback = self.main_section.MakeFloatCtrlFunction(
+        #             stoich_ctrl.GetId(), inner_callback, (0, None), left_incl=False)
+        #         stoich_ctrl.Bind(wx.EVT_TEXT, callback)
 
         self.Layout()
         self.Thaw()
 
-    def _MakeSetSrcStoichFunction(self, reai: int, nodei: int):
+    def MakeSetSrcStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self._self_changes = True
             self.controller.start_group()
@@ -1372,7 +1419,7 @@ class ReactionForm(EditPanelForm):
 
         return ret
 
-    def _MakeSetDestStoichFunction(self, reai: int, nodei: int):
+    def MakeSetDestStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self.controller.start_group()
             self._self_changes = True
@@ -1422,7 +1469,7 @@ class ReactionForm(EditPanelForm):
             self._UpdateModifierSelection(reaction.modifiers)
         else:
             self.id_ctrl.Disable()
-            fill, fill_alpha = self._GetMultiColor(list(r.fill_color for r in reactions))
+            fill, fill_alpha = GetMultiColor(list(r.fill_color for r in reactions))
             ratelaw_text = 'multiple'
             self.ratelaw_ctrl.Disable()
             self.auto_center_ctrl.Disable()
@@ -1432,8 +1479,9 @@ class ReactionForm(EditPanelForm):
             self._UpdateModifierSelection(set())
 
         bezierCurves = all(r.bezierCurves for r in reactions)
-        mod_tip_style = self._GetMultiEnum(list(r.modifier_tip_style for r in reactions), ModifierTipStyle.CIRCLE)
-        stroke_width = self._GetMultiFloatText(set(r.thickness for r in reactions), prec)
+        mod_tip_style = GetMultiEnum(
+            list(r.modifier_tip_style for r in reactions), ModifierTipStyle.CIRCLE)
+        stroke_width = GetMultiFloatText(set(r.thickness for r in reactions), prec)
 
         self.id_ctrl.ChangeValue(id_text)
         self.fill_ctrl.SetColour(fill)
@@ -1442,14 +1490,13 @@ class ReactionForm(EditPanelForm):
         self.mod_tip_dropdown.SetValue(mod_tip_style.value)
 
         if on_msw():
-            self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
-         
-        # HMS Replaced stings with contants 
-        if bezierCurves:
-           self.rxnStatusDropDown.SetSelection(0)
-        else:
-           self.rxnStatusDropDown.SetSelection(1)
+            self.fill_alpha_ctrl.ChangeValue(AlphaToText(fill_alpha, prec))
 
+        # HMS Replaced stings with contants
+        if bezierCurves:
+            self.rxnStatusDropDown.SetSelection(0)
+        else:
+            self.rxnStatusDropDown.SetSelection(1)
 
 
 class CompartmentForm(EditPanelForm):
@@ -1461,41 +1508,42 @@ class CompartmentForm(EditPanelForm):
         self._compartments = list()
         self.contiguous = True
 
-        self.InitLayout()
+        self.main_section = FieldGrid(self, self)
+        self.sections = [self.main_section]
 
-    def CreateControls(self, sizer: wx.GridSizer):
-        self.id_ctrl = self.CreateTextCtrl()
+        self.SetupSections()
+
+    def CreateControls(self):
+        self.id_ctrl = self.main_section.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
-        self._AppendControl(sizer, 'identifier', self.id_ctrl)
+        self.main_section.AppendControl('identifier', self.id_ctrl)
 
-        self.pos_ctrl = self.CreateTextCtrl()
+        self.pos_ctrl = self.main_section.CreateTextCtrl()
         self.pos_ctrl.Bind(wx.EVT_TEXT, self._OnPosText)
-        self._AppendControl(sizer, 'position', self.pos_ctrl)
+        self.main_section.AppendControl('position', self.pos_ctrl)
 
-        self.size_ctrl = self.CreateTextCtrl()
+        self.size_ctrl = self.main_section.CreateTextCtrl()
         self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
-        self._AppendControl(sizer, 'size', self.size_ctrl)
+        self.main_section.AppendControl('size', self.size_ctrl)
 
-        self.volume_ctrl = self.CreateTextCtrl()
-        self._AppendControl(sizer, 'volume', self.volume_ctrl)
-        volume_callback = self._MakeFloatCtrlFunction(self.volume_ctrl.GetId(),
-                                                      self._VolumeCallback, (0, None), left_incl=False)
+        self.volume_ctrl = self.main_section.CreateTextCtrl()
+        self.main_section.AppendControl('volume', self.volume_ctrl)
+        volume_callback = self.main_section.MakeFloatCtrlFunction(self.volume_ctrl.GetId(),
+                                                                  self._VolumeCallback, (0, None), left_incl=False)
         self.volume_ctrl.Bind(wx.EVT_TEXT, volume_callback)
 
-        self.fill_ctrl, self.fill_alpha_ctrl = self._CreateColorControl(
+        self.fill_ctrl, self.fill_alpha_ctrl = self.main_section.CreateColorControl(
             'fill color', 'fill opacity',
-            self._OnFillColorChanged, self._FillAlphaCallback,
-            sizer)
+            self._OnFillColorChanged, self._FillAlphaCallback,)
 
-        self.border_ctrl, self.border_alpha_ctrl = self._CreateColorControl(
+        self.border_ctrl, self.border_alpha_ctrl = self.main_section.CreateColorControl(
             'border color', 'border opacity',
-            self._OnBorderColorChanged, self._BorderAlphaCallback,
-            sizer)
+            self._OnBorderColorChanged, self._BorderAlphaCallback)
 
-        self.border_width_ctrl = self.CreateTextCtrl()
-        self._AppendControl(sizer, 'border width', self.border_width_ctrl)
-        border_callback = self._MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
-                                                      self._BorderWidthCallback, (1, 100))
+        self.border_width_ctrl = self.main_section.CreateTextCtrl()
+        self.main_section.AppendControl('border width', self.border_width_ctrl)
+        border_callback = self.main_section.MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
+                                                                  self._BorderWidthCallback, (1, 100))
         self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
 
     def _OnIdText(self, evt):
@@ -1506,12 +1554,12 @@ class CompartmentForm(EditPanelForm):
         [compi] = self._selected_idx
         ctrl_id = self.id_ctrl.GetId()
         if len(new_id) == 0:
-            self._SetValidationState(False, ctrl_id, "ID cannot be empty")
+            self.main_section.SetValidationState(False, ctrl_id, "ID cannot be empty")
             return
         else:
             for comp in self._compartments:
                 if comp.id == new_id:
-                    self._SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
+                    self.main_section.SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
 
             # loop terminated fine. There is no duplicate ID
@@ -1520,7 +1568,7 @@ class CompartmentForm(EditPanelForm):
             self.controller.rename_compartment(self.net_index, compi, new_id)
             post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
             self.controller.end_group()
-            self._SetValidationState(True, ctrl_id)
+            self.main_section.SetValidationState(True, ctrl_id)
 
     def _OnPosText(self, evt):
         """Callback for the position control."""
@@ -1529,12 +1577,13 @@ class CompartmentForm(EditPanelForm):
         xy = parse_num_pair(text)
         ctrl_id = self.pos_ctrl.GetId()
         if xy is None:
-            self._SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
+            self.main_section.SetValidationState(False, ctrl_id, 'Should be in the form "X, Y"')
             return
 
         pos = Vec2(xy)
         if pos.x < 0 or pos.y < 0:
-            self._SetValidationState(False, ctrl_id, 'Position coordinates should be non-negative')
+            self.main_section.SetValidationState(
+                False, ctrl_id, 'Position coordinates should be non-negative')
             return
         comps = [c for c in self._compartments if c.index in self.selected_idx]
         bounds = Rect(Vec2(), self.canvas.realsize)
@@ -1549,7 +1598,7 @@ class CompartmentForm(EditPanelForm):
             for comp in comps:
                 self.controller.move_node(self.net_index, comp.index, comp.position)
             self.controller.end_group()
-        self._SetValidationState(True, self.pos_ctrl.GetId())
+        self.main_section.SetValidationState(True, self.pos_ctrl.GetId())
 
     def _OnSizeText(self, evt):
         """Callback for the size control."""
@@ -1557,7 +1606,8 @@ class CompartmentForm(EditPanelForm):
         text = evt.GetString()
         wh = parse_num_pair(text)
         if wh is None:
-            self._SetValidationState(False, ctrl_id, 'Should be in the form "width, height"')
+            self.main_section.SetValidationState(
+                False, ctrl_id, 'Should be in the form "width, height"')
             return
 
         comps = [c for c in self._compartments if c.index in self.selected_idx]
@@ -1570,7 +1620,7 @@ class CompartmentForm(EditPanelForm):
             message = 'Size of {} needs to be at least ({}, {})'.format(
                 'bounding box' if len(comps) > 1 else 'compartment',
                 no_rzeros(limit.x, 2), no_rzeros(limit.y, 2))
-            self._SetValidationState(False, ctrl_id, message)
+            self.main_section.SetValidationState(False, ctrl_id, message)
             return
 
         clamped = clamp_rect_size(Rect(self._bounding_rect.position, size), self.canvas.realsize)
@@ -1609,7 +1659,7 @@ class CompartmentForm(EditPanelForm):
             for node in peripheral_nodes:
                 self.controller.move_node(self.net_index, node.index, node.position)
             self.controller.end_group()
-        self._SetValidationState(True, self.size_ctrl.GetId())
+        self.main_section.SetValidationState(True, self.size_ctrl.GetId())
 
     def _VolumeCallback(self, volume: float):
         """Callback for when the border width changes."""
@@ -1699,7 +1749,7 @@ class CompartmentForm(EditPanelForm):
             self._title.SetLabel(title_label)
 
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
-            self.labels[self.id_ctrl.GetId()].SetLabel(id_text)
+            self.main_section.labels[self.id_ctrl.GetId()].SetLabel(id_text)
         self.ExternalUpdate()
 
     def UpdateAllFields(self):
@@ -1715,15 +1765,15 @@ class CompartmentForm(EditPanelForm):
 
         self.pos_ctrl.Enable(self.contiguous)
         self.size_ctrl.Enable(self.contiguous)
-        border_width = self._GetMultiFloatText(set(c.border_width for c in comps), prec)
-        volume = self._GetMultiFloatText(set(c.volume for c in comps), prec)
+        border_width = GetMultiFloatText(set(c.border_width for c in comps), prec)
+        volume = GetMultiFloatText(set(c.volume for c in comps), prec)
 
         if not self.contiguous:
             self.pos_ctrl.ChangeValue('?')
             self.size_ctrl.ChangeValue('?')
         else:
-            self._ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
-            self._ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
+            ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
+            ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
 
         if len(self._selected_idx) == 1:
             [comp] = comps
@@ -1734,8 +1784,8 @@ class CompartmentForm(EditPanelForm):
             border_alpha = comp.border.Alpha()
         else:
             self.id_ctrl.Disable()
-            fill, fill_alpha = self._GetMultiColor(list(c.fill for c in comps))
-            border, border_alpha = self._GetMultiColor(list(c.border for c in comps))
+            fill, fill_alpha = GetMultiColor(list(c.fill for c in comps))
+            border, border_alpha = GetMultiColor(list(c.border for c in comps))
 
         self.id_ctrl.ChangeValue(id_text)
         self.fill_ctrl.SetColour(fill)
@@ -1744,11 +1794,10 @@ class CompartmentForm(EditPanelForm):
 
         # set fill alpha if on windows
         if on_msw():
-            self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
-            self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
+            self.fill_alpha_ctrl.ChangeValue(AlphaToText(fill_alpha, prec))
+            self.border_alpha_ctrl.ChangeValue(AlphaToText(border_alpha, prec))
 
         self.border_width_ctrl.ChangeValue(border_width)
-
 
     def CompsMovedOrResized(self, evt):
         """Called when nodes are moved or resized by dragging"""
@@ -1756,8 +1805,8 @@ class CompartmentForm(EditPanelForm):
             return
         self._UpdateBoundingRect()
         prec = 2
-        self._ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
-        self._ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
+        ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
+        ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
 
     def _UpdateBoundingRect(self):
         """Update bounding rectangle; mixed indicates whether both nodes and comps are selected.

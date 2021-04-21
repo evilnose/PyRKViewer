@@ -153,28 +153,12 @@ class NodeElement(CanvasElement):
         aligned_border_width = max(even_round(
             self.node.border_width * boundaryFactor * cstate.scale), 2)
         width, height = s_aligned_rect.size
-        # draw_rect(
-        #     gc,
-        #     s_aligned_rect,
-        #     fill=self.node.fill_color,
-        #     border=self.node.border_color,
-        #     border_width=aligned_border_width,
-        #     corner_radius=get_theme('node_corner_radius')
-        # )
         
 
         draw_composite_shape(
             gc,
             self.node.rect,
             self.node)
-
-        # draw text
-        #tw, th, _, _ = gc.GetFullTextExtent(
-        #    self.node.id)  # optimize by caching?
-        #tx = (width - tw) / 2
-        #ty = (height - th) / 2
-        #gc.DrawText(self.node.id, self.node.s_position.x +
-        #            tx, self.node.s_position.y + ty)
 
         if self.node.lockNode:
             pen = gc.CreatePen(wx.GraphicsPenInfo(

@@ -121,13 +121,13 @@ class Controller(IController):
         self.start_group()
         iod.addNode(neti, node.id, node.position.x, node.position.y, node.size.x, node.size.y, True) # True = floating species
         nodei = iod.getNodeIndex(neti, node.id)
-        iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
-        iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
-                                node.fill_color.Green(), node.fill_color.Blue())
-        iod.setNodeOutlineColorAlpha(neti, nodei, node.border_color.Alpha() / 255)
-        iod.setNodeOutlineColorRGB(neti, nodei, node.border_color.Red(),
-                                   node.border_color.Green(), node.border_color.Blue())
-        iod.setNodeOutlineThickness(neti, nodei, int(node.border_width))
+        # iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
+        # iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
+        #                         node.fill_color.Green(), node.fill_color.Blue())
+        # iod.setNodeBorderColorAlpha(neti, nodei, node.border_color.Alpha() / 255)
+        # iod.setNodeBorderColorRGB(neti, nodei, node.border_color.Red(),
+        #                            node.border_color.Green(), node.border_color.Blue())
+        # iod.setNodeBorderWidth(neti, nodei, int(node.border_width))
         iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
         iod.setNodeFloatingStatus(neti, nodei, node.floatingNode)
         iod.setNodeShapeIndex(neti, nodei, node.shape_index)
@@ -213,11 +213,11 @@ class Controller(IController):
 
     @iod_setter
     def set_node_border_rgb(self, neti: int, nodei: int, color: wx.Colour):
-        iod.setNodeOutlineColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
+        iod.setNodeBorderColorRGB(neti, nodei, color.Red(), color.Green(), color.Blue())
 
     @iod_setter
     def set_node_border_alpha(self, neti: int, nodei: int, alpha: int):
-        iod.setNodeOutlineColorAlpha(neti, nodei, alpha / 255)
+        iod.setNodeBorderColorAlpha(neti, nodei, alpha / 255)
 
     @iod_setter
     def rename_reaction(self, neti: int, reai: int, new_id: str):
@@ -241,7 +241,7 @@ class Controller(IController):
 
     @iod_setter
     def set_node_border_width(self, neti: int, nodei: int, width: float):
-        iod.setNodeOutlineThickness(neti, nodei, width)
+        iod.setNodeBorderWidth(neti, nodei, width)
 
     @iod_setter
     def set_reaction_modifiers(self, neti: int, reai: int, modifiers: Set[int]):
@@ -435,21 +435,21 @@ class Controller(IController):
     def get_node_by_index(self, neti: int, nodei: int) -> Node:
         id = iod.getNodeID(neti, nodei)
         x, y, w, h = iod.getNodeCoordinateAndSize(neti, nodei)
-        fill_alpha = iod.getNodeFillColorAlpha(neti, nodei)
-        fill_rgb = iod.getNodeFillColorRGB(neti, nodei)
-        fill_color = rgba_to_wx_colour(fill_rgb, fill_alpha)
-        border_alpha = iod.getNodeOutlineColorAlpha(neti, nodei)
-        border_rgb = iod.getNodeOutlineColorRGB(neti, nodei)
-        border_color = rgba_to_wx_colour(border_rgb, border_alpha)
+        # fill_alpha = iod.getNodeFillColorAlpha(neti, nodei)
+        # fill_rgb = iod.getNodeFillColorRGB(neti, nodei)
+        # fill_color = rgba_to_wx_colour(fill_rgb, fill_alpha)
+        # border_alpha = iod.getNodeBorderColorAlpha(neti, nodei)
+        # border_rgb = iod.getNodeBorderColorRGB(neti, nodei)
+        # border_color = rgba_to_wx_colour(border_rgb, border_alpha)
         return Node(
             id,
             neti,
             index=nodei,
             pos=Vec2(x, y),
             size=Vec2(w, h),
-            fill_color=fill_color,
-            border_color=border_color,
-            border_width=iod.getNodeOutlineThickness(neti, nodei),
+            # fill_color=fill_color,
+            # border_color=border_color,
+            # border_width=iod.getNodeBorderWidth(neti, nodei),
             comp_idx=iod.getCompartmentOfNode(neti, nodei),
             floatingNode=iod.IsFloatingNode (neti, nodei),
             lockNode=iod.IsNodeLocked(neti, nodei),

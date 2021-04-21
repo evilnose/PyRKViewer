@@ -149,8 +149,8 @@ class NodeElement(CanvasElement):
             boundaryFactor = 2  # Store this in a theme?
 
         s_aligned_rect = self.node.s_rect.aligned()
-        aligned_border_width = max(even_round(
-            self.node.border_width * boundaryFactor), 2)
+        # aligned_border_width = max(even_round(
+        #     self.node.border_width * boundaryFactor), 2)
         width, height = s_aligned_rect.size
         # draw_rect(
         #     gc,
@@ -158,7 +158,7 @@ class NodeElement(CanvasElement):
         #     fill=self.node.fill_color,
         #     border=self.node.border_color,
         #     border_width=aligned_border_width,
-        #     corner_radius=get_theme('node_corner_radius')
+            # corner_radius=get_theme('node_corner_radius')
         # )
         
         assert self.node.composite_shape is not None
@@ -176,8 +176,9 @@ class NodeElement(CanvasElement):
                     tx, self.node.s_position.y + ty)
 
         if self.node.lockNode:
+            lock_color = self.node.border_color or Color(255, 0, 0)
             pen = gc.CreatePen(wx.GraphicsPenInfo(
-                self.node.border_color).Width(aligned_border_width))
+                lock_color.to_wxcolour()).Width(2))
             gc.SetPen(pen)
             path = gc.CreatePath()
             path.AddCircle(self.node.s_position.x, self.node.s_position.y, .1*height)

@@ -4,6 +4,7 @@
 from sortedcontainers.sortedlist import SortedKeyList
 from rkviewer.canvas.elements import CanvasElement, CompartmentElt, NodeElement
 from rkviewer.canvas.state import cstate
+from rkviewer.config import Color
 import wx
 import abc
 from typing import Callable, List, cast
@@ -170,7 +171,7 @@ class Minimap(CanvasOverlay):
                 el = cast(NodeElement, el)
                 pos = el.node.position * scale + self.position
                 size = el.node.size * scale
-                fc = el.node.fill_color
+                fc = (el.node.fill_color or Color(128, 128, 128)).to_wxcolour()
             elif isinstance(el, CompartmentElt):
                 el = cast(CompartmentElt, el)
                 pos = el.compartment.position * scale + self.position

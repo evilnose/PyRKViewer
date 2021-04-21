@@ -42,10 +42,7 @@ class TNode:
     floating : bool  # If false it means the node is a boundary node
     nodeLocked: bool #if false it means the node can be moved
     compi: int = -1
-    fillColor: Color = Color(255, 150, 80, 255)
-    outlineColor: Color = Color(255, 100, 80, 255)
-    outlineThickness: float = 3
-    font: Font = Font(18, Color(0, 0, 0))  # TODO implement this
+    font: Font = Font(20, Color(0, 0, 0))  # TODO implement this
     shapei: int = 0
     shape: TCompositeShape = copy.copy(defaultShapes[0])
 
@@ -727,51 +724,42 @@ def getNodeCoordinateAndSize(neti: int, nodei: int):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-# TODO make this return Color
+def colorToRGB(color: Color):
+    color1 = color.r
+    color1 = (color1 << 8) | color.g
+    color1 = (color1 << 8) | color.b
+    return color1
+
+
 def getNodeFillColor(neti: int, nodei: int):
     """
-    getNodeFillColor  rgba tulple format, rgb range int[0,255] alpha range float[0,1]
+    Return the 'fill_color' property of the first primitive in the given node's composite shape, if
+    there is such a primitive. Otherwise, return None.
+
+    This function exists for backwards-compatibility and convenience reasons.
+
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return (n.nodes[nodei].fillColor.r, n.nodes[nodei].fillColor.g,
-                    n.nodes[nodei].fillColor.b,
-                    float(n.nodes[nodei].fillColor.a)/255)
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    node = _getNode(neti, nodei)
+    for prim, _ in node.shape.items:
+        if 'fill_color' in prim.__dataclass_fields__:
+            assert isinstance(prim.fill_color, Color)
+            return prim.fill_color
+    return None
 
 
 def getNodeFillColorRGB(neti: int, nodei: int):
     """
-    getNodeFillColorRGB getNodeFillColor rgb int format
+    See getNodeFillColor(), except only returns the RGB values
+
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            color1 = n.nodes[nodei].fillColor.r
-            color1 = (color1 << 8) | n.nodes[nodei].fillColor.g
-            color1 = (color1 << 8) | n.nodes[nodei].fillColor.b
-            return color1
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    color = getNodeFillColor(neti, nodei)
+    if color is None:
+        return None
+    return colorToRGB(color)
 
 
 def getNodeFillColorAlpha(neti: int, nodei: int):
@@ -780,105 +768,61 @@ def getNodeFillColorAlpha(neti: int, nodei: int):
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return float(n.nodes[nodei].fillColor.a)/255
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    color = getNodeFillColor(neti, nodei)
+    if color is None:
+        return None
+    return float(color.a) / 255
 
 
-def getNodeOutlineColor(neti: int, nodei: int):
+def getNodeBorderColor(neti: int, nodei: int):
     """
-    getNodeOutlineColor rgba tulple format, rgb range int[0,255] alpha range float[0,1]
+    getNodeBorderColor rgba tulple format, rgb range int[0,255] alpha range float[0,1]
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return (n.nodes[nodei].outlineColor.r, n.nodes[nodei].outlineColor.g,
-                    n.nodes[nodei].outlineColor.b,
-                    float(n.nodes[nodei].outlineColor.a)/255)
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    node = _getNode(neti, nodei)
+    for prim, _ in node.shape.items:
+        if 'border_color' in prim.__dataclass_fields__:
+            assert isinstance(prim.border_color, Color)
+            return prim.border_color
+    return None
 
 
-def getNodeOutlineColorRGB(neti: int, nodei: int):
+def getNodeBorderColorRGB(neti: int, nodei: int):
     """
-    getNodeOutlineColorRGB getNodeOutlineColor rgb int format
+    getNodeBorderColorRGB getNodeBorderColor rgb int format
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            color1 = n.nodes[nodei].outlineColor.r
-            color1 = (color1 << 8) | n.nodes[nodei].outlineColor.g
-            color1 = (color1 << 8) | n.nodes[nodei].outlineColor.b
-            return color1
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    color = getNodeBorderColor(neti, nodei)
+    if color is None:
+        return None
+    return colorToRGB(color)
 
 
-def getNodeOutlineColorAlpha(neti: int, nodei: int):
+def getNodeBorderColorAlpha(neti: int, nodei: int):
     """
-    getNodeOutlineColorAlpha getNodeOutlineColor alpha value(float)
+    getNodeBorderColorAlpha getNodeBorderColor alpha value(float)
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return float(n.nodes[nodei].outlineColor.a)/255
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    color = getNodeBorderColor(neti, nodei)
+    if color is None:
+        return None
+    return float(color.a) / 255
 
 
-def getNodeOutlineThickness(neti: int, nodei: int):
+def getNodeBorderWidth(neti: int, nodei: int):
     """
-    getNodeOutlineThickness
+    getNodeBorderWidth
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return n.nodes[nodei].outlineThickness
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    node = _getNode(neti, nodei)
+    for prim, _ in node.shape.items:
+        if 'border_width' in prim.__dataclass_fields__:
+            return prim.border_width
+    return None
 
 
 def getNodeFontPointSize(neti: int, nodei: int):
@@ -1188,22 +1132,14 @@ def setNodeFillColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            n.nodes[nodei].fillColor = n.nodes[nodei].fillColor.swapped(r, g, b)
-            return
+    if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
+        _raiseError(-12)
 
-    raise ExceptionDict[errCode](errorDict[errCode])
+    node = _getNode(neti, nodei)
+    for prim, _ in node.shape.items:
+        if 'fill_color' in prim.__dataclass_fields__:
+            assert isinstance(prim.fill_color, Color)
+            prim.fill_color = prim.fill_color.swapped(r, g, b)
 
 
 def setNodeFillColorAlpha(neti: int, nodei: int, a: float):
@@ -1213,96 +1149,64 @@ def setNodeFillColorAlpha(neti: int, nodei: int, a: float):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        node = _getNode(neti, nodei)
-        if a < 0 or a > 1:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            node.fillColor = node.fillColor.swapped(a=int(a*255))
-            return
+    if a < 0 or a > 1:
+        _raiseError(-12)
 
-    raise ExceptionDict[errCode](errorDict[errCode])
+    node = _getNode(neti, nodei)
+    for prim, _ in node.shape.items:
+        if 'fill_color' in prim.__dataclass_fields__:
+            assert isinstance(prim.fill_color, Color)
+            a_int = int(a * 255)
+            prim.fill_color = prim.fill_color.swapped(a=a_int)
 
 
-def setNodeOutlineColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
+def setNodeBorderColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     """
-    setNodeOutlineColorRGB setNodeOutlineColorRGB
+    setNodeBorderColorRGB setNodeBorderColorRGB
     errCode: -7: node index out of range
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            n.nodes[nodei].outlineColor = n.nodes[nodei].outlineColor.swapped(r, g, b)
-            return
+    if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
+        _raiseError(-12)
 
-    raise ExceptionDict[errCode](errorDict[errCode])
+    node = _getNode(neti, nodei)
+    for prim, _ in node.shape.items:
+        if 'border_color' in prim.__dataclass_fields__:
+            assert isinstance(prim.border_color, Color)
+            prim.border_color = prim.border_color.swapped(r, g, b)
 
 
-def setNodeOutlineColorAlpha(neti: int, nodei: int, a: float):
+def setNodeBorderColorAlpha(neti: int, nodei: int, a: float):
     """
-    setNodeOutlineColorAlpha setNodeOutlineColorAlpha, alpha is a float between 0 and 1
+    setNodeBorderColorAlpha setNodeBorderColorAlpha, alpha is a float between 0 and 1
     errCode: -7: node index out of range
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif a < 0 or a > 1:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            A1 = int(a * 255)
-            n.nodes[nodei].outlineColor = n.nodes[nodei].outlineColor.swapped(a=A1)
-            return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    if a < 0 or a > 1:
+        _raiseError(-12)
+    node = _getNode(neti, nodei)
+    for prim, _ in node.shape.items:
+        if 'border_color' in prim.__dataclass_fields__:
+            assert isinstance(prim.border_color, Color)
+            a_int = int(a * 255)
+            prim.border_color = prim.border_color.swapped(a=a_int)
 
 
-def setNodeOutlineThickness(neti: int, nodei: int, thickness: float):
+def setNodeBorderWidth(neti: int, nodei: int, width: float):
     """
-    setNodeOutlineThickness setNodeOutlineThickness
+    setNodeBorderWidth setNodeBorderWidth
     errCode: -7: node index out of range
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif thickness <= 0:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            n.nodes[nodei].outlineThickness = thickness
-            return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
+    if width <= 0:
+        _raiseError(-12)
+    node = _getNode(neti, nodei)
+    for prim, _ in node.shape.items:
+        if 'border_width' in prim.__dataclass_fields__:
+            prim.border_width = width
 
 
 def setNodeFontPointSize(neti: int, nodei: int, fontPointSize: int):
@@ -1352,7 +1256,6 @@ def setNodeFontFamily(neti: int, nodei: int, fontFamily: str):
             _pushUndoStack()
             raise NotImplementedError()
             # n.nodes[nodei].font.family = fontFamily
-            return
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -2537,7 +2440,10 @@ def getNodeShapeIndex(neti: int, nodei: int) -> int:
     return _getNode(neti, nodei).shapei
 
 
-def setNodeShapeIndex(neti: int, nodei: int, shapei: int):
+def setNodeShapeIndex(neti: int, nodei: int, shapei: int, preserve_common_fields=True):
+    '''If preserve_common_fields is True, then preserve common field values such as fill_color,
+    if applicable.
+    '''
     net = _getNetwork(neti)
     node = _getNode(neti, nodei)
     shape = net.compositeShapes[shapei]

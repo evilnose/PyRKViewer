@@ -107,9 +107,9 @@ class NodeData:
     net_index: int = field()
     position: Vec2 = field()
     size: Vec2 = field()
-    fill_color: Color = field()
-    border_color: Color = field()
-    border_width: float = field()
+    # fill_color: Color = field()
+    # border_color: Color = field()
+    # border_width: float = field()
     comp_idx: int = field(default=-1)
     index: int = field(default=-1)
     floatingNode: bool = field(default=True)
@@ -305,9 +305,6 @@ def _translate_node(node: Node) -> NodeData:
         net_index=node.net_index,
         position=node.position,
         size=node.size,
-        fill_color=_to_color(node.fill_color),
-        border_color=_to_color(node.border_color),
-        border_width=node.border_width,
         comp_idx=node.comp_idx,
         index=node.index,
         floatingNode=node.floatingNode,
@@ -650,15 +647,23 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
     node = Node(
         id,
         net_index,
-        fill_color=_to_wxcolour(fill_color),
-        border_color=_to_wxcolour(border_color),
-        border_width=border_width,
+        # fill_color=_to_wxcolour(fill_color),
+        # border_color=_to_wxcolour(border_color),
+        # border_width=border_width,
         pos=position,
         size=size,
         floatingNode=floatingNode,
         lockNode=lockNode,
     )
-    return _controller.add_node_g(net_index, node)
+    _controller.start_group()
+    nodei = _controller.add_node_g(net_index, node)
+    _controller.set_node_fill_rgb(net_index, nodei, _to_wxcolour(fill_color))
+    _controller.set_node_fill_alpha(net_index, nodei, fill_color.alpha)
+    _controller.set_node_border_rgb(net_index, nodei, _to_wxcolour(border_color))
+    _controller.set_node_border_alpha(net_index, nodei, border_color.alpha)
+    _controller.set_node_border_width(net_index, nodei, border_width)
+    _controller.end_group()
+    return nodei
 
 
 def move_node(net_index: int, node_index: int, position: Vec2, allowNegativeCoordinates: bool = False):

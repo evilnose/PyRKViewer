@@ -3,19 +3,20 @@
 # pylint: disable=maybe-no-member
 from itertools import chain, compress
 import wx
+from wx.core import NOT_FOUND
 from wx.lib.scrolledpanel import ScrolledPanel
 from abc import abstractmethod
 import copy
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
-from .config import get_theme, get_setting
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from .config import get_theme, get_setting, Color
 from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyReactionEvent,
                      DidMoveCompartmentsEvent, DidMoveNodesEvent, DidMoveReactionCenterEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, post_event)
 from .mvc import IController, ModifierTipStyle
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
-from .canvas.data import Compartment, Reaction, compute_centroid
+from .canvas.data import Compartment, Reaction, TPrimitive, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import TCirclePrim, TRectanglePrim, TCompositeShape
@@ -269,7 +270,8 @@ class EditPanelForm(ScrolledPanel):
 
     def _CreateColorControl(self, label: str, alpha_label: str,
                             color_callback: ColorCallback, alpha_callback: FloatCallback,
-                            sizer: wx.GridSizer, alpha_range: Tuple[float, float] = (0, 1)) \
+                            sizer: wx.GridSizer, alpha_range: Tuple[float, float] = (0, 1),
+                            placeholder: wx.Colour = wx.Colour(127, 127, 127), placeholder_alpha=None) \
             -> Tuple[wx.ColourPickerCtrl, Optional[wx.TextCtrl]]:
         """Helper method for creating a color control and adding it to the form.
 
@@ -284,7 +286,13 @@ class EditPanelForm(ScrolledPanel):
         Returns:
             A tuple of the color control and the alpha control.
         """
+        # Update placeholder to include alpha
+        if placeholder_alpha:
+            placeholder = wx.Colour(placeholder.Red(), placeholder.Green(), placeholder.Blue(),
+                                    placeholder_alpha)
+
         ctrl = wx.ColourPickerCtrl(self)
+        ctrl.SetColour(placeholder)
         ctrl.Bind(wx.EVT_COLOURPICKER_CHANGED, lambda e: color_callback(e.GetColour()))
         self._AppendControl(sizer, label, ctrl)
 
@@ -293,7 +301,8 @@ class EditPanelForm(ScrolledPanel):
         if on_msw():
             # Windows does not support picking alpha in color picker. So we add an additional
             # field for that
-            alpha_ctrl = self.CreateTextCtrl()
+            alpha_text = self._AlphaToText(placeholder_alpha, 2)
+            alpha_ctrl = self.CreateTextCtrl(value=alpha_text)
             self._AppendControl(sizer, alpha_label, alpha_ctrl)
             callback = self._MakeFloatCtrlFunction(alpha_ctrl.GetId(), alpha_callback, alpha_range)
             alpha_ctrl.Bind(wx.EVT_TEXT, callback)
@@ -378,7 +387,7 @@ class EditPanelForm(ScrolledPanel):
         """
         if on_msw():
             rgbset = set(c.GetRGB() for c in colors)
-            rgb = copy.copy(wx.BLACK)
+            rgb = copy.copy(wx.Colour(127, 127, 127))
             if len(rgbset) == 1:
                 rgb.SetRGB(next(iter(rgbset)))
 
@@ -387,7 +396,7 @@ class EditPanelForm(ScrolledPanel):
             return rgb, alpha
         else:
             rgbaset = set(c.GetRGBA() for c in colors)
-            rgba = copy.copy(wx.BLACK)
+            rgba = copy.copy(wx.Colour(127, 127, 127))
             if len(rgbaset) == 1:
                 rgba.SetRGBA(next(iter(rgbaset)))
 
@@ -460,11 +469,6 @@ class NodeForm(EditPanelForm):
     id_ctrl: wx.TextCtrl
     pos_ctrl: wx.TextCtrl
     size_ctrl: wx.TextCtrl
-    fill_ctrl: wx.ColourPickerCtrl
-    fill_alpha_ctrl: Optional[wx.TextCtrl]
-    border_ctrl: wx.ColourPickerCtrl
-    border_alpha_ctrl: Optional[wx.TextCtrl]
-    border_width_ctrl: wx.TextCtrl
     nodeStatusDropDown : wx.Choice
     compositeShapesDropDown: wx.Choice
     lockNodeCheckBox : wx.CheckBox
@@ -480,6 +484,7 @@ class NodeForm(EditPanelForm):
         # boolean to indicate whether only nodes are selected, and only nodes from the same
         # compartment are selected
         self.contiguous = True
+        self.primitives_start_row = None
         self.InitLayout()
 
     def UpdateNodes(self, nodes: List[Node]):
@@ -535,7 +540,6 @@ class NodeForm(EditPanelForm):
             self.labels[self.size_ctrl.GetId()].SetLabel(size_text)
         self.ExternalUpdate()
 
-
     def CreateControls(self, sizer: wx.GridSizer):
         self.id_ctrl = self.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
@@ -549,35 +553,19 @@ class NodeForm(EditPanelForm):
         self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
         self._AppendControl(sizer, 'size', self.size_ctrl)
 
-        self.fill_ctrl, self.fill_alpha_ctrl = self._CreateColorControl(
-            'fill color', 'fill opacity',
-            self._OnFillColorChanged, self._FillAlphaCallback,
-            sizer)
-
-        self.border_ctrl, self.border_alpha_ctrl = self._CreateColorControl(
-            'border color', 'border opacity',
-            self._OnBorderColorChanged, self._BorderAlphaCallback,
-            sizer)
-
-        self.border_width_ctrl = self.CreateTextCtrl()
-        self._AppendControl(sizer, 'border width', self.border_width_ctrl)
-        border_callback = self._MakeFloatCtrlFunction(self.border_width_ctrl.GetId(),
-                                                      self._BorderWidthCallback, (1, 100))
-        self.border_width_ctrl.Bind(wx.EVT_TEXT, border_callback)
-
         self.nodeStates = ['Floating Node', 'Boundary Node'] 
         self.nodeStatusDropDown = wx.Choice(self, choices=self.nodeStates)
         self._AppendControl(sizer, 'node status', self.nodeStatusDropDown)
-        self.nodeStatusDropDown.Bind (wx.EVT_CHOICE, self.OnNodeStatusChoice)
+        self.nodeStatusDropDown.Bind(wx.EVT_CHOICE, self.OnNodeStatusChoice)
 
         self.lockNodeCheckBox = wx.CheckBox(self, label = '') 
         self._AppendControl(sizer, 'lock node', self.lockNodeCheckBox)
-        self.lockNodeCheckBox.Bind (wx.EVT_CHECKBOX, self.OnNodeLockCheckBox)
+        self.lockNodeCheckBox.Bind(wx.EVT_CHECKBOX, self.OnNodeLockCheckBox)
 
         self.compositeShapes = [_.name for _ in self.controller.get_composite_shape_list(self.net_index)]
         self.compositeShapesDropDown = wx.Choice(self, choices=self.compositeShapes)
-        self._AppendControl(sizer, 'composite shapes', self.compositeShapesDropDown)
-        self.compositeShapesDropDown.Bind (wx.EVT_CHOICE, self.OnCompositeShapes)
+        self._AppendControl(sizer, 'shape', self.compositeShapesDropDown)
+        self.compositeShapesDropDown.Bind(wx.EVT_CHOICE, self.OnCompositeShapes)
  
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -716,7 +704,7 @@ class NodeForm(EditPanelForm):
             self.controller.end_group()
         self._SetValidationState(True, self.size_ctrl.GetId())
 
-    def  OnNodeStatusChoice (self, evt):    
+    def OnNodeStatusChoice(self, evt):    
         """Callback for the change node status, floating or boundary."""
         selected = self.nodeStatusDropDown.GetSelection()
         if selected == 0:
@@ -732,7 +720,7 @@ class NodeForm(EditPanelForm):
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
-    def  OnCompositeShapes (self, evt):
+    def OnCompositeShapes(self, evt):
         selected = self.compositeShapesDropDown.GetStringSelection()
 
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
@@ -747,7 +735,11 @@ class NodeForm(EditPanelForm):
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
-    def OnNodeLockCheckBox (self, evt):
+        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        shapes = [n.composite_shape for n in nodes]
+        self._UpdatePrimitiveFields(shapes, nodes)
+
+    def OnNodeLockCheckBox(self, evt):
         """Callback for the change node status, floating or boundary."""
         cb = evt.GetEventObject() 
         if cb.GetValue():
@@ -763,64 +755,120 @@ class NodeForm(EditPanelForm):
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()  
 
-    def _OnFillColorChanged(self, fill: wx.Colour):
-        """Callback for the fill color control."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        self._self_changes = True
-        self.controller.start_group()
-        for node in nodes:
-            if on_msw():
-                self.controller.set_node_fill_rgb(self.net_index, node.index, fill)
-            else:
-                # we can set both the RGB and the alpha at the same time
-                self.controller.set_node_fill_rgb(self.net_index, node.index, fill)
-                self.controller.set_node_fill_alpha(self.net_index, node.index, fill.Alpha())
-        post_event(DidModifyNodesEvent(list(self._selected_idx)))
-        self.controller.end_group()
+    def _ColorPrimitiveControl(self, label: str, alpha_label: str, prop_name: str,
+                                prims: List[TPrimitive], prim_index: int, node_indices: List[int]):
+        old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
 
-    def _OnBorderColorChanged(self, border: wx.Colour):
-        """Callback for the border color control."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        self._self_changes = True
-        self.controller.start_group()
-        for node in nodes:
-            if on_msw():
-                self.controller.set_node_border_rgb(self.net_index, node.index, border)
-            else:
-                # we can set both the RGB and the alpha at the same time
-                self.controller.set_node_border_rgb(self.net_index, node.index, border)
-                self.controller.set_node_border_alpha(
-                    self.net_index, node.index, border.Alpha())
-        post_event(DidModifyNodesEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        def color_callback(value: wx.Colour):
+            self._self_changes = True
+            self.controller.start_group()
+            for i, nodei in enumerate(node_indices):
+                # only update the RGB, not alpha
+                old_color = old_colors[i]
+                new_color = Color(value.Red(), value.Green(), value.Blue(), old_color.Alpha())
+                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
+                                                            prop_name, new_color)
+            self.controller.end_group()
 
-    def _FillAlphaCallback(self, alpha: float):
-        """Callback for when the fill alpha changes."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        self._self_changes = True
-        self.controller.start_group()
-        for node in nodes:
-            self.controller.set_node_fill_alpha(self.net_index, node.index, int(alpha * 255))
-        self.controller.end_group()
+        def alpha_callback(value: float):
+            self._self_changes = True
+            self.controller.start_group()
+            for i, nodei in enumerate(node_indices):
+                old_color = old_colors[i]
+                new_color = Color(old_color.Red(), old_color.Green(), old_color.Blue(), int(255 * value))
+                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
+                                                            prop_name, new_color)
+            self.controller.end_group()
 
-    def _BorderAlphaCallback(self, alpha: float):
-        """Callback for when the border alpha changes."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        self._self_changes = True
-        self.controller.start_group()
-        for node in nodes:
-            self.controller.set_node_border_alpha(self.net_index, node.index, int(alpha * 255))
-        post_event(DidModifyNodesEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        color_union, alpha_union = self._GetMultiColor(old_colors)
+        self._CreateColorControl(label, alpha_label, color_callback, alpha_callback, 
+                                 self.GetSizer(), placeholder=color_union,
+                                 placeholder_alpha=alpha_union)
 
-    def _BorderWidthCallback(self, width: float):
-        """Callback for when the border width changes."""
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        self._self_changes = True
-        self.controller.start_group()
-        for node in nodes:
-            self.controller.set_node_border_width(self.net_index, node.index, width)
-        self.controller.end_group()
+    def _FloatPrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
+                               prim_index: int, node_indices: List[int]):
+        old_values = [getattr(p, prop_name) for p in prims]
+        for val in old_values:
+            assert isinstance(val, float) or isinstance(val, int)
+
+        placeholder_value = self._GetMultiFloatText(set(old_values), 2)
+
+        def callback(value: float):
+            self._self_changes = True
+            self.controller.start_group()
+            for nodei in node_indices:
+                # only update the RGB, not alpha
+                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
+                                                            prop_name, value)
+            self.controller.end_group()
+            
+        sizer = self.GetSizer()
+        text_ctrl = self.CreateTextCtrl()
+        outer_callback = self._MakeFloatCtrlFunction(text_ctrl.GetId(),
+                                                    callback, (0, None), left_incl=False)
+        text_ctrl.ChangeValue(placeholder_value)
+        text_ctrl.Bind(wx.EVT_TEXT, outer_callback)
+        self._AppendControl(sizer, label, text_ctrl)
+
+    def _UpdatePrimitiveFields(self, com_shapes: List[TCompositeShape], nodes: List[Node]):
+        sizer = self.GetSizer()
+
+        self.Freeze()
+
+        if self.primitives_start_row:
+            start_row = self.primitives_start_row - 1
+
+            index = 0
+            while index < sizer.GetItemCount():
+                pos = sizer.GetItemPosition(index)
+                if pos.GetRow() >= start_row:
+                    item = sizer.GetItem(index)
+                    if item.IsWindow():
+                        window = item.GetWindow()
+                        winid = window.GetId()
+                        if winid in self.badges:
+                            del self.badges[winid]
+                            del self.labels[winid]
+                        item.GetWindow().Destroy()
+                    else:
+                        sizer.Remove(index)
+                else:
+                    index += 1
+
+            # reset rows
+            sizer.SetRows(start_row)
+
+        if len(com_shapes) != 0:
+            # self._primitives_heading = self._AppendSubtitle(sizer, 'Shape properties')
+            self._AppendSpacer(sizer, 0)
+            self.primitives_start_row = self.GetSizer().GetRows()
+            node_indices = [n.index for n in nodes]
+            for prim_index in range(len(com_shapes[0].items)):
+                primitives = [cs.items[prim_index][0] for cs in com_shapes]
+                one_prim = primitives[0]
+                subtitle_text = '{}. {}'.format(prim_index + 1, one_prim.name)
+                self._AppendSubtitle(sizer, subtitle_text)
+                if isinstance(one_prim, TRectanglePrim):
+                    self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
+                                                primitives, prim_index, node_indices)
+                    self._ColorPrimitiveControl('border color', 'border opacity', 'border_color',
+                                                primitives, prim_index, node_indices)
+                    self._FloatPrimitiveControl('border width', 'border_width',
+                                                primitives, prim_index, node_indices)
+                    self._FloatPrimitiveControl('corner radius', 'corner_radius',
+                                                primitives, prim_index, node_indices)
+                elif isinstance(one_prim, TCirclePrim):
+                    self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
+                                                primitives, prim_index, node_indices)
+                    self._ColorPrimitiveControl('border color', 'border opacity', 'border_color',
+                                                primitives, prim_index, node_indices)
+                    self._FloatPrimitiveControl('border width', 'border_width',
+                                                primitives, prim_index, node_indices)
+        else:
+            self.primitives_start_row = None
+
+        sizer.Layout()
+        self.Thaw()
 
     def UpdateAllFields(self):
         """Update the form field values based on current data."""
@@ -829,13 +877,9 @@ class NodeForm(EditPanelForm):
         nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
         prec = get_setting('decimal_precision')
         id_text: str
-        fill: wx.Colour
-        fill_alpha: Optional[int]
-        border: wx.Colour
-        border_alpha: Optional[int]
         floatingNode: bool
         lockNode: bool
-        compositeShape: TCompositeShape
+        shape_name: str
 
         if not self.contiguous:
             self.pos_ctrl.ChangeValue('?')
@@ -848,38 +892,32 @@ class NodeForm(EditPanelForm):
             [node] = nodes
             self.id_ctrl.Enable(True)
             id_text = node.id
-            fill = node.fill_color
-            fill_alpha = node.fill_color.Alpha()
-            border = node.border_color
-            border_alpha = node.border_color.Alpha()
             floatingNode = node.floatingNode
             lockNode = node.lockNode
-            compositeShape = [node.composite_shape]
+            assert node.composite_shape is not None
+            shape_name = node.composite_shape.name
         else:
             self.id_ctrl.Enable(False)
             id_text = '; '.join(sorted(list(n.id for n in nodes)))
 
-            fill, fill_alpha = self._GetMultiColor(list(n.fill_color for n in nodes))
-            border, border_alpha = self._GetMultiColor(list(n.border_color for n in nodes))
-
             floatingNode = all(n.floatingNode for n in nodes)
             lockNode = all(n.lockNode for n in nodes)
-            compositeShape = [n.composite_shape for n in nodes]
+            shape_name_set = set(n.composite_shape.name for n in nodes)
+            if len(shape_name_set) == 1:
+                shape_name = next(iter(shape_name_set))
+            else:
+                shape_name = ''
 
+        shapes = [n.composite_shape for n in nodes]
+        num_distinct_shapes = len(set(s.name for s in shapes))
+        if num_distinct_shapes == 1:
+            self._UpdatePrimitiveFields(shapes, nodes)
+        else:
+            self._UpdatePrimitiveFields([], nodes)
         self.pos_ctrl.Enable(self.contiguous)
         self.size_ctrl.Enable(self.contiguous)
-        border_width = self._GetMultiFloatText(set(n.border_width for n in nodes), prec)
 
         self.id_ctrl.ChangeValue(id_text)
-        self.fill_ctrl.SetColour(fill)
-        self.border_ctrl.SetColour(border)
-
-        # set fill alpha if on windows
-        if on_msw():
-            self.fill_alpha_ctrl.ChangeValue(self._AlphaToText(fill_alpha, prec))
-            self.border_alpha_ctrl.ChangeValue(self._AlphaToText(border_alpha, prec))
-
-        self.border_width_ctrl.ChangeValue(border_width)
 
         if floatingNode:
            self.nodeStatusDropDown.SetSelection(0)
@@ -887,12 +925,14 @@ class NodeForm(EditPanelForm):
            self.nodeStatusDropDown.SetSelection(1)
 
         if lockNode:
-            self.lockNodeCheckBox.SetValue (True)
+            self.lockNodeCheckBox.SetValue(True)
         else:
-           self.lockNodeCheckBox.SetValue (False)
+           self.lockNodeCheckBox.SetValue(False)
 
-        for shape in compositeShape:
-            self.compositeShapesDropDown.SetString(0, shape.name)
+        if shape_name:
+            self.compositeShapesDropDown.SetStringSelection(shape_name)
+        else:
+            self.compositeShapesDropDown.SetSelection(NOT_FOUND)
 
 @dataclass
 class StoichInfo:

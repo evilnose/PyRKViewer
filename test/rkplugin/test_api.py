@@ -21,16 +21,13 @@ class TestNode(unittest.TestCase):
             node = Node('Charles',
                         self.neti,
                         pos=Vec2(50, 50),
-                        size=Vec2(50, 30),
-                        fill_color=wx.RED,
-                        border_color=wx.GREEN,
-                        border_width=4)
+                        size=Vec2(50, 30))
             api.add_node(self.neti, id=node.id,
                          position=node.position,
                          size=node.size,
-                         fill_color=api._to_color(node.fill_color),  # HACK using API private methods
-                         border_color=api._to_color(node.border_color),
-                         border_width=node.border_width,
+                         fill_color=api._to_color(wx.RED),  # HACK using API private methods
+                         border_color=api._to_color(wx.BLUE),
+                         border_width=2,
                          )
             nodes = api.get_nodes(self.neti)
             self.assertEqual(len(nodes), 1)

@@ -696,6 +696,7 @@ class Canvas(wx.ScrolledWindow):
                         good = self._select_box.on_left_down(logical_pos)
                         assert good
                         self.dragged_element = self._select_box
+                        self._FloatNodes()
                         return
 
                 # clicked on nothing; drag-selecting
@@ -719,9 +720,9 @@ class Canvas(wx.ScrolledWindow):
                     self.net_index,
                     pos=adj_pos,
                     size=size,
-                    fill_color=get_theme('node_fill'),
-                    border_color=get_theme('node_border'),
-                    border_width=get_theme('node_border_width'),
+                    # fill_color=get_theme('node_fill'),
+                    # border_color=get_theme('node_border'),
+                    # border_width=get_theme('node_border_width'),
                     comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
                     floatingNode=True,
                     lockNode=False,
@@ -730,7 +731,15 @@ class Canvas(wx.ScrolledWindow):
                 node.id = self._GetUniqueName(node.id, [n.id for n in self._nodes])
 
                 self.controller.start_group()
-                self.controller.add_node_g(self._net_index, node)
+                nodei = self.controller.add_node_g(self._net_index, node)
+                fill_color=get_theme('node_fill')
+                border_color=get_theme('node_border')
+                border_width=get_theme('node_border_width')
+                self.controller.set_node_fill_rgb(self._net_index, nodei, fill_color)
+                self.controller.set_node_fill_alpha(self._net_index, nodei, fill_color.Alpha())
+                self.controller.set_node_border_rgb(self._net_index, nodei, border_color)
+                self.controller.set_node_border_alpha(self._net_index, nodei, border_color.Alpha())
+                self.controller.set_node_border_width(self._net_index, nodei, border_width)
                 self.controller.end_group()
 
                 index = self.controller.get_node_index(self._net_index, node.id)

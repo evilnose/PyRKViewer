@@ -9,7 +9,7 @@ import math
 from itertools import chain
 import numpy as np
 from scipy.special import comb
-from typing import Any, Callable, Container, List, Optional, Sequence, Set, Tuple
+from typing import Any, Callable, ClassVar, Container, List, Optional, Sequence, Set, Tuple
 from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
 from ..config import get_setting, get_theme, Color
@@ -31,11 +31,12 @@ class TTransform:
 
 
 class TPrimitive:
-    pass
+    name: ClassVar[str] = 'generic primitive'
 
 
 @dataclass
 class TCirclePrim(TPrimitive):
+    name: ClassVar[str] = 'circle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
     border_width: float = 0.05
@@ -44,10 +45,11 @@ class TCirclePrim(TPrimitive):
 @dataclass
 class TRectanglePrim(TPrimitive):
     # TODO change defaults
+    name: ClassVar[str] = 'rectangle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
     border_width: float = 0.05
-    corner_radius: float = 0
+    corner_radius: float = 0.15
 
 
 class TCompositeShape:
@@ -79,9 +81,9 @@ class Node(RectData):
         net_index: The network index of the node.
     """
     id: str
-    fill_color: wx.Colour
-    border_color: wx.Colour
-    border_width: float
+    # fill_color: wx.Colour
+    # border_color: wx.Colour
+    # border_width: float
     position: Vec2
     size: Vec2
     comp_idx: int
@@ -93,8 +95,7 @@ class Node(RectData):
     composite_shape: Optional[TCompositeShape]
 
     # force keyword-only arguments
-    def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, comp_idx: int = -1,
+    def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, comp_idx: int = -1,
                  floatingNode: bool = True,
                  lockNode: bool = False,
                  shape_index: int = 0,
@@ -105,14 +106,32 @@ class Node(RectData):
         self.id = id
         self.position = pos
         self.size = size
-        self.fill_color = fill_color
-        self.border_color = border_color
-        self.border_width = border_width
+        # self.fill_color = fill_color
+        # self.border_color = border_color
+        # self.border_width = border_width
         self.comp_idx = comp_idx
         self.floatingNode = floatingNode
         self.lockNode = lockNode
         self.shape_index = shape_index
         self.composite_shape = composite_shape
+
+    def _get_prim_field(self, field):
+        for prim, _ in self.composite_shape.items:
+            if hasattr(prim, field):
+                return getattr(prim, field)
+        return None
+
+    @property
+    def fill_color(self):
+        return self._get_prim_field('fill_color')
+
+    @property
+    def border_color(self):
+        return self._get_prim_field('border_color')
+
+    @property
+    def border_width(self):
+        return self._get_prim_field('border_width')
 
     @property
     def s_position(self):
@@ -152,9 +171,7 @@ class Node(RectData):
 
     def props_equal(self, other: Node):
         return self.id == other.id and self.position == other.position and \
-            self.size == other.size and self.border_width == other.border_width and \
-            self.border_color.GetRGB() == other.border_color.GetRGB() and \
-            self.fill_color.GetRGB() == other.fill_color.GetRGB()
+            self.size == other.size
 
 
 def compute_centroid(rects: Sequence[Rect]) -> Vec2:

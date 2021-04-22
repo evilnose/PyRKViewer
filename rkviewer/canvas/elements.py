@@ -1238,10 +1238,7 @@ def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node
     for primitive, transform in shape.items:
         gc.PushState()
         apply_transform_to_gc(gc, transform)
-        #if text: Draw_text
-        #if isinstance(primitive, TTextPrim):
         draw_fn_map[primitive.__class__](gc, primitive)
-        
         gc.PopState()
     gc.PopState()
 

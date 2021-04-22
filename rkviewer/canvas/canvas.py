@@ -457,7 +457,8 @@ class Canvas(wx.ScrolledWindow):
         self._nodes = nodes
         self._reactions = reactions
         self._compartments = compartments
-        self.hovered_element = None
+        if not isinstance(self.hovered_element, SelectBox):
+            self.hovered_element = None
         self.dragged_element = None
 
         self._compartment_elements = [self.CreateCompartmentElement(c) for c in compartments]
@@ -696,6 +697,7 @@ class Canvas(wx.ScrolledWindow):
                         good = self._select_box.on_left_down(logical_pos)
                         assert good
                         self.dragged_element = self._select_box
+                        self.hovered_element = self._select_box
                         self._FloatNodes()
                         return
 
@@ -1227,6 +1229,7 @@ class Canvas(wx.ScrolledWindow):
                 self.dragged_element = None
             elif self.hovered_element is not None:
                 self.hovered_element.on_mouse_leave(logical_pos)
+                print('Hi there')
                 self.hovered_element = None
             elif evt.LeftIsDown():
                 for el in reversed(self._elements):

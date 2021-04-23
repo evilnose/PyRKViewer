@@ -4,10 +4,10 @@ from abc import abstractmethod
 import enum
 from functools import partial
 from itertools import chain
-from math import pi
+from math import pi, cos, sin
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
-from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform, TTextPrim
+from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTrianglePrim, TTransform, TTextPrim, THexagonPrim, TLinePrim
 
 import wx
 
@@ -1184,6 +1184,41 @@ class ColorProperty(Property):
 def to_wxcolour(color: Color) -> wx.Colour:
     return wx.Colour(color.r, color.g, color.b, color.a)
 
+def getPolygonPoints(n, r, pos):
+    """
+    This function is used to define the vertices in 2D space of n-polygons. Each equilateral 
+    polygon is drawn inside a circle with specified radius.
+
+    n: the number of sides of the polygon
+    r: radius of the circle in which the polygon is drawn
+    pos: position of the bounding box
+    """
+    O = (0,0)
+      
+    angle = 360/n
+    points = [[None]*n, [None]*n]
+
+    points[1][0] = O[1] - r
+    points[0][0] = O[0]
+
+    #Rotate around the origin
+    for i in range(1, n):
+        points[0][i] = points[0][i-1]*cos(angle/180*pi)-points[1][i-1]*sin(angle/180*pi)
+        points[1][i] = points[1][i-1]*cos(angle/180*pi)+points[0][i-1]*sin(angle/180*pi)
+
+    #Translate all points to the bounding box's position
+    points[0] = list(map(lambda x: x+pos[0], points[0])) 
+    points[1] = list(map(lambda x: x+pos[1], points[1])) 
+    return points
+
+def to_wxPointList(points):
+    """Convert a list of points into a list of wx.Point"""
+    wxpoints = []
+    for i in range(len(points[0])):
+        wxpoints.append(wx.Point2D(points[0][i], points[1][i]))
+    wxpoints.append(wx.Point2D(points[0][0], points[1][0])) #enclosing the polygon
+    return wxpoints
+
 def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
     pen = gc.CreatePen(wx.GraphicsPenInfo(to_wxcolour(circle.border_color), circle.border_width))
     brush = gc.CreateBrush(wx.Brush(to_wxcolour(circle.fill_color)))
@@ -1201,10 +1236,20 @@ def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim):
     gc.SetBrush(brush)
     gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
 
+def draw_polygon_to_gc(gc: wx.GraphicsContext, hex: THexagonPrim):
+    pen = gc.CreatePen(wx.GraphicsPenInfo(to_wxcolour(hex.border_color), hex.border_width))
+    brush = gc.CreateBrush(wx.Brush(to_wxcolour(hex.fill_color)))
+    points = getPolygonPoints(hex.n, hex.radius, pos = (1,1)) #TODO change default positions later
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
+    gc.DrawLines(to_wxPointList(points))
 
 draw_fn_map = {
     TCirclePrim: draw_circle_to_gc,
-    TRectanglePrim: draw_rect_to_gc
+    TRectanglePrim: draw_rect_to_gc,
+    THexagonPrim: draw_polygon_to_gc,
+    TLinePrim: draw_polygon_to_gc,
+    TTrianglePrim: draw_polygon_to_gc
 }
 
 
@@ -1250,5 +1295,5 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
         gc.DrawText(text_string, bounding_rect.position.x +
                    tx, bounding_rect.position.y+ty, brush)
 
-    
+
     

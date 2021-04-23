@@ -218,7 +218,6 @@ class FieldGrid(wx.Window):
         sizer = self.InitAndGetSizer()
 
         # TODO re-add title, in EditPanelForm, but this tmie using a vertical sizer
-        # sizer.Add(self._title, wx.GBPosition(1, 0), wx.GBSpan(1, 5), flag=wx.ALIGN_CENTER)
         self.AppendSpacer(0, sizer=sizer)
         self.SetSizer(sizer)
 
@@ -450,6 +449,234 @@ class FieldGrid(wx.Window):
 
         return float_ctrl_fn
 
+class PrimitiveGrid(FieldGrid):
+    form: NodeForm
+    def __init__(self, parent, form: NodeForm):
+        super().__init__(parent, form)
+        self.update_callbacks = list()
+
+    def UpdatePrimitiveValues(self, nodes):
+        '''Update the values in the primitive fields.
+        
+        Requires:
+            The FieldGrid contains the up-to-date field widgets for the given composite shape.
+        '''
+        for callback in self.update_callbacks:
+            callback(nodes)
+
+
+    def ColorPrimitiveControl(self, label: str, alpha_label: str, prop_name: str,
+                              prim_index: int):
+        '''Create a control for a color property.
+
+        If prim_index is -1, then update the text primitive instead.
+        '''
+
+        def color_callback(value: wx.Colour):
+            node_indices = self.form.selected_idx
+            nodes = self.form.selected_nodes
+            prims = self._GetPrimitives(nodes, prim_index)
+            old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
+
+            self.form.self_changes = True
+            self.form.controller.start_group()
+            for i, nodei in enumerate(node_indices):
+                # only update the RGB, not alpha
+                old_color = old_colors[i]
+                new_color = Color(value.Red(), value.Green(), value.Blue(), old_color.Alpha())
+                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                 prop_name, new_color)
+            self.form.controller.end_group()
+
+        def alpha_callback(value: float):
+            node_indices = self.form.selected_idx
+            prims = self._GetPrimitives(self.form.selected_nodes, prim_index)
+            old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
+
+            self.form.self_changes = True
+            self.form.controller.start_group()
+            for i, nodei in enumerate(node_indices):
+                old_color = old_colors[i]
+                new_color = Color(old_color.Red(), old_color.Green(),
+                                  old_color.Blue(), int(255 * value))
+                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                 prop_name, new_color)
+            self.form.controller.end_group()
+
+        ctrl, alpha_ctrl = self.CreateColorControl(label, alpha_label, color_callback, alpha_callback)
+
+        def update_cb(nodes: List[Node]):
+            prims = self._GetPrimitives(nodes, prim_index)
+            old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
+            color_union, alpha_union = GetMultiColor(old_colors)
+            self.form.self_changes = True
+            ctrl.SetColour(color_union)
+            if alpha_ctrl:
+                alpha_ctrl.ChangeValue(AlphaToText(alpha_union, 2))
+
+        self.update_callbacks.append(update_cb)
+                
+
+    def FloatPrimitiveControl(self, label: str, prop_name: str, prim_index: int):
+        '''Create a control for a floating point property.
+
+        If prim_index is -1, then update the text primitive instead.
+        '''
+
+        def callback(value: float):
+            node_indices = self.form.selected_idx
+
+            self.form.self_changes = True
+            self.form.controller.start_group()
+            for nodei in node_indices:
+                # only update the RGB, not alpha
+                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                 prop_name, value)
+            self.form.controller.end_group()
+
+        prims = self._GetPrimitives(self.form.selected_nodes, prim_index)
+        old_values = [getattr(p, prop_name) for p in prims]
+        for val in old_values:
+            assert isinstance(val, float) or isinstance(val, int)
+
+        # TODO update values not here
+        placeholder_value = GetMultiFloatText(set(old_values), 2)
+        text_ctrl = self.CreateTextCtrl()
+        outer_callback = self.MakeFloatCtrlFunction(text_ctrl.GetId(),
+                                                    callback, (0, None), left_incl=False)
+        text_ctrl.ChangeValue(placeholder_value)
+        text_ctrl.Bind(wx.EVT_TEXT, outer_callback)
+        self.AppendControl(label, text_ctrl)
+
+    def IntPrimitiveControl(self, label: str, prop_name: str,
+                            prim_index: int, min_=0, max_=100):
+        '''Create a control for a floating point property.
+
+        If prim_index is -1, then update the text primitive instead.
+        '''
+        def callback(e):
+            node_indices = self.form.selected_idx
+            value = e.GetPosition()
+            self.form.self_changes = True
+            self.form.controller.start_group()
+            for nodei in node_indices:
+                # only update the RGB, not alpha
+                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                 prop_name, value)
+            self.form.controller.end_group()
+
+        prims = self._GetPrimitives(self.form.selected_nodes, prim_index)
+        old_values = [getattr(p, prop_name) for p in prims]
+        for val in old_values:
+            assert isinstance(val, float) or isinstance(val, int)
+        initial_value = GetMultiInt(set(old_values)) or 0
+        int_ctrl = self.CreateSpinCtrl(min=min_, max=max_, initial=initial_value)
+        int_ctrl.Bind(wx.EVT_SPINCTRL, callback)
+        self.AppendControl(label, int_ctrl)
+
+    def ChoicePrimitiveControl(self, label: str, prop_name: str, prim_index: int,
+                               choice_items: List[ChoiceItem]):
+        # TODO set original value
+        def callback(e):
+            node_indices = self.form.selected_idx
+            index = e.GetInt()
+            value = choice_items[index].value
+            self.form.self_changes = True
+            self.form.controller.start_group()
+            for nodei in node_indices:
+                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                 prop_name, value)
+            self.form.controller.end_group()
+
+        prims = self._GetPrimitives(self.form.selected_nodes, prim_index)
+        old_values = set(getattr(prim, prop_name) for prim in prims)
+
+        # TODO update this somewhere else
+        texts = [item.text for item in choice_items]
+        choice_ctrl = wx.Choice(self, choices=texts)
+
+        # Set commonly selected item
+        if len(old_values) == 1:
+            # Find choice item with given value
+            sel_ind = None
+            old_value = next(iter(old_values))
+            for index, item in enumerate(choice_items):
+                if item.value == old_value:
+                    sel_ind = index
+                    break
+            else:
+                assert False, "This should never happen"
+            choice_ctrl.SetSelection(sel_ind)
+
+        choice_ctrl.Bind(wx.EVT_CHOICE, callback)
+        self.AppendControl(label, choice_ctrl)
+
+    def _GetPrimitives(self, nodes, prim_index):
+        if prim_index == -1:
+            return [n.composite_shape.text_item[0] for n in nodes]
+        return [n.composite_shape.items[prim_index][0] for n in nodes]
+
+
+class PrimitiveSection(wx.Window):
+    subsections: List[PrimitiveGrid]
+
+    def __init__(self, node_form: NodeForm, com_shape: TCompositeShape):
+        super().__init__(node_form)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizerflags = wx.SizerFlags().Expand()
+        self.update_callbacks = list()
+        self.form = node_form
+
+        self.subsections = list()
+        # self._primitives_heading = self.main_section.AppendSubtitle('Shape properties')
+        # self.main_section.AppendSpacer(0)
+        # node_indices = [n.index for n in nodes]
+        for prim_index in range(len(com_shape.items)):
+            # primitives = [cs.items[prim_index][0] for cs in com_shapes]
+            one_prim = com_shape.items[prim_index][0]
+            subtitle_text = '{name} ({idx})'.format(idx=prim_index + 1, name=one_prim.name)
+            subsection = PrimitiveGrid(self, node_form)
+            subsection.InitLayout()
+            self.subsections.append(subsection)
+            subsection.AppendSubtitle(subtitle_text)
+            if isinstance(one_prim, TRectanglePrim):
+                subsection.ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
+                                                 prim_index)
+                subsection.ColorPrimitiveControl('border color', 'border opacity', 'border_color',
+                                                 prim_index)
+                subsection.FloatPrimitiveControl('border width', 'border_width',
+                                                 prim_index)
+                subsection.FloatPrimitiveControl('corner radius', 'corner_radius',
+                                                 prim_index)
+            elif isinstance(one_prim, TCirclePrim):
+                subsection.ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
+                                                 prim_index)
+                subsection.ColorPrimitiveControl('border color', 'border opacity', 'border_color',
+                                                 prim_index)
+                subsection.FloatPrimitiveControl('border width', 'border_width',
+                                                 prim_index)
+
+        subtitle_text = 'Text'
+        subsection = PrimitiveGrid(self, node_form)
+        self.subsections.append(subsection)
+        subsection.InitLayout()
+        subsection.AppendSubtitle(subtitle_text)
+        # Create text primitive
+        subsection.IntPrimitiveControl('font size', 'font_size', -1, min_=1, max_=100)
+        subsection.ColorPrimitiveControl('font color', 'font opacity', 'font_color',
+                                         -1)
+        subsection.ColorPrimitiveControl('highlight color', 'highlight opacity', 'bg_color',
+                                         -1)
+        subsection.ChoicePrimitiveControl('font family', 'font_family', -1, FONT_FAMILY_CHOICES)
+
+        for subsection in self.subsections:
+            sizer.Add(subsection, sizerflags)
+        self.SetSizer(sizer)
+
+    def UpdatePrimitiveValues(self):
+        for subsection in self.subsections:
+            subsection.UpdatePrimitiveValues(self.form.selected_nodes)
+
 
 class EditPanelForm(ScrolledPanel):
     """Base class for a form to be displayed on the edit panel.
@@ -472,7 +699,7 @@ class EditPanelForm(ScrolledPanel):
     _info_bitmap: wx.Bitmap  # :  bitmap for the info badge (icon), for when an input is invalid.
     _info_length: int  #: length of the square reserved for _info_bitmap
     _title: wx.StaticText  #: title of the form
-    _self_changes: bool  #: flag for if edits were made but the controller hasn't updated the view yet
+    self_changes: bool  #: flag for if edits were made but the controller hasn't updated the view yet
 
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, style=wx.VSCROLL)
@@ -481,19 +708,21 @@ class EditPanelForm(ScrolledPanel):
         self.canvas = canvas
         self.controller = controller
         self.net_index = 0
-        self._title = wx.StaticText(self)  # only displayed when node(s) are selected
+        self._title = wx.StaticText(self, style=wx.ALIGN_CENTER)  # only displayed when node(s) are selected
         title_font = wx.Font(wx.FontInfo(10))
         self._title.SetFont(title_font)
-        self._self_changes = False
+        self.self_changes = False
         self._selected_idx = set()
 
     @property
     def selected_idx(self):
         return self._selected_idx
 
-    def SetupSections(self):
+    def CreateChildren(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizerflags = wx.SizerFlags().Expand()
+
+        sizer.Add(self._title, sizerflags)
 
         for section in self.sections:
             section.InitLayout()
@@ -512,7 +741,7 @@ class EditPanelForm(ScrolledPanel):
         pass
 
     def ExternalUpdate(self):
-        if len(self._selected_idx) != 0 and not self._self_changes:
+        if len(self._selected_idx) != 0 and not self.self_changes:
             self.UpdateAllFields()
 
         # clear validation errors
@@ -520,7 +749,7 @@ class EditPanelForm(ScrolledPanel):
         for section in self.sections:
             for id in section.badges.keys():
                 section.SetValidationState(True, id)
-        self._self_changes = False
+        self.self_changes = False
 
 
 class NodeForm(EditPanelForm):
@@ -542,20 +771,25 @@ class NodeForm(EditPanelForm):
 
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
-        self._nodes = list()
+        self.all_nodes = list()
         self.main_section = FieldGrid(self, self)
         self.sections = [self.main_section]
         self._bounding_rect = None  # No padding
         # boolean to indicate whether only nodes are selected, and only nodes from the same
         # compartment are selected
         self.contiguous = True
-        self.primitives_start_row = None
+        self.last_prim_section = None
+        self.prim_section_cache = dict()
 
-        self.SetupSections()
+        self.CreateChildren()
+
+    @property
+    def selected_nodes(self):
+        return [n for n in self.all_nodes if n.index in self.selected_idx]
 
     def UpdateNodes(self, nodes: List[Node]):
         """Function called after the list of nodes have been updated."""
-        self._nodes = nodes
+        self.all_nodes = nodes
         self._UpdateBoundingRect()
         self.ExternalUpdate()
 
@@ -564,7 +798,7 @@ class NodeForm(EditPanelForm):
         if not evt.dragged:
             return
         # Possibly no nodes are selected because they are moved along with the compartments
-        if len(self.selected_idx) != 0:
+        if len(self._selected_idx) != 0:
             self._UpdateBoundingRect()
             prec = 2
             ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
@@ -573,7 +807,7 @@ class NodeForm(EditPanelForm):
     def _UpdateBoundingRect(self):
         """Update bounding rectangle; mixed indicates whether both nodes and comps are selected.
         """
-        rects = [n.rect for n in self._nodes if n.index in self.selected_idx]
+        rects = [n.rect for n in self.all_nodes if n.index in self._selected_idx]
         # It could be that compartments have been updated but selected indices have not.
         # In that case rects can be empty
         if len(rects) != 0:
@@ -588,7 +822,7 @@ class NodeForm(EditPanelForm):
         if comps_selected:
             self.contiguous = False
         else:
-            nodes = [n for n in self._nodes if n.index in selected_idx]
+            nodes = self.selected_nodes
             self.contiguous = len(set(n.comp_idx for n in nodes)) <= 1
 
         if len(self._selected_idx) != 0:
@@ -628,9 +862,9 @@ class NodeForm(EditPanelForm):
         self.main_section.AppendControl('lock node', self.lockNodeCheckBox)
         self.lockNodeCheckBox.Bind(wx.EVT_CHECKBOX, self.OnNodeLockCheckBox)
 
-        self.compositeShapes = [
-            _.name for _ in self.controller.get_composite_shape_list(self.net_index)]
-        self.compositeShapesDropDown = wx.Choice(self.main_section, choices=self.compositeShapes)
+        self.compShapeNames = [
+            x.name for x in self.controller.get_composite_shape_list(self.net_index)]
+        self.compositeShapesDropDown = wx.Choice(self.main_section, choices=self.compShapeNames)
         self.main_section.AppendControl('shape', self.compositeShapesDropDown)
         self.compositeShapesDropDown.Bind(wx.EVT_CHOICE, self.OnCompositeShapes)
 
@@ -644,13 +878,13 @@ class NodeForm(EditPanelForm):
             self.main_section.SetValidationState(False, ctrl_id, "ID cannot be empty")
             return
         else:
-            for node in self._nodes:
+            for node in self.all_nodes:
                 if node.id == new_id:
                     self.main_section.SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
             else:
                 # loop terminated fine. There is no duplicate ID
-                self._self_changes = True
+                self.self_changes = True
                 self.controller.start_group()
                 self.controller.rename_node(self.net_index, nodei, new_id)
                 post_event(DidModifyNodesEvent([nodei]))
@@ -672,7 +906,7 @@ class NodeForm(EditPanelForm):
             self.main_section.SetValidationState(
                 False, ctrl_id, 'Position coordinates should be non-negative')
             return
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         # limit position to within the compartment
         compi = nodes[0].comp_idx
         if compi == -1:
@@ -681,12 +915,12 @@ class NodeForm(EditPanelForm):
             comp = self.canvas.comp_idx_map[compi]
             bounds = Rect(comp.position, comp.size)
         clamped = None
-        index_list = list(self.selected_idx)
+        index_list = list(self._selected_idx)
         if len(nodes) == 1:
             [node] = nodes
             clamped = clamp_rect_pos(Rect(pos, node.size), bounds)
             if node.position != clamped or pos != clamped:
-                self._self_changes = True
+                self.self_changes = True
                 node.position = clamped
                 self.controller.start_group()
                 post_event(DidMoveNodesEvent(index_list, clamped - node.position, dragged=False))
@@ -696,7 +930,7 @@ class NodeForm(EditPanelForm):
             clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
             if self._bounding_rect.position != pos or pos != clamped:
                 offset = clamped - self._bounding_rect.position
-                self._self_changes = True
+                self.self_changes = True
                 self.controller.start_group()
                 for node in nodes:
                     node.position += offset
@@ -717,7 +951,7 @@ class NodeForm(EditPanelForm):
                 False, ctrl_id, 'Should be in the form "width, height"')
             return
 
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         min_width = get_setting('min_node_width')
         min_height = get_setting('min_node_height')
         size = Vec2(wh)
@@ -752,7 +986,7 @@ class NodeForm(EditPanelForm):
         clamped = size.reduce2(min, bounds.size)
         if self._bounding_rect.size != clamped or size != clamped:
             ratio = clamped.elem_div(self._bounding_rect.size)
-            self._self_changes = True
+            self.self_changes = True
             self.controller.start_group()
             offsets = list()
             for node in nodes:
@@ -764,7 +998,7 @@ class NodeForm(EditPanelForm):
                 # clamp so that nodes are always within compartment/bounds
                 node.position = clamp_rect_pos(node.rect, bounds)
 
-            idx_list = list(self.selected_idx)
+            idx_list = list(self._selected_idx)
             post_event(DidMoveNodesEvent(idx_list, offsets, dragged=False))
             post_event(DidResizeNodesEvent(idx_list, ratio=ratio, dragged=False))
             for node in nodes:
@@ -781,8 +1015,8 @@ class NodeForm(EditPanelForm):
         else:
             floatingStatus = False
 
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        self._self_changes = True
+        nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
+        self.self_changes = True
         self.controller.start_group()
         for node in nodes:
             self.controller.set_node_floating_status(self.net_index, node.index, floatingStatus)
@@ -792,21 +1026,19 @@ class NodeForm(EditPanelForm):
     def OnCompositeShapes(self, evt):
         selected = self.compositeShapesDropDown.GetStringSelection()
 
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         shapes = self.controller.get_composite_shape_list(self.net_index)
-        self._self_changes = True
+        self.self_changes = True
         self.controller.start_group()
+        shapei = self.compShapeNames.index(selected)
         for node in nodes:
-            for shapei, shape in enumerate(self.compositeShapes):
-                if selected == shape:
-                    self.controller.set_node_shape_index(self.net_index, node.index, shapei)
+            self.controller.set_node_shape_index(self.net_index, node.index, shapei)
 
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        shapes = [n.composite_shape for n in nodes]
-        self._UpdatePrimitiveFields(shapes, nodes)
+        nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
+        self._UpdatePrimitiveFields()
 
     def OnNodeLockCheckBox(self, evt):
         """Callback for the change node status, floating or boundary."""
@@ -816,218 +1048,58 @@ class NodeForm(EditPanelForm):
         else:
             nodeLocked = False
 
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
-        self._self_changes = True
+        nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
+        self.self_changes = True
         self.controller.start_group()
         for node in nodes:
             self.controller.set_node_locked_status(self.net_index, node.index, nodeLocked)
         post_event(DidModifyNodesEvent(list(self._selected_idx)))
         self.controller.end_group()
 
-    def _ColorPrimitiveControl(self, label: str, alpha_label: str, prop_name: str,
-                               prims: List[TPrimitive], prim_index: int, node_indices: List[int]):
-        '''Create a control for a color property.
-
-        If prim_index is -1, then update the text primitive instead.
-        '''
-        old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
-
-        def color_callback(value: wx.Colour):
-            self._self_changes = True
-            self.controller.start_group()
-            for i, nodei in enumerate(node_indices):
-                # only update the RGB, not alpha
-                old_color = old_colors[i]
-                new_color = Color(value.Red(), value.Green(), value.Blue(), old_color.Alpha())
-                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
-                                                            prop_name, new_color)
-            self.controller.end_group()
-
-        def alpha_callback(value: float):
-            self._self_changes = True
-            self.controller.start_group()
-            for i, nodei in enumerate(node_indices):
-                old_color = old_colors[i]
-                new_color = Color(old_color.Red(), old_color.Green(),
-                                  old_color.Blue(), int(255 * value))
-                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
-                                                            prop_name, new_color)
-            self.controller.end_group()
-
-        color_union, alpha_union = GetMultiColor(old_colors)
-        self.main_section.CreateColorControl(label, alpha_label, color_callback, alpha_callback,
-                                             placeholder=color_union,
-                                             placeholder_alpha=alpha_union)
-
-    def _FloatPrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
-                               prim_index: int, node_indices: List[int]):
-        '''Create a control for a floating point property.
-
-        If prim_index is -1, then update the text primitive instead.
-        '''
-        old_values = [getattr(p, prop_name) for p in prims]
-        for val in old_values:
-            assert isinstance(val, float) or isinstance(val, int)
-
-        placeholder_value = GetMultiFloatText(set(old_values), 2)
-
-        def callback(value: float):
-            self._self_changes = True
-            self.controller.start_group()
-            for nodei in node_indices:
-                # only update the RGB, not alpha
-                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
-                                                            prop_name, value)
-            self.controller.end_group()
-
-        sizer = self.GetSizer()
-        text_ctrl = self.main_section.CreateTextCtrl()
-        outer_callback = self.main_section.MakeFloatCtrlFunction(text_ctrl.GetId(),
-                                                                 callback, (0, None), left_incl=False)
-        text_ctrl.ChangeValue(placeholder_value)
-        text_ctrl.Bind(wx.EVT_TEXT, outer_callback)
-        self.main_section.AppendControl(label, text_ctrl)
-
-    def _IntPrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
-                             prim_index: int, node_indices: List[int], min_=0, max_=100):
-        '''Create a control for a floating point property.
-
-        If prim_index is -1, then update the text primitive instead.
-        '''
-        old_values = [getattr(p, prop_name) for p in prims]
-        for val in old_values:
-            assert isinstance(val, float) or isinstance(val, int)
-
-        def callback(e):
-            value = e.GetPosition()
-            self._self_changes = True
-            self.controller.start_group()
-            for nodei in node_indices:
-                # only update the RGB, not alpha
-                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
-                                                            prop_name, value)
-            self.controller.end_group()
-
-        initial_value = GetMultiInt(set(old_values)) or 0
-        sizer = self.GetSizer()
-        int_ctrl = self.main_section.CreateSpinCtrl(min=min_, max=max_, initial=initial_value)
-        int_ctrl.Bind(wx.EVT_SPINCTRL, callback)
-        self.main_section.AppendControl(label, int_ctrl)
-
-    def _ChoicePrimitiveControl(self, label: str, prop_name: str, prims: List[TPrimitive],
-                                prim_index: int, node_indices: List[int],
-                                choice_items: List[ChoiceItem]):
-        # TODO set original value
-        def callback(e):
-            index = e.GetInt()
-            value = choice_items[index].value
-            self._self_changes = True
-            self.controller.start_group()
-            for nodei in node_indices:
-                self.controller.set_node_primitive_property(self.net_index, nodei, prim_index,
-                                                            prop_name, value)
-            self.controller.end_group()
-
-        old_values = set(getattr(prim, prop_name) for prim in prims)
-
-        sizer = self.GetSizer()
-        texts = [item.text for item in choice_items]
-        choice_ctrl = wx.Choice(self.main_section, choices=texts)
-
-        # Set commonly selected item
-        if len(old_values) == 1:
-            # Find choice item with given value
-            sel_ind = None
-            old_value = next(iter(old_values))
-            for index, item in enumerate(choice_items):
-                if item.value == old_value:
-                    sel_ind = index
-                    break
-            else:
-                assert False, "This should never happen"
-            choice_ctrl.SetSelection(sel_ind)
-
-        choice_ctrl.Bind(wx.EVT_CHOICE, callback)
-        self.main_section.AppendControl(label, choice_ctrl)
-
-    def _UpdatePrimitiveFields(self, com_shapes: List[TCompositeShape], nodes: List[Node]):
-        sizer = self.GetSizer()
+    def _UpdatePrimitiveFields(self):
+        sizer: wx.Sizer = self.GetSizer()
+        sizerflags = wx.SizerFlags().Expand()
 
         self.Freeze()
 
-        # TODO restore this
-        # if self.primitives_start_row:
-        #     start_row = self.primitives_start_row - 1
+        nodes = self.selected_nodes
+        shape_names = set(n.composite_shape.name for n in nodes)
 
-        #     index = 0
-        #     while index < sizer.GetItemCount():
-        #         pos = sizer.GetItemPosition(index)
-        #         if pos.GetRow() >= start_row:
-        #             item = sizer.GetItem(index)
-        #             if item.IsWindow():
-        #                 window = item.GetWindow()
-        #                 winid = window.GetId()
-        #                 if winid in self.badges:
-        #                     del self.badges[winid]
-        #                     del self.labels[winid]
-        #                 item.GetWindow().Destroy()
-        #             else:
-        #                 sizer.Remove(index)
-        #         else:
-        #             index += 1
+        if self.last_prim_section is not None:
+            sizer.Detach(self.last_prim_section)
+            self.RemoveChild(self.last_prim_section)
+            self.last_prim_section.Hide()
 
-        #     # reset rows
-        #     sizer.SetRows(start_row)
+        if len(shape_names) == 1:
+            shape_index = nodes[0].shape_index
+            # TODO cache this
 
-        # if len(com_shapes) != 0:
-        #     # self._primitives_heading = self.main_section.AppendSubtitle('Shape properties')
-        #     self.main_section.AppendSpacer(0)
-        #     self.primitives_start_row = self.GetSizer().GetRows()
-        #     node_indices = [n.index for n in nodes]
-        #     for prim_index in range(len(com_shapes[0].items)):
-        #         primitives = [cs.items[prim_index][0] for cs in com_shapes]
-        #         one_prim = primitives[0]
-        #         subtitle_text = '{name} ({idx})'.format(idx=prim_index + 1, name=one_prim.name)
-        #         self.main_section.AppendSubtitle(subtitle_text)
-        #         if isinstance(one_prim, TRectanglePrim):
-        #             self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
-        #                                         primitives, prim_index, node_indices)
-        #             self._ColorPrimitiveControl('border color', 'border opacity', 'border_color',
-        #                                         primitives, prim_index, node_indices)
-        #             self._FloatPrimitiveControl('border width', 'border_width',
-        #                                         primitives, prim_index, node_indices)
-        #             self._FloatPrimitiveControl('corner radius', 'corner_radius',
-        #                                         primitives, prim_index, node_indices)
-        #         elif isinstance(one_prim, TCirclePrim):
-        #             self._ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
-        #                                         primitives, prim_index, node_indices)
-        #             self._ColorPrimitiveControl('border color', 'border opacity', 'border_color',
-        #                                         primitives, prim_index, node_indices)
-        #             self._FloatPrimitiveControl('border width', 'border_width',
-        #                                         primitives, prim_index, node_indices)
-        #     subtitle_text = 'Text'
-        #     self.main_section.AppendSubtitle(subtitle_text)
-        #     # Create text primitive
-        #     primitives = [cast(TPrimitive, cs.text_item[0]) for cs in com_shapes]
-        #     self._IntPrimitiveControl('font size', 'font_size', primitives, -1, node_indices, min_=1, max_=100)
-        #     self._ColorPrimitiveControl('font color', 'font opacity', 'font_color',
-        #                                 primitives, -1, node_indices)
-        #     self._ColorPrimitiveControl('highlight color', 'highlight opacity', 'bg_color',
-        #                                 primitives, -1, node_indices)
-        #     self._ChoicePrimitiveControl('font family', 'font_family', primitives, -1,
-        #                                  node_indices, FONT_FAMILY_CHOICES)
+            if shape_index in self.prim_section_cache:
+                # already created form for this shape before; restore the cached one
+                prim_section = self.prim_section_cache[shape_index]
+                prim_section.Show()
+                self.AddChild(prim_section)
+                sizer.Add(prim_section, sizerflags)
+            else:
+                # need to create new one
+                assert nodes[0].composite_shape is not None
+                prim_section = PrimitiveSection(self, nodes[0].composite_shape)
+                sizer.Add(prim_section, sizerflags)
+                self.last_prim_section = prim_section
+                self.prim_section_cache[shape_index] = prim_section
 
-        # else:
-        #     self.primitives_start_row = None
+            prim_section.UpdatePrimitiveValues()
+        else:
+            pass
 
         self.Layout()
         self.Thaw()
 
     def UpdateAllFields(self):
         """Update the form field values based on current data."""
-        self._self_changes = False
+        self.self_changes = False
         assert len(self._selected_idx) != 0
-        nodes = get_nodes_by_idx(self._nodes, self._selected_idx)
+        nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         prec = get_setting('decimal_precision')
         id_text: str
         floatingNode: bool
@@ -1061,12 +1133,7 @@ class NodeForm(EditPanelForm):
             else:
                 shape_name = ''
 
-        shapes = [n.composite_shape for n in nodes]
-        num_distinct_shapes = len(set(s.name for s in shapes))
-        if num_distinct_shapes == 1:
-            self._UpdatePrimitiveFields(shapes, nodes)
-        else:
-            self._UpdatePrimitiveFields([], nodes)
+        self._UpdatePrimitiveFields()
         self.pos_ctrl.Enable(self.contiguous)
         self.size_ctrl.Enable(self.contiguous)
 
@@ -1099,11 +1166,11 @@ class ReactionForm(EditPanelForm):
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
 
-        self._reactions = list()
+        self.reactions = list()
         self.main_section = FieldGrid(self, self)
         self.sections = [self.main_section]
 
-        self.SetupSections()
+        self.CreateChildren()
 
     def CreateControls(self):
         self.id_ctrl = self.main_section.CreateTextCtrl()
@@ -1151,9 +1218,10 @@ class ReactionForm(EditPanelForm):
         self.mod_tip_dropdown.Bind(wx.EVT_COMBOBOX, self.ModifierTipCallback)
 
         self._modifiers = set()
-        self._nodes = list()
-        self._node_indices = set()
-        self.modifiers_ctrl = wx.CheckListBox(self.main_section, style=wx.LB_NEEDED_SB, size=(-1, 100))
+        self.all_nodes = list()
+        self.node_indices = set()
+        self.modifiers_ctrl = wx.CheckListBox(
+            self.main_section, style=wx.LB_NEEDED_SB, size=(-1, 100))
         self.main_section.AppendControl('modifiers', self.modifiers_ctrl)
         self.modifiers_ctrl.Bind(wx.EVT_CHECKLISTBOX, self.OnModifierCheck)
 
@@ -1168,13 +1236,13 @@ class ReactionForm(EditPanelForm):
             self.main_section.SetValidationState(False, ctrl_id, "ID cannot be empty")
             return
         else:
-            for rxn in self._reactions:
+            for rxn in self.reactions:
                 if rxn.id == new_id:
                     self.main_section.SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
 
             # loop terminated fine. There is no duplicate ID
-            self._self_changes = True
+            self.self_changes = True
             self.controller.start_group()
             self.controller.rename_reaction(self.net_index, reai, new_id)
             post_event(DidModifyReactionEvent(list(self._selected_idx)))
@@ -1182,8 +1250,8 @@ class ReactionForm(EditPanelForm):
             self.main_section.SetValidationState(True, ctrl_id)
 
     def _StrokeWidthCallback(self, width: float):
-        reactions = [r for r in self._reactions if r.index in self._selected_idx]
-        self._self_changes = True
+        reactions = [r for r in self.reactions if r.index in self._selected_idx]
+        self.self_changes = True
         self.controller.start_group()
         for rxn in reactions:
             self.controller.set_reaction_line_thickness(self.net_index, rxn.index, width)
@@ -1199,8 +1267,8 @@ class ReactionForm(EditPanelForm):
         else:
             bezierCurves = False
 
-        rxns = get_rxns_by_idx(self._reactions, self._selected_idx)
-        self._self_changes = True
+        rxns = get_rxns_by_idx(self.reactions, self._selected_idx)
+        self.self_changes = True
         self.controller.start_group()
         for rxn in rxns:
             self.controller.set_reaction_bezier_curves(self.net_index, rxn.index, bezierCurves)
@@ -1219,8 +1287,8 @@ class ReactionForm(EditPanelForm):
             assert False, ('Unable to find corresponding enum entry to dropdown selection. ' +
                            'This is not supposed to happen.')
 
-        rxns = get_rxns_by_idx(self._reactions, self._selected_idx)
-        self._self_changes = True
+        rxns = get_rxns_by_idx(self.reactions, self._selected_idx)
+        self.self_changes = True
         self.controller.start_group()
         for rxn in rxns:
             self.controller.set_modifier_tip_style(self.net_index, rxn.index, entry)
@@ -1272,7 +1340,7 @@ class ReactionForm(EditPanelForm):
         reaction = self.canvas.reaction_idx_map[next(iter(self._selected_idx))]
         if reaction.center_pos != pos:
             offset = pos - reaction.center_pos
-            self._self_changes = True
+            self.self_changes = True
             self.controller.start_group()
             self.controller.set_reaction_center(self.net_index, reaction.index, pos)
             post_event(DidMoveReactionCenterEvent(self.net_index, reaction.index, offset, False))
@@ -1281,8 +1349,8 @@ class ReactionForm(EditPanelForm):
 
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
-        reactions = [r for r in self._reactions if r.index in self._selected_idx]
-        self._self_changes = True
+        reactions = [r for r in self.reactions if r.index in self._selected_idx]
+        self.self_changes = True
         self.controller.start_group()
         for rxn in reactions:
             if on_msw():
@@ -1296,8 +1364,8 @@ class ReactionForm(EditPanelForm):
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
-        reactions = (r for r in self._reactions if r.index in self._selected_idx)
-        self._self_changes = True
+        reactions = (r for r in self.reactions if r.index in self._selected_idx)
+        self.self_changes = True
         self.controller.start_group()
         for rxn in reactions:
             self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
@@ -1309,24 +1377,24 @@ class ReactionForm(EditPanelForm):
         assert len(self._selected_idx) == 1, 'Reaction rate law field should be disabled when ' + \
             'multiple are selected'
         [reai] = self._selected_idx
-        self._self_changes = True
+        self.self_changes = True
         post_event(DidModifyReactionEvent(list(self._selected_idx)))
         self.controller.set_reaction_ratelaw(self.net_index, reai, ratelaw)
 
     def OnModifierCheck(self, evt: wx.CommandEvent):
         assert len(self._selected_idx) == 1
-        reactions = [r for r in self._reactions if r.index in self._selected_idx]
+        reactions = [r for r in self.reactions if r.index in self._selected_idx]
         reaction = reactions[0]
-        new_modifiers = [self._nodes[i].index for i in self.modifiers_ctrl.GetCheckedItems()]
+        new_modifiers = [self.all_nodes[i].index for i in self.modifiers_ctrl.GetCheckedItems()]
         self.controller.set_reaction_modifiers(self.net_index, reaction.index, new_modifiers)
 
     def CanvasUpdated(self, reactions: List[Reaction], nodes: List[Node]):
         """Function called after the canvas has been updated."""
-        self._reactions = reactions
-        self._nodes = nodes
+        self.reactions = reactions
+        self.all_nodes = nodes
         new_node_indices = set(n.index for n in nodes)
-        # if new_node_indices != self._node_indices:
-        self._node_indices = new_node_indices
+        # if new_node_indices != self.node_indices:
+        self.node_indices = new_node_indices
         self._UpdateModifierList()
         self.ExternalUpdate()
 
@@ -1346,8 +1414,8 @@ class ReactionForm(EditPanelForm):
     def _UpdateModifierList(self):
         # NOTE if slightly better performance is wanted, we don't have to update this widget
         # immediately. Rather we can have a dirty flag and update only when displaying
-        self.modifiers_ctrl.Set([n.id for n in self._nodes])
-        checked_indices = set(i for i, n in enumerate(self._nodes) if n.index in self._modifiers)
+        self.modifiers_ctrl.Set([n.id for n in self.all_nodes])
+        checked_indices = set(i for i, n in enumerate(self.all_nodes) if n.index in self._modifiers)
         self._UpdateModifierSelection(checked_indices)
 
     def _UpdateModifierSelection(self, new_modifiers: Set[int]):
@@ -1411,7 +1479,7 @@ class ReactionForm(EditPanelForm):
 
     def MakeSetSrcStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
-            self._self_changes = True
+            self.self_changes = True
             self.controller.start_group()
             self.controller.set_src_node_stoich(self.net_index, reai, nodei, val)
             post_event(DidModifyReactionEvent(list(self._selected_idx)))
@@ -1422,7 +1490,7 @@ class ReactionForm(EditPanelForm):
     def MakeSetDestStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self.controller.start_group()
-            self._self_changes = True
+            self.self_changes = True
             self.controller.set_dest_node_stoich(self.net_index, reai, nodei, val)
             post_event(DidModifyReactionEvent(list(self._selected_idx)))
             self.controller.end_group()
@@ -1441,9 +1509,9 @@ class ReactionForm(EditPanelForm):
 
     def UpdateAllFields(self):
         """Update all reaction fields from current data."""
-        self._self_changes = False
+        self.self_changes = False
         assert len(self._selected_idx) != 0
-        reactions = [r for r in self._reactions if r.index in self._selected_idx]
+        reactions = [r for r in self.reactions if r.index in self._selected_idx]
         id_text = '; '.join(sorted(list(r.id for r in reactions)))
         fill: wx.Colour
         fill_alpha: Optional[int]
@@ -1505,13 +1573,13 @@ class CompartmentForm(EditPanelForm):
 
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
-        self._compartments = list()
+        self.compartments = list()
         self.contiguous = True
 
         self.main_section = FieldGrid(self, self)
         self.sections = [self.main_section]
 
-        self.SetupSections()
+        self.CreateChildren()
 
     def CreateControls(self):
         self.id_ctrl = self.main_section.CreateTextCtrl()
@@ -1557,13 +1625,13 @@ class CompartmentForm(EditPanelForm):
             self.main_section.SetValidationState(False, ctrl_id, "ID cannot be empty")
             return
         else:
-            for comp in self._compartments:
+            for comp in self.compartments:
                 if comp.id == new_id:
                     self.main_section.SetValidationState(False, ctrl_id, "Not saved: Duplicate ID")
                     return
 
             # loop terminated fine. There is no duplicate ID
-            self._self_changes = True
+            self.self_changes = True
             self.controller.start_group()
             self.controller.rename_compartment(self.net_index, compi, new_id)
             post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
@@ -1585,16 +1653,16 @@ class CompartmentForm(EditPanelForm):
             self.main_section.SetValidationState(
                 False, ctrl_id, 'Position coordinates should be non-negative')
             return
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
         bounds = Rect(Vec2(), self.canvas.realsize)
         clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
         if self._bounding_rect.position != pos or pos != clamped:
             offset = clamped - self._bounding_rect.position
-            self._self_changes = True
+            self.self_changes = True
             self.controller.start_group()
             for comp in comps:
                 comp.position += offset
-            post_event(DidMoveCompartmentsEvent(list(self.selected_idx), offset, dragged=False))
+            post_event(DidMoveCompartmentsEvent(list(self._selected_idx), offset, dragged=False))
             for comp in comps:
                 self.controller.move_node(self.net_index, comp.index, comp.position)
             self.controller.end_group()
@@ -1610,7 +1678,7 @@ class CompartmentForm(EditPanelForm):
                 False, ctrl_id, 'Should be in the form "width, height"')
             return
 
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
         size = Vec2(wh)
         _, comp_min_ratio = self.canvas.select_box.compute_min_ratio()
         assert comp_min_ratio is not None
@@ -1626,7 +1694,7 @@ class CompartmentForm(EditPanelForm):
         clamped = clamp_rect_size(Rect(self._bounding_rect.position, size), self.canvas.realsize)
         if self._bounding_rect.size != clamped or size != clamped:
             ratio = clamped.elem_div(self._bounding_rect.size)
-            self._self_changes = True
+            self.self_changes = True
             self.controller.start_group()
 
             offsets = list()
@@ -1647,7 +1715,7 @@ class CompartmentForm(EditPanelForm):
                         peripheral_nodes.append(node)
                         peripheral_offsets.append(new_pos - node.position)
 
-            idx_list = list(self.selected_idx)
+            idx_list = list(self._selected_idx)
             post_event(DidMoveCompartmentsEvent(idx_list, offsets, dragged=False))
             post_event(DidResizeCompartmentsEvent(idx_list, ratio, dragged=False))
             if len(peripheral_nodes) != 0:
@@ -1663,8 +1731,8 @@ class CompartmentForm(EditPanelForm):
 
     def _VolumeCallback(self, volume: float):
         """Callback for when the border width changes."""
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
-        self._self_changes = True
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
+        self.self_changes = True
         self.controller.start_group()
         for comp in comps:
             self.controller.set_compartment_volume(self.net_index, comp.index, volume)
@@ -1673,8 +1741,8 @@ class CompartmentForm(EditPanelForm):
 
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
-        self._self_changes = True
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
+        self.self_changes = True
         self.controller.start_group()
         for comp in comps:
             if on_msw():
@@ -1685,8 +1753,8 @@ class CompartmentForm(EditPanelForm):
 
     def _OnBorderColorChanged(self, border: wx.Colour):
         """Callback for the border color control."""
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
-        self._self_changes = True
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
+        self.self_changes = True
         self.controller.start_group()
         for comp in comps:
             if on_msw():
@@ -1697,8 +1765,8 @@ class CompartmentForm(EditPanelForm):
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
-        self._self_changes = True
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
+        self.self_changes = True
         self.controller.start_group()
         for comp in comps:
             new_fill = change_opacity(comp.fill, int(alpha * 255))
@@ -1708,8 +1776,8 @@ class CompartmentForm(EditPanelForm):
 
     def _BorderAlphaCallback(self, alpha: float):
         """Callback for when the border alpha changes."""
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
-        self._self_changes = True
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
+        self.self_changes = True
         self.controller.start_group()
         for comp in comps:
             new_border = change_opacity(comp.border, int(alpha * 255))
@@ -1719,8 +1787,8 @@ class CompartmentForm(EditPanelForm):
 
     def _BorderWidthCallback(self, width: float):
         """Callback for when the border width changes."""
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
-        self._self_changes = True
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
+        self.self_changes = True
         self.controller.start_group()
         for comp in comps:
             self.controller.set_compartment_border_width(self.net_index, comp.index, width)
@@ -1728,7 +1796,7 @@ class CompartmentForm(EditPanelForm):
         self.controller.end_group()
 
     def UpdateCompartments(self, comps: List[Compartment]):
-        self._compartments = comps
+        self.compartments = comps
         self._UpdateBoundingRect()
         self.ExternalUpdate()
 
@@ -1753,9 +1821,9 @@ class CompartmentForm(EditPanelForm):
         self.ExternalUpdate()
 
     def UpdateAllFields(self):
-        self._self_changes = False
-        comps = [c for c in self._compartments if c.index in self.selected_idx]
-        assert len(comps) == len(self.selected_idx)
+        self.self_changes = False
+        comps = [c for c in self.compartments if c.index in self._selected_idx]
+        assert len(comps) == len(self._selected_idx)
         prec = 2
 
         id_text = '; '.join([c.id for c in comps])
@@ -1811,7 +1879,7 @@ class CompartmentForm(EditPanelForm):
     def _UpdateBoundingRect(self):
         """Update bounding rectangle; mixed indicates whether both nodes and comps are selected.
         """
-        rects = [c.rect for c in self._compartments if c.index in self.selected_idx]
+        rects = [c.rect for c in self.compartments if c.index in self._selected_idx]
         # It could be that compartments have been updated but selected indices have not.
         # In that case rects can be empty
         if len(rects) != 0:

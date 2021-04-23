@@ -144,9 +144,9 @@ class NodeElement(CanvasElement):
             self.gfont = gc.CreateFont(font, wx.BLACK)
         gc.SetFont(self.gfont)
 
-        boundaryFactor = 1
-        if not self.node.floatingNode:
-            boundaryFactor = 2  # Store this in a theme?
+        # boundaryFactor = 1
+        # if not self.node.floatingNode:
+        #     boundaryFactor = 2  # Store this in a theme?
 
         s_aligned_rect = self.node.s_rect.aligned()
         # aligned_border_width = max(even_round(
@@ -852,7 +852,7 @@ class SelectBox(CanvasElement):
                         break
 
         handle = self._hovered_part
-        assert self._mode == SelectBox.Mode.IDLE
+        # assert self._mode == SelectBox.Mode.IDLE
         if handle >= 0:
             self._mode = SelectBox.Mode.RESIZING
             self._resize_handle = handle

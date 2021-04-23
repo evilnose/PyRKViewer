@@ -457,6 +457,7 @@ class Canvas(wx.ScrolledWindow):
         self._nodes = nodes
         self._reactions = reactions
         self._compartments = compartments
+        # Don't clear hovered_element if it is SelectBox
         if not isinstance(self.hovered_element, SelectBox):
             self.hovered_element = None
         self.dragged_element = None
@@ -1229,7 +1230,6 @@ class Canvas(wx.ScrolledWindow):
                 self.dragged_element = None
             elif self.hovered_element is not None:
                 self.hovered_element.on_mouse_leave(logical_pos)
-                print('Hi there')
                 self.hovered_element = None
             elif evt.LeftIsDown():
                 for el in reversed(self._elements):

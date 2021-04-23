@@ -6,6 +6,7 @@ from enum import Enum, auto
 import wx
 import copy
 import math
+from math import pi, sin, cos
 from itertools import chain
 import numpy as np
 from scipy.special import comb
@@ -103,6 +104,52 @@ class TTextPrim(TPrimitive):
     font_style: int = wx.FONTSTYLE_NORMAL
     font_weight: int = wx.FONTWEIGHT_MEDIUM
     alignment: TextAlignment = TextAlignment.CENTER
+
+
+def getPolygonPoints(n, r=0.5, phase=0) -> Tuple[Vec2, ...]:
+    """
+    This function is used to define the vertices in 2D space of n-polygons. Each equilateral 
+    polygon is drawn inside a circle with specified radius.
+
+    n: the number of sides of the polygon
+    r: radius of the circle in which the polygon is drawn
+    phase: the phase of the first point, in radians. If phase is 0, the first point is drawn at
+           (r, 0) relative to the origin.
+    """
+    assert n >= 2
+
+    origin = Vec2()
+    inc = 2 * pi /n
+
+    return tuple(origin + r * Vec2(cos(inc * i + phase), sin(inc * i + phase)) for i in range(n + 1))
+
+
+@dataclass
+class TPolygonPrim(TPrimitive):
+    # TODO change defaults
+    points: Tuple[Vec2, ...]
+    fill_color: Color = Color(255, 0, 0, 255)
+    border_color: Color = Color(0, 255, 0, 255)
+    border_width: float = 0.05
+    radius: float = 0.5
+
+
+@dataclass
+class THexagonPrim(TPolygonPrim):
+    # TODO change defaults
+    points: Tuple[Vec2, ...] = getPolygonPoints(6)
+
+
+@dataclass
+class TLinePrim(TPolygonPrim):
+    # TODO change defaults
+    points: Tuple[Vec2, ...] = getPolygonPoints(2)
+
+
+@dataclass
+class TTrianglePrim(TPolygonPrim):
+    # TODO change defaults
+    points: Tuple[Vec2, ...] = getPolygonPoints(3)
 
 
 class TCompositeShape:

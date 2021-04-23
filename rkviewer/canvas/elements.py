@@ -4,10 +4,10 @@ from abc import abstractmethod
 import enum
 from functools import partial
 from itertools import chain
-from math import pi
+from math import pi, cos, sin
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
-from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTransform, TTextPrim
+from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTrianglePrim, TTransform, TTextPrim, THexagonPrim, TLinePrim
 
 import wx
 
@@ -19,7 +19,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, TextAlignment
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, TPolygonPrim, TextAlignment
 from .geometry import (
     Rect,
     Vec2,
@@ -1181,6 +1181,9 @@ class Property:
 class ColorProperty(Property):
     pass
 
+def to_wxPointList(points: List[Vec2]):
+    """Convert a list of points into a list of wx.Point"""
+    return [wx.Point2D(*pt) for pt in points]
 
 def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
     pen = gc.CreatePen(wx.GraphicsPenInfo(circle.border_color.to_wxcolour(), circle.border_width))
@@ -1199,10 +1202,19 @@ def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim):
     gc.SetBrush(brush)
     gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
 
+def draw_polygon_to_gc(gc: wx.GraphicsContext, hex: TPolygonPrim):
+    pen = gc.CreatePen(wx.GraphicsPenInfo(hex.border_color.to_wxcolour(), hex.border_width))
+    brush = gc.CreateBrush(wx.Brush(hex.fill_color.to_wxcolour()))
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
+    gc.DrawLines(to_wxPointList(hex.points))
 
 draw_fn_map = {
     TCirclePrim: draw_circle_to_gc,
-    TRectanglePrim: draw_rect_to_gc
+    TRectanglePrim: draw_rect_to_gc,
+    THexagonPrim: draw_polygon_to_gc,
+    TLinePrim: draw_polygon_to_gc,
+    TTrianglePrim: draw_polygon_to_gc
 }
 
 
@@ -1220,10 +1232,7 @@ def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node
     for primitive, transform in shape.items:
         gc.PushState()
         apply_transform_to_gc(gc, transform)
-        #if text: Draw_text
-        # if isinstance(primitive, TTextPrim):
         draw_fn_map[primitive.__class__](gc, primitive)
-
         gc.PopState()
     gc.PopState()
 

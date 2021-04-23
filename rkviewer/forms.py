@@ -1083,7 +1083,6 @@ class NodeForm(EditPanelForm):
 
         if self.last_prim_section is not None:
             sizer.Detach(self.last_prim_section)
-            self.RemoveChild(self.last_prim_section)
             self.last_prim_section.Hide()
 
         if len(shape_names) == 1:
@@ -1094,15 +1093,16 @@ class NodeForm(EditPanelForm):
                 # already created form for this shape before; restore the cached one
                 prim_section = self.prim_section_cache[shape_index]
                 prim_section.Show()
-                self.AddChild(prim_section)
+                # self.AddChild(prim_section)
                 sizer.Add(prim_section, sizerflags)
             else:
                 # need to create new one
                 assert nodes[0].composite_shape is not None
                 prim_section = PrimitiveSection(self, nodes[0].composite_shape)
                 sizer.Add(prim_section, sizerflags)
-                self.last_prim_section = prim_section
                 self.prim_section_cache[shape_index] = prim_section
+
+            self.last_prim_section = prim_section
 
             prim_section.UpdatePrimitiveValues()
         else:
@@ -1486,11 +1486,10 @@ class ReactionForm(EditPanelForm):
         sizerflags = wx.SizerFlags().Expand()
 
         self.Freeze()
+        print('freeze')
         if self.reactants_section is not None:
             sizer.Detach(self.reactants_section)
-            self.RemoveChild(self.reactants_section)
             sizer.Detach(self.products_section)
-            self.RemoveChild(self.products_section)
             self.reactants_section.Destroy()
             self.products_section.Destroy()
 
@@ -1505,7 +1504,6 @@ class ReactionForm(EditPanelForm):
             self.products_section = None
             # Both reactants and products are empty; don't add
             assert len(products) == 0
-
 
         self.Layout()
         self.Thaw()

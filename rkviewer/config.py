@@ -448,11 +448,13 @@ def get_setting(setting_attr) -> Any:
     return _settings[setting_attr]
 
 
-def get_theme(theme_attr) -> Any:
+def get_theme(theme_attr, convert_color=True) -> Any:
+    '''convert_color: if True, convert Color instances to wx.Colour instances automatically
+    '''
     global _theme
     tmp = _theme[theme_attr]
     # automatically convert Color to wx.Colour
-    if isinstance(tmp, Color):
+    if convert_color and isinstance(tmp, Color):
         tmp = wx.Colour(tmp.r, tmp.g, tmp.b, tmp.a)
     return tmp
 

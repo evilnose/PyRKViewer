@@ -416,11 +416,13 @@ class ReactionElement(CanvasElement):
             def ret(p):
                 ctrl.set_src_node_handle(neti, reai, nodei, p)
                 post_event(DidCommitDragEvent())
+            return ret
         else:
-            def ret(p):
+            # Avoid IDE warnings
+            def ret1(p):
                 ctrl.set_dest_node_handle(neti, reai, nodei, p)
                 post_event(DidCommitDragEvent())
-        return ret
+            return ret1
 
     @property
     def selected(self) -> bool:
@@ -1181,10 +1183,6 @@ class Property:
 class ColorProperty(Property):
     pass
 
-def to_wxPointList(points: List[Vec2]):
-    """Convert a list of points into a list of wx.Point"""
-    return [wx.Point2D(*pt) for pt in points]
-
 def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
     pen = gc.CreatePen(wx.GraphicsPenInfo(circle.border_color.to_wxcolour(), circle.border_width))
     brush = gc.CreateBrush(wx.Brush(circle.fill_color.to_wxcolour()))
@@ -1202,12 +1200,14 @@ def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim):
     gc.SetBrush(brush)
     gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
 
-def draw_polygon_to_gc(gc: wx.GraphicsContext, hex: TPolygonPrim):
-    pen = gc.CreatePen(wx.GraphicsPenInfo(hex.border_color.to_wxcolour(), hex.border_width))
-    brush = gc.CreateBrush(wx.Brush(hex.fill_color.to_wxcolour()))
+
+def draw_polygon_to_gc(gc: wx.GraphicsContext, poly: TPolygonPrim):
+    pen = gc.CreatePen(wx.GraphicsPenInfo(poly.border_color.to_wxcolour(), poly.border_width))
+    brush = gc.CreateBrush(wx.Brush(poly.fill_color.to_wxcolour()))
     gc.SetPen(pen)
     gc.SetBrush(brush)
-    gc.DrawLines(to_wxPointList(hex.points))
+    gc.DrawLines([wx.Point2D(*p) for p in poly.points])
+
 
 draw_fn_map = {
     TCirclePrim: draw_circle_to_gc,

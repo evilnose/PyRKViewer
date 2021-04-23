@@ -3,7 +3,6 @@
 from __future__ import annotations
 # pylint: disable=maybe-no-member
 import wx
-from wx.core import EVT_CHOICE, NOT_FOUND
 from wx.lib.scrolledpanel import ScrolledPanel
 from abc import abstractmethod
 import copy
@@ -1168,7 +1167,7 @@ class NodeForm(EditPanelForm):
         if shape_name:
             self.compositeShapesDropDown.SetStringSelection(shape_name)
         else:
-            self.compositeShapesDropDown.SetSelection(NOT_FOUND)
+            self.compositeShapesDropDown.SetSelection(wx.NOT_FOUND)
 
 
 @dataclass

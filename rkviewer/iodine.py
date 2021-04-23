@@ -10,14 +10,16 @@ TODOs
 """
 from __future__ import annotations
 from re import S
+from functools import partial
 
 from marshmallow.decorators import post_load
+from numpy.lib.npyio import recfromcsv
 from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexError,
                   ReactionIndexError, NodeIndexError, CompartmentIndexError, StoichError,
                   StackEmptyError, JSONError, FileError)
-from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField
+from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField, get_theme
 from .canvas.geometry import Vec2
-from .canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, THexagonPrim, TLinePrim, TTrianglePrim, TTransform, TTextPrim
+from .canvas.data import CompositeShapeFactory, PrimitiveFactory, TCirclePrim, TCompositeShape, TRectanglePrim, THexagonPrim, TLinePrim, TTrianglePrim, TTransform, TTextPrim
 import copy
 from dataclasses import dataclass, field
 import json
@@ -27,13 +29,47 @@ from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
 
 
-# NOTE this should be completely immutable
-defaultShapes = [
-    TCompositeShape([(TRectanglePrim(), TTransform())], (TTextPrim(), TTransform()), 'rectangle'),
-    TCompositeShape([(TCirclePrim(), TTransform())], (TTextPrim(), TTransform()), 'circle'),
-    TCompositeShape([(THexagonPrim(), TTransform())], (TTextPrim(), TTransform()), 'hexagon'),
-    TCompositeShape([(TLinePrim(), TTransform())], (TTextPrim(), TTransform()), 'line'),
-    TCompositeShape([(TTrianglePrim(), TTransform())], (TTextPrim(), TTransform()), 'triangle')
+# # NOTE this should be completely immutable
+# defaultShapes = [
+#     TCompositeShape([(TRectanglePrim(), TTransform())], (TTextPrim(), TTransform()), 'rectangle'),
+#     TCompositeShape([(TCirclePrim(), TTransform())], (TTextPrim(), TTransform()), 'circle'),
+#     TCompositeShape([(THexagonPrim(), TTransform())], (TTextPrim(), TTransform()), 'hexagon'),
+#     TCompositeShape([(TLinePrim(), TTransform())], (TTextPrim(), TTransform()), 'line'),
+#     TCompositeShape([(TTrianglePrim(), TTransform())], (TTextPrim(), TTransform()), 'triangle')
+# ]
+
+def get_theme_fn(name):
+    return partial(get_theme, name, convert_color=False)
+
+# kwargs common to geometric shapes
+geometry_kwargs = {
+    'fill_color': get_theme_fn('node_fill'),
+    'border_color': get_theme_fn('node_border'),
+    'border_width': get_theme_fn('node_border_width'),
+}
+
+# Default primitive factories
+rectFact = PrimitiveFactory(TRectanglePrim, **geometry_kwargs)
+circleFact = PrimitiveFactory(TCirclePrim, **geometry_kwargs)
+hexFact = PrimitiveFactory(THexagonPrim, **geometry_kwargs)
+lineFact = PrimitiveFactory(TLinePrim, **geometry_kwargs)
+triangleFact = PrimitiveFactory(TTrianglePrim, **geometry_kwargs)
+textFact = PrimitiveFactory(TTextPrim)
+singletonTrans = TTransform()  # fills the entire bounding box
+
+# These are the default shape factories. They should never be modified by the user.
+shapeFactories = [
+    CompositeShapeFactory([(rectFact, singletonTrans)], (textFact, singletonTrans), 'rectangle'),
+    CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, singletonTrans), 'circle'),
+    CompositeShapeFactory([(hexFact, singletonTrans)], (textFact, singletonTrans), 'hexagon'),
+    CompositeShapeFactory([(lineFact, singletonTrans)], (textFact, singletonTrans), 'line'),
+    CompositeShapeFactory([(triangleFact, singletonTrans)], (textFact, singletonTrans), 'triangle'),
+    CompositeShapeFactory([(circleFact, TTransform(scale=Vec2.repeat(0.5))),
+                           (circleFact, TTransform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
+                           (PrimitiveFactory(TRectanglePrim, fill_color=Color(255, 0, 0, 255)),
+                                TTransform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.25)))
+                           ],
+        (PrimitiveFactory(TTextPrim, font_color=Color(255, 255, 255, 255)), singletonTrans), 'demo combo'),
 ]
 
 
@@ -47,7 +83,7 @@ class TNode:
     compi: int = -1
     font: Font = Font(20, Color(0, 0, 0))  # TODO implement this
     shapei: int = 0
-    shape: TCompositeShape = copy.copy(defaultShapes[0])
+    shape: TCompositeShape = field(default_factory=lambda: shapeFactories[0].produce())
 
 
 class TNetwork:
@@ -61,7 +97,6 @@ class TNetwork:
     lastNodeIdx: int
     lastReactionIdx: int
     lastCompartmentIdx: int
-    compositeShapes: List[TCompositeShape]
 
     def __init__(self, id: str, nodes: Dict[int, TNode] = None,
                  reactions: Dict[int, TReaction] = None,
@@ -89,7 +124,6 @@ class TNetwork:
         self.lastNodeIdx = max(nodes.keys(), default=-1) + 1
         self.lastReactionIdx = max(reactions.keys(), default=-1) + 1
         self.lastCompartmentIdx = max(compartments.keys(), default=-1) + 1
-        self.compositeShapes = copy.deepcopy(defaultShapes)
 
     def addNode(self, node: TNode):
         self.nodes[self.lastNodeIdx] = node
@@ -2427,12 +2461,14 @@ def createUniUni(neti: int, reaID: str, rateLaw: str, srci: int, desti: int, src
 
 
 # TODO allow modification of this list later
+# TODO make note that neti is useless here. Probably just remove the argument later
+# Also need to change getCompositeShapeAt
 def getListOfCompositeShapes(neti: int):
-    return copy.deepcopy(_getNetwork(neti).compositeShapes)
+    return [f.produce() for f in shapeFactories]
 
 
 def getCompositeShapeAt(neti: int, shapei: int):
-    return copy.copy(_getNetwork(neti).compositeShapes[shapei])
+    return shapeFactories[shapei].produce()
 
 
 def getNodeShape(neti: int, nodei: int) -> TCompositeShape:
@@ -2445,13 +2481,12 @@ def getNodeShapeIndex(neti: int, nodei: int) -> int:
 
 def setNodeShapeIndex(neti: int, nodei: int, shapei: int, preserve_common_fields=True):
     '''If preserve_common_fields is True, then preserve common field values such as fill_color,
-    if applicable.
+    if applicable. (Not implemented)
     '''
     net = _getNetwork(neti)
     node = _getNode(neti, nodei)
-    shape = net.compositeShapes[shapei]
     node.shapei = shapei
-    node.shape = copy.copy(shape)
+    node.shape = shapeFactories[shapei].produce()
 
 
 def setNodePrimitiveProperty(neti: int, nodei: int, prim_index: int, prop_name: str, prop_value: Any):

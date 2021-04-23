@@ -10,7 +10,7 @@ from math import pi, sin, cos
 from itertools import chain
 import numpy as np
 from scipy.special import comb
-from typing import Any, Callable, ClassVar, Container, List, NamedTuple, Optional, Sequence, Set, Tuple
+from typing import Any, Callable, ClassVar, Container, List, NamedTuple, Optional, Sequence, Set, Tuple, cast
 from collections import namedtuple
 
 from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
@@ -163,6 +163,55 @@ class TCompositeShape:
         return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.text_item), self.name)
 
 
+class PrimitiveFactory:
+    '''Factory that produces primitives.
+
+    Why do we need this?
+        1. Dynamic population of fields. When I need a primitive, I call produce(), which creates
+           a primitive based on the latest data, e.g. theme.
+        2. That's it.
+
+    How do we achieve dynamically created fields? In the constructor of this class, we allow
+    passing functions as values for fields. On product(), we call these functions to populate the
+    fields. Of course, the user can still pass all-static fields, which would work as intended.
+    '''
+    def __init__(self, prim_class, **kwargs):
+        fields = prim_class.__dataclass_fields__
+
+        for key in kwargs.keys():
+            if key not in fields:
+                assert False  # TODO raise ValueError
+        self.prim_class = prim_class
+        self.abstract_kwargs = kwargs
+
+    def produce(self):
+        kwargs = dict()
+        # construct actual arguments
+        for key, value in self.abstract_kwargs.items():
+            concrete_value = None
+            if callable(value):
+                concrete_value = value()
+            else:
+                concrete_value = value
+            kwargs[key] = concrete_value
+        return self.prim_class(**kwargs)
+
+
+class CompositeShapeFactory:
+    '''A factory for a composite shape, see PrimitiveFactory for more information.
+    '''
+    def __init__(self, item_factories: List[Tuple[PrimitiveFactory, TTransform]],
+                 text_factory: Tuple[PrimitiveFactory, TTransform], name: str):
+        self.item_factories = item_factories
+        self.text_factory = text_factory
+        self.name = name
+    
+    def produce(self):
+        items = [(prim.produce(), tf) for prim, tf in self.item_factories]
+        textitem = (self.text_factory[0].produce(), self.text_factory[1])
+        return TCompositeShape(items, textitem, self.name)
+
+
 class RectData:
     position: Vec2
     size: Vec2
@@ -296,7 +345,7 @@ def init_bezier():
         for ti in range(MAXSEGS+1):
             t = ti/MAXSEGS
             for i in range(4):  # i = 0, 1, 2, 3
-                BezJ[ti, i] = float(comb(3, i)) * math.pow(t, i) * math.pow(1-t, 3-i)
+                BezJ[ti, i] = cast(int, comb(3, i)) * math.pow(t, i) * math.pow(1-t, 3-i)
             # At the moment hard-wired for n = 3
             tm = 1 - t
             BezJPrime[ti, 0] = -3*tm*tm

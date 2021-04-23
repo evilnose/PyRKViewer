@@ -38,7 +38,7 @@ class TPrimitive:
 class TCirclePrim(TPrimitive):
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
-    border_width: float = 2
+    border_width: float = 2.
 
 
 @dataclass
@@ -67,6 +67,29 @@ class TTextPrim(TPrimitive):
         self.font_color = font_color
         self.bg_color = bg_color
         self.alignment = alignment
+
+@dataclass
+class TPolygonPrim(TPrimitive):
+    # TODO change defaults
+    fill_color: Color = Color(255, 0, 0, 255)
+    border_color: Color = Color(0, 255, 0, 255)
+    border_width: float = 0.2
+    radius: float = 2
+
+@dataclass
+class THexagonPrim(TPolygonPrim):
+    # TODO change defaults
+    n: int = 6
+
+@dataclass
+class TLinePrim(TPolygonPrim):
+    # TODO change defaults
+    n: int = 2
+
+@dataclass
+class TTrianglePrim(TPolygonPrim):
+    # TODO change defaults
+    n: int = 3
 
 class TCompositeShape:
     def __init__(self, items: List[Tuple[Any, TTransform]], text_items: Tuple[Any, TTextPrim], name: str):

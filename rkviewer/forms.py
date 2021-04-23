@@ -2,7 +2,6 @@
 """
 from __future__ import annotations
 # pylint: disable=maybe-no-member
-from itertools import chain, compress
 import wx
 from wx.core import EVT_CHOICE, NOT_FOUND
 from wx.lib.scrolledpanel import ScrolledPanel
@@ -17,7 +16,7 @@ from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyR
 from .mvc import IController, ModifierTipStyle
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
-from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, Reaction, TPrimitive, compute_centroid
+from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, Reaction, TEXT_ALIGNMENT_CHOICES, TPrimitive, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import TCirclePrim, TRectanglePrim, TCompositeShape
@@ -213,12 +212,7 @@ class FieldGrid(wx.Window):
         info_image = wx.Image(resource_path('info-2-16.png'), wx.BITMAP_TYPE_PNG)
         self._info_bitmap = wx.Bitmap(info_image)
         self._info_length = 16
-
-    def InitLayout(self):
         sizer = self.InitAndGetSizer()
-
-        # TODO re-add title, in EditPanelForm, but this tmie using a vertical sizer
-        self.AppendSpacer(0, sizer=sizer)
         self.SetSizer(sizer)
 
     def InitAndGetSizer(self) -> wx.GridSizer:
@@ -296,16 +290,18 @@ class FieldGrid(wx.Window):
         line = wx.StaticLine(self)
         sizer.Add(line, wx.GBPosition(rows, 0), wx.GBSpan(1, 5))
 
-    def AppendSubtitle(self, text: str) -> wx.StaticText:
+    def AppendSubtitle(self, text: str, add_spacers: bool = True) -> wx.StaticText:
         sizer = self.GetSizer()
-        self.AppendSpacer(3)
+        if add_spacers:
+            self.AppendSpacer(3)
         sizer.Add(0, 0, wx.GBPosition(sizer.GetRows(), 0))
         statictext = wx.StaticText(self, label=text)
         font = wx.Font(wx.FontInfo(9))
         statictext.SetFont(font)
         sizer.Add(statictext, wx.GBPosition(sizer.GetRows(), 0),
                   wx.GBSpan(1, 5), flag=wx.ALIGN_CENTER)
-        self.AppendSpacer(0)
+        if add_spacers:
+            self.AppendSpacer(0)
         return statictext
 
     def SetValidationState(self, good: bool, ctrl_id: str, message: str = ""):
@@ -455,7 +451,7 @@ class PrimitiveGrid(FieldGrid):
         super().__init__(parent, form)
         self.update_callbacks = list()
 
-    def UpdatePrimitiveValues(self, nodes):
+    def UpdateValues(self, nodes):
         '''Update the values in the primitive fields.
         
         Requires:
@@ -505,6 +501,7 @@ class PrimitiveGrid(FieldGrid):
 
         ctrl, alpha_ctrl = self.CreateColorControl(label, alpha_label, color_callback, alpha_callback)
 
+        # callback for when the canvs is upated by user input
         def update_cb(nodes: List[Node]):
             prims = self._GetPrimitives(nodes, prim_index)
             old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
@@ -534,19 +531,20 @@ class PrimitiveGrid(FieldGrid):
                                                                  prop_name, value)
             self.form.controller.end_group()
 
-        prims = self._GetPrimitives(self.form.selected_nodes, prim_index)
-        old_values = [getattr(p, prop_name) for p in prims]
-        for val in old_values:
-            assert isinstance(val, float) or isinstance(val, int)
-
         # TODO update values not here
-        placeholder_value = GetMultiFloatText(set(old_values), 2)
         text_ctrl = self.CreateTextCtrl()
         outer_callback = self.MakeFloatCtrlFunction(text_ctrl.GetId(),
                                                     callback, (0, None), left_incl=False)
-        text_ctrl.ChangeValue(placeholder_value)
         text_ctrl.Bind(wx.EVT_TEXT, outer_callback)
         self.AppendControl(label, text_ctrl)
+
+        def update_cb(nodes: List[Node]):
+            prims = self._GetPrimitives(nodes, prim_index)
+            old_values = [getattr(p, prop_name) for p in prims]
+            update_value = GetMultiFloatText(set(old_values), 2)
+            text_ctrl.ChangeValue(update_value)
+
+        self.update_callbacks.append(update_cb)
 
     def IntPrimitiveControl(self, label: str, prop_name: str,
                             prim_index: int, min_=0, max_=100):
@@ -554,9 +552,8 @@ class PrimitiveGrid(FieldGrid):
 
         If prim_index is -1, then update the text primitive instead.
         '''
-        def callback(e):
+        def spin_callback(value: int):
             node_indices = self.form.selected_idx
-            value = e.GetPosition()
             self.form.self_changes = True
             self.form.controller.start_group()
             for nodei in node_indices:
@@ -565,14 +562,24 @@ class PrimitiveGrid(FieldGrid):
                                                                  prop_name, value)
             self.form.controller.end_group()
 
-        prims = self._GetPrimitives(self.form.selected_nodes, prim_index)
-        old_values = [getattr(p, prop_name) for p in prims]
-        for val in old_values:
-            assert isinstance(val, float) or isinstance(val, int)
-        initial_value = GetMultiInt(set(old_values)) or 0
-        int_ctrl = self.CreateSpinCtrl(min=min_, max=max_, initial=initial_value)
-        int_ctrl.Bind(wx.EVT_SPINCTRL, callback)
+        def text_callback(value: str):
+            if value:
+                spin_callback(int(value))
+
+
+        int_ctrl = self.CreateSpinCtrl(min=min_, max=max_)
+        int_ctrl.Bind(wx.EVT_SPINCTRL, lambda e: spin_callback(e.GetInt()))
+        int_ctrl.Bind(wx.EVT_TEXT, lambda e: text_callback(e.GetString()))
+
         self.AppendControl(label, int_ctrl)
+
+        def update_cb(nodes: List[Node]):
+            prims = self._GetPrimitives(self.form.selected_nodes, prim_index)
+            old_values = [getattr(p, prop_name) for p in prims]
+            updated_value = GetMultiInt(set(old_values)) or 0
+            int_ctrl.SetValue(updated_value)
+
+        self.update_callbacks.append(update_cb)
 
     def ChoicePrimitiveControl(self, label: str, prop_name: str, prim_index: int,
                                choice_items: List[ChoiceItem]):
@@ -588,28 +595,32 @@ class PrimitiveGrid(FieldGrid):
                                                                  prop_name, value)
             self.form.controller.end_group()
 
-        prims = self._GetPrimitives(self.form.selected_nodes, prim_index)
-        old_values = set(getattr(prim, prop_name) for prim in prims)
-
-        # TODO update this somewhere else
         texts = [item.text for item in choice_items]
         choice_ctrl = wx.Choice(self, choices=texts)
 
-        # Set commonly selected item
-        if len(old_values) == 1:
-            # Find choice item with given value
-            sel_ind = None
-            old_value = next(iter(old_values))
-            for index, item in enumerate(choice_items):
-                if item.value == old_value:
-                    sel_ind = index
-                    break
-            else:
-                assert False, "This should never happen"
-            choice_ctrl.SetSelection(sel_ind)
-
         choice_ctrl.Bind(wx.EVT_CHOICE, callback)
         self.AppendControl(label, choice_ctrl)
+
+        def update_cb(nodes):
+            prims = self._GetPrimitives(nodes, prim_index)
+            old_values = set(getattr(prim, prop_name) for prim in prims)
+
+            # Set commonly selected item
+            if len(old_values) == 1:
+                # Find choice item with given value
+                sel_ind = None
+                old_value = next(iter(old_values))
+                for index, item in enumerate(choice_items):
+                    if item.value == old_value:
+                        sel_ind = index
+                        break
+                else:
+                    assert False, "This should never happen"
+                choice_ctrl.SetSelection(sel_ind)
+            else:
+                # Different values; set dropdown to none
+                choice_ctrl.SetSelection(wx.NOT_FOUND)
+        self.update_callbacks.append(update_cb)
 
     def _GetPrimitives(self, nodes, prim_index):
         if prim_index == -1:
@@ -636,7 +647,6 @@ class PrimitiveSection(wx.Window):
             one_prim = com_shape.items[prim_index][0]
             subtitle_text = '{name} ({idx})'.format(idx=prim_index + 1, name=one_prim.name)
             subsection = PrimitiveGrid(self, node_form)
-            subsection.InitLayout()
             self.subsections.append(subsection)
             subsection.AppendSubtitle(subtitle_text)
             if isinstance(one_prim, TRectanglePrim):
@@ -659,7 +669,6 @@ class PrimitiveSection(wx.Window):
         subtitle_text = 'Text'
         subsection = PrimitiveGrid(self, node_form)
         self.subsections.append(subsection)
-        subsection.InitLayout()
         subsection.AppendSubtitle(subtitle_text)
         # Create text primitive
         subsection.IntPrimitiveControl('font size', 'font_size', -1, min_=1, max_=100)
@@ -668,14 +677,18 @@ class PrimitiveSection(wx.Window):
         subsection.ColorPrimitiveControl('highlight color', 'highlight opacity', 'bg_color',
                                          -1)
         subsection.ChoicePrimitiveControl('font family', 'font_family', -1, FONT_FAMILY_CHOICES)
+        subsection.ChoicePrimitiveControl('font style', 'font_style', -1, FONT_STYLE_CHOICES)
+        subsection.ChoicePrimitiveControl('font weight', 'font_weight', -1, FONT_WEIGHT_CHOICES)
+        subsection.ChoicePrimitiveControl('alignment', 'alignment', -1, TEXT_ALIGNMENT_CHOICES)
 
         for subsection in self.subsections:
             sizer.Add(subsection, sizerflags)
         self.SetSizer(sizer)
 
     def UpdatePrimitiveValues(self):
+        selected_nodes = self.form.selected_nodes
         for subsection in self.subsections:
-            subsection.UpdatePrimitiveValues(self.form.selected_nodes)
+            subsection.UpdateValues(selected_nodes)
 
 
 class EditPanelForm(ScrolledPanel):
@@ -714,6 +727,10 @@ class EditPanelForm(ScrolledPanel):
         self.self_changes = False
         self._selected_idx = set()
 
+    # OVerride the ScrolledPanel behavior of jumping to the child that has the focus
+    def OnChildFocus(self, evt):
+        pass
+
     @property
     def selected_idx(self):
         return self._selected_idx
@@ -722,10 +739,10 @@ class EditPanelForm(ScrolledPanel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizerflags = wx.SizerFlags().Expand()
 
-        sizer.Add(self._title, sizerflags)
+        sizer.Add(self._title, sizerflags.Border(wx.BOTTOM, 5))
+        sizer.Add(wx.StaticLine(self), sizerflags)
 
         for section in self.sections:
-            section.InitLayout()
             sizer.Add(section, sizerflags)
         self.CreateControls()
 
@@ -1027,7 +1044,6 @@ class NodeForm(EditPanelForm):
         selected = self.compositeShapesDropDown.GetStringSelection()
 
         nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
-        shapes = self.controller.get_composite_shape_list(self.net_index)
         self.self_changes = True
         self.controller.start_group()
         shapei = self.compShapeNames.index(selected)
@@ -1162,6 +1178,47 @@ class StoichInfo:
     stoich: float
 
 
+'''Section for editing stoichiometry, includes only reactants or only products,
+so there are two of this.'''
+class StoichSection(FieldGrid):
+    def __init__(self, parent, form: ReactionForm, stoichs: List[StoichInfo], reai: int,
+                 is_reactants: bool):
+        super().__init__(parent, form)
+
+        self._reactant_subtitle = self.AppendSubtitle('Reactants' if is_reactants else 'Products')
+        for stoich in stoichs:
+            stoich_ctrl = self.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
+            node_id = self.form.controller.get_node_id(self.form.net_index, stoich.nodei)
+            self.AppendControl(node_id, stoich_ctrl)
+            if is_reactants:
+                inner_callback = self.MakeSetSrcStoichFunction(reai, stoich.nodei)
+            else:
+                inner_callback = self.MakeSetDestStoichFunction(reai, stoich.nodei)
+            callback = self.MakeFloatCtrlFunction(stoich_ctrl.GetId(), inner_callback, (0, None),
+                                                    left_incl=False)
+            stoich_ctrl.Bind(wx.EVT_TEXT, callback)
+
+    def MakeSetSrcStoichFunction(self, reai: int, nodei: int):
+        def ret(val: float):
+            self.form.self_changes = True
+            self.form.controller.start_group()
+            self.form.controller.set_src_node_stoich(self.form.net_index, reai, nodei, val)
+            post_event(DidModifyReactionEvent(list(self.form.selected_idx)))
+            self.form.controller.end_group()
+
+        return ret
+
+    def MakeSetDestStoichFunction(self, reai: int, nodei: int):
+        def ret(val: float):
+            self.form.controller.start_group()
+            self.form.self_changes = True
+            self.form.controller.set_dest_node_stoich(self.form.net_index, reai, nodei, val)
+            post_event(DidModifyReactionEvent(list(self.form.selected_idx)))
+            self.form.controller.end_group()
+
+        return ret
+
+
 class ReactionForm(EditPanelForm):
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
@@ -1192,7 +1249,7 @@ class ReactionForm(EditPanelForm):
         self.main_section.AppendControl('line width', self.stroke_width_ctrl)
 
         # Whether the center position should be autoly set?
-        self.auto_center_ctrl = wx.CheckBox(self)
+        self.auto_center_ctrl = wx.CheckBox(self.main_section)
         self.auto_center_ctrl.SetValue(True)
         self.auto_center_ctrl.Bind(wx.EVT_CHECKBOX, self._AutoCenterCallback)
         self.main_section.AppendControl('auto center pos', self.auto_center_ctrl)
@@ -1224,6 +1281,8 @@ class ReactionForm(EditPanelForm):
             self.main_section, style=wx.LB_NEEDED_SB, size=(-1, 100))
         self.main_section.AppendControl('modifiers', self.modifiers_ctrl)
         self.modifiers_ctrl.Bind(wx.EVT_CHECKLISTBOX, self.OnModifierCheck)
+        self.reactants_section = None
+        self.products_section = None
 
     def _OnIdText(self, evt):
         """Callback for the ID control."""
@@ -1424,78 +1483,32 @@ class ReactionForm(EditPanelForm):
 
     def _UpdateStoichFields(self, reai: int, reactants: List[StoichInfo], products: List[StoichInfo]):
         sizer = self.GetSizer()
+        sizerflags = wx.SizerFlags().Expand()
 
         self.Freeze()
-        # TODO
-        # if self._reactant_subtitle is not None:
-        #     start_row = sizer.GetItemPosition(self._reactant_subtitle).GetRow() - 2
+        if self.reactants_section is not None:
+            sizer.Detach(self.reactants_section)
+            self.RemoveChild(self.reactants_section)
+            sizer.Detach(self.products_section)
+            self.RemoveChild(self.products_section)
+            self.reactants_section.Destroy()
+            self.products_section.Destroy()
 
-        #     index = 0
-        #     while index < sizer.GetItemCount():
-        #         pos = sizer.GetItemPosition(index)
-        #         if pos.GetRow() >= start_row:
-        #             item = sizer.GetItem(index)
-        #             if item.IsWindow():
-        #                 window = item.GetWindow()
-        #                 winid = window.GetId()
-        #                 if winid in self.badges:
-        #                     del self.badges[winid]
-        #                     del self.labels[winid]
-        #                 item.GetWindow().Destroy()
-        #             else:
-        #                 sizer.Remove(index)
-        #         else:
-        #             index += 1
+        if len(reactants) != 0:
+            assert len(products) != 0
+            self.reactants_section = StoichSection(self, self, reactants, reai, True)
+            self.products_section = StoichSection(self, self, products, reai, False)
+            sizer.Add(self.reactants_section, sizerflags)
+            sizer.Add(self.products_section, sizerflags)
+        else:
+            self.reactants_section = None
+            self.products_section = None
+            # Both reactants and products are empty; don't add
+            assert len(products) == 0
 
-        #     self._reactant_subtitle = None
-        #     self._product_subtitle = None
-        #     # reset rows
-        #     sizer.SetRows(start_row)
-
-        # if len(reactants) != 0:
-        #     # add back the fields
-        #     self._reactant_subtitle = self.main_section.AppendSubtitle('Reactants')
-        #     for stoich in reactants:
-        #         stoich_ctrl = self.main_section.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
-        #         node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
-        #         self.main_section.AppendControl(node_id, stoich_ctrl)
-        #         inner_callback = self.MakeSetSrcStoichFunction(reai, stoich.nodei)
-        #         callback = self.main_section.MakeFloatCtrlFunction(stoich_ctrl.GetId(), inner_callback, (0, None),
-        #                                                left_incl=False)
-        #         stoich_ctrl.Bind(wx.EVT_TEXT, callback)
-
-        #     self._product_subtitle = self.main_section.AppendSubtitle('Products')
-        #     for stoich in products:
-        #         stoich_ctrl = self.main_section.CreateTextCtrl(value=no_rzeros(stoich.stoich, precision=2))
-        #         node_id = self.controller.get_node_id(self.net_index, stoich.nodei)
-        #         self.main_section.AppendControl(node_id, stoich_ctrl)
-        #         inner_callback = self.MakeSetDestStoichFunction(reai, stoich.nodei)
-        #         callback = self.main_section.MakeFloatCtrlFunction(
-        #             stoich_ctrl.GetId(), inner_callback, (0, None), left_incl=False)
-        #         stoich_ctrl.Bind(wx.EVT_TEXT, callback)
 
         self.Layout()
         self.Thaw()
-
-    def MakeSetSrcStoichFunction(self, reai: int, nodei: int):
-        def ret(val: float):
-            self.self_changes = True
-            self.controller.start_group()
-            self.controller.set_src_node_stoich(self.net_index, reai, nodei, val)
-            post_event(DidModifyReactionEvent(list(self._selected_idx)))
-            self.controller.end_group()
-
-        return ret
-
-    def MakeSetDestStoichFunction(self, reai: int, nodei: int):
-        def ret(val: float):
-            self.controller.start_group()
-            self.self_changes = True
-            self.controller.set_dest_node_stoich(self.net_index, reai, nodei, val)
-            post_event(DidModifyReactionEvent(list(self._selected_idx)))
-            self.controller.end_group()
-
-        return ret
 
     def _GetSrcStoichs(self, reai: int):
         ids = self.controller.get_list_of_src_indices(self.net_index, reai)

@@ -156,8 +156,9 @@ class EditPanel(fnb.FlatNotebook):
         # field in a notebook page after it is added.
         self.GetSizer().Layout()
 
-        # restore focus, since otherwise for some reason the newly added page gets the focus
-        focused.SetFocus()
+        if focused:
+            # restore focus, since otherwise for some reason the newly added page gets the focus
+            focused.SetFocus()
 
         # need to manually show this for some reason
         if not should_show_nodes and not should_show_reactions and not should_show_comps:

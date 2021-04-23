@@ -2,7 +2,7 @@
 from __future__ import annotations
 # pylint: disable=maybe-no-member
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, auto
 import wx
 import copy
 import math
@@ -12,7 +12,6 @@ from scipy.special import comb
 from typing import Any, Callable, ClassVar, Container, List, NamedTuple, Optional, Sequence, Set, Tuple
 from collections import namedtuple
 
-from wx.core import FONTFAMILY_DEFAULT
 from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
 from ..config import get_setting, get_theme, Color, Font
@@ -60,10 +59,37 @@ class ChoiceItem(NamedTuple):
     text: str
 
 
+class TextAlignment(Enum):
+    LEFT = auto()
+    CENTER = auto()
+    RIGHT = auto()
+
+
 FONT_FAMILY_CHOICES = [
-    ChoiceItem(wx.FONTFAMILY_DEFAULT, 'default'),
-    ChoiceItem(wx.FONTFAMILY_MODERN, 'modern'),
-    ChoiceItem(wx.FONTFAMILY_ROMAN, 'Roman'),
+    ChoiceItem(wx.FONTFAMILY_SWISS, 'sans-serif'),
+    ChoiceItem(wx.FONTFAMILY_ROMAN, 'serif'),
+    ChoiceItem(wx.FONTFAMILY_MODERN, 'monospace'),
+    # ChoiceItem(wx.FONTFAMILY_DEFAULT, 'default'),
+    # ChoiceItem(wx.FONTFAMILY_DECORATIVE, 'decorative'),
+    # ChoiceItem(wx.FONTFAMILY_SCRIPT, 'script'),
+]
+
+FONT_STYLE_CHOICES = [
+    ChoiceItem(wx.FONTSTYLE_NORMAL, 'normal'),
+    ChoiceItem(wx.FONTSTYLE_ITALIC, 'italic'),
+    # ChoiceItem(wx.FONTSTYLE_SLANT, 'slant'),
+]
+
+FONT_WEIGHT_CHOICES = [
+    ChoiceItem(wx.FONTWEIGHT_MEDIUM, 'normal'),
+    ChoiceItem(wx.FONTWEIGHT_BOLD, 'bold'),
+    ChoiceItem(wx.FONTWEIGHT_LIGHT, 'light'),
+]
+
+TEXT_ALIGNMENT_CHOICES = [
+    ChoiceItem(TextAlignment.LEFT, 'left'),
+    ChoiceItem(TextAlignment.CENTER, 'center'),
+    ChoiceItem(TextAlignment.RIGHT, 'right'),
 ]
 
 
@@ -73,10 +99,10 @@ class TTextPrim(TPrimitive):
     bg_color: Color = Color(255, 255, 0, 0)
     font_color: Color = Color(0, 0, 0, 255)
     font_size: int = 11
-    font_family: int = wx.FONTFAMILY_DEFAULT
+    font_family: int = wx.FONTFAMILY_SWISS
     font_style: int = wx.FONTSTYLE_NORMAL
     font_weight: int = wx.FONTWEIGHT_MEDIUM
-    alignment: str = "center"
+    alignment: TextAlignment = TextAlignment.CENTER
 
 
 class TCompositeShape:
@@ -93,9 +119,6 @@ class TCompositeShape:
 class RectData:
     position: Vec2
     size: Vec2
-
-
-ALIGNMENT_CHOICES = ("left align", "center", "right align")
 
 
 class Node(RectData):

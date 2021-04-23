@@ -19,7 +19,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, TextAlignment
 from .geometry import (
     Rect,
     Vec2,
@@ -152,7 +152,7 @@ class NodeElement(CanvasElement):
         # aligned_border_width = max(even_round(
         #     self.node.border_width * boundaryFactor), 2)
         width, height = s_aligned_rect.size
-        
+
         assert self.node.composite_shape is not None
         draw_composite_shape(
             gc,
@@ -276,7 +276,7 @@ class ReactionCenter(CanvasElement):
 
     def on_paint(self, gc: wx.GraphicsContext):
         if not self.parent.selected:
-           return
+            return
 
         # draw centroid
         color = self.parent.reaction.fill_color
@@ -1221,9 +1221,9 @@ def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node
         gc.PushState()
         apply_transform_to_gc(gc, transform)
         #if text: Draw_text
-        #if isinstance(primitive, TTextPrim):
+        # if isinstance(primitive, TTextPrim):
         draw_fn_map[primitive.__class__](gc, primitive)
-        
+
         gc.PopState()
     gc.PopState()
 
@@ -1232,34 +1232,35 @@ def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node
     draw_text_to_gc(gc, bounding_rect, node.id, node.composite_shape.text_item)
     gc.PopState()
 
+
 def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TTextPrim, TTransform]):
     primitive, transform = text_item
 
     # Maybe cache this?
     fg_color = primitive.font_color.to_wxcolour()
-    font = wx.Font(wx.FontInfo(primitive.font_size).Family(primitive.font_family))
+    font = wx.Font(wx.FontInfo(primitive.font_size)
+                   .Family(primitive.font_family)
+                   .Style(primitive.font_style)
+                   .Weight(primitive.font_weight))
     gfont = gc.CreateFont(font, fg_color)
     gc.SetFont(gfont)
     brush = gc.CreateBrush(wx.Brush(primitive.bg_color.to_wxcolour()))
 
     width, height = bounding_rect.size
     tw, th, _, _ = gc.GetFullTextExtent(
-           text_string)
+        text_string)
     # remaining x and y
     rx = width - tw
     ry = height - th
     text_pos = bounding_rect.position + transform.translation
 
-    if primitive.alignment =="left align":
+    if primitive.alignment == TextAlignment.LEFT:
         draw_pos = text_pos + Vec2(0, ry / 2)
-    elif primitive.alignment =="center":
+    elif primitive.alignment == TextAlignment.CENTER:
         draw_pos = text_pos + Vec2(rx, ry) / 2
-    elif primitive.alignment =="right align":
+    elif primitive.alignment == TextAlignment.RIGHT:
         draw_pos = text_pos + Vec2(rx, ry / 2)
     else:
         assert False, "This should not happen"
 
     gc.DrawText(text_string, draw_pos.x, draw_pos.y, brush)
-
-    
-    

@@ -19,7 +19,10 @@ sortedcontainers = "*"
 marshmallow = "*"
 commentjson = "*"
 networkx = "*"
-pillow = "*"
+tesbml = "*"
+tellurium = "*"
+lark = "*"
+libsbml = "*"
 
 [requires]
 python_version = "3.8"

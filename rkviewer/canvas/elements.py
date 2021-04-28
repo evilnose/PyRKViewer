@@ -1261,7 +1261,7 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
     # remaining x and y
     rx = width - tw
     ry = height - th
-    text_pos = bounding_rect.position + transform.translation
+    text_pos = bounding_rect.position + transform.translation.elem_mul(bounding_rect.size)
 
     if primitive.alignment == TextAlignment.LEFT:
         draw_pos = text_pos + Vec2(0, ry / 2)

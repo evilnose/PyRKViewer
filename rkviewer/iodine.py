@@ -64,6 +64,8 @@ shapeFactories = [
     CompositeShapeFactory([(hexFact, singletonTrans)], (textFact, singletonTrans), 'hexagon'),
     CompositeShapeFactory([(lineFact, singletonTrans)], (textFact, singletonTrans), 'line'),
     CompositeShapeFactory([(triangleFact, singletonTrans)], (textFact, singletonTrans), 'triangle'),
+    CompositeShapeFactory([], (textFact, singletonTrans), 'text-only'),
+    CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, TTransform(translation=Vec2(1, 1))), 'text outside'),
     CompositeShapeFactory([(circleFact, TTransform(scale=Vec2.repeat(0.5))),
                            (circleFact, TTransform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
                            (PrimitiveFactory(TRectanglePrim, fill_color=Color(255, 0, 0, 255)),

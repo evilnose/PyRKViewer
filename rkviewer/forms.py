@@ -1485,7 +1485,6 @@ class ReactionForm(EditPanelForm):
         sizerflags = wx.SizerFlags().Expand()
 
         self.Freeze()
-        print('freeze')
         if self.reactants_section is not None:
             sizer.Detach(self.reactants_section)
             sizer.Detach(self.products_section)

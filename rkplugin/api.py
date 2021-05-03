@@ -231,7 +231,6 @@ def logger() -> Logger:
     return _plugin_logger
 
 
-@contextmanager
 def group_action():
     """Context manager for doing a group operation in the _controller, for undo/redo purposes.
 
@@ -246,9 +245,7 @@ def group_action():
         >>> api.update_node(...)  # This is now a new action.
 
     """
-    _controller.start_group()
-    yield
-    _controller.end_group()
+    return _controller.group_action()
 
 
 def canvas_size() -> Vec2:
@@ -653,14 +650,13 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         floatingNode=floatingNode,
         lockNode=lockNode,
     )
-    _controller.start_group()
-    nodei = _controller.add_node_g(net_index, node)
-    _controller.set_node_fill_rgb(net_index, nodei, _to_wxcolour(fill_color))
-    _controller.set_node_fill_alpha(net_index, nodei, fill_color.alpha)
-    _controller.set_node_border_rgb(net_index, nodei, _to_wxcolour(border_color))
-    _controller.set_node_border_alpha(net_index, nodei, border_color.alpha)
-    _controller.set_node_border_width(net_index, nodei, border_width)
-    _controller.end_group()
+    with group_action():
+        nodei = _controller.add_node_g(net_index, node)
+        _controller.set_node_fill_rgb(net_index, nodei, _to_wxcolour(fill_color))
+        _controller.set_node_fill_alpha(net_index, nodei, fill_color.alpha)
+        _controller.set_node_border_rgb(net_index, nodei, _to_wxcolour(border_color))
+        _controller.set_node_border_alpha(net_index, nodei, border_color.alpha)
+        _controller.set_node_border_width(net_index, nodei, border_width)
     return nodei
 
 
@@ -857,18 +853,17 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
         bezierCurves=use_bezier,
     )
 
-    _controller.start_group()
-    reai = _controller.add_reaction_g(net_index, reaction)
-    # HACK set default handle positions. This should be computed by default_handle_positions()
-    # before constructing the Reaction object, but right now it only accepts a list of nodes. In
-    # the future modify default_handle_positions() to accept four lists: reactant rectangles and
-    # indices, and product rectangles and indices, since these are the only requisite parameters.
-    if auto_init_handles:
-        handle_positions = default_handle_positions(net_index, reai)
-        reaction.index = reai
-        _set_handle_positions(reaction, handle_positions)
+    with group_action():
+        reai = _controller.add_reaction_g(net_index, reaction)
+        # HACK set default handle positions. This should be computed by default_handle_positions()
+        # before constructing the Reaction object, but right now it only accepts a list of nodes. In
+        # the future modify default_handle_positions() to accept four lists: reactant rectangles and
+        # indices, and product rectangles and indices, since these are the only requisite parameters.
+        if auto_init_handles:
+            handle_positions = default_handle_positions(net_index, reai)
+            reaction.index = reai
+            _set_handle_positions(reaction, handle_positions)
 
-    _controller.end_group()
     return reai
 
 

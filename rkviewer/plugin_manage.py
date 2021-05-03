@@ -169,10 +169,8 @@ class PluginManager:
 Plugin!".format(handler_name)
 
         def ret(evt: CanvasEvent):
-            # self.controller.start_group()
             for plugin in self.plugins:
                 getattr(plugin, handler_name)(evt)
-            # self.controller.end_group()
 
         return ret
 
@@ -187,9 +185,8 @@ Plugin!".format(handler_name)
 
     def make_command_callback(self, command: CommandPlugin) -> Callable[[], None]:
         def command_cb():
-            self.controller.start_group()
-            command.run()
-            self.controller.end_group()
+            with self.controller.group_action():
+                command.run()
 
         return command_cb
 

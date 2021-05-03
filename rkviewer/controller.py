@@ -1,6 +1,7 @@
 """Implementation of a controller.
 """
 # pylint: disable=maybe-no-member
+from contextlib import contextmanager
 from numpy.core.fromnumeric import shape
 import wx
 import traceback
@@ -49,7 +50,15 @@ class Controller(IController):
         self.group_depth = 0
         self.initial_position = wx.Point (0,0)
 
-    def start_group(self) -> bool:
+    @contextmanager
+    def group_action(self):
+        try:
+            self._start_group()
+            yield
+        finally:
+            self._end_group()
+
+    def _start_group(self) -> bool:
         self.group_depth += 1
 
         # already in a group before; don't start startGroup()
@@ -58,7 +67,7 @@ class Controller(IController):
         iod.startGroup()
         return True
 
-    def end_group(self) -> bool:
+    def _end_group(self) -> bool:
         assert self.group_depth > 0
         self.group_depth -= 1
 
@@ -110,22 +119,21 @@ class Controller(IController):
 
         The 'g' suffix indicates that this operation creates its own group
         '''
-        self.start_group()
-        iod.addNode(neti, node.id, node.position.x, node.position.y, node.size.x, node.size.y, True) # True = floating species
-        nodei = iod.getNodeIndex(neti, node.id)
-        # iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
-        # iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
-        #                         node.fill_color.Green(), node.fill_color.Blue())
-        # iod.setNodeBorderColorAlpha(neti, nodei, node.border_color.Alpha() / 255)
-        # iod.setNodeBorderColorRGB(neti, nodei, node.border_color.Red(),
-        #                            node.border_color.Green(), node.border_color.Blue())
-        # iod.setNodeBorderWidth(neti, nodei, int(node.border_width))
-        iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
-        iod.setNodeFloatingStatus(neti, nodei, node.floatingNode)
-        iod.setNodeShapeIndex(neti, nodei, node.shape_index)
+        with self.group_action():
+            iod.addNode(neti, node.id, node.position.x, node.position.y, node.size.x, node.size.y, True) # True = floating species
+            nodei = iod.getNodeIndex(neti, node.id)
+            # iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
+            # iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
+            #                         node.fill_color.Green(), node.fill_color.Blue())
+            # iod.setNodeBorderColorAlpha(neti, nodei, node.border_color.Alpha() / 255)
+            # iod.setNodeBorderColorRGB(neti, nodei, node.border_color.Red(),
+            #                            node.border_color.Green(), node.border_color.Blue())
+            # iod.setNodeBorderWidth(neti, nodei, int(node.border_width))
+            iod.setCompartmentOfNode(neti, nodei, node.comp_idx)
+            iod.setNodeFloatingStatus(neti, nodei, node.floatingNode)
+            iod.setNodeShapeIndex(neti, nodei, node.shape_index)
 
-        post_event(DidAddNodeEvent(nodei))
-        self.end_group()
+            post_event(DidAddNodeEvent(nodei))
         return nodei
 
     def set_application_position(self, pos: wx.Point):
@@ -164,14 +172,13 @@ class Controller(IController):
         if len(compartment.nodes) != 0:
             raise ValueError('The "nodes" list for a newly added compartment should be empty. '
                              'This is to avoid implicit moving of nodes between compartments.')
-        self.start_group()
-        compi = iod.addCompartment(neti, compartment.id, *compartment.position, *compartment.size)
-        iod.setCompartmentFillColor(neti, compi, self.wx_to_tcolor(compartment.fill))
-        iod.setCompartmentOutlineColor(neti, compi, self.wx_to_tcolor(compartment.border))
-        iod.setCompartmentOutlineThickness(neti, compi, compartment.border_width)
-        iod.setCompartmentVolume(neti, compi, compartment.volume)
-        post_event(DidAddCompartmentEvent(compi))
-        self.end_group()
+        with self.group_action():
+            compi = iod.addCompartment(neti, compartment.id, *compartment.position, *compartment.size)
+            iod.setCompartmentFillColor(neti, compi, self.wx_to_tcolor(compartment.fill))
+            iod.setCompartmentOutlineColor(neti, compi, self.wx_to_tcolor(compartment.border))
+            iod.setCompartmentOutlineThickness(neti, compi, compartment.border_width)
+            iod.setCompartmentVolume(neti, compi, compartment.volume)
+            post_event(DidAddCompartmentEvent(compi))
         return compi
     
     @iod_setter
@@ -267,31 +274,30 @@ class Controller(IController):
 
     def add_reaction_g(self, neti: int, reaction: Reaction) -> int:
         """Try create a reaction."""
-        self.start_group()
-        iod.createReaction(neti, reaction.id, reaction.sources, reaction.targets)
-        reai = iod.getReactionIndex(neti, reaction.id)
+        with self.group_action():
+            iod.createReaction(neti, reaction.id, reaction.sources, reaction.targets)
+            reai = iod.getReactionIndex(neti, reaction.id)
 
-        for sidx in reaction.sources:
-            iod.setReactionSrcNodeStoich(neti, reai, sidx, 1.0)
+            for sidx in reaction.sources:
+                iod.setReactionSrcNodeStoich(neti, reai, sidx, 1.0)
 
-        for tidx in reaction.targets:
-            iod.setReactionDestNodeStoich(neti, reai, tidx, 1.0)
+            for tidx in reaction.targets:
+                iod.setReactionDestNodeStoich(neti, reai, tidx, 1.0)
 
-        iod.setReactionFillColorRGB(neti, reai,
-                                    reaction.fill_color.Red(),
-                                    reaction.fill_color.Green(),
-                                    reaction.fill_color.Blue())
-        for (gi, nodei), handle in zip(gchain(reaction.sources, reaction.targets), reaction.handles):
-            pos = handle.tip
-            if gi == 0:
-                iod.setReactionSrcNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
-            else:
-                iod.setReactionDestNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
+            iod.setReactionFillColorRGB(neti, reai,
+                                        reaction.fill_color.Red(),
+                                        reaction.fill_color.Green(),
+                                        reaction.fill_color.Blue())
+            for (gi, nodei), handle in zip(gchain(reaction.sources, reaction.targets), reaction.handles):
+                pos = handle.tip
+                if gi == 0:
+                    iod.setReactionSrcNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
+                else:
+                    iod.setReactionDestNodeHandlePosition(neti, reai, nodei, pos.x, pos.y)
 
-        cpos = reaction.src_c_handle.tip
-        iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
-        post_event(DidAddReactionEvent(reai))
-        self.end_group()
+            cpos = reaction.src_c_handle.tip
+            iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
+            post_event(DidAddReactionEvent(reai))
         return reai
 
     @iod_setter
@@ -407,9 +413,7 @@ class Controller(IController):
 
     @iod_setter
     def set_compartment_of_node(self, neti: int, nodei: int, compi: int):
-        self.start_group()
         iod.setCompartmentOfNode(neti, nodei, compi)
-        self.end_group()
 
     def get_compartment_of_node(self, neti: int, nodei: int) -> int:
         return iod.getCompartmentOfNode(neti, nodei)

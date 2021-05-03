@@ -20,20 +20,8 @@ class IController(abc.ABC):
     some user input. If the action tried in such a method succeeds, the Controller
     should request the view to be redrawn; otherwise, an error message might be shown.
     """
-
     @abc.abstractmethod
-    def start_group(self) -> bool:
-        """Try to signal start of group operation"""
-        pass
-
-    @abc.abstractmethod
-    def end_group(self) -> bool:
-        """Try to signal end of group operation"""
-        pass
-
-    @abc.abstractmethod
-    def in_group(self) -> bool:
-        """Returns whether the controller is in the middle of a group operation."""
+    def group_action(self) -> Any:
         pass
 
     @abc.abstractmethod

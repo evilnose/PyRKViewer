@@ -733,17 +733,16 @@ class Canvas(wx.ScrolledWindow):
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id = self._GetUniqueName(node.id, [n.id for n in self._nodes])
 
-                self.controller.start_group()
-                nodei = self.controller.add_node_g(self._net_index, node)
-                fill_color=get_theme('node_fill')
-                border_color=get_theme('node_border')
-                border_width=get_theme('node_border_width')
-                self.controller.set_node_fill_rgb(self._net_index, nodei, fill_color)
-                self.controller.set_node_fill_alpha(self._net_index, nodei, fill_color.Alpha())
-                self.controller.set_node_border_rgb(self._net_index, nodei, border_color)
-                self.controller.set_node_border_alpha(self._net_index, nodei, border_color.Alpha())
-                self.controller.set_node_border_width(self._net_index, nodei, border_width)
-                self.controller.end_group()
+                with self.controller.group_action():
+                    nodei = self.controller.add_node_g(self._net_index, node)
+                    fill_color=get_theme('node_fill')
+                    border_color=get_theme('node_border')
+                    border_width=get_theme('node_border_width')
+                    self.controller.set_node_fill_rgb(self._net_index, nodei, fill_color)
+                    self.controller.set_node_fill_alpha(self._net_index, nodei, fill_color.Alpha())
+                    self.controller.set_node_border_rgb(self._net_index, nodei, border_color)
+                    self.controller.set_node_border_alpha(self._net_index, nodei, border_color.Alpha())
+                    self.controller.set_node_border_width(self._net_index, nodei, border_width)
 
                 index = self.controller.get_node_index(self._net_index, node.id)
                 with self._SelectGroupEvent():
@@ -939,13 +938,12 @@ class Canvas(wx.ScrolledWindow):
 
     def CreateAliases(self, nodes: List[Node]):
         new_indices = set()
-        self.controller.start_group()
-        for node in nodes:
-            new_idx = self.controller.add_alias_node(self.net_index, node.index,
-                                                     node.position + Vec2.repeat(20),
-                                                     node.size)
-            new_indices.add(new_idx)
-        self.controller.end_group()
+        with self.controller.group_action():
+            for node in nodes:
+                new_idx = self.controller.add_alias_node(self.net_index, node.index,
+                                                        node.position + Vec2.repeat(20),
+                                                        node.size)
+                new_indices.add(new_idx)
         self.sel_nodes_idx.set_item(new_indices)
 
     def GetBoundingRect(self) -> Optional[Rect]:
@@ -1732,18 +1730,16 @@ depend on it.".format(bound_node.id))
                                     .format(bound_node.id, node_idx))
                 return
 
-        self.controller.start_group()
-        sel_comp_idx = self.sel_compartments_idx.item_copy()
-        for index in sel_reactions_idx:
-            self.controller.delete_reaction(self._net_index, index)
-        for index in sel_nodes_idx:
-            self.controller.delete_node(self._net_index, index)
-        for index in sel_comp_idx:
-            self.controller.delete_compartment(self._net_index, index)
-        post_event(DidDeleteEvent(node_indices=sel_nodes_idx, reaction_indices=sel_reactions_idx,
-                                  compartment_indices=sel_comp_idx))
-
-        self.controller.end_group()
+        with self.controller.group_action():
+            sel_comp_idx = self.sel_compartments_idx.item_copy()
+            for index in sel_reactions_idx:
+                self.controller.delete_reaction(self._net_index, index)
+            for index in sel_nodes_idx:
+                self.controller.delete_node(self._net_index, index)
+            for index in sel_comp_idx:
+                self.controller.delete_compartment(self._net_index, index)
+            post_event(DidDeleteEvent(node_indices=sel_nodes_idx, reaction_indices=sel_reactions_idx,
+                                    compartment_indices=sel_comp_idx))
 
     def SelectAll(self):
         with self._SelectGroupEvent():
@@ -1836,16 +1832,14 @@ depend on it.".format(bound_node.id))
         pasted_ids = set()
         all_ids = {n.id for n in self._nodes}
 
-        self.controller.start_group()
-        # get unique IDs
-        for node in self._copied_nodes:
-            node.id = self._GetUniqueName(node.id, pasted_ids, all_ids)
-            node.position += Vec2.repeat(20)
-            pasted_ids.add(node.id)
-            self._nodes.append(node)  # add this for the event handlers to see
-            self.controller.add_node_g(self._net_index, node)
-
-        self.controller.end_group()  # calls UpdateMultiSelect in a moment
+        with self.controller.group_action():
+            # get unique IDs
+            for node in self._copied_nodes:
+                node.id = self._GetUniqueName(node.id, pasted_ids, all_ids)
+                node.position += Vec2.repeat(20)
+                pasted_ids.add(node.id)
+                self._nodes.append(node)  # add this for the event handlers to see
+                self.controller.add_node_g(self._net_index, node)
         # update selection *after* end_group(), so as to make sure the canvas is property reset
         # and updated. For example, if it is not, then the ID of some nodes may be 0 as they are
         # uninitialized.

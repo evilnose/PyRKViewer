@@ -311,11 +311,10 @@ class ReactionCenter(CanvasElement):
         ctrl = self.parent.controller
         neti = self.parent.canvas.net_index
         reai = self.parent.reaction.index
-        ctrl.start_group()
-        ctrl.set_reaction_center(neti, reai, self.parent.reaction.center_pos)
-        ctrl.set_center_handle(neti, reai, self.parent.reaction.src_c_handle.tip)
-        post_event(DidCommitDragEvent())
-        ctrl.end_group()
+        with ctrl.group_action():
+            ctrl.set_reaction_center(neti, reai, self.parent.reaction.center_pos)
+            ctrl.set_center_handle(neti, reai, self.parent.reaction.src_c_handle.tip)
+            post_event(DidCommitDragEvent())
         self._moved = False
         return True
 
@@ -392,10 +391,9 @@ class ReactionElement(CanvasElement):
             self.bhandles.append(el)
 
         def centroid_handle_dropped(p: Vec2):
-            ctrl.start_group()
-            ctrl.set_center_handle(neti, reai, reaction.src_c_handle.tip)
-            post_event(DidCommitDragEvent())
-            ctrl.end_group()
+            with ctrl.group_action():
+                ctrl.set_center_handle(neti, reai, reaction.src_c_handle.tip)
+                post_event(DidCommitDragEvent())
 
         src_bh = BezierHandle(reaction.src_c_handle, handle_layer,
                               lambda _: bezier.src_handle_moved(),
@@ -934,17 +932,16 @@ class SelectBox(CanvasElement):
                 self._commit_move()
         elif self._mode == SelectBox.Mode.RESIZING:
             assert not self._did_move
-            self.controller.start_group()
-            for node in self.peripheral_nodes:
-                self.controller.move_node(self.net_index, node.index, node.position)
-            for node in self.nodes:
-                self.controller.move_node(self.net_index, node.index, node.position)
-                self.controller.set_node_size(self.net_index, node.index, node.size)
-            for comp in self.compartments:
-                self.controller.move_compartment(self.net_index, comp.index, comp.position)
-                self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
-                post_event(DidCommitDragEvent())
-            self.controller.end_group()
+            with self.controller.group_action():
+                for node in self.peripheral_nodes:
+                    self.controller.move_node(self.net_index, node.index, node.position)
+                for node in self.nodes:
+                    self.controller.move_node(self.net_index, node.index, node.position)
+                    self.controller.set_node_size(self.net_index, node.index, node.size)
+                for comp in self.compartments:
+                    self.controller.move_compartment(self.net_index, comp.index, comp.position)
+                    self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
+                    post_event(DidCommitDragEvent())
 
             # Need to do this in case _special_mode == NOT_CONTAINED, so that the mouse has now
             # left the handle. on_mouse_leave is not triggered because it's considered to be dragging.
@@ -1151,29 +1148,28 @@ class SelectBox(CanvasElement):
         self._commit_move()
 
     def _commit_move(self):
-        self.controller.start_group()
-        for node in chain(self.nodes, self.peripheral_nodes):
-            self.controller.move_node(self.net_index, node.index, node.position)
+        with self.controller.group_action():
+            for node in chain(self.nodes, self.peripheral_nodes):
+                self.controller.move_node(self.net_index, node.index, node.position)
 
-        for comp in self.compartments:
-            self.controller.move_compartment(
-                self.net_index, comp.index, comp.position)
+            for comp in self.compartments:
+                self.controller.move_compartment(
+                    self.net_index, comp.index, comp.position)
 
-        if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
-            compi = self.canvas.InWhichCompartment(self.nodes)
-            old_compi = self.nodes[0].comp_idx
-            if compi != old_compi:
-                for node in self.nodes:
-                    self.controller.set_compartment_of_node(
-                        self.net_index, node.index, compi)
-                post_event(DidChangeCompartmentOfNodesEvent(
-                    node_indices=[n.index for n in self.nodes],
-                    old_compi=old_compi,
-                    new_compi=compi
-                ))
+            if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
+                compi = self.canvas.InWhichCompartment(self.nodes)
+                old_compi = self.nodes[0].comp_idx
+                if compi != old_compi:
+                    for node in self.nodes:
+                        self.controller.set_compartment_of_node(
+                            self.net_index, node.index, compi)
+                    post_event(DidChangeCompartmentOfNodesEvent(
+                        node_indices=[n.index for n in self.nodes],
+                        old_compi=old_compi,
+                        new_compi=compi
+                    ))
 
-        post_event(DidCommitDragEvent())
-        self.controller.end_group()
+            post_event(DidCommitDragEvent())
 
 
 def primitive_peninfo(color: Color, width: float, is_alias: bool):

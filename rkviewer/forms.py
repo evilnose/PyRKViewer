@@ -474,14 +474,13 @@ class PrimitiveGrid(FieldGrid):
             old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
 
             self.form.self_changes = True
-            self.form.controller.start_group()
-            for i, nodei in enumerate(node_indices):
-                # only update the RGB, not alpha
-                old_color = old_colors[i]
-                new_color = Color(value.Red(), value.Green(), value.Blue(), old_color.Alpha())
-                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
-                                                                 prop_name, new_color)
-            self.form.controller.end_group()
+            with self.form.controller.group_action():
+                for i, nodei in enumerate(node_indices):
+                    # only update the RGB, not alpha
+                    old_color = old_colors[i]
+                    new_color = Color(value.Red(), value.Green(), value.Blue(), old_color.Alpha())
+                    self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                    prop_name, new_color)
 
         def alpha_callback(value: float):
             node_indices = self.form.selected_idx
@@ -489,14 +488,13 @@ class PrimitiveGrid(FieldGrid):
             old_colors = [getattr(p, prop_name).to_wxcolour() for p in prims]
 
             self.form.self_changes = True
-            self.form.controller.start_group()
-            for i, nodei in enumerate(node_indices):
-                old_color = old_colors[i]
-                new_color = Color(old_color.Red(), old_color.Green(),
-                                  old_color.Blue(), int(255 * value))
-                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
-                                                                 prop_name, new_color)
-            self.form.controller.end_group()
+            with self.form.controller.group_action():
+                for i, nodei in enumerate(node_indices):
+                    old_color = old_colors[i]
+                    new_color = Color(old_color.Red(), old_color.Green(),
+                                    old_color.Blue(), int(255 * value))
+                    self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                    prop_name, new_color)
 
         ctrl, alpha_ctrl = self.CreateColorControl(label, alpha_label, color_callback, alpha_callback)
 
@@ -523,12 +521,11 @@ class PrimitiveGrid(FieldGrid):
             node_indices = self.form.selected_idx
 
             self.form.self_changes = True
-            self.form.controller.start_group()
-            for nodei in node_indices:
-                # only update the RGB, not alpha
-                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
-                                                                 prop_name, value)
-            self.form.controller.end_group()
+            with self.form.controller.group_action():
+                for nodei in node_indices:
+                    # only update the RGB, not alpha
+                    self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                    prop_name, value)
 
         # TODO update values not here
         text_ctrl = self.CreateTextCtrl()
@@ -554,12 +551,11 @@ class PrimitiveGrid(FieldGrid):
         def spin_callback(value: int):
             node_indices = self.form.selected_idx
             self.form.self_changes = True
-            self.form.controller.start_group()
-            for nodei in node_indices:
-                # only update the RGB, not alpha
-                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
-                                                                 prop_name, value)
-            self.form.controller.end_group()
+            with self.form.controller.group_action():
+                for nodei in node_indices:
+                    # only update the RGB, not alpha
+                    self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                    prop_name, value)
 
         def text_callback(value: str):
             if value:
@@ -588,11 +584,10 @@ class PrimitiveGrid(FieldGrid):
             index = e.GetInt()
             value = choice_items[index].value
             self.form.self_changes = True
-            self.form.controller.start_group()
-            for nodei in node_indices:
-                self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
-                                                                 prop_name, value)
-            self.form.controller.end_group()
+            with self.form.controller.group_action():
+                for nodei in node_indices:
+                    self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
+                                                                    prop_name, value)
 
         texts = [item.text for item in choice_items]
         choice_ctrl = wx.Choice(self, choices=texts)
@@ -901,10 +896,9 @@ class NodeForm(EditPanelForm):
             else:
                 # loop terminated fine. There is no duplicate ID
                 self.self_changes = True
-                self.controller.start_group()
-                self.controller.rename_node(self.net_index, nodei, new_id)
-                post_event(DidModifyNodesEvent([nodei]))
-                self.controller.end_group()
+                with self.controller.group_action():
+                    self.controller.rename_node(self.net_index, nodei, new_id)
+                    post_event(DidModifyNodesEvent([nodei]))
         self.main_section.SetValidationState(True, self.id_ctrl.GetId())
 
     def _OnPosText(self, evt):
@@ -938,22 +932,20 @@ class NodeForm(EditPanelForm):
             if node.position != clamped or pos != clamped:
                 self.self_changes = True
                 node.position = clamped
-                self.controller.start_group()
-                post_event(DidMoveNodesEvent(index_list, clamped - node.position, dragged=False))
-                self.controller.move_node(self.net_index, node.index, node.position)
-                self.controller.end_group()
+                with self.controller.group_action():
+                    post_event(DidMoveNodesEvent(index_list, clamped - node.position, dragged=False))
+                    self.controller.move_node(self.net_index, node.index, node.position)
         else:
             clamped = clamp_rect_pos(Rect(pos, self._bounding_rect.size), bounds)
             if self._bounding_rect.position != pos or pos != clamped:
                 offset = clamped - self._bounding_rect.position
                 self.self_changes = True
-                self.controller.start_group()
-                for node in nodes:
-                    node.position += offset
-                post_event(DidMoveNodesEvent(index_list, offset, dragged=False))
-                for node in nodes:
-                    self.controller.move_node(self.net_index, node.index, node.position)
-                self.controller.end_group()
+                with self.controller.group_action():
+                    for node in nodes:
+                        node.position += offset
+                    post_event(DidMoveNodesEvent(index_list, offset, dragged=False))
+                    for node in nodes:
+                        self.controller.move_node(self.net_index, node.index, node.position)
         self.main_section.SetValidationState(True, self.pos_ctrl.GetId())
 
     def _OnSizeText(self, evt):
@@ -1003,24 +995,23 @@ class NodeForm(EditPanelForm):
         if self._bounding_rect.size != clamped or size != clamped:
             ratio = clamped.elem_div(self._bounding_rect.size)
             self.self_changes = True
-            self.controller.start_group()
-            offsets = list()
-            for node in nodes:
-                rel_pos = node.position - self._bounding_rect.position
-                new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
-                offsets.append(new_pos - node.position)
-                node.position = new_pos
-                node.size = node.size.elem_mul(ratio)
-                # clamp so that nodes are always within compartment/bounds
-                node.position = clamp_rect_pos(node.rect, bounds)
+            with self.controller.group_action():
+                offsets = list()
+                for node in nodes:
+                    rel_pos = node.position - self._bounding_rect.position
+                    new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
+                    offsets.append(new_pos - node.position)
+                    node.position = new_pos
+                    node.size = node.size.elem_mul(ratio)
+                    # clamp so that nodes are always within compartment/bounds
+                    node.position = clamp_rect_pos(node.rect, bounds)
 
-            idx_list = list(self._selected_idx)
-            post_event(DidMoveNodesEvent(idx_list, offsets, dragged=False))
-            post_event(DidResizeNodesEvent(idx_list, ratio=ratio, dragged=False))
-            for node in nodes:
-                self.controller.move_node(self.net_index, node.index, node.position)
-                self.controller.set_node_size(self.net_index, node.index, node.size)
-            self.controller.end_group()
+                idx_list = list(self._selected_idx)
+                post_event(DidMoveNodesEvent(idx_list, offsets, dragged=False))
+                post_event(DidResizeNodesEvent(idx_list, ratio=ratio, dragged=False))
+                for node in nodes:
+                    self.controller.move_node(self.net_index, node.index, node.position)
+                    self.controller.set_node_size(self.net_index, node.index, node.size)
         self.main_section.SetValidationState(True, self.size_ctrl.GetId())
 
     def OnNodeStatusChoice(self, evt):
@@ -1033,24 +1024,22 @@ class NodeForm(EditPanelForm):
 
         nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         self.self_changes = True
-        self.controller.start_group()
-        for node in nodes:
-            self.controller.set_node_floating_status(self.net_index, node.index, floatingStatus)
-        post_event(DidModifyNodesEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for node in nodes:
+                self.controller.set_node_floating_status(self.net_index, node.index, floatingStatus)
+            post_event(DidModifyNodesEvent(list(self._selected_idx)))
 
     def OnCompositeShapes(self, evt):
         selected = self.compositeShapesDropDown.GetStringSelection()
 
         nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         self.self_changes = True
-        self.controller.start_group()
-        shapei = self.compShapeNames.index(selected)
-        for node in nodes:
-            self.controller.set_node_shape_index(self.net_index, node.index, shapei)
+        with self.controller.group_action():
+            shapei = self.compShapeNames.index(selected)
+            for node in nodes:
+                self.controller.set_node_shape_index(self.net_index, node.index, shapei)
 
-        post_event(DidModifyNodesEvent(list(self._selected_idx)))
-        self.controller.end_group()
+            post_event(DidModifyNodesEvent(list(self._selected_idx)))
 
         nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         self._UpdatePrimitiveFields()
@@ -1065,11 +1054,10 @@ class NodeForm(EditPanelForm):
 
         nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         self.self_changes = True
-        self.controller.start_group()
-        for node in nodes:
-            self.controller.set_node_locked_status(self.net_index, node.index, nodeLocked)
-        post_event(DidModifyNodesEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for node in nodes:
+                self.controller.set_node_locked_status(self.net_index, node.index, nodeLocked)
+            post_event(DidModifyNodesEvent(list(self._selected_idx)))
 
     def _UpdatePrimitiveFields(self):
         sizer: wx.Sizer = self.GetSizer()
@@ -1200,20 +1188,18 @@ class StoichSection(FieldGrid):
     def MakeSetSrcStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
             self.form.self_changes = True
-            self.form.controller.start_group()
-            self.form.controller.set_src_node_stoich(self.form.net_index, reai, nodei, val)
-            post_event(DidModifyReactionEvent(list(self.form.selected_idx)))
-            self.form.controller.end_group()
+            with self.form.controller.group_action():
+                self.form.controller.set_src_node_stoich(self.form.net_index, reai, nodei, val)
+                post_event(DidModifyReactionEvent(list(self.form.selected_idx)))
 
         return ret
 
     def MakeSetDestStoichFunction(self, reai: int, nodei: int):
         def ret(val: float):
-            self.form.controller.start_group()
-            self.form.self_changes = True
-            self.form.controller.set_dest_node_stoich(self.form.net_index, reai, nodei, val)
-            post_event(DidModifyReactionEvent(list(self.form.selected_idx)))
-            self.form.controller.end_group()
+            with self.form.controller.group_action():
+                self.form.self_changes = True
+                self.form.controller.set_dest_node_stoich(self.form.net_index, reai, nodei, val)
+                post_event(DidModifyReactionEvent(list(self.form.selected_idx)))
 
         return ret
 
@@ -1301,20 +1287,18 @@ class ReactionForm(EditPanelForm):
 
             # loop terminated fine. There is no duplicate ID
             self.self_changes = True
-            self.controller.start_group()
-            self.controller.rename_reaction(self.net_index, reai, new_id)
-            post_event(DidModifyReactionEvent(list(self._selected_idx)))
-            self.controller.end_group()
+            with self.controller.group_action():
+                self.controller.rename_reaction(self.net_index, reai, new_id)
+                post_event(DidModifyReactionEvent(list(self._selected_idx)))
             self.main_section.SetValidationState(True, ctrl_id)
 
     def _StrokeWidthCallback(self, width: float):
         reactions = [r for r in self.reactions if r.index in self._selected_idx]
         self.self_changes = True
-        self.controller.start_group()
-        for rxn in reactions:
-            self.controller.set_reaction_line_thickness(self.net_index, rxn.index, width)
-        post_event(DidModifyReactionEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for rxn in reactions:
+                self.controller.set_reaction_line_thickness(self.net_index, rxn.index, width)
+            post_event(DidModifyReactionEvent(list(self._selected_idx)))
 
     def OnRxnStatusChoice(self, evt):
         """Callback for the change reaction status, bezier curve or straight line."""
@@ -1327,11 +1311,10 @@ class ReactionForm(EditPanelForm):
 
         rxns = get_rxns_by_idx(self.reactions, self._selected_idx)
         self.self_changes = True
-        self.controller.start_group()
-        for rxn in rxns:
-            self.controller.set_reaction_bezier_curves(self.net_index, rxn.index, bezierCurves)
-        post_event(DidModifyReactionEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for rxn in rxns:
+                self.controller.set_reaction_bezier_curves(self.net_index, rxn.index, bezierCurves)
+            post_event(DidModifyReactionEvent(list(self._selected_idx)))
 
     def ModifierTipCallback(self, evt):
         """Callback for the change reaction status, bezier curve or straight line."""
@@ -1347,11 +1330,10 @@ class ReactionForm(EditPanelForm):
 
         rxns = get_rxns_by_idx(self.reactions, self._selected_idx)
         self.self_changes = True
-        self.controller.start_group()
-        for rxn in rxns:
-            self.controller.set_modifier_tip_style(self.net_index, rxn.index, entry)
-        post_event(DidModifyReactionEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for rxn in rxns:
+                self.controller.set_modifier_tip_style(self.net_index, rxn.index, entry)
+            post_event(DidModifyReactionEvent(list(self._selected_idx)))
 
     def _AutoCenterCallback(self, evt):
         checked = evt.GetInt()
@@ -1363,15 +1345,14 @@ class ReactionForm(EditPanelForm):
         if checked:
             self.center_pos_ctrl.Disable()
             self.center_pos_ctrl.ChangeValue('')
-            self.controller.start_group()
-            self.controller.set_reaction_center(self.net_index, reaction.index, None)
-            # Move centroid handle along if centroid changed.
-            if reaction.center_pos is not None:
-                offset = centroid - reaction.center_pos
-                if offset != Vec2():
-                    self.controller.set_center_handle(
-                        self.net_index, reaction.index, reaction.src_c_handle.tip + offset)
-            self.controller.end_group()
+            with self.controller.group_action():
+                self.controller.set_reaction_center(self.net_index, reaction.index, None)
+                # Move centroid handle along if centroid changed.
+                if reaction.center_pos is not None:
+                    offset = centroid - reaction.center_pos
+                    if offset != Vec2():
+                        self.controller.set_center_handle(
+                            self.net_index, reaction.index, reaction.src_c_handle.tip + offset)
             self.center_pos_ctrl.Disable()
         else:
             self.center_pos_ctrl.Enable()
@@ -1399,36 +1380,33 @@ class ReactionForm(EditPanelForm):
         if reaction.center_pos != pos:
             offset = pos - reaction.center_pos
             self.self_changes = True
-            self.controller.start_group()
-            self.controller.set_reaction_center(self.net_index, reaction.index, pos)
-            post_event(DidMoveReactionCenterEvent(self.net_index, reaction.index, offset, False))
-            self.controller.end_group()
+            with self.controller.group_action():
+                self.controller.set_reaction_center(self.net_index, reaction.index, pos)
+                post_event(DidMoveReactionCenterEvent(self.net_index, reaction.index, offset, False))
         self.main_section.SetValidationState(True, ctrl_id)
 
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
         reactions = [r for r in self.reactions if r.index in self._selected_idx]
         self.self_changes = True
-        self.controller.start_group()
-        for rxn in reactions:
-            if on_msw():
-                self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
-            else:
-                # we can set both the RGB and the alpha at the same time
-                self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
-                self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, fill.Alpha())
-        post_event(DidModifyReactionEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for rxn in reactions:
+                if on_msw():
+                    self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
+                else:
+                    # we can set both the RGB and the alpha at the same time
+                    self.controller.set_reaction_fill_rgb(self.net_index, rxn.index, fill)
+                    self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, fill.Alpha())
+            post_event(DidModifyReactionEvent(list(self._selected_idx)))
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
         reactions = (r for r in self.reactions if r.index in self._selected_idx)
         self.self_changes = True
-        self.controller.start_group()
-        for rxn in reactions:
-            self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
-        post_event(DidModifyReactionEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for rxn in reactions:
+                self.controller.set_reaction_fill_alpha(self.net_index, rxn.index, int(alpha * 255))
+            post_event(DidModifyReactionEvent(list(self._selected_idx)))
 
     def _OnRateLawText(self, evt: wx.CommandEvent):
         ratelaw = evt.GetString()
@@ -1641,10 +1619,9 @@ class CompartmentForm(EditPanelForm):
 
             # loop terminated fine. There is no duplicate ID
             self.self_changes = True
-            self.controller.start_group()
-            self.controller.rename_compartment(self.net_index, compi, new_id)
-            post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
-            self.controller.end_group()
+            with self.controller.group_action():
+                self.controller.rename_compartment(self.net_index, compi, new_id)
+                post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
             self.main_section.SetValidationState(True, ctrl_id)
 
     def _OnPosText(self, evt):
@@ -1668,13 +1645,12 @@ class CompartmentForm(EditPanelForm):
         if self._bounding_rect.position != pos or pos != clamped:
             offset = clamped - self._bounding_rect.position
             self.self_changes = True
-            self.controller.start_group()
-            for comp in comps:
-                comp.position += offset
-            post_event(DidMoveCompartmentsEvent(list(self._selected_idx), offset, dragged=False))
-            for comp in comps:
-                self.controller.move_node(self.net_index, comp.index, comp.position)
-            self.controller.end_group()
+            with self.controller.group_action():
+                for comp in comps:
+                    comp.position += offset
+                post_event(DidMoveCompartmentsEvent(list(self._selected_idx), offset, dragged=False))
+                for comp in comps:
+                    self.controller.move_node(self.net_index, comp.index, comp.position)
         self.main_section.SetValidationState(True, self.pos_ctrl.GetId())
 
     def _OnSizeText(self, evt):
@@ -1704,105 +1680,97 @@ class CompartmentForm(EditPanelForm):
         if self._bounding_rect.size != clamped or size != clamped:
             ratio = clamped.elem_div(self._bounding_rect.size)
             self.self_changes = True
-            self.controller.start_group()
+            with self.controller.group_action():
+                offsets = list()
+                peripheral_nodes = list()
+                peripheral_offsets = list()
+                for comp in comps:
+                    rel_pos = comp.position - self._bounding_rect.position
+                    new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
+                    offsets.append(new_pos - comp.position)
+                    comp.position = new_pos
+                    comp.size = comp.size.elem_mul(ratio)
 
-            offsets = list()
-            peripheral_nodes = list()
-            peripheral_offsets = list()
-            for comp in comps:
-                rel_pos = comp.position - self._bounding_rect.position
-                new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
-                offsets.append(new_pos - comp.position)
-                comp.position = new_pos
-                comp.size = comp.size.elem_mul(ratio)
+                    pnodes = [self.canvas.node_idx_map[i] for i in comp.nodes]
+                    for node in pnodes:
+                        new_pos = clamp_rect_pos(node.rect, comp.rect)
+                        if new_pos != node.position:
+                            node.position = new_pos
+                            peripheral_nodes.append(node)
+                            peripheral_offsets.append(new_pos - node.position)
 
-                pnodes = [self.canvas.node_idx_map[i] for i in comp.nodes]
-                for node in pnodes:
-                    new_pos = clamp_rect_pos(node.rect, comp.rect)
-                    if new_pos != node.position:
-                        node.position = new_pos
-                        peripheral_nodes.append(node)
-                        peripheral_offsets.append(new_pos - node.position)
+                idx_list = list(self._selected_idx)
+                post_event(DidMoveCompartmentsEvent(idx_list, offsets, dragged=False))
+                post_event(DidResizeCompartmentsEvent(idx_list, ratio, dragged=False))
+                if len(peripheral_nodes) != 0:
+                    post_event(DidMoveNodesEvent(peripheral_nodes, peripheral_offsets, dragged=False))
+                for comp in comps:
+                    self.controller.move_compartment(self.net_index, comp.index, comp.position)
+                    self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
 
-            idx_list = list(self._selected_idx)
-            post_event(DidMoveCompartmentsEvent(idx_list, offsets, dragged=False))
-            post_event(DidResizeCompartmentsEvent(idx_list, ratio, dragged=False))
-            if len(peripheral_nodes) != 0:
-                post_event(DidMoveNodesEvent(peripheral_nodes, peripheral_offsets, dragged=False))
-            for comp in comps:
-                self.controller.move_compartment(self.net_index, comp.index, comp.position)
-                self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
-
-            for node in peripheral_nodes:
-                self.controller.move_node(self.net_index, node.index, node.position)
-            self.controller.end_group()
+                for node in peripheral_nodes:
+                    self.controller.move_node(self.net_index, node.index, node.position)
         self.main_section.SetValidationState(True, self.size_ctrl.GetId())
 
     def _VolumeCallback(self, volume: float):
         """Callback for when the border width changes."""
         comps = [c for c in self.compartments if c.index in self._selected_idx]
         self.self_changes = True
-        self.controller.start_group()
-        for comp in comps:
-            self.controller.set_compartment_volume(self.net_index, comp.index, volume)
-        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for comp in comps:
+                self.controller.set_compartment_volume(self.net_index, comp.index, volume)
+            post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
 
     def _OnFillColorChanged(self, fill: wx.Colour):
         """Callback for the fill color control."""
         comps = [c for c in self.compartments if c.index in self._selected_idx]
         self.self_changes = True
-        self.controller.start_group()
-        for comp in comps:
-            if on_msw():
-                fill = wx.Colour(fill.GetRGB())  # remove alpha channel
-            self.controller.set_compartment_fill(self.net_index, comp.index, fill)
-        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for comp in comps:
+                if on_msw():
+                    fill = wx.Colour(fill.GetRGB())  # remove alpha channel
+                self.controller.set_compartment_fill(self.net_index, comp.index, fill)
+            post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
 
     def _OnBorderColorChanged(self, border: wx.Colour):
         """Callback for the border color control."""
         comps = [c for c in self.compartments if c.index in self._selected_idx]
         self.self_changes = True
-        self.controller.start_group()
-        for comp in comps:
-            if on_msw():
-                border = wx.Colour(border.GetRGB())  # remove alpha channel
-            self.controller.set_compartment_border(self.net_index, comp.index, border)
-        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for comp in comps:
+                if on_msw():
+                    border = wx.Colour(border.GetRGB())  # remove alpha channel
+                self.controller.set_compartment_border(self.net_index, comp.index, border)
+            post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
 
     def _FillAlphaCallback(self, alpha: float):
         """Callback for when the fill alpha changes."""
         comps = [c for c in self.compartments if c.index in self._selected_idx]
         self.self_changes = True
-        self.controller.start_group()
-        for comp in comps:
-            new_fill = change_opacity(comp.fill, int(alpha * 255))
-            self.controller.set_compartment_fill(self.net_index, comp.index, new_fill)
-        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for comp in comps:
+                new_fill = change_opacity(comp.fill, int(alpha * 255))
+                self.controller.set_compartment_fill(self.net_index, comp.index, new_fill)
+            post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
 
     def _BorderAlphaCallback(self, alpha: float):
         """Callback for when the border alpha changes."""
         comps = [c for c in self.compartments if c.index in self._selected_idx]
         self.self_changes = True
-        self.controller.start_group()
-        for comp in comps:
-            new_border = change_opacity(comp.border, int(alpha * 255))
-            self.controller.set_compartment_border(self.net_index, comp.index, new_border)
-        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for comp in comps:
+                new_border = change_opacity(comp.border, int(alpha * 255))
+                self.controller.set_compartment_border(self.net_index, comp.index, new_border)
+            post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
 
     def _BorderWidthCallback(self, width: float):
         """Callback for when the border width changes."""
         comps = [c for c in self.compartments if c.index in self._selected_idx]
         self.self_changes = True
-        self.controller.start_group()
-        for comp in comps:
-            self.controller.set_compartment_border_width(self.net_index, comp.index, width)
-        post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
-        self.controller.end_group()
+        with self.controller.group_action():
+            for comp in comps:
+                self.controller.set_compartment_border_width(self.net_index, comp.index, width)
+            post_event(DidModifyCompartmentsEvent(list(self._selected_idx)))
 
     def UpdateCompartments(self, comps: List[Compartment]):
         self.compartments = comps

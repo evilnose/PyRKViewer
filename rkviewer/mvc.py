@@ -61,6 +61,10 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def add_alias_node(self, neti: int, original_index: int, pos: Vec2, size: Vec2) -> int:
+        pass
+
+    @abc.abstractmethod
     def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass

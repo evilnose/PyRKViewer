@@ -404,8 +404,8 @@ class Canvas(wx.ScrolledWindow):
         return NodeElement(node, self, layers)
 
     def CreateReactionElement(self, rxn: Reaction, layers: Layer) -> ReactionElement:
-        snodes = [self.node_idx_map[id] for id in rxn.sources]
-        tnodes = [self.node_idx_map[id] for id in rxn.targets]
+        snodes = [self.node_idx_map[idx] for idx in rxn.sources]
+        tnodes = [self.node_idx_map[idx] for idx in rxn.targets]
         rb = ReactionBezier(rxn, snodes, tnodes)
         return ReactionElement(rxn, rb, self, layers, Canvas.HANDLE_LAYER)
 
@@ -879,17 +879,19 @@ class Canvas(wx.ScrolledWindow):
         #    id_ = menu.Append(qmi) # (-1, menu_name).Id
         #    menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
 
-        def add_item(menu: wx.Menu, menu_name, image_name, callback):
+        def add_item(menu: wx.Menu, menu_name: str, callback, image_name: str = None):
             item = menu.Append(-1, menu_name)
 
-            if image_name != '':
+            if image_name != None:
                item.SetBitmap(wx.Bitmap(resource_path(image_name)))
             menu.Bind(wx.EVT_MENU, lambda _: callback(), id=item.Id)
 
         if total_selected != 0:
-            add_item(menu, 'Delete', '', self.DeleteSelectedItems)
+            add_item(menu, 'Delete', self.DeleteSelectedItems)
 
         if len(selected_nodes) != 0:
+            menu.AppendSeparator()
+            add_item(menu, 'Create Alias', lambda: self.CreateAliases(self.sel_nodes))
             # Only allow align when the none of the nodes are in a compartment. This prevents
             # nodes inside a compartment being arranged outside.
             if not any(node.comp_idx != -1 for node in self.sel_nodes):
@@ -898,33 +900,53 @@ class Canvas(wx.ScrolledWindow):
 
                 menu.AppendSeparator()
                 align_menu = wx.Menu()
-                add_item(align_menu, 'Align Left', 'alignLeft_XP.png',
-                         lambda: self.AlignSelectedNodes(Alignment.LEFT))
-                add_item(align_menu, 'Align Right', 'alignRight_XP.png',
-                         lambda: self.AlignSelectedNodes(Alignment.RIGHT))
-                add_item(align_menu, 'Align Center', 'alignHorizCenter_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.CENTER))
+                add_item(align_menu, 'Align Left',
+                         lambda: self.AlignSelectedNodes(Alignment.LEFT),
+                         'alignLeft_XP.png')
+                add_item(align_menu, 'Align Right',
+                         lambda: self.AlignSelectedNodes(Alignment.RIGHT),
+                         'alignRight_XP.png')
+                add_item(align_menu, 'Align Center',
+                         lambda: self.AlignSelectedNodes(Alignment.CENTER),
+                         'alignHorizCenter_XP.png')
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Align Top', 'alignTop_XP.png',
-                         lambda: self.AlignSelectedNodes(Alignment.TOP))
-                add_item(align_menu, 'Align Bottom', 'AlignBottom_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.BOTTOM))
-                add_item(align_menu, 'Align Middle', 'alignVertCenter_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.MIDDLE))
+                add_item(align_menu, 'Align Top', 
+                         lambda: self.AlignSelectedNodes(Alignment.TOP),
+                         'alignTop_XP.png')
+                add_item(align_menu, 'Align Bottom',
+                         lambda: self.AlignSelectedNodes(Alignment.BOTTOM),
+                         'AlignBottom_XP.png')
+                add_item(align_menu, 'Align Middle', 
+                         lambda: self.AlignSelectedNodes(Alignment.MIDDLE),
+                         'alignVertCenter_XP.png')
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Grid', 'alignOnGrid_XP.png',
-                         lambda: self.AlignSelectedNodes(Alignment.GRID))
+                add_item(align_menu, 'Grid',
+                         lambda: self.AlignSelectedNodes(Alignment.GRID),
+                         'alignOnGrid_XP.png')
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Arrange Horizontally', 'alignHorizEqually_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))
-                add_item(align_menu, 'Arrange Vertically', 'alignVertEqually_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.VERTICAL))
+                add_item(align_menu, 'Arrange Horizontally', 
+                         lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL),
+                         'alignHorizEqually_XP.png')
+                add_item(align_menu, 'Arrange Vertically', 
+                         lambda: self.AlignSelectedNodes(Alignment.VERTICAL),
+                         'alignVertEqually_XP.png')
                 menu.AppendSubMenu(align_menu, text='Align...')
 
         # Must refresh before the context menu is displayed, otherwise the refresh won't occur
         self.Refresh()
         self.PopupMenu(menu)
         menu.Destroy()
+
+    def CreateAliases(self, nodes: List[Node]):
+        new_indices = set()
+        self.controller.start_group()
+        for node in nodes:
+            new_idx = self.controller.add_alias_node(self.net_index, node.index,
+                                                     node.position + Vec2.repeat(20),
+                                                     node.size)
+            new_indices.add(new_idx)
+        self.controller.end_group()
+        self.sel_nodes_idx.set_item(new_indices)
 
     def GetBoundingRect(self) -> Optional[Rect]:
         """Get the bounding rectangle of all nodes, reactions, and compartments.
@@ -1143,7 +1165,7 @@ class Canvas(wx.ScrolledWindow):
                 # x = Position of left most node
                 x = nodes[0].position.x
                 # Arrange nodes with equal distance between them
-                for count in range (len (nodes)):
+                for count in range(len(nodes)):
                     newPos = Vec2(x, nodes[count].position.y)
                     api.move_node(0, nodes[count].index, newPos)
                     x = x + averageDistance

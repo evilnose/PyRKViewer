@@ -22,20 +22,12 @@ def iod_setter(controller_iod_setter):
     # If programmatic is True, then do not trigger a C-Event
 
     def ret(self, *args):
-        controller_iod_setter(self, *args)
-        '''
-        try:
-            controller_iod_setter(self, *args)
-        except iod.Error:
-            logger = logging.getLogger('controller')
-            logger.error('Caught error when trying to set something in controller:')
-            logger.error(traceback.format_exc())
-            return False
-        '''
+        retval = controller_iod_setter(self, *args)
 
         if self.group_depth == 0:
             self._update_view()
-        return True
+
+        return retval
 
     return ret
 
@@ -181,6 +173,10 @@ class Controller(IController):
         post_event(DidAddCompartmentEvent(compi))
         self.end_group()
         return compi
+    
+    @iod_setter
+    def add_alias_node(self, neti: int, original_idx: int, pos: Vec2, size: Vec2) -> int:
+        return iod.addAliasNode(neti, original_idx, *pos, *size)
 
     @iod_setter
     def move_node(self, neti: int, nodei: int, pos: Vec2, allowNegativeCoordinates: bool=False):
@@ -367,15 +363,13 @@ class Controller(IController):
 
     def get_list_of_nodes(self, neti: int) -> List[Node]:
         nodes = list()
-        for id in iod.getListOfNodeIDs(neti):
-            nodei = iod.getNodeIndex(neti, id)
+        for nodei in iod.getListOfNodeIndices(neti):
             nodes.append(self.get_node_by_index(neti, nodei))
         return nodes
 
     def get_list_of_reactions(self, neti: int) -> List[Reaction]:
         reactions = list()
-        for id in iod.getListOfReactionIDs(neti):
-            reai = iod.getReactionIndex(neti, id)
+        for reai in iod.getListOfReactionIndices(neti):
             reactions.append(self.get_reaction_by_index(neti, reai))
         return reactions
 

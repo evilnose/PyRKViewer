@@ -82,6 +82,7 @@ class TAbstractNode(abc.ABC):
     position: Vec2
     rectSize: Vec2
     compi: int
+    nodeLocked: bool
 
 
 @dataclass
@@ -103,6 +104,7 @@ class TAliasNode(TAbstractNode):
     position: Vec2
     rectSize: Vec2
     original_idx: int
+    nodeLocked: bool
     compi: int = -1
 
 
@@ -145,10 +147,12 @@ class TNetwork:
         self.lastReactionIdx = max(reactions.keys(), default=-1) + 1
         self.lastCompartmentIdx = max(compartments.keys(), default=-1) + 1
 
-    def addNode(self, node: TAbstractNode):
+    def addNode(self, node: TAbstractNode) -> int:
         self.nodes[self.lastNodeIdx] = node
         self.baseNodes.add(self.lastNodeIdx)
+        ret = self.lastNodeIdx
         self.lastNodeIdx += 1
+        return ret
 
     def addReaction(self, rea: TReaction):
         self.reactions[self.lastReactionIdx] = rea
@@ -596,7 +600,7 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
             raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def addAliasNode(neti: int, original_idx: int, x: float, y: float, w: float, h: float):
+def addAliasNode(neti: int, original_idx: int, x: float, y: float, w: float, h: float) -> int:
     net = _getNetwork(neti)
 
     # make sure we can get it
@@ -605,8 +609,8 @@ def addAliasNode(neti: int, original_idx: int, x: float, y: float, w: float, h: 
     _pushUndoStack()
 
     # Refer to the original node's index, whether 'original_index' is a TNode or a TAliasNode
-    anode = TAliasNode(net.lastNodeIdx, Vec2(x, y), Vec2(w, h), original_node.index)
-    net.addNode(anode)
+    anode = TAliasNode(net.lastNodeIdx, Vec2(x, y), Vec2(w, h), original_node.index, nodeLocked=False)
+    return net.addNode(anode)
 
 
 def getNodeIndex(neti: int, nodeID: str):
@@ -763,8 +767,8 @@ def IsBoundaryNode(neti : int, nodei : int):
     return not IsFloatingNode(neti, nodei)
 
 
-def IsNodeLocked (neti : int, nodei : int):
-    return _getConcreteNode(neti, nodei).nodeLocked
+def IsNodeLocked(neti: int, nodei: int):
+    return _getNodeOrAlias(neti, nodei).nodeLocked
 
 
 def getListOfNodeIDs(neti: int) -> List[str]:
@@ -965,8 +969,8 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
         if x < lowerLimit or y < lowerLimit:
             _raiseError(-12)
 
-        n = _getConcreteNode(neti, nodei)
-            # only move if node is locked
+        n = _getNodeOrAlias(neti, nodei)
+        # only move if node is locked
         if not n.nodeLocked:
             _pushUndoStack()
             n.position = Vec2(x, y)
@@ -1040,7 +1044,7 @@ def setNodeLockedStatus (neti: int, nodei: int, lockedNode: bool):
             errCode = -7
         else:
             _pushUndoStack()
-            _getConcreteNode(neti, nodei).nodeLocked = lockedNode
+            _getNodeOrAlias(neti, nodei).nodeLocked = lockedNode
             return
 
 

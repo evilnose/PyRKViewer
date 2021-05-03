@@ -294,18 +294,10 @@ class Node(RectData):
         """The scaled position of the node obtained by multiplying the scale."""
         return self.position
 
-    @s_position.setter
-    def s_position(self, val: Vec2):
-        self.position = val
-
     @property
     def s_size(self):
         """The scaled size of the node obtained by multiplying the scale."""
         return self.size
-
-    @s_size.setter
-    def s_size(self, val: Vec2):
-        self.size = val
 
     @property
     def s_rect(self):

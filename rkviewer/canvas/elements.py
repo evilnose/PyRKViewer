@@ -165,7 +165,7 @@ class NodeElement(CanvasElement):
                 lock_color.to_wxcolour()).Width(2))
             gc.SetPen(pen)
             path = gc.CreatePath()
-            path.AddCircle(self.node.s_position.x, self.node.s_position.y, .1*height)
+            path.AddCircle(self.node.position.x, self.node.position.y, .1*height)
             gc.StrokePath(path)
 
     def on_left_down(self, _: Vec2):
@@ -1176,16 +1176,24 @@ class SelectBox(CanvasElement):
         self.controller.end_group()
 
 
-class Property:
-    field_name: str
+def primitive_peninfo(color: Color, width: float, is_alias: bool):
+    info = wx.GraphicsPenInfo(color.to_wxcolour(), width)
+    if is_alias:
+        info = info.Style(wx.PENSTYLE_SHORT_DASH)
+    return info
 
 
-class ColorProperty(Property):
-    pass
+def primitive_brush(color: Color, is_alias: bool):
+    # style = wx.BRUSHSTYLE_FIRST_HATCH if is_alias else wx.BRUSHSTYLE_SOLID
+    style = wx.BRUSHSTYLE_SOLID
+    brush = wx.Brush(color.to_wxcolour(), style=style)
+    return brush
 
-def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
-    pen = gc.CreatePen(wx.GraphicsPenInfo(circle.border_color.to_wxcolour(), circle.border_width))
-    brush = gc.CreateBrush(wx.Brush(circle.fill_color.to_wxcolour()))
+
+def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim, is_alias: bool):
+    peninfo = primitive_peninfo(circle.border_color, circle.border_width, is_alias)
+    pen = gc.CreatePen(peninfo)
+    brush = gc.CreateBrush(primitive_brush(circle.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     path = gc.CreatePath()
@@ -1193,17 +1201,17 @@ def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim):
     gc.DrawPath(path)
 
 
-def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim):
-    pen = gc.CreatePen(wx.GraphicsPenInfo(rect.border_color.to_wxcolour(), rect.border_width))
-    brush = gc.CreateBrush(wx.Brush(rect.fill_color.to_wxcolour()))
+def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim, is_alias: bool):
+    pen = gc.CreatePen(primitive_peninfo(rect.border_color, rect.border_width, is_alias))
+    brush = gc.CreateBrush(primitive_brush(rect.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
 
 
-def draw_polygon_to_gc(gc: wx.GraphicsContext, poly: TPolygonPrim):
-    pen = gc.CreatePen(wx.GraphicsPenInfo(poly.border_color.to_wxcolour(), poly.border_width))
-    brush = gc.CreateBrush(wx.Brush(poly.fill_color.to_wxcolour()))
+def draw_polygon_to_gc(gc: wx.GraphicsContext, poly: TPolygonPrim, is_alias: bool):
+    pen = gc.CreatePen(primitive_peninfo(poly.border_color, poly.border_width, is_alias))
+    brush = gc.CreateBrush(primitive_brush(poly.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     gc.DrawLines([wx.Point2D(*p) for p in poly.points])
@@ -1232,7 +1240,7 @@ def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node
     for primitive, transform in shape.items:
         gc.PushState()
         apply_transform_to_gc(gc, transform)
-        draw_fn_map[primitive.__class__](gc, primitive)
+        draw_fn_map[primitive.__class__](gc, primitive, node.original_index != -1)
         gc.PopState()
     gc.PopState()
 

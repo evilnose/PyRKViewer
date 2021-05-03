@@ -9,6 +9,7 @@ TODOs
     * Phase out errCode, or at least provide more detalis in error messages.
 """
 from __future__ import annotations
+import abc
 from re import S
 from functools import partial
 
@@ -75,22 +76,39 @@ shapeFactories = [
 ]
 
 
+# TODO add lockedNode here too
+class TAbstractNode(abc.ABC):
+    index: int
+    position: Vec2
+    rectSize: Vec2
+    compi: int
+
+
 @dataclass
-class TNode:
+class TNode(TAbstractNode):
+    index: int
     id: str
     position: Vec2
     rectSize: Vec2
     floating : bool  # If false it means the node is a boundary node
     nodeLocked: bool #if false it means the node can be moved
     compi: int = -1
-    font: Font = Font(20, Color(0, 0, 0))  # TODO implement this
     shapei: int = 0
     shape: TCompositeShape = field(default_factory=lambda: shapeFactories[0].produce())
 
 
+@dataclass
+class TAliasNode(TAbstractNode):
+    index: int
+    position: Vec2
+    rectSize: Vec2
+    original_idx: int
+    compi: int = -1
+
+
 class TNetwork:
     id: str
-    nodes: Dict[int, TNode]
+    nodes: Dict[int, TAbstractNode]
     reactions: Dict[int, TReaction]
     compartments: Dict[int, TCompartment]
     baseNodes: Set[int]  #: Set of node indices not in any compartment
@@ -100,7 +118,7 @@ class TNetwork:
     lastReactionIdx: int
     lastCompartmentIdx: int
 
-    def __init__(self, id: str, nodes: Dict[int, TNode] = None,
+    def __init__(self, id: str, nodes: Dict[int, TAbstractNode] = None,
                  reactions: Dict[int, TReaction] = None,
                  compartments: Dict[int, TCompartment] = None):
         if nodes is None:
@@ -113,7 +131,7 @@ class TNetwork:
         self.nodes = nodes
         self.reactions = reactions
         self.compartments = compartments
-        self.baseNodes = set(index for index, n in nodes.items() if n.compi)
+        self.baseNodes = set(index for index, n in nodes.items() if n.compi == -1)
         self.srcMap = defaultdict(set)
         self.destMap = defaultdict(set)
         # Initialize srcMap and destMap
@@ -127,7 +145,7 @@ class TNetwork:
         self.lastReactionIdx = max(reactions.keys(), default=-1) + 1
         self.lastCompartmentIdx = max(compartments.keys(), default=-1) + 1
 
-    def addNode(self, node: TNode):
+    def addNode(self, node: TAbstractNode):
         self.nodes[self.lastNodeIdx] = node
         self.baseNodes.add(self.lastNodeIdx)
         self.lastNodeIdx += 1
@@ -214,7 +232,7 @@ class ErrorCode(Enum):
     NODE_NOT_FREE = -4
     NETI_NOT_FOUND = -5
     REAI_NOT_FOUND = -6
-    NODEI_NOT_OFUND = -7
+    NODEI_NOT_FOUND = -7
     BAD_STOICH = -8
     STACK_EMPTY = -9
     JSON_ERROR = -10
@@ -504,11 +522,22 @@ def _getNetwork(neti: int) -> TNetwork:
     return networkDict[neti]
 
 
-def _getNode(neti: int, nodei: int) -> TNode:
+def _getConcreteNode(neti: int, nodei: int) -> TNode:
     net = _getNetwork(neti)
     if nodei not in net.nodes:
         _raiseError(-7)
-    return net.nodes[nodei]
+    
+    node = net.nodes[nodei]
+
+    if isinstance(node, TAliasNode):
+        # get the original node
+        original_idx = node.original_idx
+        assert original_idx  in net.nodes
+        node = net.nodes[original_idx]
+
+    assert isinstance(node, TNode)
+
+    return node
 
 
 def _getReaction(neti: int, reai: int) -> TReaction:
@@ -545,8 +574,8 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
     errCode = 0
     try:
         n = _getNetwork(neti)
-        for i in n.nodes.values():
-            if i.id == nodeID:
+        for node in n.nodes.values():
+            if isinstance(node, TNode) and node.id == nodeID:
                 errCode = -3
                 return
 
@@ -555,12 +584,24 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
             return
 
         _pushUndoStack()
-        newNode = TNode(nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked)
+        newNode = TNode(n.lastNodeIdx, nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked)
         n.addNode(newNode)
-        networkDict[neti] = n
     finally:
         if errCode < 0:
             raise ExceptionDict[errCode](errorDict[errCode])
+
+
+def addAliasNode(neti: int, original_idx: int, x: float, y: float, w: float, h: float):
+    net = _getNetwork(neti)
+
+    # make sure we can get it
+    original_node = _getConcreteNode(neti, original_idx)
+
+    _pushUndoStack()
+
+    # Refer to the original node's index, whether 'original_index' is a TNode or a TAliasNode
+    anode = TAliasNode(net.lastNodeIdx, Vec2(x, y), Vec2(w, h), original_node.index)
+    net.addNode(anode)
 
 
 def getNodeIndex(neti: int, nodeID: str):
@@ -577,7 +618,7 @@ def getNodeIndex(neti: int, nodeID: str):
     else:
         n = networkDict[neti]
         for i, node, in n.nodes.items():
-            if node.id == nodeID:
+            if isinstance(node, TNode) and node.id == nodeID:
                 errCode = 0
                 return i
 
@@ -692,31 +733,26 @@ def getNodeID(neti: int, nodei: int):
     if neti not in networkDict:
         errCode = -5
     else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return n.nodes[nodei].id
+        node = _getConcreteNode(neti, nodei)
+        return node.id
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
-def IsFloatingNode (neti : int, nodei : int):
-    n = _getNetwork(neti)
-    return n.nodes[nodei].floating
+def IsFloatingNode(neti : int, nodei : int):
+    return _getConcreteNode(neti, nodei).id
 
 def IsBoundaryNode(neti : int, nodei : int):
     return not IsFloatingNode(neti, nodei)
 
 def IsNodeLocked (neti : int, nodei : int):
-    n = _getNetwork(neti)
-    return n.nodes[nodei].nodeLocked  
+    return _getConcreteNode(neti, nodei).nodeLocked
 
 
 def getListOfNodeIDs(neti: int) -> List[str]:
     if neti not in networkDict:
         errCode = -5
         raise ExceptionDict[errCode](errorDict[errCode])
-    return [n.id for n in networkDict[neti].nodes.values()]
+    return [n.id for n in networkDict[neti].nodes.values() if isinstance(n, TNode)]
 
 
 def getListOfNodeIndices(neti: int) -> Set[int]:
@@ -780,7 +816,7 @@ def getNodeFillColor(neti: int, nodei: int):
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
             assert isinstance(prim.fill_color, Color)
@@ -819,7 +855,7 @@ def getNodeBorderColor(neti: int, nodei: int):
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
             assert isinstance(prim.border_color, Color)
@@ -857,182 +893,11 @@ def getNodeBorderWidth(neti: int, nodei: int):
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_width' in prim.__dataclass_fields__:
             return prim.border_width
     return None
-
-
-def getNodeFontPointSize(neti: int, nodei: int):
-    """
-    getNodeFontPointSize
-    errCode: -7: node index out of range
-    -5: net index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return n.nodes[nodei].font.pointSize
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def getNodeFontFamily(neti: int, nodei: int):
-    """
-    getNodeFontFamily
-    errCode: -7: node index out of range
-    -5: net index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            raise NotImplementedError()
-            # return n.nodes[nodei].font.family
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def getNodeFontStyle(neti: int, nodei: int):
-    """
-    getNodeFontStyle
-    errCode: -7: node index out of range
-    -5: net index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            raise NotImplementedError()
-            # return n.nodes[nodei].font.style
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def getNodeFontWeight(neti: int, nodei: int):
-    """
-    getNodeFontWeight
-    errCode: -7: node index out of range
-    -5: net index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            raise NotImplementedError()
-            # return n.nodes[nodei].font.weight
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def getNodeFontName(neti: int, nodei: int):
-    """
-    getNodeFontName
-    errCode: -7: node index out of range
-    -5: net index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            raise NotImplementedError()
-            # return n.nodes[nodei].font.name
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def getNodeFontColor(neti: int, nodei: int):
-    """
-    getNodeFontColor rgba tulple format, rgb range int[0,255] alpha range float[0,1]
-    errCode: -7: node index out of range
-    -5: net index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return (n.nodes[nodei].font.color.r, n.nodes[nodei].font.color.g,
-                    n.nodes[nodei].font.color.b,
-                    float(n.nodes[nodei].font.color.a)/255)
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def getNodeFontColorRGB(neti: int, nodei: int):
-    """
-    getNodeFontColorRGB getNodeFontColor rgb int format
-    errCode: -7: node index out of range
-    -5: net index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            color1 = n.nodes[nodei].font.color.r
-            color1 = (color1 << 8) | n.nodes[nodei].font.color.g
-            color1 = (color1 << 8) | n.nodes[nodei].font.color.b
-            return color1
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def getNodeFontColorAlpha(neti: int, nodei: int):
-    """
-    getNodeFontColorAlpha getNodeFontColor alpha value(float)
-    errCode: -7: node index out of range
-    -5: net index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            return float(n.nodes[nodei].font.color.a)/255
-
-    raise ExceptionDict[errCode](errorDict[errCode])
 
 
 def setNodeID(neti: int, nodei: int, newID: str):
@@ -1051,11 +916,11 @@ def setNodeID(neti: int, nodei: int, newID: str):
         if nodei not in net.nodes.keys():
             errCode = -7
         else:
-            if any((n.id == newID for n in net.nodes.values())):
+            if any((n.id == newID for n in net.nodes.values() if isinstance(n, TNode))):
                 errCode = -3
             else:
                 _pushUndoStack()
-                net.nodes[nodei].id = newID
+                _getConcreteNode(neti, nodei).id = newID
                 return
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1078,20 +943,16 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
     if neti not in networkDict:
         errCode = -5
     else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif x < lowerLimit or y < lowerLimit:
-            errCode = -12
-        else:
+        if x < lowerLimit or y < lowerLimit:
+            _raiseError(-12)
 
-            if n.nodes[nodei].nodeLocked == False:
-                _pushUndoStack()
-                n.nodes[nodei].position = Vec2(x, y)
-                return
-            else:
-                _pushUndoStack()
-                return
+        n = _getConcreteNode(neti, nodei)
+            # only move if node is locked
+        if not n.nodeLocked:
+            _pushUndoStack()
+            n.position = Vec2(x, y)
+
+        return
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1138,7 +999,7 @@ def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
             errCode = -7
         else:
             _pushUndoStack()
-            n.nodes[nodei].floating = floatingStatus
+            _getConcreteNode(neti, nodei).floating = floatingStatus
             return
 
     raise ExceptionDict[errCode](errorDict[errCode])
@@ -1160,7 +1021,7 @@ def setNodeLockedStatus (neti: int, nodei: int, lockedNode: bool):
             errCode = -7
         else:
             _pushUndoStack()
-            n.nodes[nodei].nodeLocked = lockedNode
+            _getConcreteNode(neti, nodei).nodeLocked = lockedNode
             return
 
 
@@ -1174,7 +1035,7 @@ def setNodeFillColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
         _raiseError(-12)
 
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
             assert isinstance(prim.fill_color, Color)
@@ -1191,7 +1052,7 @@ def setNodeFillColorAlpha(neti: int, nodei: int, a: float):
     if a < 0 or a > 1:
         _raiseError(-12)
 
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
             assert isinstance(prim.fill_color, Color)
@@ -1209,7 +1070,7 @@ def setNodeBorderColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
         _raiseError(-12)
 
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
             assert isinstance(prim.border_color, Color)
@@ -1225,7 +1086,7 @@ def setNodeBorderColorAlpha(neti: int, nodei: int, a: float):
     """
     if a < 0 or a > 1:
         _raiseError(-12)
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
             assert isinstance(prim.border_color, Color)
@@ -1242,189 +1103,11 @@ def setNodeBorderWidth(neti: int, nodei: int, width: float):
     """
     if width <= 0:
         _raiseError(-12)
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_width' in prim.__dataclass_fields__:
             prim.border_width = width
 
-
-def setNodeFontPointSize(neti: int, nodei: int, fontPointSize: int):
-    """
-    setNodeFontPointSize setNodeFontPointSize
-    errCode: -7: node index out of range
-    -5: net index out of range
-    -12: Variable out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif fontPointSize <= 0:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            n.nodes[nodei].font.pointSize = fontPointSize
-            return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def setNodeFontFamily(neti: int, nodei: int, fontFamily: str):
-    """
-    setNodeFontFamily set the fontFamily of a node
-    errCode
-    -5: net index out of range
-    -7: node index out of range
-    -12: Variable out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif fontFamily not in fontFamilyDict:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            raise NotImplementedError()
-            # n.nodes[nodei].font.family = fontFamily
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def setNodeFontStyle(neti: int, nodei: int, fontStyle: str):
-    """
-    setNodeFontStyle set the fontStyle of a node
-    errCode
-    -5: net index out of range
-    -7: node index out of range
-    -12: Variable out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif fontStyle not in fontStyleDict:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            raise NotImplementedError()
-            # n.nodes[nodei].font.style = fontStyle
-            return
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def setNodeFontWeight(neti: int, nodei: int, fontWeight: str):
-    """
-    setNodeFontWeight set the fontWeight of a node
-    errCode
-    -5: net index out of range
-    -7: node index out of range
-    -12: Variable out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif fontWeight not in fontWeightDict:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            raise NotImplementedError()
-            # n.nodes[nodei].font.weight = fontWeight
-            return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def setNodeFontName(neti: int, nodei: int, fontName: str):
-    """
-    setNodeFontName set the fontName of a node
-    errCode
-    -5: net index out of range
-    -7: node index out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        else:
-            _pushUndoStack()
-            raise NotImplementedError()
-            # n.nodes[nodei].font.name = fontName
-            return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def setNodeFontColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
-    """
-    setNodeFontColorRGB setNodeFontColorRGB
-    errCode: -7: node index out of range
-    -5: net index out of range
-    -12: Variable out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            n.nodes[nodei].font.color = n.nodes[nodei].font.color.swapped(r, g, b)
-            return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
-
-
-def setNodeFontColorAlpha(neti: int, nodei: int, a: float):
-    """
-    setNodeFontColorAlpha setNodeFontColorAlpha
-    errCode: -7: node index out of range
-    -5: net index out of range
-    -12: Variable out of range
-    """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    errCode = 0
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
-        elif a < 0 or a > 1:
-            errCode = -12
-        else:
-            _pushUndoStack()
-            node = networkDict[neti].nodes[nodei]
-            node.font.color = node.font.color.swapped(a=int(a*255))
-            return
-
-    raise ExceptionDict[errCode](errorDict[errCode])
 
 
 def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]):
@@ -2362,7 +2045,7 @@ def setCompartmentOfNode(neti: int, nodei: int, compi: int):
     """Set the compartment of the node, or remove it from any compartment if -1 is given."""
     net = _getNetwork(neti)
 
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     _pushUndoStack()
     if node.compi != -1:
         net.compartments[node.compi].node_indices.remove(nodei)
@@ -2474,11 +2157,11 @@ def getCompositeShapeAt(neti: int, shapei: int):
 
 
 def getNodeShape(neti: int, nodei: int) -> TCompositeShape:
-    return copy.copy(_getNode(neti, nodei).shape)
+    return copy.copy(_getConcreteNode(neti, nodei).shape)
 
 
 def getNodeShapeIndex(neti: int, nodei: int) -> int:
-    return _getNode(neti, nodei).shapei
+    return _getConcreteNode(neti, nodei).shapei
 
 
 def setNodeShapeIndex(neti: int, nodei: int, shapei: int, preserve_common_fields=True):
@@ -2486,7 +2169,7 @@ def setNodeShapeIndex(neti: int, nodei: int, shapei: int, preserve_common_fields
     if applicable. (Not implemented)
     '''
     net = _getNetwork(neti)
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     node.shapei = shapei
     node.shape = shapeFactories[shapei].produce()
 
@@ -2502,7 +2185,7 @@ def setNodePrimitiveProperty(neti: int, nodei: int, prim_index: int, prop_name: 
         prop_name:  The name of the primitive's property.
         prop_value: The value of the primitives's property
     '''
-    node = _getNode(neti, nodei)
+    node = _getConcreteNode(neti, nodei)
     if prim_index >= len(node.shape.items) or prim_index < -1:
         raise ValueError('Primitive index out of range for the shape of node {} in network {}'.format(nodei, neti))
     

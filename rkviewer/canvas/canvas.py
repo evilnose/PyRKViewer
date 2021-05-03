@@ -898,18 +898,22 @@ class Canvas(wx.ScrolledWindow):
 
                 menu.AppendSeparator()
                 align_menu = wx.Menu()
-                add_item(align_menu, 'Align Left', 'alignLeft_XP.png', lambda: self.AlignSelectedNodes(Alignment.LEFT))
-                add_item(align_menu, 'Align Right', 'alignRight_XP.png', lambda: self.AlignSelectedNodes(Alignment.RIGHT))
+                add_item(align_menu, 'Align Left', 'alignLeft_XP.png',
+                         lambda: self.AlignSelectedNodes(Alignment.LEFT))
+                add_item(align_menu, 'Align Right', 'alignRight_XP.png',
+                         lambda: self.AlignSelectedNodes(Alignment.RIGHT))
                 add_item(align_menu, 'Align Center', 'alignHorizCenter_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.CENTER))
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Align Top', 'alignTop_XP.png', lambda: self.AlignSelectedNodes(Alignment.TOP))
+                add_item(align_menu, 'Align Top', 'alignTop_XP.png',
+                         lambda: self.AlignSelectedNodes(Alignment.TOP))
                 add_item(align_menu, 'Align Bottom', 'AlignBottom_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.BOTTOM))
                 add_item(align_menu, 'Align Middle', 'alignVertCenter_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.MIDDLE))
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Grid', 'alignOnGrid_XP.png', lambda: self.AlignSelectedNodes(Alignment.GRID))
+                add_item(align_menu, 'Grid', 'alignOnGrid_XP.png',
+                         lambda: self.AlignSelectedNodes(Alignment.GRID))
                 align_menu.AppendSeparator()
                 add_item(align_menu, 'Arrange Horizontally', 'alignHorizEqually_XP.png', 
                          lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))

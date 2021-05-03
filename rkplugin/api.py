@@ -101,19 +101,19 @@ class NodeData:
                   compartment.
         floatingNode: Set true if you want the node to have floating status or false for boundary status (default is floating)
         lockNode: Set false if you want the node to move or true for block (default is false)
+        original_index = If this is an alias node, this is the index of the original node. Otherwise
+                         this is -1.
     """
     # TODO add fields; possibly use @dataclass
     id: str = field()
     net_index: int = field()
     position: Vec2 = field()
     size: Vec2 = field()
-    # fill_color: Color = field()
-    # border_color: Color = field()
-    # border_width: float = field()
     comp_idx: int = field(default=-1)
     index: int = field(default=-1)
     floatingNode: bool = field(default=True)
     lockNode: bool = field(default=False)
+    original_index: int = field(default=-1)
 
     @property
     def bounding_rect(self) -> Rect:
@@ -309,6 +309,7 @@ def _translate_node(node: Node) -> NodeData:
         index=node.index,
         floatingNode=node.floatingNode,
         lockNode=node.lockNode,
+        original_index=node.original_index
     )
 
 
@@ -647,9 +648,6 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
     node = Node(
         id,
         net_index,
-        # fill_color=_to_wxcolour(fill_color),
-        # border_color=_to_wxcolour(border_color),
-        # border_width=border_width,
         pos=position,
         size=size,
         floatingNode=floatingNode,

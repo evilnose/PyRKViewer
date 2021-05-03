@@ -522,12 +522,17 @@ def _getNetwork(neti: int) -> TNetwork:
     return networkDict[neti]
 
 
-def _getConcreteNode(neti: int, nodei: int) -> TNode:
+def _getNodeOrAlias(neti: int, nodei: int) -> TAbstractNode:
     net = _getNetwork(neti)
     if nodei not in net.nodes:
         _raiseError(-7)
     
-    node = net.nodes[nodei]
+    return net.nodes[nodei]
+
+
+def _getConcreteNode(neti: int, nodei: int) -> TNode:
+    net = _getNetwork(neti)
+    node = _getNodeOrAlias(neti, nodei)
 
     if isinstance(node, TAliasNode):
         # get the original node
@@ -626,6 +631,7 @@ def getNodeIndex(neti: int, nodeID: str):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
+# TODO update this for alias nodes
 def deleteNode(neti: int, nodei: int):
     """
     DeleteNode delete the node with index
@@ -738,11 +744,24 @@ def getNodeID(neti: int, nodei: int):
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
+
+def getOriginalIndex(neti: int, nodei: int) -> int:
+    '''Return -1 if the node is an original, or if this is an alias, return the original index.'''
+    node = _getNodeOrAlias(neti, nodei)
+    if isinstance(node, TNode):
+        return -1
+    else:
+        assert isinstance(node, TAliasNode)
+        return node.original_idx
+
+
 def IsFloatingNode(neti : int, nodei : int):
-    return _getConcreteNode(neti, nodei).id
+    return _getConcreteNode(neti, nodei).floating
+
 
 def IsBoundaryNode(neti : int, nodei : int):
     return not IsFloatingNode(neti, nodei)
+
 
 def IsNodeLocked (neti : int, nodei : int):
     return _getConcreteNode(neti, nodei).nodeLocked

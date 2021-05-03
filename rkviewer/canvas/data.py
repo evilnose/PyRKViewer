@@ -244,6 +244,9 @@ class Node(RectData):
     lockNode: bool  # Prevent users from moving the node
     shape_index: int
     composite_shape: Optional[TCompositeShape]
+    # -1 if this is an original node, or if this is an alias node, then the index of the original copy
+    original_index: int
+                        
 
     # force keyword-only arguments
     def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, comp_idx: int = -1,
@@ -251,7 +254,8 @@ class Node(RectData):
                  lockNode: bool = False,
                  shape_index: int = 0,
                  composite_shape: Optional[TCompositeShape] = None,
-                 index: int = -1):
+                 index: int = -1,
+                 original_index: int = -1):
         self.index = index
         self.net_index = net_index
         self.id = id
@@ -265,6 +269,7 @@ class Node(RectData):
         self.lockNode = lockNode
         self.shape_index = shape_index
         self.composite_shape = composite_shape
+        self.original_index = original_index
 
     def _get_prim_field(self, field):
         for prim, _ in self.composite_shape.items:

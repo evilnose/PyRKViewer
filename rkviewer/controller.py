@@ -451,10 +451,11 @@ class Controller(IController):
             # border_color=border_color,
             # border_width=iod.getNodeBorderWidth(neti, nodei),
             comp_idx=iod.getCompartmentOfNode(neti, nodei),
-            floatingNode=iod.IsFloatingNode (neti, nodei),
+            floatingNode=iod.IsFloatingNode(neti, nodei),
             lockNode=iod.IsNodeLocked(neti, nodei),
             shape_index=iod.getNodeShapeIndex(neti, nodei),
             composite_shape=iod.getNodeShape(neti, nodei),
+            original_index=iod.getOriginalIndex(neti, nodei)
         )
 
     def get_reaction_by_index(self, neti: int, reai: int) -> Reaction:

@@ -636,43 +636,91 @@ def getNodeIndex(neti: int, nodeID: str):
 
 
 # TODO update this for alias nodes
-def deleteNode(neti: int, nodei: int):
+def deleteNode(neti: int, nodei: int) -> bool:
     """
-    DeleteNode delete the node with index
-    return: -7: node index out of range, -4: node is not free
-    -5: net index out of range
+    DeleteNode deletes the node with index. Returns whether there was a node with the given index,
+    i.e. whether a node was deleted.
+
+    This does not throw an error due to the possibility of someone deleting nodes in a loop, in
+    which case an original copy may be deleted before its alias, and so when the alias is reached,
+    it no longer exists.
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
-    if neti not in networkDict:
-        errCode = -5
-    else:
-        n = networkDict[neti]
-        if nodei not in n.nodes:
-            errCode = -7
+    def deleteHelper(net: TNetwork, node: TAbstractNode, neti: int, nodei: int, is_alias: bool):
+        # to delete an alias, remove it from the compartment
+        # modify the reactions that it is in, so that previous references now point to the original
+        # node. Also modify the modifiers to do the same
+
+        # remove from compartment
+        compi = getCompartmentOfNode(neti, nodei)
+        if compi == -1:
+            net.baseNodes.remove(nodei)
         else:
-            # validate that node is not part of a reaction
-            if len(n.srcMap[nodei]) == 0 and len(n.destMap[nodei]) == 0:
-                errCode = 0
-                _pushUndoStack()
-                networkDict[neti] = n
-                # remove node from associated compartment
-                compi = getCompartmentOfNode(neti, nodei)
-                if compi == -1:
-                    n.baseNodes.remove(nodei)
-                else:
-                    n.compartments[compi].node_indices.remove(nodei)
-                del n.nodes[nodei]
+            net.compartments[compi].node_indices.remove(nodei)
 
-                # Remove as a modifier
-                for rxn in n.reactions.values():
-                    if nodei in rxn.modifiers:
-                        rxn.modifiers.remove(nodei)
-                return
-            else:
-                errCode = -4
+        if is_alias:
+            assert isinstance(node, TAliasNode)
+            srcReactions = net.srcMap[nodei]
+            destReactions = net.destMap[nodei]
 
-    assert errCode < 0
-    raise ExceptionDict[errCode](errorDict[errCode])
+            # put the original node in the reaction in the place of the alias node
+            for reai in srcReactions:
+                rxn = net.reactions[reai]
+                # TODO what if alias and node are both reactants?
+                # probably add the stoich
+                rxn.reactants[node.original_idx] = rxn.reactants[nodei]
+                del rxn.reactants[nodei]
+
+            for reai in destReactions:
+                rxn = net.reactions[reai]
+                # put the original node in the reaction in the place of the alias node
+                # TODO what if alias and node are both reactants?
+                # probably add the stoich
+                rxn.products[node.original_idx] = rxn.products[nodei]
+                del rxn.products[nodei]
+
+            # replace the old node
+            for rxn in net.reactions.values():
+                if nodei in rxn.modifiers:
+                    rxn.modifiers.remove(nodei)
+                    rxn.modifiers.add(node.original_idx)
+        else:
+            # for now, disallow removing concrete nodes that are part of a reaction
+            if len(net.srcMap[nodei]) != 0 and len(net.destMap[nodei]) != 0:
+                _raiseError(-4)
+
+            # remove self from modifiers list
+            for rxn in net.reactions.values():
+                rxn.modifiers.discard(nodei)
+
+        # remove from 'nodes'
+        del net.nodes[nodei]
+
+
+    net = _getNetwork(neti)
+    try:
+        node = _getNodeOrAlias(neti, nodei)
+    except NodeIndexError:
+        return False
+
+    # validate that node is not part of a reaction
+    # TODO do differently for alias nodes
+    if len(net.srcMap[nodei]) != 0 and len(net.destMap[nodei]) != 0:
+        _raiseError(-4)
+
+    _pushUndoStack()
+
+    is_alias = isinstance(node, TAliasNode)
+    if is_alias:
+        deleteHelper(net, node, neti, nodei, True)
+    else:
+        alias_indices = [i for i, n in net.nodes.items() if isinstance(n, TAliasNode) and cast(TAliasNode, n).original_idx == nodei]
+        for alias_idx in alias_indices:
+            deleteHelper(net, net.nodes[alias_idx], neti, alias_idx, True)
+
+        # delete original node
+        deleteHelper(net, node, neti, nodei, False)
+    
+    return True
 
 
 def clearNetwork(neti: int):
@@ -1964,7 +2012,7 @@ def setReactionBezierCurves(neti: int, reai: int, bezierCurves: bool):
 
 def setReactionModifiers(neti: int, reai: int, modifiers: Set[int]):
     r = _getReaction(neti, reai)
-    r.modifiers = copy.copy(modifiers)
+    r.modifiers = copy.copy(set(modifiers))
 
 
 def getReactionModifiers(neti: int, reai: int) -> Set[int]:
@@ -2349,6 +2397,8 @@ class ReactionSchema(Schema):
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TReaction:
+        if 'modifiers' in data:
+            data['modifiers'] = set(data['modifiers'])
         return TReaction(**data)
 
 

@@ -261,8 +261,8 @@ class Controller(IController):
         return iod.getModifierTipStyle(neti, reai)
 
     @iod_setter
-    def delete_node(self, neti: int, nodei: int):
-        iod.deleteNode(neti, nodei)
+    def delete_node(self, neti: int, nodei: int) -> bool:
+        return iod.deleteNode(neti, nodei)
 
     @iod_setter
     def delete_reaction(self, neti: int, reai: int):

@@ -512,19 +512,28 @@ def get_compartment_by_index(net_index: int, comp_index: int) -> CompartmentData
     return _translate_compartment(_controller.get_compartment_by_index(net_index, comp_index))
 
 
-def delete_node(net_index: int, node_index: int):
+def delete_node(net_index: int, node_index: int) -> bool:
     """Delete a node with the given index in the given network.
+
+    If the node does not exist, return False; otherwise return True. This method does not throw
+    an error when the given node is missing, because the user may potentially be deleing nodes
+    in a loop, and if an original node is deleted before its aliases, when the alias is reached
+    it would no longer be in the network.
+
+    If you want to make certain that a node does exist, use the return value of this function.
 
     Args:
         net_index: The network index.
         node_index: The node index.
+    
+    Returns:
+        True if and only if a node was deleted.
 
     Raises:
-        NetIndexError:
-        NodeIndexError: If the given node does not exist in the network.
-        NodeNotFreeError: If the given onde is part of a reaction.
+        NetIndexError: If the given network does not exist
+        NodeNotFreeError: If the given node is part of a reaction.
     """
-    _controller.delete_node(net_index, node_index)
+    return _controller.delete_node(net_index, node_index)
 
 
 def delete_reaction(net_index: int, reaction_index: int):

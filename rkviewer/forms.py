@@ -1418,8 +1418,10 @@ class ReactionForm(EditPanelForm):
         self.controller.set_reaction_ratelaw(self.net_index, reai, ratelaw)
 
     def OnModifierCheck(self, evt: wx.CommandEvent):
+        evt.Skip()
         assert len(self._selected_idx) == 1
         reactions = [r for r in self.reactions if r.index in self._selected_idx]
+        assert len(reactions) == 1
         reaction = reactions[0]
         new_modifiers = [self.all_nodes[i].index for i in self.modifiers_ctrl.GetCheckedItems()]
         self.controller.set_reaction_modifiers(self.net_index, reaction.index, new_modifiers)
@@ -1450,13 +1452,19 @@ class ReactionForm(EditPanelForm):
     def _UpdateModifierList(self):
         # NOTE if slightly better performance is wanted, we don't have to update this widget
         # immediately. Rather we can have a dirty flag and update only when displaying
-        self.modifiers_ctrl.Set([n.id for n in self.all_nodes])
-        checked_indices = set(i for i, n in enumerate(self.all_nodes) if n.index in self._modifiers)
-        self._UpdateModifierSelection(checked_indices)
+        node_names = list()
+        for n in self.all_nodes:
+            name = n.id
+            if n.original_index != -1:
+                name += ' (alias)'
+            node_names.append(name)
 
-    def _UpdateModifierSelection(self, new_modifiers: Set[int]):
-        self._modifiers = new_modifiers
-        self.modifiers_ctrl.SetCheckedItems(new_modifiers)
+        self.modifiers_ctrl.Set(node_names)
+        self._UpdateModifierSelection()
+
+    def _UpdateModifierSelection(self):
+        checked_indices = set(i for i, n in enumerate(self.all_nodes) if n.index in self._modifiers)
+        self.modifiers_ctrl.SetCheckedItems(checked_indices)
 
     def _UpdateStoichFields(self, reai: int, reactants: List[StoichInfo], products: List[StoichInfo]):
         sizer = self.GetSizer()
@@ -1521,7 +1529,8 @@ class ReactionForm(EditPanelForm):
 
             self._UpdateStoichFields(reai, self._GetSrcStoichs(reai), self._GetDestStoichs(reai))
             self.modifiers_ctrl.Enable()
-            self._UpdateModifierSelection(reaction.modifiers)
+            self._modifiers = reaction.modifiers
+            self._UpdateModifierSelection()
         else:
             self.id_ctrl.Disable()
             fill, fill_alpha = GetMultiColor(list(r.fill_color for r in reactions))
@@ -1531,7 +1540,8 @@ class ReactionForm(EditPanelForm):
             self.center_pos_ctrl.Disable()
             self._UpdateStoichFields(0, [], [])
             self.modifiers_ctrl.Disable()
-            self._UpdateModifierSelection(set())
+            self._modifiers = set()
+            self._UpdateModifierSelection()
 
         bezierCurves = all(r.bezierCurves for r in reactions)
         mod_tip_style = GetMultiEnum(

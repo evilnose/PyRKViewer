@@ -53,6 +53,11 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def alias_for_reaction(self, neti: int, reai: int, nodei: int, pos: Vec2, size: Vec2):
+        """See Iodine aliasForReaction for documentation"""
+        pass
+
+    @abc.abstractmethod
     def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass

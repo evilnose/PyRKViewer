@@ -184,6 +184,10 @@ class Controller(IController):
     @iod_setter
     def add_alias_node(self, neti: int, original_idx: int, pos: Vec2, size: Vec2) -> int:
         return iod.addAliasNode(neti, original_idx, *pos, *size)
+    
+    @iod_setter
+    def alias_for_reaction(self, neti: int, reai: int, nodei: int, pos: Vec2, size: Vec2):
+        iod.aliasForReaction(neti, reai, nodei, *pos, *size)
 
     @iod_setter
     def move_node(self, neti: int, nodei: int, pos: Vec2, allowNegativeCoordinates: bool=False):

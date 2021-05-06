@@ -13,7 +13,8 @@ import abc
 from re import S
 from functools import partial
 
-from marshmallow.decorators import post_load
+from marshmallow.decorators import post_dump, post_load, pre_load
+from marshmallow_polyfield import PolyField
 from numpy.lib.npyio import recfromcsv
 from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeError, NetIndexError,
                   ReactionIndexError, NodeIndexError, CompartmentIndexError, StoichError,
@@ -103,7 +104,7 @@ class TAliasNode(TAbstractNode):
     index: int
     position: Vec2
     rectSize: Vec2
-    original_idx: int
+    originalIdx: int
     nodeLocked: bool
     compi: int = -1
 
@@ -540,9 +541,9 @@ def _getConcreteNode(neti: int, nodei: int) -> TNode:
 
     if isinstance(node, TAliasNode):
         # get the original node
-        original_idx = node.original_idx
-        assert original_idx  in net.nodes
-        node = net.nodes[original_idx]
+        originalIdx = node.originalIdx
+        assert originalIdx  in net.nodes
+        node = net.nodes[originalIdx]
 
     assert isinstance(node, TNode)
 
@@ -600,17 +601,44 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
             raise ExceptionDict[errCode](errorDict[errCode])
 
 
-def addAliasNode(neti: int, original_idx: int, x: float, y: float, w: float, h: float) -> int:
+def addAliasNode(neti: int, originalIdx: int, x: float, y: float, w: float, h: float) -> int:
     net = _getNetwork(neti)
 
     # make sure we can get it
-    original_node = _getConcreteNode(neti, original_idx)
+    original_node = _getConcreteNode(neti, originalIdx)
 
     _pushUndoStack()
 
     # Refer to the original node's index, whether 'original_index' is a TNode or a TAliasNode
     anode = TAliasNode(net.lastNodeIdx, Vec2(x, y), Vec2(w, h), original_node.index, nodeLocked=False)
     return net.addNode(anode)
+
+
+def aliasForReaction(neti: int, reai: int, nodei: int, x: float, y: float, w: float, h: float):
+    '''Create an alias for nodei, and replace each instance of nodei in reai with the alias
+    '''
+    # ensure that the original node exists
+    _getConcreteNode(neti, nodei)
+    _pushUndoStack()
+
+    aliasi = addAliasNode(neti, nodei, x, y, w, h)
+
+    reaction = _getReaction(neti, reai)
+    net = _getNetwork(neti)
+
+    # update reactants and srcMap
+    if nodei in reaction.reactants:
+        reaction.reactants[aliasi] = reaction.reactants[nodei]
+        del reaction.reactants[nodei]
+        net.srcMap[nodei].remove(reai)
+        net.srcMap[aliasi].add(reai)
+
+    # update products and destMap
+    if nodei in reaction.products:
+        reaction.products[aliasi] = reaction.products[nodei]
+        del reaction.products[nodei]
+        net.destMap[nodei].remove(reai)
+        net.destMap[aliasi].add(reai)
 
 
 def getNodeIndex(neti: int, nodeID: str):
@@ -665,24 +693,34 @@ def deleteNode(neti: int, nodei: int) -> bool:
             # put the original node in the reaction in the place of the alias node
             for reai in srcReactions:
                 rxn = net.reactions[reai]
-                # TODO what if alias and node are both reactants?
-                # probably add the stoich
-                rxn.reactants[node.original_idx] = rxn.reactants[nodei]
+                original_species = rxn.reactants.get(node.originalIdx, None)
+                rxn.reactants[node.originalIdx] = rxn.reactants[nodei]
+                # I'm not sure what should happen if both a node and its alias are reactants of
+                # the same reaction. Originally I thought of adding up the stoich of the deleted
+                # alias to that of the original node, but frankly this is such a nonsensical case
+                # that I think doing so would be making it unncessarily complicated.
+                # if original_species:
+                #     new_species = rxn.reactants[node.originalIdx]
+                #     new_species.stoich += original_species.stoich
+                #     new_species.handlePos = original_species.handlePos
                 del rxn.reactants[nodei]
 
             for reai in destReactions:
                 rxn = net.reactions[reai]
-                # put the original node in the reaction in the place of the alias node
-                # TODO what if alias and node are both reactants?
-                # probably add the stoich
-                rxn.products[node.original_idx] = rxn.products[nodei]
+                # see above for explanation
+                original_species = rxn.products.get(node.originalIdx, default=None)
+                rxn.products[node.originalIdx] = rxn.products[nodei]
+                # if original_species:
+                #     new_species = rxn.products[node.originalIdx]
+                #     new_species.stoich += original_species.stoich
+                #     new_species.handlePos = original_species.handlePos
                 del rxn.products[nodei]
 
             # replace the old node
             for rxn in net.reactions.values():
                 if nodei in rxn.modifiers:
                     rxn.modifiers.remove(nodei)
-                    rxn.modifiers.add(node.original_idx)
+                    rxn.modifiers.add(node.originalIdx)
         else:
             # for now, disallow removing concrete nodes that are part of a reaction
             if len(net.srcMap[nodei]) != 0 and len(net.destMap[nodei]) != 0:
@@ -713,7 +751,7 @@ def deleteNode(neti: int, nodei: int) -> bool:
     if is_alias:
         deleteHelper(net, node, neti, nodei, True)
     else:
-        alias_indices = [i for i, n in net.nodes.items() if isinstance(n, TAliasNode) and cast(TAliasNode, n).original_idx == nodei]
+        alias_indices = [i for i, n in net.nodes.items() if isinstance(n, TAliasNode) and cast(TAliasNode, n).originalIdx == nodei]
         for alias_idx in alias_indices:
             deleteHelper(net, net.nodes[alias_idx], neti, alias_idx, True)
 
@@ -804,7 +842,7 @@ def getOriginalIndex(neti: int, nodei: int) -> int:
         return -1
     else:
         assert isinstance(node, TAliasNode)
-        return node.original_idx
+        return node.originalIdx
 
 
 def IsFloatingNode(neti : int, nodei : int):
@@ -2355,21 +2393,34 @@ class FontSchema(Schema):
     color: Color
 
 
-class NodeSchema(Schema):
-    id = fields.Str()  # TODO assert unique
+class AbstractNodeSchema(Schema):
+    index = fields.Int()
+    id = fields.Str()
     position = Dim2()
     rectSize = Dim2()
-    floating = fields.Bool()
     nodeLocked = fields.Bool()
-    compartment = fields.Int()
-    fillColor = ColorField()
-    outlineColor = ColorField()
-    outlineThickness = Dim()
-    # font: Font
+    
+    @post_dump
+    def post_dump(self, data: Any, **kwargs):
+        del data['index']
+        return data
+
+
+class NodeSchema(AbstractNodeSchema):
+    floating = fields.Bool()
+    compi = fields.Int(missing=-1)
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNode:
         return TNode(**data)
+
+
+class AliasSchema(AbstractNodeSchema):
+    originalIdx = fields.Int()
+
+    @post_load
+    def post_load(self, data: Any, **kwargs):
+        return TAliasNode(**data)
 
 
 class SpeciesNode(Schema):
@@ -2417,11 +2468,38 @@ class CompartmentSchema(Schema):
         return TCompartment(**data)
 
 
+def node_or_alias_dump(base_obj, parent_obj):
+    ret =  {
+        TNode.__name__: NodeSchema,
+        TAliasNode.__name__: AliasSchema,
+    }[base_obj.__class__.__name__]()
+    return ret
+
+
+def node_or_alias_load(base_dict, parent_dict):
+    if 'originalIdx' not in base_dict:
+        return NodeSchema()
+    else:
+        return AliasSchema()
+
+
+nodeOrAliasField = PolyField(
+    serialization_schema_selector=node_or_alias_dump,
+    deserialization_schema_selector=node_or_alias_load,
+    required=True,
+)
 class NetworkSchema(Schema):
     id = fields.Str()
-    nodes = fields.Mapping(fields.Int(), fields.Nested(NodeSchema))
+    nodes = fields.Mapping(fields.Int(), nodeOrAliasField)
     reactions = fields.Mapping(fields.Int(), fields.Nested(ReactionSchema))
     compartments = fields.Mapping(fields.Int(), fields.Nested(CompartmentSchema))
+
+    @pre_load
+    def pre_load(self, data: Any, **kwargs):
+        for nodei, nodedata in data['nodes'].items():
+            nodedata['index'] = int(nodei)
+
+        return data
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNetwork:

@@ -115,7 +115,7 @@ class Canvas(wx.ScrolledWindow):
     hovered_element: Optional[CanvasElement]
     dragged_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
-    reaction_map: DefaultDict[int, Set[int]]
+    reaction_map: DefaultDict[int, Set[int]]  # maps node index to reactions it's part of
     logger: Logger
 
     #: Current network index. Right now this is always 0 since there is only one tab.
@@ -891,6 +891,9 @@ class Canvas(wx.ScrolledWindow):
         if len(selected_nodes) != 0:
             menu.AppendSeparator()
             add_item(menu, 'Create Alias', lambda: self.CreateAliases(self.sel_nodes))
+            if len(self.sel_nodes) == 1 and len(self.reaction_map[self.sel_nodes[0].index]) > 1:
+                add_item(menu, 'Split on Reactions',
+                         lambda: self.SplitAliasesOnReactions(self.sel_nodes[0]))
             # Only allow align when the none of the nodes are in a compartment. This prevents
             # nodes inside a compartment being arranged outside.
             if not any(node.comp_idx != -1 for node in self.sel_nodes):
@@ -945,6 +948,15 @@ class Canvas(wx.ScrolledWindow):
                                                         node.size)
                 new_indices.add(new_idx)
         self.sel_nodes_idx.set_item(new_indices)
+    
+    def SplitAliasesOnReactions(self, node: Node):
+        rea_els = [re for re in self._reaction_elements if re.reaction.index in self.reaction_map[node.index]]
+        # exclude the first reaction
+        for rea_el in rea_els[1:]:
+            reaction = rea_el.reaction
+            new_pos = node.position * 0.8 + rea_el.bezier.real_center * 0.2
+            # move node position slightly toward the position of the reaction
+            self.controller.alias_for_reaction(self.net_index, reaction.index, node.index, new_pos, node.size)
 
     def GetBoundingRect(self) -> Optional[Rect]:
         """Get the bounding rectangle of all nodes, reactions, and compartments.
@@ -1716,19 +1728,20 @@ class Canvas(wx.ScrolledWindow):
         rem_rxn = {r.index for r in self.reactions} - sel_reactions_idx
 
         # Second, confirm the selected nodes are free (i.e. not part of a reaction)
-        for node_idx in sel_nodes_idx:
-            if len(self.reaction_map[node_idx] & rem_rxn) != 0:
-                bound_node = None
-                for node in self.nodes:
-                    if node.index == node_idx:
-                        bound_node = node
-
-                assert bound_node is not None
-                self.ShowWarningDialog("Could not delete node '{}', as one or more reactions \
-depend on it.".format(bound_node.id))
-                self.logger.warning("Tried and failed to delete bound node '{}' with index '{}'"
-                                    .format(bound_node.id, node_idx))
-                return
+        for orig_node_idx in sel_nodes_idx:
+            orig_node = self.node_idx_map[orig_node_idx]
+            is_alias = orig_node.original_index != -1
+            # don't need to worry about deleting aliases that are part of reactions
+            if is_alias:
+                continue
+            aliases = [node.index for node in self.nodes if node.original_index == orig_node_idx]
+            for node_idx in chain([orig_node_idx], aliases):
+                if len(self.reaction_map[node_idx] & rem_rxn) != 0:
+                    self.ShowWarningDialog(("Could not delete node '{}', as one or more reactions "
+                                            "depend on it or its aliases.").format(orig_node.id))
+                    self.logger.warning("Tried and failed to delete bound node '{}' with index '{}'"
+                                        .format(orig_node.id, node_idx))
+                    return
 
         with self.controller.group_action():
             sel_comp_idx = self.sel_compartments_idx.item_copy()

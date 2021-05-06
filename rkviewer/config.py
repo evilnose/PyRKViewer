@@ -86,8 +86,8 @@ class AppSettings:
        self.size = wx.Size (1366,737)
        self.displaySize = wx.DisplaySize() 
        # Find the center poistion of the frame
-       self.position.x = self.displaySize[0] / 2 - self.size.x / 2
-       self.position.y = self.displaySize[1] / 2 - self.size.y / 2
+       self.position.x = self.displaySize[0] // 2 - self.size.x // 2
+       self.position.y = self.displaySize[1] // 2 - self.size.y // 2
 
    def load_appSettings(self):
        sp = wx.StandardPaths.Get()
@@ -397,6 +397,26 @@ _settings = BUILTIN_SETTINGS
 _theme = None
 _settings_err = None  
 
+
+
+@dataclass
+class RuntimeVariables:
+    '''Variables pertaining to the application runtime'''
+    enable_plugins: bool = True
+
+
+_RUNTIME_VARS = RuntimeVariables()
+
+
+def runtime_vars() -> RuntimeVariables:
+    return _RUNTIME_VARS
+
+
+def reset_runtime_vars():
+    global _RUNTIME_VARS
+    _RUNTIME_VARS = RuntimeVariables()
+
+
 def load_theme_settings():
     """Reload all settings from the default settings path.
     
@@ -462,3 +482,4 @@ def get_theme(theme_attr, convert_color=True) -> Any:
 def add_plugin_schema(name: str, schema: Schema):
     # TODO 
     pass
+

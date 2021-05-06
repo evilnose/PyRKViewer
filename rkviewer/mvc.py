@@ -16,7 +16,7 @@ class IController(abc.ABC):
     The abc.ABC (Abstract Base Class) is used to enforce the MVC interface more
     strictly.
 
-    The methods with name beginning with Try- are usually called by the View after
+    The methods with name beginning with Try- are usually called by the RKView after
     some user input. If the action tried in such a method succeeds, the Controller
     should request the view to be redrawn; otherwise, an error message might be shown.
     """

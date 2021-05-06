@@ -1,4 +1,4 @@
-"""The main View class and associated widgets.
+"""The main RKView class and associated widgets.
 """
 import os
 from pathlib import Path
@@ -23,7 +23,7 @@ from .canvas.canvas import Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import InputMode, cstate
 from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, get_default_raw_settings, get_setting, get_theme,
-                     GetConfigDir, GetThemeSettingsPath, load_theme_settings, pop_settings_err)
+                     GetConfigDir, GetThemeSettingsPath, load_theme_settings, pop_settings_err, runtime_vars)
 from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
                      DidMoveNodesEvent, DidResizeCompartmentsEvent,
                      DidResizeNodesEvent, SelectionDidUpdateEvent,
@@ -469,7 +469,6 @@ class MainFrame(wx.Frame):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
                          wx.WS_EX_PROCESS_UI_UPDATES, **kw)
         manager = PluginManager(self, controller)
-        manager.load_from('plugins')
         load_theme_settings()
         self.appSettings = AppSettings()
         self.appSettings.load_appSettings()
@@ -483,6 +482,7 @@ class MainFrame(wx.Frame):
         self.manager.bind_error_callback(lambda msg: self.main_panel.canvas.ShowWarningDialog(msg, caption='Plugin Error'))
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.main_panel, 1, wx.EXPAND)
+        self.Bind(wx.EVT_SHOW, self.OnShow)
 
         canvas = self.main_panel.canvas
         self.controller = controller
@@ -578,24 +578,24 @@ class MainFrame(wx.Frame):
                          lambda _: canvas.CreateReactionFromMarked(), entries,
                          key=(wx.ACCEL_CTRL, ord('R')))
 
-        plugins_menu = wx.Menu()
-        self.AddMenuItem(plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
+        self.plugins_menu = wx.Menu()
+        self.AddMenuItem(self.plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
                          key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
-        plugins_menu.AppendSeparator()
-        self.manager.register_menu(plugins_menu)
+        # load the plugin items in OnShow
+        self.plugins_menu.AppendSeparator()
 
         help_menu = wx.Menu()
         self.AddMenuItem(help_menu, '&About...',
                          'Show about dialog', self.onAboutDlg, entries)  # self.ShowAbout, entries)
-        self.AddMenuItem(help_menu, '&Default settings...', 'View default settings',
+        self.AddMenuItem(help_menu, '&Default settings...', 'RKView default settings',
                          lambda _: self.ShowDefaultSettings(), entries)
 
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')
         menu_bar.Append(select_menu, '&Select')
-        menu_bar.Append(view_menu, '&View')
+        menu_bar.Append(view_menu, '&RKView')
         menu_bar.Append(reaction_menu, '&Reaction')
-        menu_bar.Append(plugins_menu, '&Plugins')
+        menu_bar.Append(self.plugins_menu, '&Plugins')
         menu_bar.Append(help_menu, '&Help')
 
         atable = wx.AcceleratorTable(entries)
@@ -617,9 +617,14 @@ class MainFrame(wx.Frame):
 
         # Record the initial position of the window
         self.controller.set_application_position(self.GetPosition())
+    
+    def OnShow(self, evt):
+        if runtime_vars().enable_plugins:
+            self.manager.load_from('plugins')
+            self.manager.register_menu(self.plugins_menu)
+        evt.Skip()
 
-    # Any thing we need to do when the app closes can be included here
-
+    # Anything we need to do when the app closes can be included here
     def OnCloseExit(self, evt):
         self.appSettings.size = self.GetSize()
         self.appSettings.position = self.Position
@@ -877,9 +882,8 @@ class MainFrame(wx.Frame):
             self.OverrideAccelTable(child)
 
 
-class View(IView):
+class RKView(IView):
     """Implementation of the view class."""
-
     def __init__(self):
         self.controller = None
         self.manager = None
@@ -904,7 +908,7 @@ class View(IView):
                    compartments: List[Compartment]):
         """Update the list of nodes.
 
-        Note that View takes ownership of the list of nodes and may modify it.
+        Note that RKView takes ownership of the list of nodes and may modify it.
         """
         self.canvas_panel.Reset(nodes, reactions, compartments)
         self.canvas_panel.LazyRefresh()

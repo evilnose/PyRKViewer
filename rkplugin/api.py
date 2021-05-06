@@ -82,7 +82,7 @@ class Color:
 
 
 @require_kwargs_on_init
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=True)
 class NodeData:
     """Class that holds all the necessary data for a Node.
 
@@ -104,11 +104,10 @@ class NodeData:
         original_index = If this is an alias node, this is the index of the original node. Otherwise
                          this is -1.
     """
-    # TODO add fields; possibly use @dataclass
-    id: str = field()
     net_index: int = field()
-    position: Vec2 = field()
-    size: Vec2 = field()
+    id: str = field()
+    position: Vec2 = field(default=Vec2())
+    size: Vec2 = field(default=Vec2())
     comp_idx: int = field(default=-1)
     index: int = field(default=-1)
     floatingNode: bool = field(default=True)
@@ -204,6 +203,8 @@ def _to_wxcolour(color: Color) -> wx.Colour:
 def init_api(canvas: Canvas, controller: IController):
     """Initializes the API; for internal use only."""
     global _canvas, _controller
+    assert canvas is not None
+    assert controller is not None
     _canvas = canvas
     _controller = controller
 
@@ -211,7 +212,6 @@ def init_api(canvas: Canvas, controller: IController):
 def uninit_api():
     """Uninitialize the API; for internal use only."""
     global _canvas, _controller
-    _controller.clear_network(0)
     _canvas = None
     _controller = None
 
@@ -669,6 +669,29 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
     return nodei
 
 
+def add_alias(net_index: int, original_index: int, position: Vec2 = None, size: Vec2 = None):
+    """Adds an alias node to the network.
+
+    The node indices are assigned in increasing order, regardless of deletion.
+
+    Args:  
+        net_index: The network index.
+        original_index: The index of the original node, from which to create an alias
+        position: The position of the alias, or leave as None to use default, (0, 0).
+        size: The size of the alias, or leave as None to use default, (0, 0).
+
+    Returns:
+        The index of the alias that was added.
+    """
+    position = position or Vec2()
+    size = size or Vec2(get_theme('node_width'), get_theme('node_height'))
+
+    with group_action():
+        aliasi = _controller.add_alias_node(net_index, original_index, position, size)
+
+    return aliasi
+
+
 def move_node(net_index: int, node_index: int, position: Vec2, allowNegativeCoordinates: bool = False):
     """Change the position of a node."""
     _controller.move_node(net_index, node_index, position, allowNegativeCoordinates)
@@ -708,6 +731,14 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
         This is *not* an atomic function, meaning if we failed to set one specific property, the
         previous changes to model in this function will not be undone, even after the exception
         is caught. To go around that, make one calls to update_node() for each property instead.
+
+        Also note the behavior if the given node_index refers to an alias node.
+        The properties 'position', 'size', and 'lockNode' pertain to the alias node itself.
+        But all other properties pertain to the original node that the alias refers to. For example,
+        if one sets the 'position' of an alias node, the position of the alias is updated. But if
+        one sets the 'id' of an alias node, the ID of the original node is modified (and that of
+        the alias node is updated to reflect that).
+
     Raises:
         ValueError: If ID is empty or if any one of border_width, position, and size is out of
                     range.

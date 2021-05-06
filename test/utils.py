@@ -7,12 +7,12 @@ from rkviewer.controller import Controller
 import wx
 from contextlib import contextmanager
 import threading
-from rkviewer.view import View
+from rkviewer.view import RKView
 
 @contextmanager
 def run_app():
     """Create an app context. The app main loop is not called."""
-    view = View()
+    view = RKView()
     controller = Controller(view)
     view.bind_controller(controller)
     view.init()

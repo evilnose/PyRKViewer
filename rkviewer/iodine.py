@@ -663,7 +663,6 @@ def getNodeIndex(neti: int, nodeID: str):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
-# TODO update this for alias nodes
 def deleteNode(neti: int, nodei: int) -> bool:
     """
     DeleteNode deletes the node with index. Returns whether there was a node with the given index,
@@ -677,13 +676,6 @@ def deleteNode(neti: int, nodei: int) -> bool:
         # to delete an alias, remove it from the compartment
         # modify the reactions that it is in, so that previous references now point to the original
         # node. Also modify the modifiers to do the same
-
-        # remove from compartment
-        compi = getCompartmentOfNode(neti, nodei)
-        if compi == -1:
-            net.baseNodes.remove(nodei)
-        else:
-            net.compartments[compi].node_indices.remove(nodei)
 
         if is_alias:
             assert isinstance(node, TAliasNode)
@@ -723,12 +715,19 @@ def deleteNode(neti: int, nodei: int) -> bool:
                     rxn.modifiers.add(node.originalIdx)
         else:
             # for now, disallow removing concrete nodes that are part of a reaction
-            if len(net.srcMap[nodei]) != 0 and len(net.destMap[nodei]) != 0:
+            if len(net.srcMap[nodei]) != 0 or len(net.destMap[nodei]) != 0:
                 _raiseError(-4)
 
             # remove self from modifiers list
             for rxn in net.reactions.values():
                 rxn.modifiers.discard(nodei)
+
+        # remove from compartment
+        compi = getCompartmentOfNode(neti, nodei)
+        if compi == -1:
+            net.baseNodes.remove(nodei)
+        else:
+            net.compartments[compi].node_indices.remove(nodei)
 
         # remove from 'nodes'
         del net.nodes[nodei]

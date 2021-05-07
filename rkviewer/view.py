@@ -593,7 +593,7 @@ class MainFrame(wx.Frame):
         menu_bar.Append(file_menu, '&File')
         menu_bar.Append(edit_menu, '&Edit')
         menu_bar.Append(select_menu, '&Select')
-        menu_bar.Append(view_menu, '&RKView')
+        menu_bar.Append(view_menu, '&View')
         menu_bar.Append(reaction_menu, '&Reaction')
         menu_bar.Append(self.plugins_menu, '&Plugins')
         menu_bar.Append(help_menu, '&Help')

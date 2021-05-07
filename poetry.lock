@@ -790,7 +790,7 @@ numpy = ">=1.19"
 
 [[package]]
 name = "sbml2matlab"
-version = "1.2.3.1"
+version = "1.2.3"
 description = "An SBML to MATLAB translator"
 category = "main"
 optional = true
@@ -806,6 +806,24 @@ python-versions = ">=3.6"
 
 [package.dependencies]
 numpy = ">=1.14.5"
+
+[[package]]
+name = "simplesbml"
+version = "2.0.7"
+description = "A simplified interface for constructing and accessing SBML docs. Version 2.0"
+category = "main"
+optional = true
+python-versions = ">=3.6"
+develop = false
+
+[package.dependencies]
+tesbml = ">=5.15.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/evilnose/simplesbml.git"
+reference = "master"
+resolved_reference = "dfd61aea0781804389b2a74d816b8960fc57fb3c"
 
 [[package]]
 name = "six"
@@ -996,6 +1014,14 @@ sbml2matlab = ">=0.9.1"
 scipy = ">=1.5.1"
 
 [[package]]
+name = "tesbml"
+version = "5.18.1.2"
+description = "LibSBML Python API"
+category = "main"
+optional = true
+python-versions = "*"
+
+[[package]]
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
@@ -1109,12 +1135,12 @@ docs = ["sphinx", "jaraco.packaging (>=8.2)", "rst.linker (>=1.9)"]
 testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pytest-cov", "pytest-enabler", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
 
 [extras]
-sbml = ["tellurium", "sbml2matlab", "networkx"]
+sbml = ["tellurium", "sbml2matlab", "networkx", "simplesbml"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "114f22dfb1063e77c97248fa269d9d93f7370064abd2b51c61b0a7864d9dbfd6"
+content-hash = "aec7478cd79ce6f713e22d1ed3707b6b5c18991869062430309ea1e26078e0d1"
 
 [metadata.files]
 alabaster = [
@@ -1806,9 +1832,13 @@ rrplugins = [
     {file = "rrplugins-2.0.5-py3-none-win_amd64.whl", hash = "sha256:847c65c02a8ac5d630a8eb0d3ab4bb2eef07ce67e3c7159984ce8398c2df0734"},
 ]
 sbml2matlab = [
-    {file = "sbml2matlab-1.2.3.1-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:ce9d4e788df3dbc767dcb4c1272e0edc4a9547568b9e411f08eff36c7e431522"},
-    {file = "sbml2matlab-1.2.3.1-cp37-cp37m-macosx_10_12_x86_64.whl", hash = "sha256:3a1b428c487b2ae17ec6605635721f7cfc62cf42851fe9179e5520ae52a7a06f"},
-    {file = "sbml2matlab-1.2.3.1-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:98b6a4cf122a045f03876dc5013fedaab0669600f7af1a2a8ad0a20ebe8f6655"},
+    {file = "sbml2matlab-1.2.3-cp36-cp36m-win_amd64.whl", hash = "sha256:925e8217fd0dc08af64d23c6abacc1970b57698f5425fc64fd4ed66596589fcb"},
+    {file = "sbml2matlab-1.2.3-cp37-cp37m-macosx_10_14_x86_64.whl", hash = "sha256:fe55ea5c0568459d1f32a558df2501f1006bb46d0284b26ff24866d1292d580b"},
+    {file = "sbml2matlab-1.2.3-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:b17f1bc762393b5d2e920363f808ac45d97952d2abfe1d2376f1188bd1bdc74a"},
+    {file = "sbml2matlab-1.2.3-cp37-cp37m-win_amd64.whl", hash = "sha256:f0293073fe5f6f566b4c260c1d8115858e9a5b437124b2642dfb9b7c8d7995b1"},
+    {file = "sbml2matlab-1.2.3-cp38-cp38-win_amd64.whl", hash = "sha256:0d667de6b45b5390d6b42ca9dbf2132c0322718331f96166c0fd555283e54c73"},
+    {file = "sbml2matlab-1.2.3-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:28ee6975f7e1486b768f7384c0e3869eeb09ab9f1bcbb91c89dcfc525ecc7429"},
+    {file = "sbml2matlab-1.2.3-cp39-cp39-win_amd64.whl", hash = "sha256:a6620b543dd322a1a7538a807149ccf16b0222a257c26b96f8fa7ea6dc0201a6"},
 ]
 scipy = [
     {file = "scipy-1.5.4-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:4f12d13ffbc16e988fa40809cbbd7a8b45bc05ff6ea0ba8e3e41f6f4db3a9e47"},
@@ -1837,6 +1867,7 @@ scipy = [
     {file = "scipy-1.5.4-cp39-cp39-win_amd64.whl", hash = "sha256:cc1f78ebc982cd0602c9a7615d878396bec94908db67d4ecddca864d049112f2"},
     {file = "scipy-1.5.4.tar.gz", hash = "sha256:4a453d5e5689de62e5d38edf40af3f17560bfd63c9c5bd228c18c1f99afa155b"},
 ]
+simplesbml = []
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
@@ -1887,6 +1918,17 @@ sphinxcontrib-serializinghtml = [
 ]
 tellurium = [
     {file = "tellurium-2.2.0-py3-none-any.whl", hash = "sha256:8ccff5b39b586b0a28bf97b173fe5e94244b0fcc4f881d13942cfceb9ff62a00"},
+]
+tesbml = [
+    {file = "tesbml-5.18.1.2-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:6aa5169883e95f40100d99e8f107de9adfb6dbadf8747ccdf04f7755c3ffc01f"},
+    {file = "tesbml-5.18.1.2-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:d4d91858c99362502e077ddabc345875e8274f7066b468ca4a6e98da9b9721db"},
+    {file = "tesbml-5.18.1.2-cp36-cp36m-win_amd64.whl", hash = "sha256:c39143424fbde6e3a49c3c3ec7000352bd8531ba86de0b1057ba9756edc59237"},
+    {file = "tesbml-5.18.1.2-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:10632aa7eeb587ec0ea2ccfb7a1a44f65913b43f4fbc19bb109e5759a67d56a3"},
+    {file = "tesbml-5.18.1.2-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:f0d93fc77ba01c5cc24b9834a07e69c4e294fa3a192071e2484ef8c99fd00e53"},
+    {file = "tesbml-5.18.1.2-cp37-cp37m-win_amd64.whl", hash = "sha256:43e13398b2b51bd165b7a9dd5c0b42e0e1c76411762688c55aa1daad98b14758"},
+    {file = "tesbml-5.18.1.2-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:fd61ef7b9f79d649402dc296a2f9e7c64728f4ab78704390946bd8080e916381"},
+    {file = "tesbml-5.18.1.2-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:eace6629ad4ae43ecfc9a0ad87d88d60a3e52a13ebfc85c3912eafe6cf59d359"},
+    {file = "tesbml-5.18.1.2-cp38-cp38-win_amd64.whl", hash = "sha256:95fafb63bc139c62a6b2be9b9fdd70caf2098f6308555bd2124e79af8e7da402"},
 ]
 toml = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},

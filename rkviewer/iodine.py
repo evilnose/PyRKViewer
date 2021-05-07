@@ -1228,7 +1228,7 @@ def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]
     errCode = 0
 
     if len(sources) == 0 or len(targets) == 0:
-        raise ValueError('Both the sources and targets of a reaction must be nonempty.')
+        raise ValueError("Reaction '{}' has no reactants or it has no products".format(reaID))
 
     net = _getNetwork(neti)
     # duplicate ID?

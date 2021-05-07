@@ -1,4 +1,4 @@
-from __future__ import annotations
+# from __future__ import annotations
 # pylint: disable=maybe-no-member
 from abc import abstractmethod
 import enum
@@ -265,10 +265,10 @@ class BezierHandle(CanvasElement):
 
 
 class ReactionCenter(CanvasElement):
-    parent: ReactionElement
+    parent: 'ReactionElement'
     _moved: bool
 
-    def __init__(self, parent: ReactionElement, layers: Layer):
+    def __init__(self, parent: 'ReactionElement', layers: Layer):
         super().__init__(layers)
         self.parent = parent
         self._moved = False
@@ -643,7 +643,7 @@ class SelectBox(CanvasElement):
     #: the bounding rect when dragging/resizing started
     _orig_rect: Optional[Rect]
     _bounds: Rect  #: the bounds that the bounding rect may not exceed
-    special_mode: SelectBox.SMode
+    special_mode: 'SelectBox.SMode'
 
     class Mode(enum.Enum):
         IDLE = 0

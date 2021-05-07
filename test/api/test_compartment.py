@@ -2,10 +2,10 @@
 
 from rkviewer.mvc import CompartmentIndexError
 from rkplugin import api
-from test.api.common import TestWithApp
+from test.api.common import DummyAppTest
 
 
-class TestCompartment(TestWithApp):
+class TestCompartment(DummyAppTest):
     def setUp(self):
         api.add_node(self.neti, 'Alice')
         api.add_node(self.neti, 'Bob')

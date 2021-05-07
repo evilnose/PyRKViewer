@@ -1,15 +1,16 @@
 """Classes for storing and managing data for graph elements."""
-from __future__ import annotations
+# from __future__ import annotations
 # pylint: disable=maybe-no-member
 from dataclasses import dataclass
 from enum import Enum, auto
+from functools import reduce
 import wx
 import copy
 import math
-from math import pi, sin, cos
+from math import factorial, pi, sin, cos
+from operator import mul
 from itertools import chain
 import numpy as np
-from scipy.special import comb
 from typing import Any, Callable, ClassVar, Container, List, NamedTuple, Optional, Sequence, Set, Tuple, cast
 from collections import namedtuple
 
@@ -317,7 +318,7 @@ class Node(RectData):
     def __repr__(self):
         return 'Node(index={}, id="{}")'.format(self.index, self.id)
 
-    def props_equal(self, other: Node):
+    def props_equal(self, other: 'Node'):
         return self.id == other.id and self.position == other.position and \
             self.size == other.size
 
@@ -332,6 +333,14 @@ BezJ = np.zeros((MAXSEGS + 1, 5))  #: Precomputed Bezier curve data
 BezJPrime = np.zeros((MAXSEGS + 1, 5))  #: Precomputed bezier curve data
 INITIALIZED = False  #: Flag for asserting that the above data is initialized
 CURVE_SLACK = 5  #: Distance allowed on either side of a curve for testing click hit.
+
+
+# inefficient implementation of comb(), but we only call this on startup, so that's fine
+def comb(n, k):
+    if k < n-k:
+        return reduce(mul, range(n-k+1, n+1), 1) // factorial(k)
+    else:
+        return reduce(mul, range(k+1, n+1), 1) // factorial(n-k)
 
 
 def init_bezier():
@@ -369,9 +378,9 @@ class Reaction:
     _sources: List[int]
     _targets: List[int]
     _thickness: float
-    src_c_handle: HandleData
-    dest_c_handle: HandleData
-    handles: List[HandleData]
+    src_c_handle: 'HandleData'
+    dest_c_handle: 'HandleData'
+    handles: List['HandleData']
     bezierCurves: bool
     modifiers: Set[int]
     modifier_tip_style: ModifierTipStyle

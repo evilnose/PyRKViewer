@@ -4,7 +4,7 @@ API for the RKViewer GUI and model. Allows viewing and modifying the network mod
 
 # pylint: disable=maybe-no-member
 #from rkviewer.mvc import NetIndexError
-from __future__ import annotations
+# from __future__ import annotations
 from dataclasses import field, dataclass
 from rkviewer.canvas.canvas import Canvas
 from rkviewer.events import DidChangeCompartmentOfNodesEvent, post_event
@@ -76,7 +76,7 @@ class Color:
         return self._alpha
 
     @classmethod
-    def from_rgb(cls, val: int) -> Color:
+    def from_rgb(cls, val: int) -> 'Color':
         """Create color from RGB hex value: #00BBGGRR"""
         return Color((val >> 0) & 255, (val >> 8) & 255, (val >> 16) & 255)
 

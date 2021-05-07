@@ -1,12 +1,12 @@
 
-from test.api.common import TestWithApp
+from test.api.common import DummyAppTest
 
 from rkplugin.api import Node, Vec2
 from rkplugin import api
 from rkviewer.mvc import NodeNotFreeError, NodeIndexError, ReactionIndexError
 
 
-class TestReaction(TestWithApp):
+class TestReaction(DummyAppTest):
     def setUp(self):
         api.add_node(self.neti, 'Alice')
         api.add_node(self.neti, 'Bob')

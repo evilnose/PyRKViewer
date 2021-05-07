@@ -39,8 +39,9 @@ use that Python installation for building.
 ## Future Development
 
 ### Testing and Profiling
-* To run all tests, go to project root and run `python -m unittest`.
-* To run a particular test, run e.g. `python -m unittest test.rkplugin.test_api`.
+* To run all tests, go to project root and run `python -m unittest discover`.
+* To run a specific test suite, run e.g. `python -m unittest test.api.test_node`.
+* Or even more specific: `python -m unittest test.api.test_node.TestNode.test_add_nodes`.
 * To profile the application, run `python -m cProfile -o rkviewer.stat main.py`.
 * To visualize the profile result, run `tuna rkviewer.stat`.
 

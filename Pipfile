@@ -12,7 +12,7 @@ sphinx-autodoc-typehints="*"
 autopep8 = "*"
 
 [packages]
-wxpython = "==4.1.0"
+wxpython = ">=4.1.1"
 numpy = "<1.19.4"
 scipy = "*"
 sortedcontainers = "*"

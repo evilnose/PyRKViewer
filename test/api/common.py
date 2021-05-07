@@ -4,7 +4,10 @@ from rkviewer.config import runtime_vars, reset_runtime_vars
 from test.utils import close_app_context, open_app_context, run_app
 
 
-class TestWithApp(unittest.TestCase):
+class DummyAppTest(unittest.TestCase):
+    '''Test superclass for functions that need the app, canvas, and controller to be initialized,
+    but don't require the windows to be created or the app to be actually running.
+    '''
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.neti = 0

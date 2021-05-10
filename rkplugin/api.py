@@ -94,9 +94,6 @@ class NodeData:
         net_index: The index of the network that this node is in.
         position: The top-left position of the node bounding box as (x, y).
         size: The size of the node bounding box as (w, h).
-        fill_color: The fill color of the node.
-        border_color: The border color of the node.
-        border_width: The border width of the node.
         comp_idx: The index of the compartment that this node is in, or -1 if it is in the base
                   compartment.
         floatingNode: Set true if you want the node to have floating status or false for boundary status (default is floating)

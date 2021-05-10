@@ -943,8 +943,13 @@ class Canvas(wx.ScrolledWindow):
         new_indices = set()
         with self.controller.group_action():
             for node in nodes:
+                alias_pos = node.position + Vec2.repeat(20)
+                if node.comp_idx >= 0:
+                    comp = self.comp_idx_map[node.comp_idx]
+                    alias_pos = clamp_rect_pos(Rect(alias_pos, node.size), comp.rect)
+                
                 new_idx = self.controller.add_alias_node(self.net_index, node.index,
-                                                        node.position + Vec2.repeat(20),
+                                                        alias_pos,
                                                         node.size)
                 new_indices.add(new_idx)
         self.sel_nodes_idx.set_item(new_indices)
@@ -954,9 +959,12 @@ class Canvas(wx.ScrolledWindow):
         # exclude the first reaction
         for rea_el in rea_els[1:]:
             reaction = rea_el.reaction
-            new_pos = node.position * 0.8 + rea_el.bezier.real_center * 0.2
+            alias_pos = node.position * 0.8 + rea_el.bezier.real_center * 0.2
+            if node.comp_idx >= 0:
+                comp = self.comp_idx_map[node.comp_idx]
+                alias_pos = clamp_rect_pos(Rect(alias_pos, node.size), comp.rect)
             # move node position slightly toward the position of the reaction
-            self.controller.alias_for_reaction(self.net_index, reaction.index, node.index, new_pos, node.size)
+            self.controller.alias_for_reaction(self.net_index, reaction.index, node.index, alias_pos, node.size)
 
     def GetBoundingRect(self) -> Optional[Rect]:
         """Get the bounding rectangle of all nodes, reactions, and compartments.

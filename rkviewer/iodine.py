@@ -610,8 +610,12 @@ def addAliasNode(neti: int, originalIdx: int, x: float, y: float, w: float, h: f
     _pushUndoStack()
 
     # Refer to the original node's index, whether 'original_index' is a TNode or a TAliasNode
-    anode = TAliasNode(net.lastNodeIdx, Vec2(x, y), Vec2(w, h), original_node.index, nodeLocked=False)
-    return net.addNode(anode)
+    anode = TAliasNode(net.lastNodeIdx, Vec2(x, y), Vec2(w, h), original_node.index,
+                       nodeLocked=False)
+
+    anodei = net.addNode(anode)
+    setCompartmentOfNode(neti, anodei, original_node.compi)
+    return anodei
 
 
 def aliasForReaction(neti: int, reai: int, nodei: int, x: float, y: float, w: float, h: float):
@@ -2142,18 +2146,14 @@ def getNodesInCompartment(neti: int, compi: int) -> List[int]:
 
 def getCompartmentOfNode(neti: int, nodei: int) -> int:
     """Return the compartment index that the given node is in, or -1 if it is not in any."""
-    net = _getNetwork(neti)
-    if nodei not in net.nodes:
-        _raiseError(-7)
-
-    return net.nodes[nodei].compi
+    return _getNodeOrAlias(neti, nodei).compi
 
 
 def setCompartmentOfNode(neti: int, nodei: int, compi: int):
     """Set the compartment of the node, or remove it from any compartment if -1 is given."""
     net = _getNetwork(neti)
 
-    node = _getConcreteNode(neti, nodei)
+    node = _getNodeOrAlias(neti, nodei)
     _pushUndoStack()
     if node.compi != -1:
         net.compartments[node.compi].node_indices.remove(nodei)

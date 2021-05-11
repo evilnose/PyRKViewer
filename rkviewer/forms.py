@@ -15,7 +15,7 @@ from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyR
 from .mvc import IController, ModifierTipStyle
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
-from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, Reaction, TEXT_ALIGNMENT_CHOICES, TPrimitive, compute_centroid
+from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, Reaction, TEXT_ALIGNMENT_CHOICES, TLinePrim, TPolygonPrim, TPrimitive, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import TCirclePrim, TRectanglePrim, TCompositeShape
@@ -652,7 +652,12 @@ class PrimitiveSection(wx.Window):
                                                  prim_index)
                 subsection.FloatPrimitiveControl('corner radius', 'corner_radius',
                                                  prim_index)
-            elif isinstance(one_prim, TCirclePrim):
+            elif isinstance(one_prim, TLinePrim):
+                subsection.ColorPrimitiveControl('line color', 'line opacity', 'border_color',
+                                                 prim_index)
+                subsection.FloatPrimitiveControl('line width', 'border_width',
+                                                 prim_index)
+            elif isinstance(one_prim, TCirclePrim) or isinstance(one_prim, TPolygonPrim):
                 subsection.ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
                                                  prim_index)
                 subsection.ColorPrimitiveControl('border color', 'border opacity', 'border_color',
@@ -1074,7 +1079,6 @@ class NodeForm(EditPanelForm):
 
         if len(shape_names) == 1:
             shape_index = nodes[0].shape_index
-            # TODO cache this
 
             if shape_index in self.prim_section_cache:
                 # already created form for this shape before; restore the cached one
@@ -1093,9 +1097,10 @@ class NodeForm(EditPanelForm):
 
             prim_section.UpdatePrimitiveValues()
         else:
-            pass
+            pass  # don't need to do anything since this whole section is hidden
 
-        self.Layout()
+        # need to tell parent to adjust height as well
+        self.GetParent().Layout()
         self.Thaw()
 
     def UpdateAllFields(self):

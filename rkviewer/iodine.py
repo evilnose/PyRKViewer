@@ -21,7 +21,9 @@ from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeE
                   StackEmptyError, JSONError, FileError)
 from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField, get_theme
 from .canvas.geometry import Vec2
-from .canvas.data import CompositeShapeFactory, PrimitiveFactory, TCirclePrim, TCompositeShape, TRectanglePrim, THexagonPrim, TLinePrim, TTrianglePrim, TTransform, TTextPrim
+from .canvas.data import CompositeShapeFactory, PrimitiveFactory, TCirclePrim, TCompositeShape, TPrimitive, \
+    TRectanglePrim, THexagonPrim, TLinePrim, TTrianglePrim, TTransform, TTextPrim, ChoiceItem,\
+    FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, TEXT_ALIGNMENT_CHOICES
 import copy
 from dataclasses import dataclass, field
 import json
@@ -29,7 +31,7 @@ from typing import Any, DefaultDict, Dict, MutableSet, Optional, Set, Tuple, Lis
 from enum import Enum
 from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
-
+from pprint import pprint
 
 # # NOTE this should be completely immutable
 # defaultShapes = [
@@ -2381,6 +2383,25 @@ class EnumField(fields.Field):
                 return entry
         assert False, "Not supposed to reach here"
     
+class ChoiceField(fields.Field):
+    def __init__(self, choice_list):
+        super().__init__()
+        
+        for choice in choice_list:
+            if not isinstance(choice, ChoiceItem):
+                raise ValueError("not choice item")
+        self.choice_list = choice_list
+
+    def _serialize(self, entry, attr, obj, **kwargs):
+        for i in self.choice_list:
+            if entry == i.value:
+                return i.text
+    def _deserilize(self, value, attr, data, **kwargs):
+        for i in self.choice_list:
+            if value == i.text:
+                return i.value
+        assert False, "No choice found"
+        #choice = choice_list[entry.value]
 
 class FontSchema(Schema):
     # TODO use this after implemented
@@ -2391,6 +2412,107 @@ class FontSchema(Schema):
     name: str
     color: Color
 
+class TransformSchema(Schema):
+    translation = Dim2()
+    rotation = Dim()
+    scale = Dim2()
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TTransform:
+        return TTransform(**data)
+
+class PrimitiveSchema(Schema):
+    name = fields.Str()
+    fill_color = ColorField()
+    border_color = ColorField()
+    border_width = Dim()
+    
+
+class RectangleSchema(PrimitiveSchema):
+    corner_radius = Dim()
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TRectanglePrim:
+        return TRectanglePrim(**data)
+
+class CircleSchema(PrimitiveSchema):
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TCirclePrim:
+        return TCirclePrim(**data)
+
+class PolygonSchema(PrimitiveSchema):
+    #name = fields.Str()
+    fill_color = ColorField()
+    border_color = ColorField()
+    border_width = Dim()
+    corner_radius = Dim()
+    radius = Dim()
+
+class LineSchema(PrimitiveSchema):
+    points = fields.Tuple(([Dim2()]*2))
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TLinePrim:
+        return TLinePrim(**data)
+
+class TriangleSchema(PolygonSchema):
+    points = fields.Tuple(([Dim2()]*3))
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TTrianglePrim:
+        return TTrianglePrim(**data)
+
+class HexagonSchema(PolygonSchema):
+    points = fields.Tuple(([Dim2()]*6))
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> THexagonPrim:
+        return THexagonPrim(**data)
+
+def primitive_dump(base_obj, parent_obj):
+    ret = {
+        TRectanglePrim.__name__: RectangleSchema,
+        TCirclePrim.__name__: CircleSchema,
+        TLinePrim.__name__: LineSchema,
+        TTrianglePrim.__name__: TriangleSchema,
+        THexagonPrim.__name__: HexagonSchema
+        
+    }[base_obj.__class__.__name__]()
+    return ret
+
+primitive_schemes = {'rectangle':RectangleSchema(),
+                     'circle': CircleSchema(),
+                     'triangle': TriangleSchema(),
+                     'line': LineSchema(),
+                     'hexagon': HexagonSchema()}
+
+def primitive_load(base_dict, parent_dict):
+    return primitive_schemes[base_dict['name']]
+
+primitiveField = PolyField(
+    serialization_schema_selector=primitive_dump,
+    deserialization_schema_selector=primitive_load,
+    required=True,
+)
+
+class TextSchema(Schema):
+    #name = fields.Str()
+    bg_color = ColorField()
+    font_color = ColorField()
+    font_size = fields.Int()
+    font_family = ChoiceField(FONT_FAMILY_CHOICES)
+    font_style = ChoiceField(FONT_STYLE_CHOICES)
+    font_weight = ChoiceField(FONT_WEIGHT_CHOICES)
+    alignment = ChoiceField(TEXT_ALIGNMENT_CHOICES)
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TTextPrim:
+        return TTextPrim(**data)
+
+class CompositeShapeSchema(Schema):
+    name = fields.Str()
+    text_item = fields.Tuple((fields.Nested(TextSchema), fields.Nested(TransformSchema)))
+    items = fields.List(fields.Tuple((primitiveField, fields.Nested(TransformSchema))))
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TCompositeShape:
+        return TCompositeShape(**data)
 
 class AbstractNodeSchema(Schema):
     index = fields.Int()
@@ -2408,11 +2530,12 @@ class AbstractNodeSchema(Schema):
 class NodeSchema(AbstractNodeSchema):
     floating = fields.Bool()
     compi = fields.Int(missing=-1)
+    shapei = fields.Int()
+    shape = fields.Nested(CompositeShapeSchema)
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNode:
         return TNode(**data)
-
 
 class AliasSchema(AbstractNodeSchema):
     originalIdx = fields.Int()
@@ -2451,7 +2574,6 @@ class ReactionSchema(Schema):
             data['modifiers'] = set(data['modifiers'])
         return TReaction(**data)
 
-
 class CompartmentSchema(Schema):
     id = fields.Str()
     position = Dim2()
@@ -2487,6 +2609,7 @@ nodeOrAliasField = PolyField(
     deserialization_schema_selector=node_or_alias_load,
     required=True,
 )
+
 class NetworkSchema(Schema):
     id = fields.Str()
     nodes = fields.Mapping(fields.Int(), nodeOrAliasField)

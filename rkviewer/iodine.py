@@ -2393,15 +2393,15 @@ class ChoiceField(fields.Field):
         self.choice_list = choice_list
 
     def _serialize(self, entry, attr, obj, **kwargs):
-        for i in self.choice_list:
-            if entry == i.value:
-                return i.text
-    def _deserilize(self, value, attr, data, **kwargs):
-        for i in self.choice_list:
-            if value == i.text:
-                return i.value
+        for choice in self.choice_list:
+            if entry == choice.value:
+                return choice.text
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        for choice in self.choice_list:
+            if value == choice.text:
+                return choice.value
         assert False, "No choice found"
-        #choice = choice_list[entry.value]
 
 class FontSchema(Schema):
     # TODO use this after implemented
@@ -2434,10 +2434,12 @@ class RectangleSchema(PrimitiveSchema):
     def post_load(self, data: Any, **kwargs) -> TRectanglePrim:
         return TRectanglePrim(**data)
 
+
 class CircleSchema(PrimitiveSchema):
     @post_load
     def post_load(self, data: Any, **kwargs) -> TCirclePrim:
         return TCirclePrim(**data)
+
 
 class PolygonSchema(PrimitiveSchema):
     #name = fields.Str()
@@ -2453,17 +2455,20 @@ class LineSchema(PrimitiveSchema):
     def post_load(self, data: Any, **kwargs) -> TLinePrim:
         return TLinePrim(**data)
 
+
 class TriangleSchema(PolygonSchema):
     points = fields.Tuple(([Dim2()]*3))
     @post_load
     def post_load(self, data: Any, **kwargs) -> TTrianglePrim:
         return TTrianglePrim(**data)
 
+
 class HexagonSchema(PolygonSchema):
     points = fields.Tuple(([Dim2()]*6))
     @post_load
     def post_load(self, data: Any, **kwargs) -> THexagonPrim:
         return THexagonPrim(**data)
+
 
 def primitive_dump(base_obj, parent_obj):
     ret = {
@@ -2476,14 +2481,16 @@ def primitive_dump(base_obj, parent_obj):
     }[base_obj.__class__.__name__]()
     return ret
 
-primitive_schemes = {'rectangle':RectangleSchema(),
+
+primitive_schemas = {'rectangle':RectangleSchema(),
                      'circle': CircleSchema(),
                      'triangle': TriangleSchema(),
                      'line': LineSchema(),
                      'hexagon': HexagonSchema()}
 
+
 def primitive_load(base_dict, parent_dict):
-    return primitive_schemes[base_dict['name']]
+    return primitive_schemas[base_dict['name']]
 
 primitiveField = PolyField(
     serialization_schema_selector=primitive_dump,

@@ -10,7 +10,7 @@ TODOs
 """
 from __future__ import annotations
 import abc
-from re import S
+from re import S, X
 from functools import partial
 
 from marshmallow.decorators import post_dump, post_load, pre_load
@@ -32,15 +32,6 @@ from enum import Enum
 from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
 from pprint import pprint
-
-# # NOTE this should be completely immutable
-# defaultShapes = [
-#     TCompositeShape([(TRectanglePrim(), TTransform())], (TTextPrim(), TTransform()), 'rectangle'),
-#     TCompositeShape([(TCirclePrim(), TTransform())], (TTextPrim(), TTransform()), 'circle'),
-#     TCompositeShape([(THexagonPrim(), TTransform())], (TTextPrim(), TTransform()), 'hexagon'),
-#     TCompositeShape([(TLinePrim(), TTransform())], (TTextPrim(), TTransform()), 'line'),
-#     TCompositeShape([(TTrianglePrim(), TTransform())], (TTextPrim(), TTransform()), 'triangle')
-# ]
 
 def get_theme_fn(name):
     return partial(get_theme, name, convert_color=False)
@@ -2421,23 +2412,27 @@ class TransformSchema(Schema):
     def post_load(self, data: Any, **kwargs) -> TTransform:
         return TTransform(**data)
 
+
 class PrimitiveSchema(Schema):
     name = fields.Str()
     fill_color = ColorField()
     border_color = ColorField()
     border_width = Dim()
-    
+
 
 class RectangleSchema(PrimitiveSchema):
     corner_radius = Dim()
+
     @post_load
     def post_load(self, data: Any, **kwargs) -> TRectanglePrim:
+        del data['name']
         return TRectanglePrim(**data)
 
 
 class CircleSchema(PrimitiveSchema):
     @post_load
     def post_load(self, data: Any, **kwargs) -> TCirclePrim:
+        del data['name']
         return TCirclePrim(**data)
 
 
@@ -2453,20 +2448,23 @@ class LineSchema(PrimitiveSchema):
     points = fields.Tuple(([Dim2()]*2))
     @post_load
     def post_load(self, data: Any, **kwargs) -> TLinePrim:
+        del data['name']
         return TLinePrim(**data)
 
 
 class TriangleSchema(PolygonSchema):
-    points = fields.Tuple(([Dim2()]*3))
+    points = fields.Tuple(((Dim2(),)*4))
     @post_load
     def post_load(self, data: Any, **kwargs) -> TTrianglePrim:
+        del data['name']
         return TTrianglePrim(**data)
 
 
 class HexagonSchema(PolygonSchema):
-    points = fields.Tuple(([Dim2()]*6))
+    points = fields.Tuple((Dim2(),)*7)
     @post_load
     def post_load(self, data: Any, **kwargs) -> THexagonPrim:
+        del data['name']
         return THexagonPrim(**data)
 
 
@@ -2487,10 +2485,9 @@ primitive_schemas = {'rectangle':RectangleSchema(),
                      'triangle': TriangleSchema(),
                      'line': LineSchema(),
                      'hexagon': HexagonSchema()}
-
-
 def primitive_load(base_dict, parent_dict):
     return primitive_schemas[base_dict['name']]
+
 
 primitiveField = PolyField(
     serialization_schema_selector=primitive_dump,
@@ -2537,11 +2534,15 @@ class AbstractNodeSchema(Schema):
 class NodeSchema(AbstractNodeSchema):
     floating = fields.Bool()
     compi = fields.Int(missing=-1)
-    shapei = fields.Int()
     shape = fields.Nested(CompositeShapeSchema)
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNode:
+        shape_name = data['shape'].name
+        # get shape index manually
+        # If this fails, then somebody modified the shape name
+        shapei = [s.name for s in shapeFactories].index(shape_name)
+        data['shapei'] = shapei
         return TNode(**data)
 
 class AliasSchema(AbstractNodeSchema):

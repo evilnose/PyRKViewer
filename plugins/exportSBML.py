@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an SBML string as save it as a file.
-Version 0.01: Author: Jin Xu (2021)
+Version 0.02: Author: Jin Xu (2021)
 """
 
 
@@ -20,7 +20,7 @@ class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportSBML',
         author='Jin Xu',
-        version='0.0.1',
+        version='0.0.2',
         short_desc='Export SBML.',
         long_desc='Export the SBML String from the network on canvas and save it to a file.',
         category=PluginCategory.ANALYSIS
@@ -53,15 +53,16 @@ class ExportSBML(WindowedPlugin):
         Handler for the "Export" button.
         Get the network on canvas and change it to an SBML string.
         """
+
         isReversible = True
         netIn = 0
         numNodes = api.node_count(netIn)
+        numReactions = api.reaction_count(netIn)
         
-        if numNodes == 0:
+        if numNodes == 0: #or numReactions == 0 :
             wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
-            numReactions = api.reaction_count(netIn)
             allReactions = api.get_reactions(netIn)
             allcompartments = api.get_compartments(netIn)
             numCompartments = len(allcompartments)          
@@ -187,6 +188,8 @@ class ExportSBML(WindowedPlugin):
             #
             layoutns = LayoutPkgNamespaces(3, 1, 1)
 
+            renderns = RenderPkgNamespaces(3, 1, 1)
+
             #
             # Get a LayoutModelPlugin object plugged in the model object.
             #
@@ -194,12 +197,22 @@ class ExportSBML(WindowedPlugin):
             # thus the value needs to be casted for the corresponding derived class.
             #
 
-            mplugin = (model.getPlugin("layout"))
+            mplugin = model.getPlugin("layout")
 
+            # rPlugin = model.getPlugin("render")
+            # if rPlugin is None:
+            #   print("there is no render outside layout.")
+                 
+            # lolPlugin = mplugin.getListOfLayouts().getPlugin("render")
+            # if lolPlugin is None:
+            #   print("there is no render info inside layout.")
+            
             if mplugin is None:
-                print(
-                    "[Fatal Error] Layout Extension Level " + layoutns.getLevel() + " Version " + layoutns.getVersion() + " package version " + layoutns.getPackageVersion() + " is not registered.")
-                sys.exit(1)
+                # print(
+                #     "[Fatal Error] Layout Extension Level " + layoutns.getLevel() + " Version " + layoutns.getVersion() + " package version " + layoutns.getPackageVersion() + " is not registered.")
+                # sys.exit(1)
+                wx.MessageBox("There is no layout information.", "Message", wx.OK | wx.ICON_INFORMATION)
+
 
             #
             # Creates a Layout object via LayoutModelPlugin object.
@@ -245,20 +258,7 @@ class ExportSBML(WindowedPlugin):
                         textGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
                         textGlyph.setOriginOfTextId(specG_id)
                         textGlyph.setGraphicalObjectId(specG_id)
-            else:#the whole size of the canvas is the compartment size
-                comp_id="c_0"
-                compartmentGlyph = layout.createCompartmentGlyph()
-                compG_id = "CompG_" + comp_id
-                compartmentGlyph.setId(compG_id)
-                compartmentGlyph.setCompartmentId(comp_id)
-                bb_id  = "bb_" + comp_id
-                pos_x  = 0 # same as random network
-                pos_y  = 0
-                width  = 4000
-                height = 2500
-                compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
-                   
-
+            else:#there is no compartment   
                 for i in range(numNodes):
                     spec_id = allNodes[i].id
                     speciesGlyph = layout.createSpeciesGlyph()
@@ -360,7 +360,113 @@ class ExportSBML(WindowedPlugin):
                     cb.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y - 0.5*height))
 
             sbmlStr_layout = writeSBMLToString(document) #sbmlStr is w/o layout info
-            self.SBMLText.SetValue(sbmlStr_layout) 
+            #self.SBMLText.SetValue(sbmlStr_layout) 
+
+            doc = readSBMLFromString(sbmlStr_layout)
+            model_layout = doc.getModel()
+            mplugin = model_layout.getPlugin("layout")
+
+            # add render information to the first layout
+            layout = mplugin.getLayout(0)
+
+            rPlugin = layout.getPlugin("render")
+
+            uri = RenderExtension.getXmlnsL2() if doc.getLevel() == 2 else RenderExtension.getXmlnsL3V1V1();
+
+            # enable render package
+            doc.enablePackage(uri, "render", True)
+            doc.setPackageRequired("render", False)
+
+            rPlugin = layout.getPlugin("render")
+
+            rInfo = rPlugin.createLocalRenderInformation()
+            rInfo.setId("info")
+            rInfo.setName("Render Information")
+            rInfo.setProgramName("RenderInformation")
+            rInfo.setProgramVersion("1.0")
+
+            # add some colors
+            if numCompartments != 0:  
+                fill_color        = allcompartments[0].fill_color
+                border_color      = allcompartments[0].border_color
+                comp_border_width = allcompartments[0].border_width
+                fill_color_str    = '#%02x%02x%02x' % (fill_color.r,fill_color.g,fill_color.b)
+                border_color_str  = '#%02x%02x%02x' % (border_color.r,border_color.g,border_color.b)
+            
+            else:
+                comp_border_width = 2.
+                fill_color_str    = '#9ea9ff'
+                border_color_str  = '#001dff'
+
+            node =  allNodes[0]
+            spec_fill_color   = node.fill_color
+            spec_border_color = node.border_color
+            spec_border_width = node.border_width
+            spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
+            spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
+
+            if numReactions != 0:
+                reaction_fill_color     = allReactions[0].fill_color
+                reaction_fill_color_str = '#%02x%02x%02x' % (reaction_fill_color.r,reaction_fill_color.g,reaction_fill_color.b)           
+                reaction_line_thickness = allReactions[i].line_thickness
+
+            #add some colors
+            color = rInfo.createColorDefinition()
+            color.setId("black")
+            color.setColorValue("#000000")
+
+            color = rInfo.createColorDefinition()
+            color.setId("comp_fill_color")
+            color.setColorValue(fill_color_str)
+
+            color = rInfo.createColorDefinition()
+            color.setId("comp_border_color")
+            color.setColorValue(border_color_str)
+
+            color = rInfo.createColorDefinition()
+            color.setId("spec_fill_color")
+            color.setColorValue(spec_fill_color_str)
+
+            color = rInfo.createColorDefinition()
+            color.setId("spec_border_color")
+            color.setColorValue(spec_border_color_str)
+
+            if numReactions != 0:
+                color = rInfo.createColorDefinition()
+                color.setId("reaction_fill_color")
+                color.setColorValue(reaction_fill_color_str)
+
+            # add a list of styles 
+            style = rInfo.createStyle("compStyle")
+            style.getGroup().setFillColor("comp_fill_color")
+            style.getGroup().setStroke("comp_border_color")
+            style.getGroup().setStrokeWidth(comp_border_width)
+            style.addType("COMPARTMENTGLYPH")
+            rectangle = style.getGroup().createRectangle()
+            rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+
+            style = rInfo.createStyle("specStyle")
+            style.getGroup().setFillColor("spec_fill_color")
+            style.getGroup().setStroke("spec_border_color")
+            style.getGroup().setStrokeWidth(spec_border_width)
+            style.addType("SPECIESGLYPH")
+            rectangle = style.getGroup().createRectangle()
+            rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+
+            style = rInfo.createStyle("textStyle")
+            style.getGroup().setStroke("black")
+            style.getGroup().setStrokeWidth(1.)
+            style.addType("TEXTGLYPH")
+
+            if numReactions != 0:
+                style = rInfo.createStyle("reactionStyle")
+                style.getGroup().setStroke("reaction_fill_color")
+                style.getGroup().setStrokeWidth(reaction_line_thickness)
+                style.addType("REACTIONGLYPH SPECIESREFERENCEGLYPH")
+            
+            
+            sbmlStr_layout_render = writeSBMLToString(doc)
+            self.SBMLText.SetValue(sbmlStr_layout_render) 
            
     def Save(self, evt):
         """

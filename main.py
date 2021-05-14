@@ -10,6 +10,8 @@ from rkviewer.controller import Controller
 # only necessary to do so for rkplugin.events but not other rkplugin files.
 import os
 from pathlib import Path
+import simplesbml #necessary for importSBML plug-in
+from libsbml import * #necessary for Export/importSBML plug-in
 
 
 class ExceptionDialog(wx.MessageDialog):

@@ -398,12 +398,17 @@ class ExportSBML(WindowedPlugin):
                 fill_color_str    = '#9ea9ff'
                 border_color_str  = '#001dff'
 
+            #nodeData does not have fill_color,border_color,border_width
             node =  allNodes[0]
-            spec_fill_color   = node.fill_color
-            spec_border_color = node.border_color
-            spec_border_width = node.border_width
-            spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
-            spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
+            # spec_fill_color   = node.fill_color
+            # spec_border_color = node.border_color
+            # spec_border_width = node.border_width
+            # spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
+            # spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
+
+            spec_fill_color_str = '#ffcc99'
+            spec_border_color_str = '#ff6c09'
+            spec_border_width = 2.
 
             if numReactions != 0:
                 reaction_fill_color     = allReactions[0].fill_color

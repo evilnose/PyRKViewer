@@ -468,6 +468,7 @@ class MainFrame(wx.Frame):
     def __init__(self, controller: IController, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |
                          wx.WS_EX_PROCESS_UI_UPDATES, **kw)
+        self.last_save_path = None
         manager = PluginManager(self, controller)
         load_theme_settings()
         self.appSettings = AppSettings()
@@ -794,7 +795,7 @@ class MainFrame(wx.Frame):
 
     def SaveJson(self):
         if self.last_save_path is None:
-            return
+            return self.SaveAsJson()
         try:
             net_index = 0
             net_json = self.controller.dump_network(net_index)

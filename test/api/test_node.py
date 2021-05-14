@@ -70,7 +70,7 @@ class TestAlias(TestWithApp):
         nodes = api.get_nodes(self.neti)
         self.assertEqual(2, len(nodes))
         original = NodeData(net_index=self.neti, id='Hookie', index=0, original_index=-1)
-        alias = NodeData(self.neti, id='Hookie', index=1, original_index=0)
+        alias = NodeData(net_index=self.neti, id='Hookie', index=1, original_index=0)
         self.assertEqual(original, nodes[0])
         self.assertEqual(alias, nodes[1])
 

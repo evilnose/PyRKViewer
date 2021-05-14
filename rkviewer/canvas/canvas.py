@@ -956,15 +956,16 @@ class Canvas(wx.ScrolledWindow):
     
     def SplitAliasesOnReactions(self, node: Node):
         rea_els = [re for re in self._reaction_elements if re.reaction.index in self.reaction_map[node.index]]
-        # exclude the first reaction
-        for rea_el in rea_els[1:]:
-            reaction = rea_el.reaction
-            alias_pos = node.position * 0.8 + rea_el.bezier.real_center * 0.2
-            if node.comp_idx >= 0:
-                comp = self.comp_idx_map[node.comp_idx]
-                alias_pos = clamp_rect_pos(Rect(alias_pos, node.size), comp.rect)
-            # move node position slightly toward the position of the reaction
-            self.controller.alias_for_reaction(self.net_index, reaction.index, node.index, alias_pos, node.size)
+        with self.controller.group_action():
+            # exclude the first reaction
+            for rea_el in rea_els[1:]:
+                reaction = rea_el.reaction
+                alias_pos = node.position * 0.8 + rea_el.bezier.real_center * 0.2
+                if node.comp_idx >= 0:
+                    comp = self.comp_idx_map[node.comp_idx]
+                    alias_pos = clamp_rect_pos(Rect(alias_pos, node.size), comp.rect)
+                # move node position slightly toward the position of the reaction
+                self.controller.alias_for_reaction(self.net_index, reaction.index, node.index, alias_pos, node.size)
 
     def GetBoundingRect(self) -> Optional[Rect]:
         """Get the bounding rectangle of all nodes, reactions, and compartments.

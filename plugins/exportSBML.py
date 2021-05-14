@@ -7,7 +7,7 @@ Version 0.02: Author: Jin Xu (2021)
 # pylint: disable=maybe-no-member
 
 from inspect import Parameter
-from libsbml import KineticLaw
+#from libsbml import KineticLaw
 #from tesbml.libsbml import BoundaryCondition
 import wx
 from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory

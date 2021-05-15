@@ -13,7 +13,7 @@ from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction, Color
 import os
-import simplesbml # has to import in the main.py too
+import simplesbml # does not have to import in the main.py too
 from libsbml import *
 import math
 import random as _random

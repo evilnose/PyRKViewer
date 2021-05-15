@@ -14,7 +14,7 @@ from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction, Color
 import os
-from libsbml import *
+from libsbml import * # does not have to import in the main.py too
 
 class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(

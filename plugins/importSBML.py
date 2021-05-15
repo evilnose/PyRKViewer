@@ -18,7 +18,7 @@ from libsbml import *
 import math
 import random as _random
 
-class ExportSBML(WindowedPlugin):
+class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',

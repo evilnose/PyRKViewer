@@ -33,8 +33,7 @@ from ..utils import even_round, opacity_mul, resource_path
 from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
 from .elements import BezierHandle, CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
-    Rect,
-    Vec2, circle_bounds,
+    Rect, Vec2, circle_bounds,
     clamp_rect_pos, get_bounding_rect,
     padded_rect,
     rects_overlap,
@@ -116,7 +115,7 @@ class Canvas(wx.ScrolledWindow):
     hovered_element: Optional[CanvasElement]
     dragged_element: Optional[CanvasElement]
     zoom_slider: wx.Slider
-    reaction_map: DefaultDict[int, Set[int]]
+    reaction_map: DefaultDict[int, Set[int]]  # maps node index to reactions it's part of
     logger: Logger
 
     #: Current network index. Right now this is always 0 since there is only one tab.
@@ -164,6 +163,7 @@ class Canvas(wx.ScrolledWindow):
         # ensure the parent's __init__ is called
         super().__init__(*args, style=wx.DEFAULT_FRAME_STYLE & ~wx.MAXIMIZE_BOX ^ wx.RESIZE_BORDER,
                          **kw)
+        self.last_motion = 0
         err = pop_settings_err()
         if err is not None:
             if isinstance(err, JSONLibraryException):
@@ -204,7 +204,7 @@ class Canvas(wx.ScrolledWindow):
         self.Bind(wx.EVT_MOUSEWHEEL, self.OnMouseWheel)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeaveWindow)
         self.Bind(wx.EVT_WINDOW_DESTROY, self.OnWindowDestroy)
-        self.Bind(wx.EVT_IDLE, self.OnIdle)
+        # self.Bind(wx.EVT_IDLE, self.OnIdle)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda _: None)  # Don't erase background
         self.Bind(wx.EVT_CHAR_HOOK, self.OnChar)
 
@@ -223,7 +223,7 @@ class Canvas(wx.ScrolledWindow):
         self._scroll_off = Vec2(scroll_width, scroll_height)
         self.SetVirtualSize(*self.realsize)
 
-        bounds = Rect(BOUNDS_EPS_VEC, self.realsize * cstate.scale - BOUNDS_EPS_VEC)
+        bounds = Rect(BOUNDS_EPS_VEC, self.realsize - BOUNDS_EPS_VEC)
         self._select_box = SelectBox(self, [], [], bounds, self.controller, self._net_index,
                                      Canvas.SELECT_BOX_LAYER)
         self.sel_nodes_idx = SetSubject()
@@ -404,8 +404,8 @@ class Canvas(wx.ScrolledWindow):
         return NodeElement(node, self, layers)
 
     def CreateReactionElement(self, rxn: Reaction, layers: Layer) -> ReactionElement:
-        snodes = [self.node_idx_map[id] for id in rxn.sources]
-        tnodes = [self.node_idx_map[id] for id in rxn.targets]
+        snodes = [self.node_idx_map[idx] for idx in rxn.sources]
+        tnodes = [self.node_idx_map[idx] for idx in rxn.targets]
         rb = ReactionBezier(rxn, snodes, tnodes)
         return ReactionElement(rxn, rb, self, layers, Canvas.HANDLE_LAYER)
 
@@ -457,7 +457,9 @@ class Canvas(wx.ScrolledWindow):
         self._nodes = nodes
         self._reactions = reactions
         self._compartments = compartments
-        self.hovered_element = None
+        # Don't clear hovered_element if it is SelectBox
+        if not isinstance(self.hovered_element, SelectBox):
+            self.hovered_element = None
         self.dragged_element = None
 
         self._compartment_elements = [self.CreateCompartmentElement(c) for c in compartments]
@@ -515,7 +517,6 @@ class Canvas(wx.ScrolledWindow):
 
     def SetOriginPos(self, pos: Vec2):
         """Set the origin position (position of the topleft corner) to pos by scrolling."""
-        pos *= cstate.scale
         # check if out of bounds
         pos = pos.map(lambda e: max(e, 0))
 
@@ -610,7 +611,7 @@ class Canvas(wx.ScrolledWindow):
     def OnLeftDown(self, evt):
         try:
             device_pos = Vec2(evt.GetPosition())
-            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition())) / cstate.scale
 
             # Check if clicked on overlay using device_pos
             overlay = self._InWhichOverlay(device_pos)
@@ -697,6 +698,8 @@ class Canvas(wx.ScrolledWindow):
                         good = self._select_box.on_left_down(logical_pos)
                         assert good
                         self.dragged_element = self._select_box
+                        self.hovered_element = self._select_box
+                        self._FloatNodes()
                         return
 
                 # clicked on nothing; drag-selecting
@@ -712,7 +715,7 @@ class Canvas(wx.ScrolledWindow):
             elif cstate.input_mode == InputMode.ADD_NODES:
                 size = Vec2(get_theme('node_width'), get_theme('node_height'))
 
-                unscaled_pos = logical_pos / cstate.scale
+                unscaled_pos = logical_pos
                 adj_pos = unscaled_pos - size / 2
 
                 node = Node(
@@ -720,9 +723,9 @@ class Canvas(wx.ScrolledWindow):
                     self.net_index,
                     pos=adj_pos,
                     size=size,
-                    fill_color=get_theme('node_fill'),
-                    border_color=get_theme('node_border'),
-                    border_width=get_theme('node_border_width'),
+                    # fill_color=get_theme('node_fill'),
+                    # border_color=get_theme('node_border'),
+                    # border_width=get_theme('node_border_width'),
                     comp_idx=self.RectInWhichCompartment(Rect(adj_pos, size)),
                     floatingNode=True,
                     lockNode=False,
@@ -730,9 +733,16 @@ class Canvas(wx.ScrolledWindow):
                 node.position = clamp_rect_pos(node.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 node.id = self._GetUniqueName(node.id, [n.id for n in self._nodes])
 
-                self.controller.start_group()
-                self.controller.add_node_g(self._net_index, node)
-                self.controller.end_group()
+                with self.controller.group_action():
+                    nodei = self.controller.add_node_g(self._net_index, node)
+                    fill_color=get_theme('node_fill')
+                    border_color=get_theme('node_border')
+                    border_width=get_theme('node_border_width')
+                    self.controller.set_node_fill_rgb(self._net_index, nodei, fill_color)
+                    self.controller.set_node_fill_alpha(self._net_index, nodei, fill_color.Alpha())
+                    self.controller.set_node_border_rgb(self._net_index, nodei, border_color)
+                    self.controller.set_node_border_alpha(self._net_index, nodei, border_color.Alpha())
+                    self.controller.set_node_border_width(self._net_index, nodei, border_width)
 
                 index = self.controller.get_node_index(self._net_index, node.id)
                 with self._SelectGroupEvent():
@@ -796,7 +806,7 @@ class Canvas(wx.ScrolledWindow):
         than by the individual elements.
         """
         device_pos = Vec2(evt.GetPosition())
-        logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+        logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition())) / cstate.scale
 
         overlay = self._InWhichOverlay(device_pos)
         if overlay is not None:
@@ -868,17 +878,22 @@ class Canvas(wx.ScrolledWindow):
         #    id_ = menu.Append(qmi) # (-1, menu_name).Id
         #    menu.Bind(wx.EVT_MENU, lambda _: callback(), id=id_)
 
-        def add_item(menu: wx.Menu, menu_name, image_name, callback):
+        def add_item(menu: wx.Menu, menu_name: str, callback, image_name: str = None):
             item = menu.Append(-1, menu_name)
 
-            if image_name != '':
+            if image_name != None:
                item.SetBitmap(wx.Bitmap(resource_path(image_name)))
             menu.Bind(wx.EVT_MENU, lambda _: callback(), id=item.Id)
 
         if total_selected != 0:
-            add_item(menu, 'Delete', '', self.DeleteSelectedItems)
+            add_item(menu, 'Delete', self.DeleteSelectedItems)
 
         if len(selected_nodes) != 0:
+            menu.AppendSeparator()
+            add_item(menu, 'Create Alias', lambda: self.CreateAliases(self.sel_nodes))
+            if len(self.sel_nodes) == 1 and len(self.reaction_map[self.sel_nodes[0].index]) > 1:
+                add_item(menu, 'Split on Reactions',
+                         lambda: self.SplitAliasesOnReactions(self.sel_nodes[0]))
             # Only allow align when the none of the nodes are in a compartment. This prevents
             # nodes inside a compartment being arranged outside.
             if not any(node.comp_idx != -1 for node in self.sel_nodes):
@@ -887,29 +902,72 @@ class Canvas(wx.ScrolledWindow):
 
                 menu.AppendSeparator()
                 align_menu = wx.Menu()
-                add_item(align_menu, 'Align Left', 'alignLeft_XP.png', lambda: self.AlignSelectedNodes(Alignment.LEFT))
-                add_item(align_menu, 'Align Right', 'alignRight_XP.png', lambda: self.AlignSelectedNodes(Alignment.RIGHT))
-                add_item(align_menu, 'Align Center', 'alignHorizCenter_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.CENTER))
+                add_item(align_menu, 'Align Left',
+                         lambda: self.AlignSelectedNodes(Alignment.LEFT),
+                         'alignLeft_XP.png')
+                add_item(align_menu, 'Align Right',
+                         lambda: self.AlignSelectedNodes(Alignment.RIGHT),
+                         'alignRight_XP.png')
+                add_item(align_menu, 'Align Center',
+                         lambda: self.AlignSelectedNodes(Alignment.CENTER),
+                         'alignHorizCenter_XP.png')
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Align Top', 'alignTop_XP.png', lambda: self.AlignSelectedNodes(Alignment.TOP))
-                add_item(align_menu, 'Align Bottom', 'AlignBottom_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.BOTTOM))
-                add_item(align_menu, 'Align Middle', 'alignVertCenter_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.MIDDLE))
+                add_item(align_menu, 'Align Top', 
+                         lambda: self.AlignSelectedNodes(Alignment.TOP),
+                         'alignTop_XP.png')
+                add_item(align_menu, 'Align Bottom',
+                         lambda: self.AlignSelectedNodes(Alignment.BOTTOM),
+                         'AlignBottom_XP.png')
+                add_item(align_menu, 'Align Middle', 
+                         lambda: self.AlignSelectedNodes(Alignment.MIDDLE),
+                         'alignVertCenter_XP.png')
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Grid', 'alignOnGrid_XP.png', lambda: self.AlignSelectedNodes(Alignment.GRID))
+                add_item(align_menu, 'Grid',
+                         lambda: self.AlignSelectedNodes(Alignment.GRID),
+                         'alignOnGrid_XP.png')
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Arrange Horizontally', 'alignHorizEqually_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL))
-                add_item(align_menu, 'Arrange Vertically', 'alignVertEqually_XP.png', 
-                         lambda: self.AlignSelectedNodes(Alignment.VERTICAL))
+                add_item(align_menu, 'Arrange Horizontally', 
+                         lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL),
+                         'alignHorizEqually_XP.png')
+                add_item(align_menu, 'Arrange Vertically', 
+                         lambda: self.AlignSelectedNodes(Alignment.VERTICAL),
+                         'alignVertEqually_XP.png')
                 menu.AppendSubMenu(align_menu, text='Align...')
 
         # Must refresh before the context menu is displayed, otherwise the refresh won't occur
         self.Refresh()
         self.PopupMenu(menu)
         menu.Destroy()
+
+    def CreateAliases(self, nodes: List[Node]):
+        new_indices = set()
+        with self.controller.group_action():
+            for node in nodes:
+                alias_pos = node.position + Vec2.repeat(20)
+                if node.comp_idx >= 0:
+                    comp = self.comp_idx_map[node.comp_idx]
+                    alias_pos = clamp_rect_pos(Rect(alias_pos, node.size), comp.rect)
+                
+                new_idx = self.controller.add_alias_node(self.net_index, node.index,
+                                                        alias_pos,
+                                                        node.size)
+                new_indices.add(new_idx)
+        self.sel_nodes_idx.set_item(new_indices)
+    
+    def SplitAliasesOnReactions(self, node: Node):
+        rea_els = [re for re in self._reaction_elements if re.reaction.index in self.reaction_map[node.index]]
+        with self.controller.group_action():
+            # exclude the first reaction
+            for rea_el in rea_els[1:]:
+                reaction = rea_el.reaction
+                alias_pos = node.position * 0.8 + rea_el.bezier.real_center * 0.2
+                if node.comp_idx >= 0:
+                    comp = self.comp_idx_map[node.comp_idx]
+                    alias_pos = clamp_rect_pos(Rect(alias_pos, node.size), comp.rect)
+
+                # move node position slightly toward the position of the reaction
+                self.controller.alias_for_reaction(self.net_index, reaction.index, node.index,
+                                                   alias_pos, node.size)
 
     def GetBoundingRect(self) -> Optional[Rect]:
         """Get the bounding rectangle of all nodes, reactions, and compartments.
@@ -1128,7 +1186,7 @@ class Canvas(wx.ScrolledWindow):
                 # x = Position of left most node
                 x = nodes[0].position.x
                 # Arrange nodes with equal distance between them
-                for count in range (len (nodes)):
+                for count in range(len(nodes)):
                     newPos = Vec2(x, nodes[count].position.y)
                     api.move_node(0, nodes[count].index, newPos)
                     x = x + averageDistance
@@ -1187,14 +1245,14 @@ class Canvas(wx.ScrolledWindow):
             elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
                 id = self._GetUniqueName('c', [c.id for c in self._compartments])
 
-                size = self._drag_rect.size / cstate.scale
+                size = self._drag_rect.size
                 # make sure the compartment is at least of some size
                 adj_size = Vec2(max(size.x, get_setting('min_comp_width')),
                                 max(size.y, get_setting('min_comp_height')))
                 # compute position
                 size_diff = adj_size - self._drag_rect.size
                 # center position if drag_rect size has been adjusted
-                pos = self._drag_rect.position / cstate.scale - size_diff / 2
+                pos = self._drag_rect.position - size_diff / 2
 
                 comp = Compartment(id,
                                    index=self.comp_index,
@@ -1213,7 +1271,7 @@ class Canvas(wx.ScrolledWindow):
         elif cstate.input_mode == InputMode.SELECT:
             # perform left_up on dragged_element if it exists, or just find the node under the
             # cursor
-            logical_pos = self.CalcScrolledPositionFloat(device_pos)
+            logical_pos = self.CalcScrolledPositionFloat(device_pos) / cstate.scale
             if self.dragged_element is not None:
                 self.dragged_element.on_left_up(logical_pos)
                 self.dragged_element = None
@@ -1242,16 +1300,21 @@ class Canvas(wx.ScrolledWindow):
         return Vec2(self.CalcUnscrolledPosition(wx.Point(0, 0))) + pos
 
     def OnMotion(self, evt):
+        now = time.time()
+        if now - self.last_motion < 0.016:
+            return
+        self.last_motion = now
+
         assert isinstance(evt, wx.MouseEvent)
         redraw = False
         try:
             device_pos = Vec2(evt.GetPosition())
-            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition()))
+            logical_pos = Vec2(self.CalcUnscrolledPosition(evt.GetPosition())) / cstate.scale
             self._cursor_logical_pos = logical_pos
             rxn_radius = get_theme('reaction_radius')
 
             if self._drag_selecting:
-                assert evt.leftIsDown
+                # assert evt.leftIsDown
                 topleft = Vec2(min(logical_pos.x, self._drag_select_start.x),
                                min(logical_pos.y, self._drag_select_start.y))
                 botright = Vec2(max(logical_pos.x, self._drag_select_start.x),
@@ -1261,10 +1324,10 @@ class Canvas(wx.ScrolledWindow):
                     selected_nodes = [n for n in self._nodes
                                       if rects_overlap(n.s_rect, self._drag_rect)]
                     selected_comps = [c for c in self._compartments
-                                      if rects_overlap(c.rect * cstate.scale, self._drag_rect)]
+                                      if rects_overlap(c.rect, self._drag_rect)]
                     selected_rxns = [re.reaction for re in self._reaction_elements
                                      if rects_overlap(circle_bounds(
-                                         re.bezier.real_center * cstate.scale, rxn_radius * cstate.scale),
+                                         re.bezier.real_center, rxn_radius),
                                          self._drag_rect)]
                     new_drag_sel_nodes_idx = set(n.index for n in selected_nodes)
                     new_drag_sel_rxns_idx = set(r.index for r in selected_rxns)
@@ -1403,108 +1466,122 @@ class Canvas(wx.ScrolledWindow):
         # Create graphics context since we need transparency
         gc = wx.GraphicsContext.Create(dc)
 
-        if gc:
-            # Draw gray background
+        assert gc is not None
+
+        # Draw gray background
+        draw_rect(
+            gc,
+            Rect(Vec2(), Vec2(self.GetVirtualSize()) + Vec2(10, 10)),
+            fill=get_theme('canvas_outside_bg'),
+        )
+        gc.PushState()
+        gc.Scale(cstate.scale, cstate.scale)
+        # Draw background
+        draw_rect(
+            gc,
+            Rect(Vec2(), self.realsize),
+            fill=get_theme('canvas_bg'),
+        )
+
+        # transform = Transform(Vec2(0.5, 0.5), 0, Vec2(0.5, 0.5))
+        # primitives = [
+        #     (CirclePrim(wx.RED, wx.BLUE, 0.02), transform),
+        #     (RectanglePrim(wx.YELLOW, wx.CYAN, 0.02), Transform(Vec2(0.5, 1), 3.1415/4, Vec2(0, 0))),
+        # ]
+        # shape = CompositeShape(primitives)
+        # bounding_rect = Rect(Vec2(100, 100), Vec2(100, 100))
+        # draw_rect(gc, bounding_rect, fill=wx.GREEN)
+        # shape.draw(gc, bounding_rect)
+
+        # Draw nodes
+        within_comp = None
+        if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
+            size = Vec2(get_theme('node_width'), get_theme('node_height'))
+            pos = self._cursor_logical_pos - size/2
+            within_comp = self.RectInWhichCompartment(Rect(pos, size))
+        elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
+            within_comp = self.InWhichCompartment(self._select_box.nodes)
+
+        # create font for nodes
+        for el in self._elements:
+            if not el.enabled:
+                continue
+            if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
+                # Highlight compartment that will be dropped in.
+                el.on_paint(gc, highlight=True)
+            else:
+                el.on_paint(gc)
+
+        # TODO Put this in SelectionChanged
+        sel_rects = ([n.rect for n in self.sel_nodes] +
+                        [c.rect for c in self.sel_comps])
+
+        # If we are not drag-selecting, don't draw selection outlines if there is only one rect
+        # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
+        # documented in _UpdateSelectedLists())
+        if len(sel_rects) > 1 or self.drawing_drag:
+            for rect in sel_rects:
+                rect = rect.aligned()
+                # Draw selection outlines
+                rect = padded_rect(rect, get_theme('select_outline_padding'))
+                # draw rect
+                draw_rect(gc, rect, border=get_theme('handle_color'),
+                            border_width=get_theme('select_outline_width'),
+                            corner_radius=0)
+
+        # Draw reactant and product marker outlines
+        def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):
             draw_rect(
                 gc,
-                Rect(Vec2(), Vec2(self.GetVirtualSize())),
-                fill=get_theme('canvas_outside_bg'),
+                padded_rect(node.s_rect.aligned(), padding),
+                fill=None,
+                border=color,
+                border_width=max(even_round(get_theme('react_node_border_width')), 2),
+                border_style=wx.PENSTYLE_LONG_DASH,
             )
-            # Draw background
+
+        reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
+        for node in reactants:
+            draw_reaction_outline(node, get_theme('reactant_border'),
+                                    get_theme('react_node_padding'))
+
+        products = get_nodes_by_idx(self._nodes, self._product_idx)
+        for node in products:
+            pad = get_theme('react_node_border_width') + \
+                3 if node.index in self._reactant_idx else 0
+            draw_reaction_outline(node, get_theme('product_border'),
+                                    pad + get_theme('react_node_padding'))
+
+        # Draw drag-selection rect
+        if self._drag_selecting:
+            fill: wx.Colour
+            border: Optional[wx.Colour]
+            bwidth: int
+            if cstate.input_mode == InputMode.SELECT:
+                fill = get_theme('drag_fill')
+                border = get_theme('drag_border')
+                bwidth = get_theme('drag_border_width')
+                corner_radius = 0
+            elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
+                fill = opacity_mul(get_theme('comp_fill'), 0.3)
+                border = opacity_mul(get_theme('comp_border'), 0.3)
+                bwidth = get_theme('comp_border_width')
+                corner_radius = get_theme('comp_corner_radius')
+            else:
+                assert False, "Should not be _drag_selecting in any other input mode."
+
+            if bwidth == 0:
+                border = None
+
             draw_rect(
                 gc,
-                Rect(Vec2(), self.realsize * cstate.scale),
-                fill=get_theme('canvas_bg'),
+                self._drag_rect,
+                fill=fill,
+                border=border,
+                border_width=bwidth,
+                corner_radius=corner_radius,
             )
-
-            # Draw nodes
-            within_comp = None
-            if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
-                size = Vec2(get_theme('node_width'), get_theme('node_height'))
-                pos = self._cursor_logical_pos - size/2
-                within_comp = self.RectInWhichCompartment(Rect(pos, size))
-            elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
-                within_comp = self.InWhichCompartment(self._select_box.nodes)
-
-            # create font for nodes
-            for el in self._elements:
-                if not el.enabled:
-                    continue
-                if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
-                    # Highlight compartment that will be dropped in.
-                    el.on_paint(gc, highlight=True)
-                else:
-                    el.on_paint(gc)
-
-            # TODO Put this in SelectionChanged
-            sel_rects = ([n.rect * cstate.scale for n in self.sel_nodes] +
-                         [c.rect * cstate.scale for c in self.sel_comps])
-
-            # If we are not drag-selecting, don't draw selection outlines if there is only one rect
-            # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
-            # documented in _UpdateSelectedLists())
-            if len(sel_rects) > 1 or self.drawing_drag:
-                for rect in sel_rects:
-                    rect = rect.aligned()
-                    # Draw selection outlines
-                    rect = padded_rect(rect, get_theme('select_outline_padding'))
-                    # draw rect
-                    draw_rect(gc, rect, border=get_theme('handle_color'),
-                              border_width=get_theme('select_outline_width'),
-                              corner_radius=get_theme('node_corner_radius'))
-
-            # Draw reactant and product marker outlines
-            def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):
-                draw_rect(
-                    gc,
-                    padded_rect(node.s_rect.aligned(), padding),
-                    fill=None,
-                    border=color,
-                    border_width=max(even_round(get_theme('react_node_border_width')), 2),
-                    border_style=wx.PENSTYLE_LONG_DASH,
-                )
-
-            reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
-            for node in reactants:
-                draw_reaction_outline(node, get_theme('reactant_border'),
-                                      get_theme('react_node_padding'))
-
-            products = get_nodes_by_idx(self._nodes, self._product_idx)
-            for node in products:
-                pad = get_theme('react_node_border_width') + \
-                    3 if node.index in self._reactant_idx else 0
-                draw_reaction_outline(node, get_theme('product_border'),
-                                      pad + get_theme('react_node_padding'))
-
-            # Draw drag-selection rect
-            if self._drag_selecting:
-                fill: wx.Colour
-                border: Optional[wx.Colour]
-                bwidth: int
-                if cstate.input_mode == InputMode.SELECT:
-                    fill = get_theme('drag_fill')
-                    border = get_theme('drag_border')
-                    bwidth = get_theme('drag_border_width')
-                    corner_radius = 0
-                elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
-                    fill = opacity_mul(get_theme('comp_fill'), 0.3)
-                    border = opacity_mul(get_theme('comp_border'), 0.3)
-                    bwidth = get_theme('comp_border_width')
-                    corner_radius = get_theme('comp_corner_radius')
-                else:
-                    assert False, "Should not be _drag_selecting in any other input mode."
-
-                if bwidth == 0:
-                    border = None
-
-                draw_rect(
-                    gc,
-                    self._drag_rect,
-                    fill=fill,
-                    border=border,
-                    border_width=bwidth,
-                    corner_radius=corner_radius,
-                )
+        gc.PopState()
         return gc
 
     def ResetLayer(self, elt: CanvasElement, layers: Layer):
@@ -1662,32 +1739,31 @@ class Canvas(wx.ScrolledWindow):
         rem_rxn = {r.index for r in self.reactions} - sel_reactions_idx
 
         # Second, confirm the selected nodes are free (i.e. not part of a reaction)
-        for node_idx in sel_nodes_idx:
-            if len(self.reaction_map[node_idx] & rem_rxn) != 0:
-                bound_node = None
-                for node in self.nodes:
-                    if node.index == node_idx:
-                        bound_node = node
+        for orig_node_idx in sel_nodes_idx:
+            orig_node = self.node_idx_map[orig_node_idx]
+            is_alias = orig_node.original_index != -1
+            # don't need to worry about deleting aliases that are part of reactions
+            if is_alias:
+                continue
+            aliases = [node.index for node in self.nodes if node.original_index == orig_node_idx]
+            for node_idx in chain([orig_node_idx], aliases):
+                if len(self.reaction_map[node_idx] & rem_rxn) != 0:
+                    self.ShowWarningDialog(("Could not delete node '{}', as one or more reactions "
+                                            "depend on it or its aliases.").format(orig_node.id))
+                    self.logger.warning("Tried and failed to delete bound node '{}' with index '{}'"
+                                        .format(orig_node.id, node_idx))
+                    return
 
-                assert bound_node is not None
-                self.ShowWarningDialog("Could not delete node '{}', as one or more reactions \
-depend on it.".format(bound_node.id))
-                self.logger.warning("Tried and failed to delete bound node '{}' with index '{}'"
-                                    .format(bound_node.id, node_idx))
-                return
-
-        self.controller.start_group()
-        sel_comp_idx = self.sel_compartments_idx.item_copy()
-        for index in sel_reactions_idx:
-            self.controller.delete_reaction(self._net_index, index)
-        for index in sel_nodes_idx:
-            self.controller.delete_node(self._net_index, index)
-        for index in sel_comp_idx:
-            self.controller.delete_compartment(self._net_index, index)
-        post_event(DidDeleteEvent(node_indices=sel_nodes_idx, reaction_indices=sel_reactions_idx,
-                                  compartment_indices=sel_comp_idx))
-
-        self.controller.end_group()
+        with self.controller.group_action():
+            sel_comp_idx = self.sel_compartments_idx.item_copy()
+            for index in sel_reactions_idx:
+                self.controller.delete_reaction(self._net_index, index)
+            for index in sel_nodes_idx:
+                self.controller.delete_node(self._net_index, index)
+            for index in sel_comp_idx:
+                self.controller.delete_compartment(self._net_index, index)
+            post_event(DidDeleteEvent(node_indices=sel_nodes_idx, reaction_indices=sel_reactions_idx,
+                                    compartment_indices=sel_comp_idx))
 
     def SelectAll(self):
         with self._SelectGroupEvent():
@@ -1780,16 +1856,14 @@ depend on it.".format(bound_node.id))
         pasted_ids = set()
         all_ids = {n.id for n in self._nodes}
 
-        self.controller.start_group()
-        # get unique IDs
-        for node in self._copied_nodes:
-            node.id = self._GetUniqueName(node.id, pasted_ids, all_ids)
-            node.position += Vec2.repeat(20)
-            pasted_ids.add(node.id)
-            self._nodes.append(node)  # add this for the event handlers to see
-            self.controller.add_node_g(self._net_index, node)
-
-        self.controller.end_group()  # calls UpdateMultiSelect in a moment
+        with self.controller.group_action():
+            # get unique IDs
+            for node in self._copied_nodes:
+                node.id = self._GetUniqueName(node.id, pasted_ids, all_ids)
+                node.position += Vec2.repeat(20)
+                pasted_ids.add(node.id)
+                self._nodes.append(node)  # add this for the event handlers to see
+                self.controller.add_node_g(self._net_index, node)
         # update selection *after* end_group(), so as to make sure the canvas is property reset
         # and updated. For example, if it is not, then the ID of some nodes may be 0 as they are
         # uninitialized.

@@ -377,7 +377,7 @@ class RandomNetwork(WindowedPlugin):
 
             nodeIdx = []
             for i in range (numNodes):
-                nodeIdx.append ( api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 204, 153),
+                nodeIdx.append (api.add_node(net_index, 'node_{}'.format(i), size=Vec2(60,40), fill_color=api.Color(255, 204, 153),
                         border_color=api.Color(255, 108, 9),
                         position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800))))
         

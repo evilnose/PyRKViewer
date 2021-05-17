@@ -7,14 +7,14 @@ Version 0.02: Author: Jin Xu (2021)
 # pylint: disable=maybe-no-member
 
 from inspect import Parameter
-from libsbml import KineticLaw
+#from libsbml import KineticLaw
 #from tesbml.libsbml import BoundaryCondition
 import wx
 from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction, Color
 import os
-from libsbml import *
+from libsbml import * # does not have to import in the main.py too
 
 class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
@@ -398,12 +398,17 @@ class ExportSBML(WindowedPlugin):
                 fill_color_str    = '#9ea9ff'
                 border_color_str  = '#001dff'
 
+            #nodeData does not have fill_color,border_color,border_width
             node =  allNodes[0]
-            spec_fill_color   = node.fill_color
-            spec_border_color = node.border_color
-            spec_border_width = node.border_width
-            spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
-            spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
+            # spec_fill_color   = node.fill_color
+            # spec_border_color = node.border_color
+            # spec_border_width = node.border_width
+            # spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
+            # spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
+
+            spec_fill_color_str = '#ffcc99'
+            spec_border_color_str = '#ff6c09'
+            spec_border_width = 2.
 
             if numReactions != 0:
                 reaction_fill_color     = allReactions[0].fill_color

@@ -2,18 +2,22 @@
 """
 # pylint: disable=maybe-no-member
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Any
-from commentjson.commentjson import JSONLibraryException
-from rkviewer.utils import get_local_path
-import wx
-import os
-from marshmallow import Schema, fields, validate, missing as missing_, ValidationError
-from rkviewer.canvas.geometry import Vec2
-import copy
-import commentjson
-from pathlib import Path
 
+import copy
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, List, Tuple
+
+import commentjson
+import wx
+from commentjson.commentjson import JSONLibraryException
+from marshmallow import Schema, ValidationError, fields
+from marshmallow import missing as missing_
+from marshmallow import validate
+
+from rkviewer.canvas.geometry import Rect, Vec2
+from rkviewer.utils import get_local_path
 
 # TODO rename get_local_path
 #config_dir = "" #get_local_path('.rkviewer')  # This will be set by either appsettings (see below) or CreateConfigDir in view.poy
@@ -50,6 +54,9 @@ class Color:
             a = self.a
         return Color(r, g, b, a)
 
+    def to_wxcolour(self):
+        return wx.Colour(self.r, self.g, self.b, self.a)
+
 
 @dataclass
 class Font:
@@ -79,8 +86,8 @@ class AppSettings:
        self.size = wx.Size (1366,737)
        self.displaySize = wx.DisplaySize() 
        # Find the center poistion of the frame
-       self.position.x = self.displaySize[0] / 2 - self.size.x / 2
-       self.position.y = self.displaySize[1] / 2 - self.size.y / 2
+       self.position.x = self.displaySize[0] // 2 - self.size.x // 2
+       self.position.y = self.displaySize[1] // 2 - self.size.y // 2
 
    def load_appSettings(self):
        sp = wx.StandardPaths.Get()
@@ -255,71 +262,71 @@ class ThemeSchema(Schema):
     TODO more documentation under attributes and link to this document in Help or settings.json
     """
     # overall background of the application 
-    overall_bg = ColorField(missing=wx.Colour(240, 240, 240))
-    canvas_bg = ColorField(missing=wx.Colour(255, 255, 255))
+    overall_bg = ColorField(missing=Color(240, 240, 240))
+    canvas_bg = ColorField(missing=Color(255, 255, 255))
     # Background color of the toolbars (i.e. panels around the canvas)
-    toolbar_bg = ColorField(missing=wx.Colour(230, 230, 230))
+    toolbar_bg = ColorField(missing=Color(230, 230, 230))
     # Text color of the toolbars (i.e. panels around the canvas)
-    toolbar_fg = ColorField(missing=wx.Colour(0, 0, 0))
+    toolbar_fg = ColorField(missing=Color(0, 0, 0))
     canvas_width = Pixel(missing=1000)
     canvas_height = Pixel(missing=620)
-    btn_bg = ColorField(missing=wx.Colour(240,240,240))
-    btn_fg = ColorField(missing=wx.BLACK)
-    btn_hover_bg = ColorField(missing=wx.Colour(240,240,240))
-    btn_hover_fg = ColorField(missing=wx.BLACK)
+    btn_bg = ColorField(missing=Color(240,240,240))
+    btn_fg = ColorField(missing=Color(0, 0, 0))
+    btn_hover_bg = ColorField(missing=Color(240,240,240))
+    btn_hover_fg = ColorField(missing=Color(0, 0, 0))
     btn_border = fields.Boolean(missing=True) 
     # vertical gap between toolbars and canvas
     vgap = Pixel(missing=2)
     # horizontal gap between toolbars and canvas
     hgap = Pixel(missing=2)
-    canvas_outside_bg = ColorField(missing=wx.Colour(160, 160, 160))
+    canvas_outside_bg = ColorField(missing=Color(160, 160, 160))
     mode_panel_width = Pixel(missing=100)
     toolbar_height = Pixel(missing=75)
     edit_panel_width = Pixel(missing=260)
-    node_fill = ColorField(missing=wx.Colour(255, 204, 153, 200))
-    node_border = ColorField(missing=wx.Colour(255, 108, 9))
+    node_fill = ColorField(missing=Color(255, 204, 153, 200))
+    node_border = ColorField(missing=Color(255, 108, 9))
     node_width = Dim(missing=50)
     node_height = Dim(missing=30)
-    node_corner_radius = Pixel(missing=6)
-    node_border_width = Pixel(missing=2)
+    # node_corner_radius = Dim(missing=0.15)
+    node_border_width = Dim(missing=0.05)
     node_font_size = Pixel(missing=10)
-    node_font_color = ColorField(missing=wx.Colour(255, 0, 0, 100))
+    node_font_color = ColorField(missing=Color(255, 0, 0, 100))
     # Width of the outline around each selected node
     select_outline_width = Pixel(missing=2)
     # Padding of the outline around each selected node
     select_outline_padding = Pixel(missing=3)
     # ColorField of control handles, e.g. resize handles, Bezier handles
-    handle_color = ColorField(missing=wx.Colour(0, 140, 255))
+    handle_color = ColorField(missing=Color(0, 140, 255))
     # ColorField of control handles when they are highlighted, if applicable
-    highlighted_handle_color = ColorField(missing=wx.Colour(128, 198, 255))
+    highlighted_handle_color = ColorField(missing=Color(128, 198, 255))
     # Padding of the select box, relative to the mininum possible bbox
     select_box_padding = Pixel(missing=5)
     # Length of the squares one uses to drag resize nodes
     select_handle_length = Pixel(missing=8)
-    zoom_slider_bg = ColorField(missing=wx.Colour(180, 180, 180))
-    drag_fill = ColorField(missing=wx.Colour(0, 140, 255, 20))
-    drag_border = ColorField(missing=wx.Colour(0, 140, 255))
+    zoom_slider_bg = ColorField(missing=Color(180, 180, 180))
+    drag_fill = ColorField(missing=Color(0, 140, 255, 20))
+    drag_border = ColorField(missing=Color(0, 140, 255))
     drag_border_width = Pixel(missing=1)
     react_node_padding = Pixel(missing=5)
     react_node_border_width = Pixel(missing=3)
-    reactant_border = ColorField(missing=wx.Colour(255, 100, 100))
-    product_border = ColorField(missing=wx.Colour(0, 214, 125))
-    reaction_fill = ColorField(missing=wx.Colour(91, 176, 253))
+    reactant_border = ColorField(missing=Color(255, 100, 100))
+    product_border = ColorField(missing=Color(0, 214, 125))
+    reaction_fill = ColorField(missing=Color(91, 176, 253))
     reaction_line_thickness = Dim(missing=2)
-    selected_reaction_fill = ColorField(missing=wx.Colour(0, 140, 255))
-    comp_fill = ColorField(missing=wx.Colour(158, 169, 255, 200))
-    comp_border = ColorField(missing=wx.Colour(0, 29, 255))
+    selected_reaction_fill = ColorField(missing=Color(0, 140, 255))
+    comp_fill = ColorField(missing=Color(158, 169, 255, 200))
+    comp_border = ColorField(missing=Color(0, 29, 255))
     comp_border_width = Dim(missing=2)
     comp_corner_radius = Dim(missing=6)
     reaction_radius = Dim(missing=6)
-    modifier_line_color = ColorField(missing=wx.Colour(202, 148, 255))
+    modifier_line_color = ColorField(missing=Color(202, 148, 255))
     modifier_line_width = Dim(missing=2)
-    active_tab_fg = ColorField(missing=wx.Colour(0, 0, 0))  
-    text_field_bg = ColorField(missing=wx.Colour(255, 255, 255))
-    text_field_fg = ColorField(missing=wx.Colour(0, 0, 0))
+    active_tab_fg = ColorField(missing=Color(0, 0, 0))  
+    text_field_bg = ColorField(missing=Color(255, 255, 255))
+    text_field_fg = ColorField(missing=Color(0, 0, 0))
     text_field_border = fields.Boolean(missing=True)
     # using ribbon style for notebooks, so no need for this
-    # active_tab_bg = ColorField(missing=wx.Colour(100, 100, 100))
+    # active_tab_bg = ColorField(missing=Color(100, 100, 100))
     # panel_font = FontField(missing=Font(pointSize=))
 
 
@@ -390,6 +397,26 @@ _settings = BUILTIN_SETTINGS
 _theme = None
 _settings_err = None  
 
+
+
+@dataclass
+class RuntimeVariables:
+    '''Variables pertaining to the application runtime'''
+    enable_plugins: bool = True
+
+
+_RUNTIME_VARS = RuntimeVariables()
+
+
+def runtime_vars() -> RuntimeVariables:
+    return _RUNTIME_VARS
+
+
+def reset_runtime_vars():
+    global _RUNTIME_VARS
+    _RUNTIME_VARS = RuntimeVariables()
+
+
 def load_theme_settings():
     """Reload all settings from the default settings path.
     
@@ -441,11 +468,13 @@ def get_setting(setting_attr) -> Any:
     return _settings[setting_attr]
 
 
-def get_theme(theme_attr) -> Any:
+def get_theme(theme_attr, convert_color=True) -> Any:
+    '''convert_color: if True, convert Color instances to wx.Colour instances automatically
+    '''
     global _theme
     tmp = _theme[theme_attr]
     # automatically convert Color to wx.Colour
-    if isinstance(tmp, Color):
+    if convert_color and isinstance(tmp, Color):
         tmp = wx.Colour(tmp.r, tmp.g, tmp.b, tmp.a)
     return tmp
 
@@ -453,3 +482,4 @@ def get_theme(theme_attr) -> Any:
 def add_plugin_schema(name: str, schema: Schema):
     # TODO 
     pass
+

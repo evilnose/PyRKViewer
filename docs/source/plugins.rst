@@ -1,4 +1,4 @@
-plugins module
+Plugin Base Classes
 ==============
 
 .. automodule:: rkplugin.plugins

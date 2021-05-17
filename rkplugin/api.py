@@ -81,8 +81,8 @@ class Color:
         return Color((val >> 0) & 255, (val >> 8) & 255, (val >> 16) & 255)
 
 
-@require_kwargs_on_init
-@dataclass(frozen=True)
+# @require_kwargs_on_init
+@dataclass(frozen=True, eq=True)
 class NodeData:
     """Class that holds all the necessary data for a Node.
 
@@ -101,26 +101,25 @@ class NodeData:
                   compartment.
         floatingNode: Set true if you want the node to have floating status or false for boundary status (default is floating)
         lockNode: Set false if you want the node to move or true for block (default is false)
+        original_index = If this is an alias node, this is the index of the original node. Otherwise
+                         this is -1.
     """
-    # TODO add fields; possibly use @dataclass
-    id: str = field()
     net_index: int = field()
-    position: Vec2 = field()
-    size: Vec2 = field()
-    fill_color: Color = field()
-    border_color: Color = field()
-    border_width: float = field()
+    id: str = field()
+    position: Vec2 = field(default=Vec2())
+    size: Vec2 = field(default=Vec2())
     comp_idx: int = field(default=-1)
     index: int = field(default=-1)
     floatingNode: bool = field(default=True)
     lockNode: bool = field(default=False)
+    original_index: int = field(default=-1)
 
     @property
     def bounding_rect(self) -> Rect:
         return Rect(self.position, self.size)
 
 
-@require_kwargs_on_init
+# @require_kwargs_on_init
 @dataclass(frozen=True)
 class ReactionData:
     """Class that bolds the data of a Reaction, except for stoich information (TODO?).
@@ -164,7 +163,7 @@ class ReactionData:
         return self.center_pos if self.center_pos is not None else self.centroid
 
 
-@require_kwargs_on_init
+# @require_kwargs_on_init
 @dataclass(frozen=True)
 class CompartmentData:
     """
@@ -204,6 +203,8 @@ def _to_wxcolour(color: Color) -> wx.Colour:
 def init_api(canvas: Canvas, controller: IController):
     """Initializes the API; for internal use only."""
     global _canvas, _controller
+    assert canvas is not None
+    assert controller is not None
     _canvas = canvas
     _controller = controller
 
@@ -211,7 +212,6 @@ def init_api(canvas: Canvas, controller: IController):
 def uninit_api():
     """Uninitialize the API; for internal use only."""
     global _canvas, _controller
-    _controller.clear_network(0)
     _canvas = None
     _controller = None
 
@@ -231,7 +231,6 @@ def logger() -> Logger:
     return _plugin_logger
 
 
-@contextmanager
 def group_action():
     """Context manager for doing a group operation in the _controller, for undo/redo purposes.
 
@@ -246,9 +245,7 @@ def group_action():
         >>> api.update_node(...)  # This is now a new action.
 
     """
-    _controller.start_group()
-    yield
-    _controller.end_group()
+    return _controller.group_action()
 
 
 def canvas_size() -> Vec2:
@@ -305,13 +302,11 @@ def _translate_node(node: Node) -> NodeData:
         net_index=node.net_index,
         position=node.position,
         size=node.size,
-        fill_color=_to_color(node.fill_color),
-        border_color=_to_color(node.border_color),
-        border_width=node.border_width,
         comp_idx=node.comp_idx,
         index=node.index,
         floatingNode=node.floatingNode,
         lockNode=node.lockNode,
+        original_index=node.original_index
     )
 
 
@@ -517,19 +512,28 @@ def get_compartment_by_index(net_index: int, comp_index: int) -> CompartmentData
     return _translate_compartment(_controller.get_compartment_by_index(net_index, comp_index))
 
 
-def delete_node(net_index: int, node_index: int):
+def delete_node(net_index: int, node_index: int) -> bool:
     """Delete a node with the given index in the given network.
+
+    If the node does not exist, return False; otherwise return True. This method does not throw
+    an error when the given node is missing, because the user may potentially be deleing nodes
+    in a loop, and if an original node is deleted before its aliases, when the alias is reached
+    it would no longer be in the network.
+
+    If you want to make certain that a node does exist, use the return value of this function.
 
     Args:
         net_index: The network index.
         node_index: The node index.
+    
+    Returns:
+        True if and only if a node was deleted.
 
     Raises:
-        NetIndexError:
-        NodeIndexError: If the given node does not exist in the network.
-        NodeNotFreeError: If the given onde is part of a reaction.
+        NetIndexError: If the given network does not exist
+        NodeNotFreeError: If the given node is part of a reaction.
     """
-    _controller.delete_node(net_index, node_index)
+    return _controller.delete_node(net_index, node_index)
 
 
 def delete_reaction(net_index: int, reaction_index: int):
@@ -566,7 +570,7 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
                     border_width: float = None, position: Vec2 = None, size: Vec2 = None,
                     volume: float = None, nodes: List[int] = None) -> int:
     """ 
-    Adds a compartment. TODO modify this after add_node() and add_reaction().
+    Adds a compartment.
 
     The Compartment indices are assigned in increasing order, regardless of deletion.
 
@@ -614,7 +618,8 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
 
 
 def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
-             border_width: float = None, position: Vec2 = None, size: Vec2 = None, floatingNode: bool = True, lockNode: bool = False) -> int:
+             border_width: float = None, position: Vec2 = None, size: Vec2 = None,
+             floatingNode: bool = True, lockNode: bool = False) -> int:
     """Adds a node to the given network.
 
     The node indices are assigned in increasing order, regardless of deletion.
@@ -649,15 +654,42 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
     node = Node(
         id,
         net_index,
-        fill_color=_to_wxcolour(fill_color),
-        border_color=_to_wxcolour(border_color),
-        border_width=border_width,
         pos=position,
         size=size,
         floatingNode=floatingNode,
         lockNode=lockNode,
     )
-    return _controller.add_node_g(net_index, node)
+    with group_action():
+        nodei = _controller.add_node_g(net_index, node)
+        _controller.set_node_fill_rgb(net_index, nodei, _to_wxcolour(fill_color))
+        _controller.set_node_fill_alpha(net_index, nodei, fill_color.alpha)
+        _controller.set_node_border_rgb(net_index, nodei, _to_wxcolour(border_color))
+        _controller.set_node_border_alpha(net_index, nodei, border_color.alpha)
+        _controller.set_node_border_width(net_index, nodei, border_width)
+    return nodei
+
+
+def add_alias(net_index: int, original_index: int, position: Vec2 = None, size: Vec2 = None):
+    """Adds an alias node to the network.
+
+    The node indices are assigned in increasing order, regardless of deletion.
+
+    Args:  
+        net_index: The network index.
+        original_index: The index of the original node, from which to create an alias
+        position: The position of the alias, or leave as None to use default, (0, 0).
+        size: The size of the alias, or leave as None to use default, (0, 0).
+
+    Returns:
+        The index of the alias that was added.
+    """
+    position = position or Vec2()
+    size = size or Vec2(get_theme('node_width'), get_theme('node_height'))
+
+    with group_action():
+        aliasi = _controller.add_alias_node(net_index, original_index, position, size)
+
+    return aliasi
 
 
 def move_node(net_index: int, node_index: int, position: Vec2, allowNegativeCoordinates: bool = False):
@@ -699,6 +731,14 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
         This is *not* an atomic function, meaning if we failed to set one specific property, the
         previous changes to model in this function will not be undone, even after the exception
         is caught. To go around that, make one calls to update_node() for each property instead.
+
+        Also note the behavior if the given node_index refers to an alias node.
+        The properties 'position', 'size', and 'lockNode' pertain to the alias node itself.
+        But all other properties pertain to the original node that the alias refers to. For example,
+        if one sets the 'position' of an alias node, the position of the alias is updated. But if
+        one sets the 'id' of an alias node, the ID of the original node is modified (and that of
+        the alias node is updated to reflect that).
+
     Raises:
         ValueError: If ID is empty or if any one of border_width, position, and size is out of
                     range.
@@ -853,18 +893,17 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
         bezierCurves=use_bezier,
     )
 
-    _controller.start_group()
-    reai = _controller.add_reaction_g(net_index, reaction)
-    # HACK set default handle positions. This should be computed by default_handle_positions()
-    # before constructing the Reaction object, but right now it only accepts a list of nodes. In
-    # the future modify default_handle_positions() to accept four lists: reactant rectangles and
-    # indices, and product rectangles and indices, since these are the only requisite parameters.
-    if auto_init_handles:
-        handle_positions = default_handle_positions(net_index, reai)
-        reaction.index = reai
-        _set_handle_positions(reaction, handle_positions)
+    with group_action():
+        reai = _controller.add_reaction_g(net_index, reaction)
+        # HACK set default handle positions. This should be computed by default_handle_positions()
+        # before constructing the Reaction object, but right now it only accepts a list of nodes. In
+        # the future modify default_handle_positions() to accept four lists: reactant rectangles and
+        # indices, and product rectangles and indices, since these are the only requisite parameters.
+        if auto_init_handles:
+            handle_positions = default_handle_positions(net_index, reai)
+            reaction.index = reai
+            _set_handle_positions(reaction, handle_positions)
 
-    _controller.end_group()
     return reai
 
 

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Any, Callable, List, Tuple
 
-
 @unique
 class InputMode(Enum):
     """Enum for the current input mode of the canvas."""

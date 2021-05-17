@@ -4,13 +4,14 @@ from abc import abstractmethod
 import enum
 from functools import partial
 from itertools import chain
-from math import pi
+from math import pi, cos, sin
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
+from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTrianglePrim, TTransform, TTextPrim, THexagonPrim, TLinePrim
 
 import wx
 
-from ..config import get_setting, get_theme
+from ..config import Color, get_setting, get_theme
 from ..events import (
     CanvasEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidMoveBezierHandleEvent, DidMoveReactionCenterEvent, DidResizeCompartmentsEvent, DidResizeNodesEvent, DidMoveCompartmentsEvent,
     DidMoveNodesEvent, bind_handler,
@@ -18,7 +19,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, TPolygonPrim, TextAlignment
 from .geometry import (
     Rect,
     Vec2,
@@ -139,42 +140,32 @@ class NodeElement(CanvasElement):
 
     def on_paint(self, gc: wx.GraphicsContext):
         if self.gfont is None or self.font_scale != cstate.scale:
-            self.font_scale = cstate.scale
-            font = wx.Font(wx.FontInfo(10 * cstate.scale))
+            font = wx.Font(wx.FontInfo(10))
             self.gfont = gc.CreateFont(font, wx.BLACK)
         gc.SetFont(self.gfont)
 
-        boundaryFactor = 1
-        if not self.node.floatingNode:
-            boundaryFactor = 2  # Store this in a theme?
+        # boundaryFactor = 1
+        # if not self.node.floatingNode:
+        #     boundaryFactor = 2  # Store this in a theme?
 
         s_aligned_rect = self.node.s_rect.aligned()
-        aligned_border_width = max(even_round(
-            self.node.border_width * boundaryFactor * cstate.scale), 2)
+        # aligned_border_width = max(even_round(
+        #     self.node.border_width * boundaryFactor), 2)
         width, height = s_aligned_rect.size
-        draw_rect(
-            gc,
-            s_aligned_rect,
-            fill=self.node.fill_color,
-            border=self.node.border_color,
-            border_width=aligned_border_width,
-            corner_radius=get_theme('node_corner_radius')
-        )
 
-        # draw text
-        tw, th, _, _ = gc.GetFullTextExtent(
-            self.node.id)  # optimize by caching?
-        tx = (width - tw) / 2
-        ty = (height - th) / 2
-        gc.DrawText(self.node.id, self.node.s_position.x +
-                    tx, self.node.s_position.y + ty)
+        assert self.node.composite_shape is not None
+        draw_composite_shape(
+            gc,
+            self.node.rect,
+            self.node)
 
         if self.node.lockNode:
+            lock_color = self.node.border_color or Color(255, 0, 0)
             pen = gc.CreatePen(wx.GraphicsPenInfo(
-                self.node.border_color).Width(aligned_border_width))
+                lock_color.to_wxcolour()).Width(2))
             gc.SetPen(pen)
             path = gc.CreatePath()
-            path.AddCircle(self.node.s_position.x, self.node.s_position.y, .1*height)
+            path.AddCircle(self.node.position.x, self.node.position.y, .1*height)
             gc.StrokePath(path)
 
     def on_left_down(self, _: Vec2):
@@ -219,7 +210,7 @@ class BezierHandle(CanvasElement):
         self.node_idx = node_idx
 
     def pos_inside(self, logical_pos: Vec2):
-        return pt_in_circle(logical_pos, BezierHandle.HANDLE_RADIUS, self.data.tip * cstate.scale)
+        return pt_in_circle(logical_pos, BezierHandle.HANDLE_RADIUS, self.data.tip)
 
     def on_paint(self, gc: wx.GraphicsContext):
         """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
@@ -230,8 +221,8 @@ class BezierHandle(CanvasElement):
             brush = wx.Brush(c)
             pen = gc.CreatePen(wx.GraphicsPenInfo(c))
 
-            sbase = self.data.base * cstate.scale
-            stip = self.data.tip * cstate.scale
+            sbase = self.data.base
+            stip = self.data.tip
 
             gc.SetPen(pen)
 
@@ -260,7 +251,7 @@ class BezierHandle(CanvasElement):
         return True
 
     def on_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
-        self.data.tip += rel_pos / cstate.scale
+        self.data.tip += rel_pos
         self.on_moved(self.data.tip)
         neti = 0
         post_event(DidMoveBezierHandleEvent(neti, self.reaction.index,
@@ -285,7 +276,7 @@ class ReactionCenter(CanvasElement):
 
     def on_paint(self, gc: wx.GraphicsContext):
         if not self.parent.selected:
-           return
+            return
 
         # draw centroid
         color = self.parent.reaction.fill_color
@@ -299,7 +290,7 @@ class ReactionCenter(CanvasElement):
         gc.SetPen(pen)
         gc.SetBrush(brush)
         radius = get_theme('reaction_radius')
-        center = self.parent.bezier.real_center * cstate.scale - Vec2.repeat(radius)
+        center = self.parent.bezier.real_center - Vec2.repeat(radius)
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
@@ -307,7 +298,7 @@ class ReactionCenter(CanvasElement):
         return True
 
     def on_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
-        offset = rel_pos / cstate.scale
+        offset = rel_pos
         reaction = self.parent.reaction
         reaction.center_pos = self.parent.bezier.real_center + offset
         self.parent.bezier.center_moved(offset)
@@ -320,18 +311,17 @@ class ReactionCenter(CanvasElement):
         ctrl = self.parent.controller
         neti = self.parent.canvas.net_index
         reai = self.parent.reaction.index
-        ctrl.start_group()
-        ctrl.set_reaction_center(neti, reai, self.parent.reaction.center_pos)
-        ctrl.set_center_handle(neti, reai, self.parent.reaction.src_c_handle.tip)
-        post_event(DidCommitDragEvent())
-        ctrl.end_group()
+        with ctrl.group_action():
+            ctrl.set_reaction_center(neti, reai, self.parent.reaction.center_pos)
+            ctrl.set_center_handle(neti, reai, self.parent.reaction.src_c_handle.tip)
+            post_event(DidCommitDragEvent())
         self._moved = False
         return True
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         # TODO works witih zoom?
         radius = get_theme('reaction_radius')
-        return pt_in_circle(self.parent.bezier.real_center * cstate.scale, radius, logical_pos)
+        return pt_in_circle(self.parent.bezier.real_center, radius, logical_pos)
 
     def on_mouse_enter(self, logical_pos: Vec2) -> bool:
         self.hovering = True
@@ -401,10 +391,9 @@ class ReactionElement(CanvasElement):
             self.bhandles.append(el)
 
         def centroid_handle_dropped(p: Vec2):
-            ctrl.start_group()
-            ctrl.set_center_handle(neti, reai, reaction.src_c_handle.tip)
-            post_event(DidCommitDragEvent())
-            ctrl.end_group()
+            with ctrl.group_action():
+                ctrl.set_center_handle(neti, reai, reaction.src_c_handle.tip)
+                post_event(DidCommitDragEvent())
 
         src_bh = BezierHandle(reaction.src_c_handle, handle_layer,
                               lambda _: bezier.src_handle_moved(),
@@ -425,11 +414,13 @@ class ReactionElement(CanvasElement):
             def ret(p):
                 ctrl.set_src_node_handle(neti, reai, nodei, p)
                 post_event(DidCommitDragEvent())
+            return ret
         else:
-            def ret(p):
+            # Avoid IDE warnings
+            def ret1(p):
                 ctrl.set_dest_node_handle(neti, reai, nodei, p)
                 post_event(DidCommitDragEvent())
-        return ret
+            return ret1
 
     @property
     def selected(self) -> bool:
@@ -537,8 +528,8 @@ class ReactionElement(CanvasElement):
             # create segment
             segment = (node_center, rxn_center)
             diff = node_center - rxn_center
-            rxn_intersection = (rxn_center + diff.normalized(RXN_PAD)) * cstate.scale
-            node_intersection = segment_rect_intersection(segment, clipping_rect) * cstate.scale
+            rxn_intersection = (rxn_center + diff.normalized(RXN_PAD))
+            node_intersection = segment_rect_intersection(segment, clipping_rect)
 
             # gc.StrokeLine(*node_intersection, *rxn_intersection)
             path = gc.CreatePath()
@@ -549,8 +540,8 @@ class ReactionElement(CanvasElement):
             elif self.reaction.modifier_tip_style == ModifierTipStyle.TEE:
                 # draw T-shaped tip
                 ortho = rotate_unit(diff, pi / 2)
-                pt1 = rxn_intersection + ortho * TEE_LENGTH * cstate.scale
-                pt2 = rxn_intersection - ortho * TEE_LENGTH * cstate.scale
+                pt1 = rxn_intersection + ortho * TEE_LENGTH
+                pt2 = rxn_intersection - ortho * TEE_LENGTH
                 path.MoveToPoint(*pt1)
                 path.AddLineToPoint(*pt2)
             gc.StrokePath(path)
@@ -567,14 +558,14 @@ class CompartmentElt(CanvasElement):
         self.compartment = compartment
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return pt_in_rect(logical_pos, self.compartment.rect * cstate.scale)
+        return pt_in_rect(logical_pos, self.compartment.rect)
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
         return True
 
     def on_paint(self, gc: wx.GraphicsContext, highlight=False):
         rect = Rect(self.compartment.position,
-                    self.compartment.size) * cstate.scale
+                    self.compartment.size)
         border = self.compartment.border
         fill = self.compartment.fill
         if highlight:
@@ -750,7 +741,7 @@ class SelectBox(CanvasElement):
 
     def outline_rect(self) -> Rect:
         """Helper that returns the scaled, padded bounding rectangle."""
-        return padded_rect((self.bounding_rect * cstate.scale).aligned(), self._padding)
+        return padded_rect((self.bounding_rect).aligned(), self._padding)
 
     def _resize_handle_rects(self):
         """Helper that computes the scaled positions and sizes of the resize handles.
@@ -792,7 +783,7 @@ class SelectBox(CanvasElement):
 
         rects = [n.rect for n in self.nodes] + \
             [c.rect for c in self.compartments]
-        if any(pt_in_rect(logical_pos, r * cstate.scale) for r in rects):
+        if any(pt_in_rect(logical_pos, r) for r in rects):
             return -1
         else:
             return -2
@@ -833,7 +824,7 @@ class SelectBox(CanvasElement):
                 draw_rect(gc, handle_rect, fill=get_theme('handle_color'))
 
     def map_rel_pos(self, positions: Iterable[Vec2]) -> List[Vec2]:
-        temp = [p * cstate.scale - self._orig_rect.position - Vec2.repeat(self._padding)
+        temp = [p - self._orig_rect.position - Vec2.repeat(self._padding)
                 for p in positions]
         return temp
 
@@ -861,7 +852,7 @@ class SelectBox(CanvasElement):
                         break
 
         handle = self._hovered_part
-        assert self._mode == SelectBox.Mode.IDLE
+        # assert self._mode == SelectBox.Mode.IDLE
         if handle >= 0:
             self._mode = SelectBox.Mode.RESIZING
             self._resize_handle = handle
@@ -871,12 +862,12 @@ class SelectBox(CanvasElement):
             #self._orig_rect = self.outline_rect()
             # Take unaligned bounding rect as orig_rect for better accuracy
             self._orig_rect = padded_rect(
-                (self.bounding_rect * cstate.scale), self._padding)
+                (self.bounding_rect), self._padding)
             # relative starting positions to the select box
             orig_node_pos = self.map_rel_pos((n.position for n in self.nodes))
             orig_comp_pos = self.map_rel_pos((c.position for c in self.compartments))
-            orig_node_sizes = [n.size * cstate.scale for n in self.nodes]
-            orig_comp_sizes = [c.size * cstate.scale for c in self.compartments]
+            orig_node_sizes = [n.size for n in self.nodes]
+            orig_comp_sizes = [c.size for c in self.compartments]
             self._orig_rpos = orig_comp_pos + orig_node_pos
             self._orig_rsizes = orig_comp_sizes + orig_node_sizes
             self._resize_handle_offset = self._resize_handle_pos(handle) - logical_pos
@@ -884,11 +875,11 @@ class SelectBox(CanvasElement):
         elif handle == -1:
             self._mode = SelectBox.Mode.MOVING
             # relative starting positions to the mouse positions
-            rel_node_pos = [n.position * cstate.scale -
+            rel_node_pos = [n.position -
                             logical_pos for n in self.nodes if not n.lockNode]
-            rel_comp_pos = [c.position * cstate.scale - logical_pos for c in self.compartments]
+            rel_comp_pos = [c.position - logical_pos for c in self.compartments]
             self._rel_positions = rel_comp_pos + rel_node_pos
-            self._drag_rel = self.bounding_rect.position * cstate.scale - logical_pos
+            self._drag_rel = self.bounding_rect.position - logical_pos
             return True
 
         return False
@@ -941,17 +932,16 @@ class SelectBox(CanvasElement):
                 self._commit_move()
         elif self._mode == SelectBox.Mode.RESIZING:
             assert not self._did_move
-            self.controller.start_group()
-            for node in self.peripheral_nodes:
-                self.controller.move_node(self.net_index, node.index, node.position)
-            for node in self.nodes:
-                self.controller.move_node(self.net_index, node.index, node.position)
-                self.controller.set_node_size(self.net_index, node.index, node.size)
-            for comp in self.compartments:
-                self.controller.move_compartment(self.net_index, comp.index, comp.position)
-                self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
-                post_event(DidCommitDragEvent())
-            self.controller.end_group()
+            with self.controller.group_action():
+                for node in self.peripheral_nodes:
+                    self.controller.move_node(self.net_index, node.index, node.position)
+                for node in self.nodes:
+                    self.controller.move_node(self.net_index, node.index, node.position)
+                    self.controller.set_node_size(self.net_index, node.index, node.size)
+                for comp in self.compartments:
+                    self.controller.move_compartment(self.net_index, comp.index, comp.position)
+                    self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
+                    post_event(DidCommitDragEvent())
 
             # Need to do this in case _special_mode == NOT_CONTAINED, so that the mouse has now
             # left the handle. on_mouse_leave is not triggered because it's considered to be dragging.
@@ -1009,7 +999,7 @@ class SelectBox(CanvasElement):
                 target_point = target_point.swapped(1, orig_dragged_point.y)
 
         # clamp target point
-        target_point = clamp_point(target_point, bounds * cstate.scale)
+        target_point = clamp_point(target_point, bounds)
 
         # STEP 2, get and validate rect ratio
 
@@ -1050,22 +1040,22 @@ class SelectBox(CanvasElement):
 
         # STEP 4 calculate and apply new node positions and sizes
         # calculate and keep incremental ratio for the event arguments
-        inc_ratio = orig_bb_size.elem_mul(size_ratio / cstate.scale).elem_div(rect_data[0].size)
+        inc_ratio = orig_bb_size.elem_mul(size_ratio).elem_div(rect_data[0].size)
         offsets = list()
         index = 0
         for index, (rdata, opos, osize) in enumerate(zip(rect_data, orig_pos, orig_sizes)):
             #assert opos.x >= -1e-6 and opos.y >= -1e-6
-            pos = (br_pos + opos.elem_mul(size_ratio) + pad_off) / cstate.scale
+            pos = (br_pos + opos.elem_mul(size_ratio) + pad_off)
             # HACK rect_data is compartments + nodes. So we only append to offsets we've reached
             # the nodes sectoin
             if index >= len(self.compartments):
                 offsets.append(pos - rdata.position)
             rdata.position = pos
-            rdata.size = osize.elem_mul(size_ratio) / cstate.scale
+            rdata.size = osize.elem_mul(size_ratio)
 
         # STEP 5 apply new bounding_rect position and size
-        self.bounding_rect.position = (br_pos + pad_off) / cstate.scale
-        self.bounding_rect.size = target_size / cstate.scale
+        self.bounding_rect.position = (br_pos + pad_off)
+        self.bounding_rect.size = target_size
 
         # STEP 6 post main events
         if len(self.nodes) != 0:
@@ -1103,13 +1093,13 @@ class SelectBox(CanvasElement):
         new_positions = [pos + rp for rp in rel_positions]
         min_x = min(p.x for p in new_positions)
         min_y = min(p.y for p in new_positions)
-        max_x = max(p.x + r.size.x * cstate.scale for p,
+        max_x = max(p.x + r.size.x for p,
                     r in zip(new_positions, rect_data))
-        max_y = max(p.y + r.size.y * cstate.scale for p,
+        max_y = max(p.y + r.size.y for p,
                     r in zip(new_positions, rect_data))
         offset = Vec2(0, 0)
 
-        s_bounds = self._bounds * cstate.scale
+        s_bounds = self._bounds
         lim_topleft = s_bounds.position
         lim_botright = s_bounds.position + s_bounds.size
 
@@ -1125,11 +1115,11 @@ class SelectBox(CanvasElement):
         elif max_y > lim_botright.y:
             offset += Vec2(0, lim_botright.y - max_y)
 
-        self.bounding_rect.position = (pos + offset + self._drag_rel) / cstate.scale
+        self.bounding_rect.position = (pos + offset + self._drag_rel)
         # The actual amount moved by the rects
-        pos_offset = (new_positions[0] + offset) / cstate.scale - rect_data[0].position
+        pos_offset = (new_positions[0] + offset) - rect_data[0].position
         for rdata, np in zip(rect_data, new_positions):
-            rdata.position = (np + offset) / cstate.scale
+            rdata.position = (np + offset)
 
         # Note that don't need to test if out of bounds by peripheral nodes, since all
         # peripheral nodes must be inside selected compartments.
@@ -1147,8 +1137,8 @@ class SelectBox(CanvasElement):
         nodes = [n for n in self.nodes if not n.lockNode]
         rect_data = cast(List[RectData], self.compartments) + cast(List[RectData], nodes)
         pos = self.bounding_rect.position
-        rel_node_pos = [n.position * cstate.scale - pos for n in self.nodes if not n.lockNode]
-        rel_comp_pos = [c.position * cstate.scale - pos for c in self.compartments]
+        rel_node_pos = [n.position - pos for n in self.nodes if not n.lockNode]
+        rel_comp_pos = [c.position - pos for c in self.compartments]
         rel_positions = rel_comp_pos + rel_node_pos
 
         if len(rect_data) == 0:
@@ -1158,26 +1148,132 @@ class SelectBox(CanvasElement):
         self._commit_move()
 
     def _commit_move(self):
-        self.controller.start_group()
-        for node in chain(self.nodes, self.peripheral_nodes):
-            self.controller.move_node(self.net_index, node.index, node.position)
+        with self.controller.group_action():
+            for node in chain(self.nodes, self.peripheral_nodes):
+                self.controller.move_node(self.net_index, node.index, node.position)
 
-        for comp in self.compartments:
-            self.controller.move_compartment(
-                self.net_index, comp.index, comp.position)
+            for comp in self.compartments:
+                self.controller.move_compartment(
+                    self.net_index, comp.index, comp.position)
 
-        if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
-            compi = self.canvas.InWhichCompartment(self.nodes)
-            old_compi = self.nodes[0].comp_idx
-            if compi != old_compi:
-                for node in self.nodes:
-                    self.controller.set_compartment_of_node(
-                        self.net_index, node.index, compi)
-                post_event(DidChangeCompartmentOfNodesEvent(
-                    node_indices=[n.index for n in self.nodes],
-                    old_compi=old_compi,
-                    new_compi=compi
-                ))
+            if self.special_mode == SelectBox.SMode.NODES_IN_ONE:
+                compi = self.canvas.InWhichCompartment(self.nodes)
+                old_compi = self.nodes[0].comp_idx
+                if compi != old_compi:
+                    for node in self.nodes:
+                        self.controller.set_compartment_of_node(
+                            self.net_index, node.index, compi)
+                    post_event(DidChangeCompartmentOfNodesEvent(
+                        node_indices=[n.index for n in self.nodes],
+                        old_compi=old_compi,
+                        new_compi=compi
+                    ))
 
-        post_event(DidCommitDragEvent())
-        self.controller.end_group()
+            post_event(DidCommitDragEvent())
+
+
+def primitive_peninfo(color: Color, width: float, is_alias: bool):
+    info = wx.GraphicsPenInfo(color.to_wxcolour(), width)
+    if is_alias:
+        info = info.Style(wx.PENSTYLE_SHORT_DASH)
+    return info
+
+
+def primitive_brush(color: Color, is_alias: bool):
+    # style = wx.BRUSHSTYLE_FIRST_HATCH if is_alias else wx.BRUSHSTYLE_SOLID
+    style = wx.BRUSHSTYLE_SOLID
+    brush = wx.Brush(color.to_wxcolour(), style=style)
+    return brush
+
+
+def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim, is_alias: bool):
+    peninfo = primitive_peninfo(circle.border_color, circle.border_width, is_alias)
+    pen = gc.CreatePen(peninfo)
+    brush = gc.CreateBrush(primitive_brush(circle.fill_color, is_alias))
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
+    path = gc.CreatePath()
+    path.AddCircle(0.0, 0.0, 0.5)
+    gc.DrawPath(path)
+
+
+def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim, is_alias: bool):
+    pen = gc.CreatePen(primitive_peninfo(rect.border_color, rect.border_width, is_alias))
+    brush = gc.CreateBrush(primitive_brush(rect.fill_color, is_alias))
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
+    gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
+
+
+def draw_polygon_to_gc(gc: wx.GraphicsContext, poly: TPolygonPrim, is_alias: bool):
+    pen = gc.CreatePen(primitive_peninfo(poly.border_color, poly.border_width, is_alias))
+    brush = gc.CreateBrush(primitive_brush(poly.fill_color, is_alias))
+    gc.SetPen(pen)
+    gc.SetBrush(brush)
+    gc.DrawLines([wx.Point2D(*p) for p in poly.points])
+
+
+draw_fn_map = {
+    TCirclePrim: draw_circle_to_gc,
+    TRectanglePrim: draw_rect_to_gc,
+    THexagonPrim: draw_polygon_to_gc,
+    TLinePrim: draw_polygon_to_gc,
+    TTrianglePrim: draw_polygon_to_gc
+}
+
+
+def apply_transform_to_gc(gc: wx.GraphicsContext, transform: TTransform):
+    gc.Translate(*transform.translation)
+    gc.Rotate(transform.rotation)
+    gc.Scale(*transform.scale)
+
+
+def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node):
+    shape = node.composite_shape
+    gc.PushState()
+    gc.Translate(*bounding_rect.position)
+    gc.Scale(*bounding_rect.size)
+    for primitive, transform in shape.items:
+        gc.PushState()
+        apply_transform_to_gc(gc, transform)
+        draw_fn_map[primitive.__class__](gc, primitive, node.original_index != -1)
+        gc.PopState()
+    gc.PopState()
+
+    gc.PushState()
+    apply_transform_to_gc(gc, node.composite_shape.text_item[1])
+    draw_text_to_gc(gc, bounding_rect, node.id, node.composite_shape.text_item)
+    gc.PopState()
+
+
+def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TTextPrim, TTransform]):
+    primitive, transform = text_item
+
+    # Maybe cache this?
+    fg_color = primitive.font_color.to_wxcolour()
+    font = wx.Font(wx.FontInfo(primitive.font_size)
+                   .Family(primitive.font_family)
+                   .Style(primitive.font_style)
+                   .Weight(primitive.font_weight))
+    gfont = gc.CreateFont(font, fg_color)
+    gc.SetFont(gfont)
+    brush = gc.CreateBrush(wx.Brush(primitive.bg_color.to_wxcolour()))
+
+    width, height = bounding_rect.size
+    tw, th, _, _ = gc.GetFullTextExtent(
+        text_string)
+    # remaining x and y
+    rx = width - tw
+    ry = height - th
+    text_pos = bounding_rect.position + transform.translation.elem_mul(bounding_rect.size)
+
+    if primitive.alignment == TextAlignment.LEFT:
+        draw_pos = text_pos + Vec2(0, ry / 2)
+    elif primitive.alignment == TextAlignment.CENTER:
+        draw_pos = text_pos + Vec2(rx, ry) / 2
+    elif primitive.alignment == TextAlignment.RIGHT:
+        draw_pos = text_pos + Vec2(rx, ry / 2)
+    else:
+        assert False, "This should not happen"
+
+    gc.DrawText(text_string, draw_pos.x, draw_pos.y, brush)

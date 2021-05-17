@@ -64,13 +64,14 @@ class TestNode(TestWithApp):
 
 class TestAlias(TestWithApp):
     def test_add_alias(self):
-        nodei = api.add_node(self.neti, id='Hookie')
-        api.add_alias(self.neti, nodei)
+        size = Vec2(60, 60)
+        nodei = api.add_node(self.neti, id='Hookie', size=size)
+        api.add_alias(self.neti, nodei, size=size)
 
         nodes = api.get_nodes(self.neti)
         self.assertEqual(2, len(nodes))
-        original = NodeData(net_index=self.neti, id='Hookie', index=0, original_index=-1)
-        alias = NodeData(net_index=self.neti, id='Hookie', index=1, original_index=0)
+        original = NodeData(net_index=self.neti, id='Hookie', index=0, original_index=-1, size=size)
+        alias = NodeData(net_index=self.neti, id='Hookie', index=1, original_index=0, size=size)
         self.assertEqual(original, nodes[0])
         self.assertEqual(alias, nodes[1])
 

@@ -6,5 +6,3 @@ Folder containing the plugins created.
    :maxdepth: 4
 
    arrow_designer
-   color_selected
-   disco

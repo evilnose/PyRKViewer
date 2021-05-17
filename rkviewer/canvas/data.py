@@ -2,17 +2,20 @@
 from __future__ import annotations
 # pylint: disable=maybe-no-member
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, auto
 import wx
 import copy
 import math
+from math import pi, sin, cos
 from itertools import chain
 import numpy as np
 from scipy.special import comb
-from typing import Callable, Container, List, Optional, Sequence, Set, Tuple
+from typing import Any, Callable, ClassVar, Container, List, NamedTuple, Optional, Sequence, Set, Tuple, cast
+from collections import namedtuple
+
 from .geometry import Vec2, Rect, get_bounding_rect, padded_rect, pt_in_circle, pt_on_line, rotate_unit, segment_rect_intersection, segments_intersect
 from .state import cstate
-from ..config import get_setting, get_theme
+from ..config import get_setting, get_theme, Color, Font
 from ..utils import gchain, pairwise
 
 
@@ -21,6 +24,193 @@ HANDLE_RADIUS = 5  # Radius of the contro lhandle
 HANDLE_BUFFER = 2
 NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
 TIP_DISPLACEMENT = 4
+
+
+@dataclass
+class TTransform:
+    translation: Vec2 = Vec2()
+    rotation: float = 0
+    scale: Vec2 = Vec2(1, 1)
+
+
+class TPrimitive:
+    name: ClassVar[str] = 'generic primitive'
+
+
+@dataclass
+class TCirclePrim(TPrimitive):
+    name: ClassVar[str] = 'circle'
+    fill_color: Color = Color(255, 0, 0, 255)
+    border_color: Color = Color(0, 255, 0, 255)
+    border_width: float = 0.05
+
+
+@dataclass
+class TRectanglePrim(TPrimitive):
+    name: ClassVar[str] = 'rectangle'
+    fill_color: Color = Color(255, 0, 0, 255)
+    border_color: Color = Color(0, 255, 0, 255)
+    border_width: float = 0.05
+    corner_radius: float = 0.15
+
+
+class ChoiceItem(NamedTuple):
+    value: Any
+    text: str
+
+
+class TextAlignment(Enum):
+    LEFT = auto()
+    CENTER = auto()
+    RIGHT = auto()
+
+
+FONT_FAMILY_CHOICES = [
+    ChoiceItem(wx.FONTFAMILY_SWISS, 'sans-serif'),
+    ChoiceItem(wx.FONTFAMILY_ROMAN, 'serif'),
+    ChoiceItem(wx.FONTFAMILY_MODERN, 'monospace'),
+    # ChoiceItem(wx.FONTFAMILY_DEFAULT, 'default'),
+    # ChoiceItem(wx.FONTFAMILY_DECORATIVE, 'decorative'),
+    # ChoiceItem(wx.FONTFAMILY_SCRIPT, 'script'),
+]
+
+FONT_STYLE_CHOICES = [
+    ChoiceItem(wx.FONTSTYLE_NORMAL, 'normal'),
+    ChoiceItem(wx.FONTSTYLE_ITALIC, 'italic'),
+    # ChoiceItem(wx.FONTSTYLE_SLANT, 'slant'),
+]
+
+FONT_WEIGHT_CHOICES = [
+    ChoiceItem(wx.FONTWEIGHT_MEDIUM, 'normal'),
+    ChoiceItem(wx.FONTWEIGHT_BOLD, 'bold'),
+    ChoiceItem(wx.FONTWEIGHT_LIGHT, 'light'),
+]
+
+TEXT_ALIGNMENT_CHOICES = [
+    ChoiceItem(TextAlignment.LEFT, 'left'),
+    ChoiceItem(TextAlignment.CENTER, 'center'),
+    ChoiceItem(TextAlignment.RIGHT, 'right'),
+]
+
+
+@dataclass
+class TTextPrim(TPrimitive):
+    name: ClassVar[str] = 'text'
+    bg_color: Color = Color(255, 255, 0, 0)
+    font_color: Color = Color(0, 0, 0, 255)
+    font_size: int = 11
+    font_family: int = wx.FONTFAMILY_SWISS
+    font_style: int = wx.FONTSTYLE_NORMAL
+    font_weight: int = wx.FONTWEIGHT_MEDIUM
+    alignment: TextAlignment = TextAlignment.CENTER
+
+
+def gen_polygon_pts(n, r=0.5, phase=0) -> Tuple[Vec2, ...]:
+    """
+    This function is used to define the vertices in 2D space of n-polygons. Each equilateral 
+    polygon is drawn inside a circle with specified radius.
+
+    n: the number of sides of the polygon
+    r: radius of the circle in which the polygon is drawn
+    phase: the phase of the first point, in radians. If phase is 0, the first point is drawn at
+           (r, 0) relative to the origin.
+    """
+    assert n >= 2
+
+    origin = Vec2()
+    inc = 2 * pi /n
+
+    return tuple(origin + r * Vec2(cos(inc * i + phase), sin(inc * i + phase))
+                 for i in range(n + 1))
+
+
+@dataclass
+class TPolygonPrim(TPrimitive):
+    name: ClassVar[str] = 'polygon'
+    points: Tuple[Vec2, ...]
+    fill_color: Color = Color(255, 0, 0, 255)
+    border_color: Color = Color(0, 255, 0, 255)
+    border_width: float = 0.05
+    radius: float = 0.5
+
+
+@dataclass
+class THexagonPrim(TPolygonPrim):
+    name: ClassVar[str] = 'hexagon'
+    points: Tuple[Vec2, ...] = gen_polygon_pts(6)
+
+
+@dataclass
+class TLinePrim(TPolygonPrim):
+    name: ClassVar[str] = 'line'
+    # exclude the last point since we don't need the lines to be closed
+    points: Tuple[Vec2, ...] = gen_polygon_pts(2)[:-1]
+
+
+@dataclass
+class TTrianglePrim(TPolygonPrim):
+    name: ClassVar[str] = 'triangle'
+    points: Tuple[Vec2, ...] = gen_polygon_pts(3)
+
+
+class TCompositeShape:
+    def __init__(self, items: List[Tuple[Any, TTransform]],
+                 text_item: Tuple[TTextPrim, TTransform], name: str):
+        self.items = items
+        self.name = name
+        self.text_item = text_item
+
+    def __copy__(self):
+        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.text_item), self.name)
+
+
+class PrimitiveFactory:
+    '''Factory that produces primitives.
+
+    Why do we need this?
+        1. Dynamic population of fields. When I need a primitive, I call produce(), which creates
+           a primitive based on the latest data, e.g. theme.
+        2. That's it.
+
+    How do we achieve dynamically created fields? In the constructor of this class, we allow
+    passing functions as values for fields. On product(), we call these functions to populate the
+    fields. Of course, the user can still pass all-static fields, which would work as intended.
+    '''
+    def __init__(self, prim_class, **kwargs):
+        fields = prim_class.__dataclass_fields__
+
+        for key in kwargs.keys():
+            if key not in fields:
+                assert False  # TODO raise ValueError
+        self.prim_class = prim_class
+        self.abstract_kwargs = kwargs
+
+    def produce(self):
+        kwargs = dict()
+        # construct actual arguments
+        for key, value in self.abstract_kwargs.items():
+            concrete_value = None
+            if callable(value):
+                concrete_value = value()
+            else:
+                concrete_value = value
+            kwargs[key] = concrete_value
+        return self.prim_class(**kwargs)
+
+
+class CompositeShapeFactory:
+    '''A factory for a composite shape, see PrimitiveFactory for more information.
+    '''
+    def __init__(self, item_factories: List[Tuple[PrimitiveFactory, TTransform]],
+                 text_factory: Tuple[PrimitiveFactory, TTransform], name: str):
+        self.item_factories = item_factories
+        self.text_factory = text_factory
+        self.name = name
+    
+    def produce(self):
+        items = [(prim.produce(), tf) for prim, tf in self.item_factories]
+        textitem = (self.text_factory[0].produce(), self.text_factory[1])
+        return TCompositeShape(items, textitem, self.name)
 
 
 class RectData:
@@ -43,9 +233,9 @@ class Node(RectData):
         net_index: The network index of the node.
     """
     id: str
-    fill_color: wx.Colour
-    border_color: wx.Colour
-    border_width: float
+    # fill_color: wx.Colour
+    # border_color: wx.Colour
+    # border_width: float
     position: Vec2
     size: Vec2
     comp_idx: int
@@ -53,39 +243,62 @@ class Node(RectData):
     net_index: int
     floatingNode: bool
     lockNode: bool  # Prevent users from moving the node
+    shape_index: int
+    composite_shape: Optional[TCompositeShape]
+    # -1 if this is an original node, or if this is an alias node, then the index of the original copy
+    original_index: int
+                        
 
     # force keyword-only arguments
-    def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, fill_color: wx.Colour,
-                 border_color: wx.Colour, border_width: float, comp_idx: int = -1, floatingNode: bool = True, lockNode: bool = False, index: int = -1):
+    def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, comp_idx: int = -1,
+                 floatingNode: bool = True,
+                 lockNode: bool = False,
+                 shape_index: int = 0,
+                 composite_shape: Optional[TCompositeShape] = None,
+                 index: int = -1,
+                 original_index: int = -1):
         self.index = index
         self.net_index = net_index
         self.id = id
         self.position = pos
         self.size = size
-        self.fill_color = fill_color
-        self.border_color = border_color
-        self.border_width = border_width
+        # self.fill_color = fill_color
+        # self.border_color = border_color
+        # self.border_width = border_width
         self.comp_idx = comp_idx
         self.floatingNode = floatingNode
         self.lockNode = lockNode
+        self.shape_index = shape_index
+        self.composite_shape = composite_shape
+        self.original_index = original_index
+
+    def _get_prim_field(self, field):
+        for prim, _ in self.composite_shape.items:
+            if hasattr(prim, field):
+                return getattr(prim, field)
+        return None
+
+    @property
+    def fill_color(self):
+        return self._get_prim_field('fill_color')
+
+    @property
+    def border_color(self):
+        return self._get_prim_field('border_color')
+
+    @property
+    def border_width(self):
+        return self._get_prim_field('border_width')
 
     @property
     def s_position(self):
         """The scaled position of the node obtained by multiplying the scale."""
-        return self.position * cstate.scale
-
-    @s_position.setter
-    def s_position(self, val: Vec2):
-        self.position = val / cstate.scale
+        return self.position
 
     @property
     def s_size(self):
         """The scaled size of the node obtained by multiplying the scale."""
-        return self.size * cstate.scale
-
-    @s_size.setter
-    def s_size(self, val: Vec2):
-        self.size = val / cstate.scale
+        return self.size
 
     @property
     def s_rect(self):
@@ -107,9 +320,7 @@ class Node(RectData):
 
     def props_equal(self, other: Node):
         return self.id == other.id and self.position == other.position and \
-            self.size == other.size and self.border_width == other.border_width and \
-            self.border_color.GetRGB() == other.border_color.GetRGB() and \
-            self.fill_color.GetRGB() == other.fill_color.GetRGB()
+            self.size == other.size
 
 
 def compute_centroid(rects: Sequence[Rect]) -> Vec2:
@@ -132,7 +343,7 @@ def init_bezier():
         for ti in range(MAXSEGS+1):
             t = ti/MAXSEGS
             for i in range(4):  # i = 0, 1, 2, 3
-                BezJ[ti, i] = comb(3, i) * math.pow(t, i) * math.pow(1-t, 3-i)
+                BezJ[ti, i] = cast(int, comb(3, i)) * math.pow(t, i) * math.pow(1-t, 3-i)
             # At the moment hard-wired for n = 3
             tm = 1 - t
             BezJPrime[ti, 0] = -3*tm*tm
@@ -414,12 +625,13 @@ class SpeciesBezier:
         """Check if position is on curve; pos is scaled logical position."""
         self._recompute(for_collision=True)
         if self.bezierCurves:
-            return any(pt_on_line(p1 * cstate.scale, p2 * cstate.scale, pos,
+            return any(pt_on_line(p1, p2, pos,
                                   CURVE_SLACK + self.thickness / 2)
                        for p1, p2 in pairwise(self.bezier_points))
         else:
-            return pt_on_line(self.node_intersection * cstate.scale,
-                              self.real_center * cstate.scale, pos,
+            assert self.node_intersection is not None
+            return pt_on_line(self.node_intersection,
+                              self.real_center, pos,
                               CURVE_SLACK + self.thickness / 2)
 
     def do_paint(self, gc: wx.GraphicsContext, fill: wx.Colour, selected: bool):
@@ -436,10 +648,10 @@ class SpeciesBezier:
         gc.SetPen(pen)
         # gc.StrokeLines([wx.Point2D(*(p * cstate.scale)) for p in self.bezier_points])
         path = gc.CreatePath()
-        points = [p * cstate.scale for p in (self.node_intersection,
-                                             self.handle.tip,
-                                             self.centroid_handle.tip,
-                                             self.real_center)]
+        points = [p for p in (self.node_intersection,
+                              self.handle.tip,
+                              self.centroid_handle.tip,
+                              self.real_center)]
         path.MoveToPoint(*points[0])
         if self.bezierCurves:
             path.AddCurveToPoint(*points[1], *points[2], *points[3])
@@ -461,7 +673,7 @@ class SpeciesBezier:
             "Arrow adjusted coords is not of length 4: {}".format(self.arrow_adjusted_coords)
         gc.SetPen(gc.CreatePen(wx.GraphicsPenInfo(fill)))
         gc.SetBrush(wx.Brush(fill))
-        gc.DrawLines([wx.Point2D(*(coord * cstate.scale))
+        gc.DrawLines([wx.Point2D(*(coord))
                       for coord in self.arrow_adjusted_coords])
 
 

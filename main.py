@@ -4,14 +4,12 @@ import sys
 import logging
 import logging.config
 import traceback
-from rkviewer.view import View
+from rkviewer.view import RKView
 from rkviewer.controller import Controller
 # Import rkplugin stuff for PyInstaller to include the file in the bundle. For some reason, it's
 # only necessary to do so for rkplugin.events but not other rkplugin files.
 import os
 from pathlib import Path
-import simplesbml
-from libsbml import *
 
 class ExceptionDialog(wx.MessageDialog):
     def __init__(self, msg):
@@ -113,7 +111,7 @@ if __name__ == '__main__':
     sys.excepthook = create_excepthook(sys.excepthook)
 
     logging.info('Initializing RKViewer...')
-    view = View()
+    view = RKView()
     controller = Controller(view)
     view.bind_controller(controller)
     view.init()

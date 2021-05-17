@@ -7,12 +7,12 @@ from rkviewer.controller import Controller
 import wx
 from contextlib import contextmanager
 import threading
-from rkviewer.view import View
+from rkviewer.view import RKView
 
 @contextmanager
 def run_app():
     """Create an app context. The app main loop is not called."""
-    view = View()
+    view = RKView()
     controller = Controller(view)
     view.bind_controller(controller)
     view.init()
@@ -32,10 +32,7 @@ def auto_node(id_: str, neti: int) -> Node:
     return Node(id_,
                 neti,
                 pos=Vec2(550, 450),
-                size=Vec2(50, 30),
-                fill_color=wx.RED,
-                border_color=wx.GREEN,
-                border_width=2)
+                size=Vec2(50, 30))
 
 def auto_reaction(id_: str, neti: int, sources: List[int], targets: List[int]) -> Reaction:
     return Reaction(

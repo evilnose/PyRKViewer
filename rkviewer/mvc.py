@@ -1,10 +1,13 @@
 # pylint: disable=maybe-no-member
+from dataclasses import dataclass
 from enum import Enum
+from rkviewer.config import Color
 import wx
 import abc
-from typing import Any, List, Optional, Set
+import copy
+from typing import Any, List, Optional, Set, Tuple
 from .canvas.geometry import Vec2
-from .canvas.data import Compartment, Node, Reaction, ModifierTipStyle
+from .canvas.data import Compartment, Node, Reaction, ModifierTipStyle, TCompositeShape
 
 
 class IController(abc.ABC):
@@ -13,24 +16,12 @@ class IController(abc.ABC):
     The abc.ABC (Abstract Base Class) is used to enforce the MVC interface more
     strictly.
 
-    The methods with name beginning with Try- are usually called by the View after
+    The methods with name beginning with Try- are usually called by the RKView after
     some user input. If the action tried in such a method succeeds, the Controller
     should request the view to be redrawn; otherwise, an error message might be shown.
     """
-
     @abc.abstractmethod
-    def start_group(self) -> bool:
-        """Try to signal start of group operation"""
-        pass
-
-    @abc.abstractmethod
-    def end_group(self) -> bool:
-        """Try to signal end of group operation"""
-        pass
-
-    @abc.abstractmethod
-    def in_group(self) -> bool:
-        """Returns whether the controller is in the middle of a group operation."""
+    def group_action(self) -> Any:
         pass
 
     @abc.abstractmethod
@@ -55,6 +46,15 @@ class IController(abc.ABC):
     @abc.abstractmethod
     def add_compartment_g(self, neti: int, compartment: Compartment) -> int:
         """Try to add the given Compartment to the canvas. Return index of added comp."""
+        pass
+
+    @abc.abstractmethod
+    def add_alias_node(self, neti: int, original_index: int, pos: Vec2, size: Vec2) -> int:
+        pass
+
+    @abc.abstractmethod
+    def alias_for_reaction(self, neti: int, reai: int, nodei: int, pos: Vec2, size: Vec2):
+        """See Iodine aliasForReaction for documentation"""
         pass
 
     @abc.abstractmethod
@@ -337,6 +337,31 @@ class IController(abc.ABC):
     @abc.abstractmethod
     def get_application_position(self) -> wx.Point:
         pass
+
+    @abc.abstractmethod
+    def get_composite_shape_list(self, neti: int) -> List[TCompositeShape]:
+        pass
+
+    @abc.abstractmethod
+    def get_composite_shape_at(self, neti: int, shapei: int) -> List[TCompositeShape]:
+        pass
+
+    @abc.abstractmethod
+    def get_node_shape(self, neti: int, nodei: int) -> TCompositeShape:
+        pass
+
+    @abc.abstractmethod
+    def get_node_shape_index(self, neti: int, nodei: int) -> int:
+        pass
+
+    @abc.abstractmethod
+    def set_node_shape_index(self, neti: int, nodei: int, shapei: int):
+        pass
+
+    @abc.abstractmethod
+    def set_node_primitive_property(self, neti: int, nodei: int, primitive_index: int, prop_name: str, prop_value):
+        pass
+
 
 class IView(abc.ABC):
     """The inteface class for a controller

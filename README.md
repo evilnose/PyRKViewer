@@ -42,6 +42,7 @@ use that Python installation for building.
 * To run all tests, go to project root and run `python -m unittest`.
 * To run a particular test, run e.g. `python -m unittest test.rkplugin.test_api`.
 * To profile the application, run `python -m cProfile -o rkviewer.stat main.py`.
+* To visualize the profile result, run `tuna rkviewer.stat`.
 
 ### Building Local Docs
 * Run `sphinx-build -b html docs\source docs\build`.
@@ -51,7 +52,35 @@ Usually snake_case is used for function names. However, to retain some degree of
  
 ### TODOs
 * BUG: The handle of a reaction may go out of bounds when a node is being moved. Make sure to clip those values.
-* OPTIMIZE: Do not rebuild reaction forms. Instead, keep them all in a dict() and only make the currently used one visible.
 * REFACTOR: Refactor Minimap so that it's a CanvasElement. We also need CanvasElement functions to accept both a logical_pos and a device_pos as arguments.
 * ENHANCEMENT: Add support for multiple net IDs. Currently all net IDs are set to 0 by default.
 
+### Shapes TODOs
+* Add form fields for changing the CompositeShape and for setting primitive properties
+* Add API functions for setting/getting shapes
+* Add convenience API functions for creating rectangle nodes or circle nodes
+* Serialize/deserialize shape properties (don't serialize shape list for now), use field like Color | str
+* Events (NodeModified)
+* Consideration for later: allow shape properties to get values from settings, such as default colors
+
+### Roadmap for Shape Engine
+A shape "engine" allows the user to specify custom composite shapes for nodes and compartments.
+Composite shapes are constructed out of primitives such as circles, (rounded) rectangles, polygons,
+etc.
+
+RKViewer provides a default list of (composite) shapes, but the user may also create their own
+shapes out of primitives. A (composite) shape is formed out of one or many primitives, each
+scaled, rotated, and translated by certain amounts. User-created shapes will be
+associated with each model in the exported `.json` files.
+
+A shape-creation plugin may be created in the future to facilitate the process of designing
+complex shapes.
+
+Here is the roadmap for the shape engine:
+* Create preliminary list of primitives and a default list of shapes. Allow model loader/saver to
+reference that list.
+* Modify renderer to be able to render these default shapes.
+* Modify inspector to allow the user to change the properties of the primitives in the shape, such
+as colors, border thickness, etc.
+* Modify model loader/saver to allow users to create custom shape lists manually.
+* Write shape-creation plugin?

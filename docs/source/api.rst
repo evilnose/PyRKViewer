@@ -1,4 +1,4 @@
-api module
+Plugin API Reference
 ==========
 
 .. automodule:: rkplugin.api

@@ -1,5 +1,26 @@
 =================================================
-For Developers: Basic Overview of Code Structures
+Plugin Development
+=================================================
+
+----------------
+Writing plugins
+----------------
+
+Here are the steps for writing a plugin:
+
+1. First decide if you want a CommandPlugin or a WindowedPlugin. CommandPlugins are those with one single action and don’t require a dialog display. WindowedPlugin allows for a more complex UI by spawning a window.
+2. Create a Python script with a single class that inherits from either CommandPlugin or WindowedPlugin.
+3. In the plugin class, create a `PluginMetadata` object named `metadata`. This holds necessary information (e.g. name, author, description) about the plugin. See the sample plugin for an example.
+4. If needed, create a constructor that also calls the “super” constructor.
+5. Override the inherited methods:
+ 
+ a. If you inherited a CommandPlugin, simply override the “run()”method, which is called when the user clicks on the plugin item
+ b. For WindowedPlugin, you need to override “create_window(dialog)”, which passes you the parent dialog in which you can create your widgets.
+
+6. Also keep in mind the event handlers which are called when events occur (e.g. on node created, deleted, etc.). See the same file on plugins for info on these.
+
+=================================================
+Core Development
 =================================================
 
 -------------------------------------------------
@@ -37,20 +58,5 @@ How do I add a field to Node/Reaction/Compartment?
  d. Note: If the form freezes after changing the field, you might’ve gotten into a circular event loop, i.e. user changes field → event triggers → field updates controller → controller notifies form → form updates field → event triggers → … This shouldn’t happen with most controls (use ChangeValue()), but in case it does happen, check out the variable “_self_changes” and how it’s used)
  
 This seems messy and redundant, so some work could definitely be done here to reduce the number of copies of the data classes and also to automate the process (e.g. of adding field to forms).
-
-----------------
-Writing plugins
-----------------
-
-Here are the steps for writing a plugin:
-
-1. First decide if you want a CommandPlugin or a WindowedPlugin. CommandPlugins are those with one single action and don’t require a dialog display. WindowedPlugin allows for a more complex UI by spawning a window.
-2. Create a Python script with a single class that inherits from either CommandPlugin or WindowedPlugin.
-3. In the plugin class, create a `PluginMetadata` object named `metadata`. This holds necessary information (e.g. name, author, description) about the plugin. See the sample plugin for an example.
-4. If needed, create a constructor that also calls the “super” constructor.
-5. Override the inherited methods:
- 
- a. If you inherited a CommandPlugin, simply override the “run()”method, which is called when the user clicks on the plugin item
- b. For WindowedPlugin, you need to override “create_window(dialog)”, which passes you the parent dialog in which you can create your widgets.
-
-6. Also keep in mind the event handlers which are called when events occur (e.g. on node created, deleted, etc.). See the same file on plugins for info on these.
+The MVC structure is also not perfect right now, with iodine importing from the view (e.g. Vec2). If a real MVC structure is deemed to be necessary,
+work needs to be done to create a truly separate interface for models and views.

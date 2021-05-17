@@ -80,7 +80,7 @@ T = TypeVar('T')
 
 
 # TODO add SetObserver, which allows delaying callback and combining multiple notify calls.
-# e.g. with start_group() and end_group()
+# e.g. with group_action()
 class Observer(abc.ABC, Generic[T]):
     """Observer abstract base class; encapsulates object of type T."""
 

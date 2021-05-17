@@ -86,10 +86,18 @@ class PluginManager:
                 continue
             mod_name = '_rkplugin_{}'.format(f[:-2])  # remove extension
             spec = importlib.util.spec_from_file_location(mod_name, os.path.join(dir_path, f))
+            assert spec is not None
             mod = importlib.util.module_from_spec(spec)
             assert spec.loader is not None
             loader = cast(importlib.abc.Loader, spec.loader)
-            loader.exec_module(mod)
+            try:
+                loader.exec_module(mod)
+            except Exception as e:
+                except_str = ''.join(traceback.format_exception(None, e, e.__traceback__))
+                errmsg = "Failed to load plugin '{}':\n{}".format(f, except_str)
+                self.logger.error(errmsg)
+                self.error_callback(errmsg)
+                continue
 
             def pred(o): return o.__module__ == mod_name and issubclass(o, Plugin)
             def wrap_exception(pname, method):
@@ -98,7 +106,7 @@ class PluginManager:
                         return method(*args, **kwargs)
                     except Exception as e:
                         errmsg = ''.join(traceback.format_exception(None, e, e.__traceback__))
-                        errmsg = "Caught error in plugin '{}'".format(pname) + errmsg
+                        errmsg = "Caught error in plugin '{}':\n".format(pname) + errmsg
                         self.logger.error(errmsg)
                         self.error_callback(errmsg)
                 return ret
@@ -169,10 +177,8 @@ class PluginManager:
 Plugin!".format(handler_name)
 
         def ret(evt: CanvasEvent):
-            # self.controller.start_group()
             for plugin in self.plugins:
                 getattr(plugin, handler_name)(evt)
-            # self.controller.end_group()
 
         return ret
 
@@ -187,9 +193,8 @@ Plugin!".format(handler_name)
 
     def make_command_callback(self, command: CommandPlugin) -> Callable[[], None]:
         def command_cb():
-            self.controller.start_group()
-            command.run()
-            self.controller.end_group()
+            with self.controller.group_action():
+                command.run()
 
         return command_cb
 

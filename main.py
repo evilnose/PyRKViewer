@@ -11,7 +11,6 @@ from rkviewer.controller import Controller
 import os
 from pathlib import Path
 
-
 class ExceptionDialog(wx.MessageDialog):
     def __init__(self, msg):
         """Constructor"""

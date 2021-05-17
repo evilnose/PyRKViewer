@@ -1,27 +1,28 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 0.01: Author: Jin Xu (2021)
+Version 0.02: Author: Jin Xu (2021)
 """
 
 
 # pylint: disable=maybe-no-member
 
 from inspect import Parameter
+#from libsbml import KineticLaw
 import wx
 from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
 from rkplugin import api
 from rkplugin.api import Node, Vec2, Reaction, Color
 import os
-import simplesbml # has to import in the main.py too
-from libsbml import readSBMLFromString
+import simplesbml # does not have to import in the main.py too
+from libsbml import *
 import math
 import random as _random
 
-class ExportSBML(WindowedPlugin):
+class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='0.0.1',
+        version='0.0.2',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.ANALYSIS
@@ -72,6 +73,10 @@ class ExportSBML(WindowedPlugin):
         Visualize the SBML string to a network shown on the canvas.
         """
 
+        def hex_to_rgb(value):
+            value = value.lstrip('#')
+            return tuple(int(value[i:i+2], 16) for i in (0, 2, 4))      
+
         if len(self.sbmlStr) == 0:
             wx.MessageBox("Please import an SBML file.", "Message", wx.OK | wx.ICON_INFORMATION)
 
@@ -85,8 +90,18 @@ class ExportSBML(WindowedPlugin):
             spec_dimension_list =[]
             spec_position_list = []
 
+
+            #set the default values without render info:
+            comp_fill_color = (158, 169, 255)
+            comp_border_color = (0, 29, 255)
+            comp_border_width = 2.0
+            spec_fill_color = (255, 204, 153)
+            spec_border_color = (255, 108, 9)
+            spec_border_width = 2.0
+            reaction_line_color = (129, 123, 255)
+            reaction_line_width = 3.0
+
             ### from here for layout ###
-            # change to use libsbml instead of simplesbml
             document = readSBMLFromString(self.sbmlStr)
             model_layout = document.getModel()
             mplugin = (model_layout.getPlugin("layout"))
@@ -129,6 +144,38 @@ class ExportSBML(WindowedPlugin):
                         spec_dimension_list.append([width,height])
                         spec_position_list.append([pos_x,pos_y])
 
+                    rPlugin = layout.getPlugin("render")
+                    if (rPlugin != None and rPlugin.getNumLocalRenderInformationObjects() > 0):
+                        info = rPlugin.getRenderInformation(0)
+                        color_list = []
+                        for  j in range ( 0, info.getNumColorDefinitions()):
+                            color = info.getColorDefinition(j)			  
+                            color_list.append([color.getId(),color.createValueString()])
+                        for j in range (0, info.getNumStyles()):
+                            style = info.getStyle(j)
+                            group = style.getGroup()
+                            typeList = style.createTypeString()
+                            if 'COMPARTMENTGLYPH' in typeList:
+                                for k in range(len(color_list)):
+                                    if color_list[k][0] == group.getFill():
+                                        comp_fill_color = hex_to_rgb(color_list[k][1])
+                                    if color_list[k][0] == group.getStroke():
+                                        comp_border_color = hex_to_rgb(color_list[k][1])
+                                comp_border_width = group.getStrokeWidth()
+                            elif 'SPECIESGLYPH' in typeList:
+                                for k in range(len(color_list)):
+                                    if color_list[k][0] == group.getFill():
+                                        spec_fill_color = hex_to_rgb(color_list[k][1])
+                                    if color_list[k][0] == group.getStroke():
+                                        spec_border_color = hex_to_rgb(color_list[k][1])
+                                spec_border_width = group.getStrokeWidth()
+                            elif 'REACTIONGLYPH' in typeList:
+                                for k in range(len(color_list)):
+                                    if color_list[k][0] == group.getStroke():
+                                        reaction_line_color = hex_to_rgb(color_list[k][1])
+                                reaction_line_width = group.getStrokeWidth()
+
+
             model = simplesbml.loadSBMLStr(self.sbmlStr)
             
             numFloatingNodes  = model.getNumFloatingSpecies()
@@ -145,6 +192,7 @@ class ExportSBML(WindowedPlugin):
                 temp_id = Comps_ids[i]
                 vol= model.getCompartmentVolume(i)
                 if len(comp_id_list) != 0:
+                #if mplugin is not None:
                     for j in range(numComps):
                         if comp_id_list[j] == temp_id:
                             dimension = comp_dimension_list[j]
@@ -154,8 +202,12 @@ class ExportSBML(WindowedPlugin):
                     dimension = [4000,2500]
                     position = [0,0] 
 
-                comp_idx = api.add_compartment(net_index, id=temp_id, volume = vol,
-                size=Vec2(dimension[0],dimension[1]),position=Vec2(position[0],position[1]))
+                api.add_compartment(net_index, id=temp_id, volume = vol,
+                size=Vec2(dimension[0],dimension[1]),position=Vec2(position[0],position[1]),
+                fill_color = api.Color(comp_fill_color[0],comp_fill_color[1],comp_fill_color[2]),
+                border_color = api.Color(comp_border_color[0],comp_border_color[1],comp_border_color[2]),
+                border_width = comp_border_width)
+
 
             comp_node_list = [0]*numComps
 
@@ -163,6 +215,7 @@ class ExportSBML(WindowedPlugin):
                 comp_node_list[i] = []
 
             if len(comp_id_list) != 0:
+            #if mplugin is not None:
                 for i in range (numFloatingNodes):
                     temp_id = FloatingNodes_ids[i]
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
@@ -170,8 +223,11 @@ class ExportSBML(WindowedPlugin):
                         if temp_id == spec_id_list[j]:
                             dimension = spec_dimension_list[j]
                             position = spec_position_list[j] 
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(dimension[0],dimension[1]), floatingNode = True, 
-                    position=Vec2(position[0],position[1]))
+                    nodeIdx_temp = api.add_node(net_index, id=temp_id, floatingNode = True, 
+                    size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]), 
+                    fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
+                    border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
+                    border_width=spec_border_width)
                     for j in range(numComps):
                         if comp_id == comp_id_list[j]:
                             comp_node_list[j].append(nodeIdx_temp)
@@ -183,8 +239,11 @@ class ExportSBML(WindowedPlugin):
                         if temp_id == spec_id_list[j]:
                             dimension = spec_dimension_list[j]
                             position = spec_position_list[j] 
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(dimension[0],dimension[1]), floatingNode = True, 
-                    position=Vec2(position[0],position[1]))
+                    nodeIdx_temp = api.add_node(net_index, id=temp_id, floatingNode = False, 
+                    size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]), 
+                    fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
+                    border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
+                    border_width=spec_border_width)
                     for j in range(numComps):
                         if comp_id == comp_id_list[j]:
                             comp_node_list[j].append(nodeIdx_temp)
@@ -196,7 +255,10 @@ class ExportSBML(WindowedPlugin):
                     temp_id = FloatingNodes_ids[i]
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                     nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floatingNode = True, 
-                    position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)))
+                    position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
+                    fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
+                    border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
+                    border_width=spec_border_width)
                     for j in range(numComps):
                         if comp_id == comp_id_list[j]:
                             comp_node_list[j].append(nodeIdx_temp)
@@ -205,7 +267,10 @@ class ExportSBML(WindowedPlugin):
                     temp_id = BoundaryNodes_ids[i]
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                     nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floatingNode = False, 
-                    position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)))
+                    position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
+                    fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
+                    border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
+                    border_width=spec_border_width)
                     for j in range(numComps):
                         if comp_id == comp_id_list[j]:
                             comp_node_list[j].append(nodeIdx_temp)
@@ -246,9 +311,9 @@ class ExportSBML(WindowedPlugin):
                         if allNodes[k].id == prd_id:
                             dst.append(allNodes[k].index)
 
-
-                r_idx = api.add_reaction(net_index, id = temp_id, reactants = src, products = dst,
-                rate_law = kinetics)
+                api.add_reaction(net_index, id=temp_id, reactants=src, products=dst, rate_law = kinetics,
+                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]), 
+                line_thickness=reaction_line_width)
             
 
                 

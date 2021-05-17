@@ -675,6 +675,7 @@ def deleteNode(neti: int, nodei: int) -> bool:
         # node. Also modify the modifiers to do the same
 
         if is_alias:
+            # swap all occurrences of alias with the original node, since we're deleting the alias
             assert isinstance(node, TAliasNode)
             srcReactions = net.srcMap[nodei]
             destReactions = net.destMap[nodei]
@@ -682,12 +683,12 @@ def deleteNode(neti: int, nodei: int) -> bool:
             # put the original node in the reaction in the place of the alias node
             for reai in srcReactions:
                 rxn = net.reactions[reai]
-                original_species = rxn.reactants.get(node.originalIdx, None)
                 rxn.reactants[node.originalIdx] = rxn.reactants[nodei]
                 # I'm not sure what should happen if both a node and its alias are reactants of
                 # the same reaction. Originally I thought of adding up the stoich of the deleted
                 # alias to that of the original node, but frankly this is such a nonsensical case
                 # that I think doing so would be making it unncessarily complicated.
+                # So now I'm just deleting it and doing nothing
                 # if original_species:
                 #     new_species = rxn.reactants[node.originalIdx]
                 #     new_species.stoich += original_species.stoich
@@ -697,7 +698,6 @@ def deleteNode(neti: int, nodei: int) -> bool:
             for reai in destReactions:
                 rxn = net.reactions[reai]
                 # see above for explanation
-                original_species = rxn.products.get(node.originalIdx, default=None)
                 rxn.products[node.originalIdx] = rxn.products[nodei]
                 # if original_species:
                 #     new_species = rxn.products[node.originalIdx]
@@ -705,7 +705,13 @@ def deleteNode(neti: int, nodei: int) -> bool:
                 #     new_species.handlePos = original_species.handlePos
                 del rxn.products[nodei]
 
-            # replace the old node
+            # update srcMap and destMap
+            net.srcMap[node.originalIdx] |= net.srcMap[nodei]
+            net.destMap[node.originalIdx] |= net.destMap[nodei]
+            del net.srcMap[nodei]
+            del net.destMap[nodei]
+
+            # replace occurrences in modifiers
             for rxn in net.reactions.values():
                 if nodei in rxn.modifiers:
                     rxn.modifiers.remove(nodei)
@@ -737,8 +743,7 @@ def deleteNode(neti: int, nodei: int) -> bool:
         return False
 
     # validate that node is not part of a reaction
-    # TODO do differently for alias nodes
-    if len(net.srcMap[nodei]) != 0 and len(net.destMap[nodei]) != 0:
+    if isinstance(node, TNode) and (len(net.srcMap[nodei]) != 0 or len(net.destMap[nodei]) != 0):
         _raiseError(-4)
 
     _pushUndoStack()
@@ -747,6 +752,7 @@ def deleteNode(neti: int, nodei: int) -> bool:
     if is_alias:
         deleteHelper(net, node, neti, nodei, True)
     else:
+        # delete all the aliases of node if node is an original node
         alias_indices = [i for i, n in net.nodes.items() if isinstance(n, TAliasNode) and cast(TAliasNode, n).originalIdx == nodei]
         for alias_idx in alias_indices:
             deleteHelper(net, net.nodes[alias_idx], neti, alias_idx, True)

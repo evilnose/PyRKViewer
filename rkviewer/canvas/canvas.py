@@ -964,8 +964,10 @@ class Canvas(wx.ScrolledWindow):
                 if node.comp_idx >= 0:
                     comp = self.comp_idx_map[node.comp_idx]
                     alias_pos = clamp_rect_pos(Rect(alias_pos, node.size), comp.rect)
+
                 # move node position slightly toward the position of the reaction
-                self.controller.alias_for_reaction(self.net_index, reaction.index, node.index, alias_pos, node.size)
+                self.controller.alias_for_reaction(self.net_index, reaction.index, node.index,
+                                                   alias_pos, node.size)
 
     def GetBoundingRect(self) -> Optional[Rect]:
         """Get the bounding rectangle of all nodes, reactions, and compartments.

@@ -498,7 +498,7 @@ class MainFrame(wx.Frame):
         self.menu_events = list()
         file_menu = wx.Menu()
 
-        self.AddMenuItem(file_menu, '&New...', 'Start a new network',
+        self.AddMenuItem(file_menu, '&New', 'Start a new network',
                          lambda _: self.NewNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('N')))
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Load...', 'Load network from JSON file',

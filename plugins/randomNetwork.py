@@ -7,9 +7,9 @@ Version 0.01: Author: Jin Xu, Herbert M Sauro (2020)
 
 
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
-from rkplugin import api
-from rkplugin.api import Node, Vec2, Reaction
+from rkviewer.plugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin import api
+from rkviewer.plugin.api import Node, Vec2, Reaction
 import math
 import random as _random
 import numpy as _np

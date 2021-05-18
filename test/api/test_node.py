@@ -3,8 +3,8 @@ from test.api.common import DummyAppTest
 from typing import List
 from rkviewer.canvas.data import Reaction
 from rkviewer.mvc import CompartmentIndexError, NetIndexError, NodeIndexError, ReactionIndexError
-from rkplugin.api import Node, NodeData, Vec2
-from rkplugin import api
+from rkviewer.plugin.api import Node, NodeData, Vec2
+from rkviewer.plugin import api
 import wx
 import time
 

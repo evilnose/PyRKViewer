@@ -1,7 +1,7 @@
 
 
 from rkviewer.mvc import CompartmentIndexError
-from rkplugin import api
+from rkviewer.plugin import api
 from test.api.common import DummyAppTest
 
 

@@ -1,10 +1,10 @@
 Canvas methods
 =================
 
-.. automodule:: rkplugin.canvas
+.. automodule:: rkviewer.plugin.canvas
    :members: 
 
-.. autoclass:: rkplugin.canvas.CanvasElement
+.. autoclass:: rkviewer.plugin.canvas.CanvasElement
    :members:
 
-.. autofunction:: rkplugin.canvas.draw_rect
+.. autofunction:: rkviewer.plugin.canvas.draw_rect

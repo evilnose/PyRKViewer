@@ -6,9 +6,9 @@ Version 0.01: Author: Jin Xu (2021)
 
 # pylint: disable=maybe-no-member
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
-from rkplugin import api
-from rkplugin.api import Node, Vec2, Reaction, Color
+from rkviewer.plugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin import api
+from rkviewer.plugin.api import Node, Vec2, Reaction, Color
 import os
 
 

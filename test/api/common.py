@@ -1,5 +1,5 @@
 import unittest
-from rkplugin import api
+from rkviewer.plugin import api
 from rkviewer.config import runtime_vars, reset_runtime_vars
 from test.utils import close_app_context, open_app_context, run_app
 

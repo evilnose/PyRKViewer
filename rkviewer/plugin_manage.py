@@ -1,6 +1,6 @@
 """Classes for managing plugins for Canvas.
 
-Note: This file imports stuff from rkplugin.plugins, but usually rkplugin imports from
+Note: This file imports stuff from rkviewer.plugin.plugins, but usually rkviewer.plugin imports from
 rkviewer. Beware of circular dependency.
 """
 # pylint: disable=maybe-no-member
@@ -18,7 +18,7 @@ import traceback
 
 # pylint: disable=no-name-in-module
 import wx
-from rkplugin.plugins import CommandPlugin, Plugin, PluginCategory, PluginType, WindowedPlugin
+from rkviewer.plugin.plugins import CommandPlugin, Plugin, PluginCategory, PluginType, WindowedPlugin
 # pylint: disable=no-name-in-module
 from wx.html import HtmlWindow
 
@@ -84,7 +84,7 @@ class PluginManager:
         for f in os.listdir(dir_path):
             if not f.endswith('.py'):
                 continue
-            mod_name = '_rkplugin_{}'.format(f[:-2])  # remove extension
+            mod_name = '_rkviewer.plugin_{}'.format(f[:-2])  # remove extension
             spec = importlib.util.spec_from_file_location(mod_name, os.path.join(dir_path, f))
             assert spec is not None
             mod = importlib.util.module_from_spec(spec)

@@ -2,7 +2,7 @@
 """
 import os
 from pathlib import Path
-from rkplugin.plugins import CATEGORY_NAMES, PluginCategory
+from rkviewer.plugin.plugins import CATEGORY_NAMES, PluginCategory
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import json
 
@@ -12,7 +12,7 @@ import wx
 from wx.lib.buttons import GenBitmapButton, GenBitmapTextButton
 import wx.lib.agw.flatnotebook as fnb
 from commentjson.commentjson import JSONLibraryException
-from rkplugin.api import init_api
+from rkviewer.plugin.api import init_api
 import wx.adv
 
 import rkviewer

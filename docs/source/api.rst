@@ -1,12 +1,12 @@
 Plugin API Reference
 ==========
 
-.. automodule:: rkplugin.api
+.. automodule:: rkviewer.plugin.api
    :members:
 
-.. autoclass:: rkplugin.api.Vec2
+.. autoclass:: rkviewer.plugin.api.Vec2
    :members:
 
-.. autoclass:: rkplugin.api.Rect
+.. autoclass:: rkviewer.plugin.api.Rect
    :members:
    

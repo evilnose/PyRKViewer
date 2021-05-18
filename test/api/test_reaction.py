@@ -1,8 +1,8 @@
 
 from test.api.common import DummyAppTest
 
-from rkplugin.api import Node, Vec2
-from rkplugin import api
+from rkviewer.plugin.api import Node, Vec2
+from rkviewer.plugin import api
 from rkviewer.mvc import NodeNotFreeError, NodeIndexError, ReactionIndexError
 
 

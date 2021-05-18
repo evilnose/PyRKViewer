@@ -9,9 +9,9 @@ Version 0.01: Author: Jin Xu (2021)
 from inspect import Parameter
 import libsbml
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
-from rkplugin import api
-from rkplugin.api import Node, Vec2, Reaction, Color
+from rkviewer.plugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin import api
+from rkviewer.plugin.api import Node, Vec2, Reaction, Color
 import os
 import simplesbml # has to import in the main.py too
 from libsbml import readSBMLFromString

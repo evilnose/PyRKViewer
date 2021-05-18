@@ -1,8 +1,11 @@
 [tool.poetry]
-name = "pyviewer"
+name = "coyote-gui"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
+packages = [
+    { include = "rkviewer" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.6"
@@ -16,6 +19,7 @@ tellurium = { version = "^2.2.0", optional = true }
 sbml2matlab = { version = "1.2.3", optional = true }
 networkx = { version = "^2.5.1", optional = true }
 simplesbml = { git = "https://github.com/evilnose/simplesbml.git", branch = "master", optional = true }
+python-libsbml = { version = "^5.18.0", optional = true }
 
 [tool.poetry.dev-dependencies]
 Sphinx = "^3.5.4"
@@ -26,7 +30,10 @@ autopep8 = "^1.5.7"
 tuna = "^0.5.5"
 
 [tool.poetry.extras]
-sbml = ["tellurium", "sbml2matlab", "networkx", "simplesbml"]
+sbml = ["tellurium", "sbml2matlab", "networkx", "simplesbml", "python-libsbml"]
+
+[tool.poetry.scripts]
+coyote = 'rkviewer.main:main'
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

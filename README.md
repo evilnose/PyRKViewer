@@ -12,10 +12,13 @@ For the next version, we are going to add simulations of reaction networks.
 ## Quick Starts and Building
 
 ### Running locally
-* If you have `pipenv`, run `pipenv install` and then `python main.py`.
+* If you have `pipenv`, run `pipenv install` and then `python -m rkviewer.main`.
 * If not, you may use `pip` with `requirements.txt` and `requirements-dev.txt`. They are generated from the Pipfile and may not be up-to-date though, so check the commit history to make sure.
 
-### Bundling an Executable with PyInstaller
+### Poetry commands
+* `poetry install -E sbml` to install optional dependencies.
+
+### Bundling an Executable with PyInstaller (obsolete for now)
 * Always run `pyinstaller rkviewer.spec` when `rkviewer.spec` is present.
 * If somehow `rkviewer.spec` went missing or you want to regenerate the build specs, run `pyinstaller -F --windowed --add-data ext/Iodine.dll;. main.py` on Windows or `pyinstaller -F -- windowed --add-data ext/Iodine.dll:. main.py` on Linux/Mac to generate a file named `main.spec`. Note that if a `main.spec` file is already  present **it will be overwritten**.
 

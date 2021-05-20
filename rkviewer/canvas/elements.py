@@ -1246,6 +1246,23 @@ def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node
     gc.PopState()
 
 
+def _truncate_text(gc: wx.GraphicsContext, max_width: float, text: str):
+    '''Truncate the given text (add ellipsis to the end) so that its width fits inside `max_width`.
+
+    Assume that we are using the currently selected font in gc.
+    '''
+
+    tw, th, _, _ = gc.GetFullTextExtent(text)
+    # very rough chopping
+    if tw > max_width:
+        text_len = int((max_width / tw) * len(text))
+        text = text[:text_len]
+        if len(text) >= 2:
+            text = text[:-2] + '..'
+    
+    return text
+
+
 def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TTextPrim, TTransform]):
     primitive, transform = text_item
 
@@ -1260,8 +1277,9 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
     brush = gc.CreateBrush(wx.Brush(primitive.bg_color.to_wxcolour()))
 
     width, height = bounding_rect.size
-    tw, th, _, _ = gc.GetFullTextExtent(
-        text_string)
+    text_string = _truncate_text(gc, bounding_rect.size.x, text_string)
+    tw, th, _, _ = gc.GetFullTextExtent(text_string)
+    
     # remaining x and y
     rx = width - tw
     ry = height - th

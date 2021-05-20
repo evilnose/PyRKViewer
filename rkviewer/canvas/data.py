@@ -155,6 +155,7 @@ class TTrianglePrim(TPolygonPrim):
 
 
 class TCompositeShape:
+    text_item: Tuple[TTextPrim, TTransform]
     def __init__(self, items: List[Tuple[Any, TTransform]],
                  text_item: Tuple[TTextPrim, TTransform], name: str):
         self.items = items

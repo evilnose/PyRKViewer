@@ -58,12 +58,12 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False) -> bool:
+    def move_node(self, neti: int, nodei: int, pos: Vec2, allowNegativeCoords: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def set_node_size(self, neti: int, nodei: int, size: Vec2, programmatic: bool = False) -> bool:
+    def set_node_size(self, neti: int, nodei: int, size: Vec2) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 

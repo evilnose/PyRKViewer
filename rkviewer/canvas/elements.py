@@ -1257,8 +1257,10 @@ def _truncate_text(gc: wx.GraphicsContext, max_width: float, text: str):
     if tw > max_width:
         text_len = int((max_width / tw) * len(text))
         text = text[:text_len]
-        if len(text) >= 2:
+        if len(text) > 2:
             text = text[:-2] + '..'
+        else:
+            text = '..'
     
     return text
 

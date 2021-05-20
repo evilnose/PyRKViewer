@@ -586,6 +586,29 @@ class Canvas(wx.ScrolledWindow):
         """Reset the zoom level, with the anchor on the center of the visible window."""
         self.SetZoomLevel(0, Vec2(self.GetSize()) / 2)
 
+    def FitNodeSizeToText(self):
+        dc = wx.WindowDC(self)
+        gc = wx.GraphicsContext.Create(dc)
+        min_w = get_theme('node_width')
+        min_h = get_theme('node_height')
+        with self.controller.group_action():
+            for node in self.nodes:
+                # TODO set font
+                tp = node.composite_shape.text_item[0]
+                font = wx.Font(wx.FontInfo(tp.font_size)
+                            .Family(tp.font_family)
+                            .Style(tp.font_style)
+                            .Weight(tp.font_weight))
+                gfont = gc.CreateFont(font)
+                gc.SetFont(gfont)
+                w, h, _, _ = gc.GetFullTextExtent(node.id)
+                w += 20
+                h += 10
+                w = max(w, min_w)
+                h = max(h, min_h)
+                self.controller.set_node_size(self.net_index, node.index, Vec2(w, h))
+
+
     def _GetUniqueName(self, base: str, names: Collection[str], *args: Collection[str]) -> str:
         """Given a base name "x", try "x_0", "x_1", ... until it is unique in all the collections.
         """

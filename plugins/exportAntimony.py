@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an Antimony string.
-Version 0.01: Author: Jin Xu (2021)
+Version 0.02: Author: Jin Xu (2021)
 """
 
 
@@ -17,7 +17,7 @@ class ExportAntimony(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportAntimony',
         author='Jin Xu',
-        version='0.0.1',
+        version='0.0.2',
         short_desc='Export Antimony.',
         long_desc='Export the Antimony String from the network on canvas.',
         category=PluginCategory.ANALYSIS

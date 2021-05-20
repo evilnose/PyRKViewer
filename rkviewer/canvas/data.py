@@ -40,7 +40,7 @@ class TPrimitive:
 
 @dataclass
 class TCirclePrim(TPrimitive):
-    name: ClassVar[str] = 'Circle'
+    name: ClassVar[str] = 'circle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
     border_width: float = 0.05
@@ -48,8 +48,7 @@ class TCirclePrim(TPrimitive):
 
 @dataclass
 class TRectanglePrim(TPrimitive):
-    # TODO change defaults
-    name: ClassVar[str] = 'Rectangle'
+    name: ClassVar[str] = 'rectangle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
     border_width: float = 0.05
@@ -107,7 +106,7 @@ class TTextPrim(TPrimitive):
     alignment: TextAlignment = TextAlignment.CENTER
 
 
-def getPolygonPoints(n, r=0.5, phase=0) -> Tuple[Vec2, ...]:
+def gen_polygon_pts(n, r=0.5, phase=0) -> Tuple[Vec2, ...]:
     """
     This function is used to define the vertices in 2D space of n-polygons. Each equilateral 
     polygon is drawn inside a circle with specified radius.
@@ -122,12 +121,13 @@ def getPolygonPoints(n, r=0.5, phase=0) -> Tuple[Vec2, ...]:
     origin = Vec2()
     inc = 2 * pi /n
 
-    return tuple(origin + r * Vec2(cos(inc * i + phase), sin(inc * i + phase)) for i in range(n + 1))
+    return tuple(origin + r * Vec2(cos(inc * i + phase), sin(inc * i + phase))
+                 for i in range(n + 1))
 
 
 @dataclass
 class TPolygonPrim(TPrimitive):
-    # TODO change defaults
+    name: ClassVar[str] = 'polygon'
     points: Tuple[Vec2, ...]
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
@@ -137,20 +137,21 @@ class TPolygonPrim(TPrimitive):
 
 @dataclass
 class THexagonPrim(TPolygonPrim):
-    # TODO change defaults
-    points: Tuple[Vec2, ...] = getPolygonPoints(6)
+    name: ClassVar[str] = 'hexagon'
+    points: Tuple[Vec2, ...] = gen_polygon_pts(6)
 
 
 @dataclass
 class TLinePrim(TPolygonPrim):
-    # TODO change defaults
-    points: Tuple[Vec2, ...] = getPolygonPoints(2)
+    name: ClassVar[str] = 'line'
+    # exclude the last point since we don't need the lines to be closed
+    points: Tuple[Vec2, ...] = gen_polygon_pts(2)[:-1]
 
 
 @dataclass
 class TTrianglePrim(TPolygonPrim):
-    # TODO change defaults
-    points: Tuple[Vec2, ...] = getPolygonPoints(3)
+    name: ClassVar[str] = 'triangle'
+    points: Tuple[Vec2, ...] = gen_polygon_pts(3)
 
 
 class TCompositeShape:

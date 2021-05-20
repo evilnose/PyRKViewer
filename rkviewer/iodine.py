@@ -10,7 +10,7 @@ TODOs
 """
 # from __future__ import annotations
 import abc
-from re import S
+from re import S, X
 from functools import partial
 
 from marshmallow.decorators import post_dump, post_load, pre_load
@@ -21,7 +21,9 @@ from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeE
                   StackEmptyError, JSONError, FileError)
 from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField, get_theme
 from .canvas.geometry import Vec2
-from .canvas.data import CompositeShapeFactory, PrimitiveFactory, TCirclePrim, TCompositeShape, TRectanglePrim, THexagonPrim, TLinePrim, TTrianglePrim, TTransform, TTextPrim
+from .canvas.data import CompositeShapeFactory, PrimitiveFactory, TCirclePrim, TCompositeShape, TPrimitive, \
+    TRectanglePrim, THexagonPrim, TLinePrim, TTrianglePrim, TTransform, TTextPrim, ChoiceItem,\
+    FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, TEXT_ALIGNMENT_CHOICES
 import copy
 from dataclasses import dataclass, field
 import json
@@ -29,16 +31,7 @@ from typing import Any, DefaultDict, Dict, MutableSet, Optional, Set, Tuple, Lis
 from enum import Enum
 from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
-
-
-# # NOTE this should be completely immutable
-# defaultShapes = [
-#     TCompositeShape([(TRectanglePrim(), TTransform())], (TTextPrim(), TTransform()), 'rectangle'),
-#     TCompositeShape([(TCirclePrim(), TTransform())], (TTextPrim(), TTransform()), 'circle'),
-#     TCompositeShape([(THexagonPrim(), TTransform())], (TTextPrim(), TTransform()), 'hexagon'),
-#     TCompositeShape([(TLinePrim(), TTransform())], (TTextPrim(), TTransform()), 'line'),
-#     TCompositeShape([(TTrianglePrim(), TTransform())], (TTextPrim(), TTransform()), 'triangle')
-# ]
+from pprint import pprint
 
 def get_theme_fn(name):
     return partial(get_theme, name, convert_color=False)
@@ -303,8 +296,9 @@ fontWeightDict = {
 
 stackFlag: bool = True
 errCode: int = 0
+# dict mapping from index to network
 networkDict: TNetworkDict = TNetworkDict()
-netSetStack: TStack = TStack()
+undoStack: TStack = TStack()
 redoStack: TStack = TStack()
 lastNetIndex: int = 0
 
@@ -320,13 +314,13 @@ def undo():
     Undo ge back to last state
     errCode: -9: stack is empty
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
-    if netSetStack.isEmpty():
+    if undoStack.isEmpty():
         errCode = -9
     else:
         redoStack.push(networkDict)
-        networkDict = netSetStack.pop()
+        networkDict = undoStack.pop()
     if errCode < 0:
         raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -336,11 +330,11 @@ def redo():
     Redo redo
     errCode: -9: stack is empty
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     if redoStack.isEmpty():
         errCode = -9
     else:
-        netSetStack.push(networkDict)
+        undoStack.push(networkDict)
         networkDict = redoStack.pop()
     if errCode < 0:
         raise ExceptionDict[errCode](errorDict[errCode])
@@ -350,9 +344,9 @@ def startGroup():
     """
     StartGroup used at the start of a group operaction or secondary function.
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     redoStack = TStack()
-    netSetStack.push(networkDict)
+    undoStack.push(networkDict)
     stackFlag = False
 
 
@@ -369,7 +363,7 @@ def newNetwork(netID: str):
     newNetwork Create a new network
     errCode -3: id repeat, 0 :ok
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack, lastNetIndex
+    global stackFlag, errCode, networkDict, undoStack, redoStack, lastNetIndex
     errCode = 0
     for network in networkDict.values():
         if network.id == netID:
@@ -390,7 +384,7 @@ def getNetworkIndex(netID: str) -> int:
     getNetworkIndex
     return: -2: net id can't find
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = -2
 
     for i, net in networkDict.items():
@@ -407,7 +401,7 @@ def getNetworkIndex(netID: str) -> int:
 #     errCode: -5: net index out of range
 #     -10: "Json convert error", -11: "File error"
 #     """
-#     global stackFlag, errCode, networkDict, netSetStack, redoStack
+#     global stackFlag, errCode, networkDict, undoStack, redoStack
 #     errCode = 0
 #     if neti not in networkDict:
 #         errCode = -5
@@ -444,8 +438,8 @@ def getNetworkIndex(netID: str) -> int:
 
 
 #     if stackFlag :
-#         redoStack = TNetSetStack{
-#         netSetStack.push(networkDict)
+#         redoStack = TundoStack{
+#         undoStack.push(networkDict)
 
 #     networkDict = append(networkDict, newNet)
 #     # fmt.Println(networkDict)
@@ -457,7 +451,7 @@ def deleteNetwork(neti: int):
     DeleteNetwork DeleteNetwork
     errCode: -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -470,7 +464,7 @@ def deleteNetwork(neti: int):
 
 
 def clearNetworks():
-    global stackFlag, errCode, networkDict, netSetStack, redoStack, lastNetIndex
+    global stackFlag, errCode, networkDict, undoStack, redoStack, lastNetIndex
     errCode = 0
     _pushUndoStack()
     networkDict = TNetworkDict()
@@ -486,7 +480,7 @@ def getNetworkID(neti: int):
     GetNetworkID GetID of network
     errCode: -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -567,10 +561,10 @@ def _getCompartment(neti: int, compi: int) -> TCompartment:
 
 
 def _pushUndoStack():
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     if stackFlag:
         redoStack = TStack()
-        netSetStack.push(networkDict)
+        undoStack.push(networkDict)
 
 
 def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, nodeLocked: bool = False):
@@ -580,7 +574,7 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     try:
         n = _getNetwork(neti)
@@ -610,8 +604,12 @@ def addAliasNode(neti: int, originalIdx: int, x: float, y: float, w: float, h: f
     _pushUndoStack()
 
     # Refer to the original node's index, whether 'original_index' is a TNode or a TAliasNode
-    anode = TAliasNode(net.lastNodeIdx, Vec2(x, y), Vec2(w, h), original_node.index, nodeLocked=False)
-    return net.addNode(anode)
+    anode = TAliasNode(net.lastNodeIdx, Vec2(x, y), Vec2(w, h), original_node.index,
+                       nodeLocked=False)
+
+    anodei = net.addNode(anode)
+    setCompartmentOfNode(neti, anodei, original_node.compi)
+    return anodei
 
 
 def aliasForReaction(neti: int, reai: int, nodei: int, x: float, y: float, w: float, h: float):
@@ -648,7 +646,7 @@ def getNodeIndex(neti: int, nodeID: str):
     -5: net index out of range
     return: >=0
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = -2
     if neti not in networkDict:
         errCode = -5
@@ -678,6 +676,7 @@ def deleteNode(neti: int, nodei: int) -> bool:
         # node. Also modify the modifiers to do the same
 
         if is_alias:
+            # swap all occurrences of alias with the original node, since we're deleting the alias
             assert isinstance(node, TAliasNode)
             srcReactions = net.srcMap[nodei]
             destReactions = net.destMap[nodei]
@@ -685,12 +684,12 @@ def deleteNode(neti: int, nodei: int) -> bool:
             # put the original node in the reaction in the place of the alias node
             for reai in srcReactions:
                 rxn = net.reactions[reai]
-                original_species = rxn.reactants.get(node.originalIdx, None)
                 rxn.reactants[node.originalIdx] = rxn.reactants[nodei]
                 # I'm not sure what should happen if both a node and its alias are reactants of
                 # the same reaction. Originally I thought of adding up the stoich of the deleted
                 # alias to that of the original node, but frankly this is such a nonsensical case
                 # that I think doing so would be making it unncessarily complicated.
+                # So now I'm just deleting it and doing nothing
                 # if original_species:
                 #     new_species = rxn.reactants[node.originalIdx]
                 #     new_species.stoich += original_species.stoich
@@ -700,7 +699,6 @@ def deleteNode(neti: int, nodei: int) -> bool:
             for reai in destReactions:
                 rxn = net.reactions[reai]
                 # see above for explanation
-                original_species = rxn.products.get(node.originalIdx, default=None)
                 rxn.products[node.originalIdx] = rxn.products[nodei]
                 # if original_species:
                 #     new_species = rxn.products[node.originalIdx]
@@ -708,7 +706,13 @@ def deleteNode(neti: int, nodei: int) -> bool:
                 #     new_species.handlePos = original_species.handlePos
                 del rxn.products[nodei]
 
-            # replace the old node
+            # update srcMap and destMap
+            net.srcMap[node.originalIdx] |= net.srcMap[nodei]
+            net.destMap[node.originalIdx] |= net.destMap[nodei]
+            del net.srcMap[nodei]
+            del net.destMap[nodei]
+
+            # replace occurrences in modifiers
             for rxn in net.reactions.values():
                 if nodei in rxn.modifiers:
                     rxn.modifiers.remove(nodei)
@@ -740,8 +744,7 @@ def deleteNode(neti: int, nodei: int) -> bool:
         return False
 
     # validate that node is not part of a reaction
-    # TODO do differently for alias nodes
-    if len(net.srcMap[nodei]) != 0 and len(net.destMap[nodei]) != 0:
+    if isinstance(node, TNode) and (len(net.srcMap[nodei]) != 0 or len(net.destMap[nodei]) != 0):
         _raiseError(-4)
 
     _pushUndoStack()
@@ -750,6 +753,7 @@ def deleteNode(neti: int, nodei: int) -> bool:
     if is_alias:
         deleteHelper(net, node, neti, nodei, True)
     else:
+        # delete all the aliases of node if node is an original node
         alias_indices = [i for i, n in net.nodes.items() if isinstance(n, TAliasNode) and cast(TAliasNode, n).originalIdx == nodei]
         for alias_idx in alias_indices:
             deleteHelper(net, net.nodes[alias_idx], neti, alias_idx, True)
@@ -765,7 +769,7 @@ def clearNetwork(neti: int):
     ClearNetwork clear all nodes and reactions in this network
     errCode: -5:  net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -784,7 +788,7 @@ def getNumberOfNodes(neti: int):
     GetNumberOfNodes get the number of nodes in the current network
     num: >= -5:  net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -801,7 +805,7 @@ def getNodeCenter(neti: int, nodei: int):
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -823,7 +827,7 @@ def getNodeID(neti: int, nodei: int):
     errCode: -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -889,7 +893,7 @@ def getNodeCoordinateAndSize(neti: int, nodei: int):
     errCode:-7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1015,7 +1019,7 @@ def setNodeID(neti: int, nodei: int, newID: str):
     -5: net index out of range
     -7: node index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1040,7 +1044,7 @@ def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCo
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
 
     if allowNegativeCoordinates:
@@ -1072,7 +1076,7 @@ def setNodeSize(neti: int, nodei: int, w: float, h: float):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1097,7 +1101,7 @@ def setNodeFloatingStatus (neti: int, nodei: int, floatingStatus : bool):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1119,7 +1123,7 @@ def setNodeLockedStatus (neti: int, nodei: int, lockedNode: bool):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1224,7 +1228,7 @@ def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]
     errCode: -3: id repeat
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
 
     if len(sources) == 0 or len(targets) == 0:
@@ -1264,7 +1268,7 @@ def getReactionIndex(neti: int, reaID: str):
     return: -2: id can't find, >=0: ok
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1284,7 +1288,7 @@ def deleteReaction(neti: int, reai: int):
     errCode:  -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1310,7 +1314,7 @@ def clearReactions(neti: int):
     clearReactions clear all reactions in this network
     errCode: -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1330,7 +1334,7 @@ def getNumberOfReactions(neti: int):
     getNumberOfReactions get the number of reactions in the current Reactionset
     return: >=0: ok, -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     if neti not in networkDict:
         errCode = -5
     if errCode < 0:
@@ -1346,7 +1350,7 @@ def getReactionID(neti: int, reai: int):
     errCode: -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1373,7 +1377,7 @@ def getReactionRateLaw(neti: int, reai: int):
     errCode: -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1401,7 +1405,7 @@ def getReactionFillColor(neti: int, reai: int):
     errCode:  -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1421,7 +1425,7 @@ def getReactionFillColorRGB(neti: int, reai: int):
     errCode:  -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1444,7 +1448,7 @@ def getReactionFillColorAlpha(neti: int, reai: int):
     errCode:  -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1465,7 +1469,7 @@ def getReactionLineThickness(neti: int, reai: int):
     errCode: -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1485,7 +1489,7 @@ def getReactionCenterHandlePosition(neti: int, reai: int):
     errCode: -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1505,7 +1509,7 @@ def getReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int):
     errCode: -6: reaction index out of range,
     -5: net index out of range, -7: node index not found
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1529,7 +1533,7 @@ def getReactionDestNodeStoich(neti: int, reai: int, destNodeIdx: int):
     return: positive float : ok, -6: reaction index out of range, -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1554,7 +1558,7 @@ def getReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int):
     errCode: -6: reaction index out of range,
     -5: net index out of range, -7: node index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1580,7 +1584,7 @@ def getReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int):
     return: positive float : ok, -6: reaction index out of range, -7: node index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1606,7 +1610,7 @@ def getNumberOfSrcNodes(neti: int, reai: int):
     return: non-negative int: ok, -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1626,7 +1630,7 @@ def getNumberOfDestNodes(neti: int, reai: int):
     return: non-negative int: ok, -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1646,7 +1650,7 @@ def getListOfReactionSrcNodes(neti: int, reai: int) -> List[int]:
     return: non-empty slice : ok, -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1670,7 +1674,7 @@ def getListOfReactionDestNodes(neti: int, reai: int) -> List[int]:
     return: non-empty slice : ok, -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1720,7 +1724,7 @@ def printReactionInfo(neti: int, reai: int):
 #     -5: net index out of range
 #     -2: id not found
 #     """
-#     global stackFlag, errCode, networkDict, netSetStack, redoStack
+#     global stackFlag, errCode, networkDict, undoStack, redoStack
 #     errCode = 0
 #     if neti not in networkDict:
 #         errCode = -5
@@ -1748,7 +1752,7 @@ def printReactionInfo(neti: int, reai: int):
 #     -5: net index out of range
 #     -2: id not found
 #     """
-#     global stackFlag, errCode, networkDict, netSetStack, redoStack
+#     global stackFlag, errCode, networkDict, undoStack, redoStack
 #     errCode = 0
 #     if neti not in networkDict:
 #         errCode = -5
@@ -1775,7 +1779,7 @@ def setReactionID(neti: int, reai: int, newID: str):
     -5: net index out of range
     -3: id repeat
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1800,7 +1804,7 @@ def setRateLaw(neti: int, reai: int, rateLaw: str):
     errCode: -6: reaction index out of range
     -5: net index out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1832,7 +1836,7 @@ def setReactionSrcNodeStoich(neti: int, reai: int, srcNodeIdx: int, newStoich: f
     -8: wrong stoich
     raises ValueError if given node index not a dest node
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1864,7 +1868,7 @@ def setReactionDestNodeStoich(neti: int, reai: int, destNodeIdx: int, newStoich:
     -8: wrong stoich
     raises ValueError if given node index not a dest node
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1894,7 +1898,7 @@ def setReactionSrcNodeHandlePosition(neti: int, reai: int, srcNodeIdx: int, hand
     -5: net index out of range, -7: node index not found
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1923,7 +1927,7 @@ def setReactionDestNodeHandlePosition(neti: int, reai: int, destNodeIdx: int, ha
     -5: net index out of range, -2: id not found
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1952,7 +1956,7 @@ def setReactionFillColorRGB(neti: int, reai: int, R: int, G: int, B: int):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -1977,7 +1981,7 @@ def setReactionFillColorAlpha(neti: int, reai: int, a: float):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -2003,7 +2007,7 @@ def setReactionLineThickness(neti: int, reai: int, thickness: float):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -2031,7 +2035,7 @@ def setReactionBezierCurves(neti: int, reai: int, bezierCurves: bool):
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -2074,7 +2078,7 @@ def setReactionCenterHandlePosition(neti: int, reai: int, centerHandlePosX: floa
     -5: net index out of range
     -12: Variable out of range
     """
-    global stackFlag, errCode, networkDict, netSetStack, redoStack
+    global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
     if neti not in networkDict:
         errCode = -5
@@ -2142,18 +2146,14 @@ def getNodesInCompartment(neti: int, compi: int) -> List[int]:
 
 def getCompartmentOfNode(neti: int, nodei: int) -> int:
     """Return the compartment index that the given node is in, or -1 if it is not in any."""
-    net = _getNetwork(neti)
-    if nodei not in net.nodes:
-        _raiseError(-7)
-
-    return net.nodes[nodei].compi
+    return _getNodeOrAlias(neti, nodei).compi
 
 
 def setCompartmentOfNode(neti: int, nodei: int, compi: int):
     """Set the compartment of the node, or remove it from any compartment if -1 is given."""
     net = _getNetwork(neti)
 
-    node = _getConcreteNode(neti, nodei)
+    node = _getNodeOrAlias(neti, nodei)
     _pushUndoStack()
     if node.compi != -1:
         net.compartments[node.compi].node_indices.remove(nodei)
@@ -2349,11 +2349,11 @@ def CreateBiBi(neti: int, reaID: str, rateLaw: str, src1i: int, src2i: int, dest
 
 
 def reset():
-    global stackFlag, errCode, networkDict, netSetStack, redoStack, lastNetIndex
+    global stackFlag, errCode, networkDict, undoStack, redoStack, lastNetIndex
     stackFlag = True
     errCode = 0
     networkDict = TNetworkDict()
-    netSetStack = TStack()
+    undoStack = TStack()
     redoStack = TStack()
     lastNetIndex = 0
 
@@ -2381,6 +2381,25 @@ class EnumField(fields.Field):
                 return entry
         assert False, "Not supposed to reach here"
     
+class ChoiceField(fields.Field):
+    def __init__(self, choice_list):
+        super().__init__()
+        
+        for choice in choice_list:
+            if not isinstance(choice, ChoiceItem):
+                raise ValueError("not choice item")
+        self.choice_list = choice_list
+
+    def _serialize(self, entry, attr, obj, **kwargs):
+        for choice in self.choice_list:
+            if entry == choice.value:
+                return choice.text
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        for choice in self.choice_list:
+            if value == choice.text:
+                return choice.value
+        assert False, "No choice found"
 
 class FontSchema(Schema):
     # TODO use this after implemented
@@ -2391,6 +2410,120 @@ class FontSchema(Schema):
     name: str
     color: Color
 
+class TransformSchema(Schema):
+    translation = Dim2()
+    rotation = Dim()
+    scale = Dim2()
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TTransform:
+        return TTransform(**data)
+
+
+class PrimitiveSchema(Schema):
+    name = fields.Str()
+    fill_color = ColorField()
+    border_color = ColorField()
+    border_width = Dim()
+
+
+class RectangleSchema(PrimitiveSchema):
+    corner_radius = Dim()
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TRectanglePrim:
+        del data['name']
+        return TRectanglePrim(**data)
+
+
+class CircleSchema(PrimitiveSchema):
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TCirclePrim:
+        del data['name']
+        return TCirclePrim(**data)
+
+
+class PolygonSchema(PrimitiveSchema):
+    #name = fields.Str()
+    fill_color = ColorField()
+    border_color = ColorField()
+    border_width = Dim()
+    corner_radius = Dim()
+    radius = Dim()
+
+class LineSchema(PrimitiveSchema):
+    points = fields.Tuple(([Dim2()]*2))
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TLinePrim:
+        del data['name']
+        return TLinePrim(**data)
+
+
+class TriangleSchema(PolygonSchema):
+    points = fields.Tuple(((Dim2(),)*4))
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TTrianglePrim:
+        del data['name']
+        return TTrianglePrim(**data)
+
+
+class HexagonSchema(PolygonSchema):
+    points = fields.Tuple((Dim2(),)*7)
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> THexagonPrim:
+        del data['name']
+        return THexagonPrim(**data)
+
+
+def primitive_dump(base_obj, parent_obj):
+    ret = {
+        TRectanglePrim.__name__: RectangleSchema,
+        TCirclePrim.__name__: CircleSchema,
+        TLinePrim.__name__: LineSchema,
+        TTrianglePrim.__name__: TriangleSchema,
+        THexagonPrim.__name__: HexagonSchema
+        
+    }[base_obj.__class__.__name__]()
+    return ret
+
+
+primitive_schemas = {'rectangle':RectangleSchema(),
+                     'circle': CircleSchema(),
+                     'triangle': TriangleSchema(),
+                     'line': LineSchema(),
+                     'hexagon': HexagonSchema()}
+def primitive_load(base_dict, parent_dict):
+    return primitive_schemas[base_dict['name']]
+
+
+primitiveField = PolyField(
+    serialization_schema_selector=primitive_dump,
+    deserialization_schema_selector=primitive_load,
+    required=True,
+)
+
+class TextSchema(Schema):
+    #name = fields.Str()
+    bg_color = ColorField()
+    font_color = ColorField()
+    font_size = fields.Int()
+    font_family = ChoiceField(FONT_FAMILY_CHOICES)
+    font_style = ChoiceField(FONT_STYLE_CHOICES)
+    font_weight = ChoiceField(FONT_WEIGHT_CHOICES)
+    alignment = ChoiceField(TEXT_ALIGNMENT_CHOICES)
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TTextPrim:
+        return TTextPrim(**data)
+
+class CompositeShapeSchema(Schema):
+    name = fields.Str()
+    text_item = fields.Tuple((fields.Nested(TextSchema), fields.Nested(TransformSchema)))
+    items = fields.List(fields.Tuple((primitiveField, fields.Nested(TransformSchema))))
+
+    @post_load
+    def post_load(self, data: Any, **kwargs) -> TCompositeShape:
+        return TCompositeShape(**data)
 
 class AbstractNodeSchema(Schema):
     index = fields.Int()
@@ -2408,11 +2541,16 @@ class AbstractNodeSchema(Schema):
 class NodeSchema(AbstractNodeSchema):
     floating = fields.Bool()
     compi = fields.Int(missing=-1)
+    shape = fields.Nested(CompositeShapeSchema)
 
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNode:
+        shape_name = data['shape'].name
+        # get shape index manually
+        # If this fails, then somebody modified the shape name
+        shapei = [s.name for s in shapeFactories].index(shape_name)
+        data['shapei'] = shapei
         return TNode(**data)
-
 
 class AliasSchema(AbstractNodeSchema):
     originalIdx = fields.Int()
@@ -2451,7 +2589,6 @@ class ReactionSchema(Schema):
             data['modifiers'] = set(data['modifiers'])
         return TReaction(**data)
 
-
 class CompartmentSchema(Schema):
     id = fields.Str()
     position = Dim2()
@@ -2487,6 +2624,7 @@ nodeOrAliasField = PolyField(
     deserialization_schema_selector=node_or_alias_load,
     required=True,
 )
+
 class NetworkSchema(Schema):
     id = fields.Str()
     nodes = fields.Mapping(fields.Int(), nodeOrAliasField)
@@ -2526,3 +2664,54 @@ def loadNetwork(net_object) -> int:
     clearNetworks()
     _addNetwork(net)
     return 0
+
+
+def validateState():
+    assert undoStack is not None
+    assert redoStack is not None
+
+    net_ids = [net.id for net in networkDict.values()]
+    assert len(net_ids) == len(set(net_ids)), "duplicate network IDs"
+
+    assert isinstance(networkDict, dict)
+    for neti, net in networkDict.items():
+        assert isinstance(neti, int)
+        assert isinstance(neti, TNetwork)
+
+        validateNodes(net.nodes)
+        # TODO validate reactions, compartments, and cross-validate
+
+
+def validateNodes(nodes: Dict[int, TAbstractNode]):
+    assert isinstance(nodes, dict)
+
+    for nodei, node in nodes.items():
+        assert isinstance(nodei, int)
+        assert isinstance(node, TNode) or isinstance(node, TAliasNode)
+
+        assert isinstance(node, TNode) or isinstance(node, TAliasNode), 'unexpected type: ' + type(node)
+
+    cnodes = [n for n in nodes.values() if isinstance(n, TNode)]
+    aliases = [n for n in nodes.values() if isinstance(n, TAliasNode)]
+
+    node_ids = [n.id for n in cnodes]
+    assert len(node_ids) == len(set(node_ids)), "duplicate node IDs"
+
+    # assert alias references are good
+    for alias in aliases:
+        assert isinstance(alias.originalIdx, int) and alias.originalIdx >= 0
+        assert alias.originalIdx in nodes and isinstance(nodes[alias.originalIdx], TNode)
+
+    for cnode in cnodes:
+        assert isinstance(cnode.floating, bool)
+    
+    for node in nodes.values():
+        node: TAbstractNode
+        assert isinstance(node.nodeLocked, bool)
+        assert isinstance(node.compi, int)
+        assert isinstance(node.position, Vec2) and node.position.x >= 0 and node.position.y >= 0
+        assert isinstance(node.rectSize, Vec2) and node.rectSize.x >= 0 and node.rectSize.y >= 0
+        # TODO assert node.compi in net.compartments OUTSIDE of this function
+
+    # TODO assert more properties
+

@@ -81,7 +81,7 @@ class Color:
         return Color((val >> 0) & 255, (val >> 8) & 255, (val >> 16) & 255)
 
 
-@require_kwargs_on_init
+# @require_kwargs_on_init
 @dataclass(frozen=True, eq=True)
 class NodeData:
     """Class that holds all the necessary data for a Node.
@@ -116,7 +116,7 @@ class NodeData:
         return Rect(self.position, self.size)
 
 
-@require_kwargs_on_init
+# @require_kwargs_on_init
 @dataclass(frozen=True)
 class ReactionData:
     """Class that bolds the data of a Reaction, except for stoich information (TODO?).
@@ -160,7 +160,7 @@ class ReactionData:
         return self.center_pos if self.center_pos is not None else self.centroid
 
 
-@require_kwargs_on_init
+# @require_kwargs_on_init
 @dataclass(frozen=True)
 class CompartmentData:
     """

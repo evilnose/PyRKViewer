@@ -1,6 +1,6 @@
 """Classes for managing plugins for Canvas.
 
-Note: This file imports stuff from rkviewer.plugin.plugins, but usually rkviewer.plugin imports from
+Note: This file imports stuff from rkviewer.plugin.classes, but usually rkviewer.plugin imports from
 rkviewer. Beware of circular dependency.
 """
 # pylint: disable=maybe-no-member
@@ -18,7 +18,7 @@ import traceback
 
 # pylint: disable=no-name-in-module
 import wx
-from rkviewer.plugin.plugins import CommandPlugin, Plugin, PluginCategory, PluginType, WindowedPlugin
+from rkviewer.plugin.classes import CommandPlugin, Plugin, PluginCategory, PluginType, WindowedPlugin
 # pylint: disable=no-name-in-module
 from wx.html import HtmlWindow
 

@@ -10,7 +10,7 @@ from rkviewer.canvas.state import ArrowTip
 import wx
 from typing import List, Tuple
 from rkviewer.plugin import api
-from rkviewer.plugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin.api import Vec2
 
 

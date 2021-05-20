@@ -7,7 +7,7 @@ Version 0.01: Author: Jin Xu, Herbert M Sauro (2020)
 
 
 import wx
-from rkviewer.plugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin import api
 from rkviewer.plugin.api import Node, Vec2, Reaction
 import math

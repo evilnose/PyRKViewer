@@ -6,7 +6,7 @@ Version 0.02: Author: Jin Xu (2021)
 
 # pylint: disable=maybe-no-member
 import wx
-from rkviewer.plugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin import api
 from rkviewer.plugin.api import Node, Vec2, Reaction, Color
 import os

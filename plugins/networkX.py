@@ -7,7 +7,7 @@ Using python's networkx
 '''
 # pylint: disable=maybe-no-member
 import wx
-from rkviewer.plugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin import api
 from rkviewer.plugin.api import Node, Vec2, Reaction
 import math

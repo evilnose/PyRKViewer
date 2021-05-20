@@ -2,7 +2,7 @@
 """
 import os
 from pathlib import Path
-from rkviewer.plugin.plugins import CATEGORY_NAMES, PluginCategory
+from rkviewer.plugin.classes import CATEGORY_NAMES, PluginCategory
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import json
 

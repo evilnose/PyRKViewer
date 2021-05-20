@@ -41,7 +41,7 @@ How do I add a field to Node/Reaction/Compartment?
 
  a. Also update get_{node/reaction/compartment}_by_index(), which is a helper method that calls a bunch of getters to construct a Node (etc.) data structure. The data structure it returns is the class we modified in step 4.
 
-4. [Optional] If you want this field exposed to the API, go to rkplugin/api.py and modify the NodeData/ReactionData/CompartmentData class and add the new field.
+4. [Optional] If you want this field exposed to the API, go to rkviewer.plugin/api.py and modify the NodeData/ReactionData/CompartmentData class and add the new field.
 
  a. Modify the _translate_*() function to account for the new field. This function translates Node → NodeData, etc.
 

@@ -12,7 +12,7 @@ import typing
 from typing import Collection, DefaultDict, Dict, List, Optional, Set, Tuple, Union, cast
 from commentjson.commentjson import JSONLibraryException
 from marshmallow.exceptions import ValidationError
-from rkplugin import api
+from rkviewer.plugin import api
 
 from sortedcontainers import SortedKeyList
 import wx

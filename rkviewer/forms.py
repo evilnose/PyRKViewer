@@ -1,6 +1,6 @@
 """All sorts of form widgets, mainly those used in EditPanel.
 """
-from __future__ import annotations
+# from __future__ import annotations
 # pylint: disable=maybe-no-member
 import wx
 from wx.lib.scrolledpanel import ScrolledPanel
@@ -200,7 +200,7 @@ def parse_precisions(text: str) -> Tuple[int, int]:
 
 
 class FieldGrid(wx.Window):
-    def __init__(self, parent, form: EditPanelForm):
+    def __init__(self, parent, form: 'EditPanelForm'):
         super().__init__(parent)
         self.SetForegroundColour(get_theme('toolbar_fg'))
         self.SetBackgroundColour(get_theme('toolbar_bg'))
@@ -445,8 +445,8 @@ class FieldGrid(wx.Window):
         return float_ctrl_fn
 
 class PrimitiveGrid(FieldGrid):
-    form: NodeForm
-    def __init__(self, parent, form: NodeForm):
+    form: 'NodeForm'
+    def __init__(self, parent, form: 'NodeForm'):
         super().__init__(parent, form)
         self.update_callbacks = list()
 
@@ -625,7 +625,7 @@ class PrimitiveGrid(FieldGrid):
 class PrimitiveSection(wx.Window):
     subsections: List[PrimitiveGrid]
 
-    def __init__(self, node_form: NodeForm, com_shape: TCompositeShape):
+    def __init__(self, node_form: 'NodeForm', com_shape: TCompositeShape):
         super().__init__(node_form)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizerflags = wx.SizerFlags().Expand()
@@ -1173,7 +1173,7 @@ class StoichInfo:
 '''Section for editing stoichiometry, includes only reactants or only products,
 so there are two of this.'''
 class StoichSection(FieldGrid):
-    def __init__(self, parent, form: ReactionForm, stoichs: List[StoichInfo], reai: int,
+    def __init__(self, parent, form: 'ReactionForm', stoichs: List[StoichInfo], reai: int,
                  is_reactants: bool):
         super().__init__(parent, form)
 

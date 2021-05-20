@@ -3,7 +3,7 @@
 These events may later be used within a plugin system, where plugins are allowed to bind their own
 handlers to these events.
 """
-from __future__ import annotations
+# from __future__ import annotations
 # pylint: disable=maybe-no-member
 from collections import defaultdict
 from dataclasses import dataclass, fields, is_dataclass
@@ -301,9 +301,10 @@ class DidPaintCanvasEvent(CanvasEvent):
     gc: wx.GraphicsContext
 
 
+EventCallback = Callable[[CanvasEvent], None]
 class HandlerNode:
-    next_: Optional[HandlerNode]
-    prev: Optional[HandlerNode]
+    next_: Optional['HandlerNode']
+    prev: Optional['HandlerNode']
     handler: EventCallback
 
     def __init__(self, handler: EventCallback):
@@ -311,11 +312,10 @@ class HandlerNode:
         self.next_ = None
 
 
-EventCallback = Callable[[CanvasEvent], None]
 # Maps CanvasElement to a dict that maps events to handler nodes
-handler_map: Dict[int, Tuple[HandlerChain, HandlerNode]] = dict()
+handler_map: Dict[int, Tuple['HandlerChain', HandlerNode]] = dict()
 # Maps event to a chain of handlers
-event_chains: DefaultDict[Type[CanvasEvent], HandlerChain] = defaultdict(lambda: HandlerChain())
+event_chains: DefaultDict[Type[CanvasEvent], 'HandlerChain'] = defaultdict(lambda: HandlerChain())
 
 handler_id = 0
 

@@ -8,7 +8,7 @@ Adapted by:         Gary Geng
 TODOs
     * Phase out errCode, or at least provide more detalis in error messages.
 """
-from __future__ import annotations
+# from __future__ import annotations
 import abc
 from re import S, X
 from functools import partial
@@ -105,8 +105,8 @@ class TAliasNode(TAbstractNode):
 class TNetwork:
     id: str
     nodes: Dict[int, TAbstractNode]
-    reactions: Dict[int, TReaction]
-    compartments: Dict[int, TCompartment]
+    reactions: Dict[int, 'TReaction']
+    compartments: Dict[int, 'TCompartment']
     baseNodes: Set[int]  #: Set of node indices not in any compartment
     srcMap: DefaultDict[int, MutableSet[int]]  #: Map nodes to reactions of which it is a source
     destMap: DefaultDict[int, MutableSet[int]]  #: Map nodes to reactions of which it is a target
@@ -115,8 +115,8 @@ class TNetwork:
     lastCompartmentIdx: int
 
     def __init__(self, id: str, nodes: Dict[int, TAbstractNode] = None,
-                 reactions: Dict[int, TReaction] = None,
-                 compartments: Dict[int, TCompartment] = None):
+                 reactions: Dict[int, 'TReaction'] = None,
+                 compartments: Dict[int, 'TCompartment'] = None):
         if nodes is None:
             nodes = dict()
         if reactions is None:
@@ -148,7 +148,7 @@ class TNetwork:
         self.lastNodeIdx += 1
         return ret
 
-    def addReaction(self, rea: TReaction):
+    def addReaction(self, rea: 'TReaction'):
         self.reactions[self.lastReactionIdx] = rea
 
         # update nodeToReactions
@@ -159,7 +159,7 @@ class TNetwork:
 
         self.lastReactionIdx += 1
 
-    def addCompartment(self, comp: TCompartment) -> int:
+    def addCompartment(self, comp: 'TCompartment') -> int:
         ind = self.lastCompartmentIdx
         self.compartments[ind] = comp
         self.lastCompartmentIdx += 1
@@ -171,8 +171,8 @@ class TReaction:
     id: str
     centerPos: Optional[Vec2] = None
     rateLaw: str = ""
-    reactants: Dict[int, TSpeciesNode] = field(default_factory=dict)
-    products: Dict[int, TSpeciesNode] = field(default_factory=dict)
+    reactants: Dict[int, 'TSpeciesNode'] = field(default_factory=dict)
+    products: Dict[int, 'TSpeciesNode'] = field(default_factory=dict)
     fillColor: Color = Color(255, 150, 80, 255)
     thickness: float = 3.0
     centerHandlePos: Vec2 = Vec2()
@@ -200,7 +200,7 @@ class TCompartment:
 
 
 class TStack:
-    items: List[TNetworkDict]
+    items: List['TNetworkDict']
 
     def __init__(self):
         self.items = []
@@ -208,7 +208,7 @@ class TStack:
     def isEmpty(self):
         return self.items == []
 
-    def push(self, netDict: TNetworkDict):
+    def push(self, netDict: 'TNetworkDict'):
         theSet = copy.deepcopy(netDict)
         self.items.append(theSet)
 
@@ -1232,7 +1232,7 @@ def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]
     errCode = 0
 
     if len(sources) == 0 or len(targets) == 0:
-        raise ValueError('Both the sources and targets of a reaction must be nonempty.')
+        raise ValueError("Reaction '{}' has no reactants or it has no products".format(reaID))
 
     net = _getNetwork(neti)
     # duplicate ID?

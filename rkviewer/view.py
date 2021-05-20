@@ -2,7 +2,7 @@
 """
 import os
 from pathlib import Path
-from rkplugin.plugins import CATEGORY_NAMES, PluginCategory
+from rkviewer.plugin.classes import CATEGORY_NAMES, PluginCategory
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import json
 
@@ -12,7 +12,7 @@ import wx
 from wx.lib.buttons import GenBitmapButton, GenBitmapTextButton
 import wx.lib.agw.flatnotebook as fnb
 from commentjson.commentjson import JSONLibraryException
-from rkplugin.api import init_api
+from rkviewer.plugin.api import init_api
 import wx.adv
 
 import rkviewer
@@ -499,7 +499,7 @@ class MainFrame(wx.Frame):
         self.menu_events = list()
         file_menu = wx.Menu()
 
-        self.AddMenuItem(file_menu, '&New...', 'Start a new network',
+        self.AddMenuItem(file_menu, '&New', 'Start a new network',
                          lambda _: self.NewNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('N')))
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Load...', 'Load network from JSON file',

@@ -5,9 +5,9 @@ Author: Evan Yip (2021)
 
 """
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
-from rkplugin import api
-from rkplugin.api import Vec2
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin import api
+from rkviewer.plugin.api import Vec2
 import numpy as np
 import math
 

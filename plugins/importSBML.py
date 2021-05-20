@@ -9,9 +9,9 @@ Version 0.02: Author: Jin Xu (2021)
 from inspect import Parameter
 #from libsbml import KineticLaw
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
-from rkplugin import api
-from rkplugin.api import Node, Vec2, Reaction, Color
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin import api
+from rkviewer.plugin.api import Node, Vec2, Reaction, Color
 import os
 import simplesbml # does not have to import in the main.py too
 from libsbml import *
@@ -296,7 +296,6 @@ class IMPORTSBML(WindowedPlugin):
                 kinetics = model.getRateLaw(i)
                 rct_num = model.getNumReactants(i)
                 prd_num = model.getNumProducts(i)
-
 
                 for j in range(rct_num):
                     rct_id = model.getReactant(temp_id,j)

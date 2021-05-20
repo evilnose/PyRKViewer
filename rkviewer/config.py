@@ -1,7 +1,7 @@
 """Configuration parameters.
 """
 # pylint: disable=maybe-no-member
-from __future__ import annotations
+# from __future__ import annotations
 
 import copy
 import os
@@ -43,7 +43,7 @@ class Color:
     b: int
     a: int = 255
 
-    def swapped(self, r: int = None, g: int = None, b: int = None, a: int = None) -> Color:
+    def swapped(self, r: int = None, g: int = None, b: int = None, a: int = None) -> 'Color':
         if r is None:
             r = self.r
         if g is None:

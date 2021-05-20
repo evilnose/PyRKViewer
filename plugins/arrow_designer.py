@@ -9,9 +9,9 @@ from rkviewer.utils import opacity_mul
 from rkviewer.canvas.state import ArrowTip
 import wx
 from typing import List, Tuple
-from rkplugin import api
-from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
-from rkplugin.api import Vec2
+from rkviewer.plugin import api
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin.api import Vec2
 
 
 class DesignerWindow(wx.Window):

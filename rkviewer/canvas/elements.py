@@ -1186,31 +1186,42 @@ def primitive_brush(color: Color, is_alias: bool):
     return brush
 
 
-def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim, is_alias: bool):
+def draw_circle_to_gc(gc: wx.GraphicsContext, box: Rect, circle: TCirclePrim, is_alias: bool):
     peninfo = primitive_peninfo(circle.border_color, circle.border_width, is_alias)
     pen = gc.CreatePen(peninfo)
     brush = gc.CreateBrush(primitive_brush(circle.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     path = gc.CreatePath()
-    path.AddCircle(0.0, 0.0, 0.5)
+    path.AddEllipse(box.position.x, box.position.y, box.size.x, box.size.y)
     gc.DrawPath(path)
 
 
-def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim, is_alias: bool):
-    pen = gc.CreatePen(primitive_peninfo(rect.border_color, rect.border_width, is_alias))
+def draw_rect_to_gc(gc: wx.GraphicsContext, box: Rect, rect: TRectanglePrim, is_alias: bool):
+    # restrict the border width of the node to an even integer
+    # this is necessary for aligning the node rectangle to the selection rectangle
+    # why? see Rect::aligned().
+    box = box.aligned()
+    if rect.border_width == 0:
+        border_width = 0
+    else:
+        border_width = max(even_round(rect.border_width), 2)
+    pen = gc.CreatePen(primitive_peninfo(rect.border_color, border_width, is_alias))
     brush = gc.CreateBrush(primitive_brush(rect.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
-    gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
+    gc.DrawRoundedRectangle(box.position.x, box.position.y, box.size.x, box.size.y, rect.corner_radius)
 
 
-def draw_polygon_to_gc(gc: wx.GraphicsContext, poly: TPolygonPrim, is_alias: bool):
+def draw_polygon_to_gc(gc: wx.GraphicsContext, box: Rect, poly: TPolygonPrim, is_alias: bool):
     pen = gc.CreatePen(primitive_peninfo(poly.border_color, poly.border_width, is_alias))
     brush = gc.CreateBrush(primitive_brush(poly.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
-    gc.DrawLines([wx.Point2D(*p) for p in poly.points])
+    # offset so polygon is centered at (0.5, 0.5)
+    points = [p + Vec2.repeat(0.5) for p in poly.points]
+    transformed_pts = [box.position + p.elem_mul(box.size) for p in points]
+    gc.DrawLines([wx.Point2D(*p) for p in transformed_pts])
 
 
 draw_fn_map = {
@@ -1222,26 +1233,28 @@ draw_fn_map = {
 }
 
 
-def apply_transform_to_gc(gc: wx.GraphicsContext, transform: TTransform):
-    gc.Translate(*transform.translation)
-    gc.Rotate(transform.rotation)
-    gc.Scale(*transform.scale)
+# def apply_transform_to_gc(gc: wx.GraphicsContext, transform: TTransform):
+#     gc.Translate(*transform.translation)
+#     gc.Rotate(transform.rotation)
+#     gc.Scale(*transform.scale)
 
 
 def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node):
     shape = node.composite_shape
     gc.PushState()
-    gc.Translate(*bounding_rect.position)
-    gc.Scale(*bounding_rect.size)
+    # gc.Translate(*(bounding_rect.position.elem_mul(bounding_rect.size)))
+    # gc.Scale(*bounding_rect.size)
     for primitive, transform in shape.items:
         gc.PushState()
-        apply_transform_to_gc(gc, transform)
-        draw_fn_map[primitive.__class__](gc, primitive, node.original_index != -1)
+        # apply_transform_to_gc(gc, transform)
+        box = Rect(bounding_rect.position + bounding_rect.size.elem_mul(transform.translation),
+                   bounding_rect.size.elem_mul(transform.scale))
+        draw_fn_map[primitive.__class__](gc, box, primitive, node.original_index != -1)
         gc.PopState()
     gc.PopState()
 
     gc.PushState()
-    apply_transform_to_gc(gc, node.composite_shape.text_item[1])
+    # apply_transform_to_gc(gc, node.composite_shape.text_item[1])
     draw_text_to_gc(gc, bounding_rect, node.id, node.composite_shape.text_item)
     gc.PopState()
 

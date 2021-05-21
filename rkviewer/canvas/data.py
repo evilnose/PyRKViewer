@@ -43,7 +43,7 @@ class TCirclePrim(TPrimitive):
     name: ClassVar[str] = 'circle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
-    border_width: float = 0.05
+    border_width: float = 2
 
 
 @dataclass
@@ -51,8 +51,8 @@ class TRectanglePrim(TPrimitive):
     name: ClassVar[str] = 'rectangle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
-    border_width: float = 0.05
-    corner_radius: float = 0.15
+    border_width: float = 2
+    corner_radius: float = 4
 
 
 class ChoiceItem(NamedTuple):
@@ -131,7 +131,7 @@ class TPolygonPrim(TPrimitive):
     points: Tuple[Vec2, ...]
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
-    border_width: float = 0.05
+    border_width: float = 2
     radius: float = 0.5
 
 

@@ -288,7 +288,7 @@ class ThemeSchema(Schema):
     node_width = Dim(missing=50)
     node_height = Dim(missing=30)
     # node_corner_radius = Dim(missing=0.15)
-    node_border_width = Dim(missing=0.05)
+    node_border_width = Dim(missing=2)
     node_font_size = Pixel(missing=10)
     node_font_color = ColorField(missing=Color(255, 0, 0, 100))
     # Width of the outline around each selected node

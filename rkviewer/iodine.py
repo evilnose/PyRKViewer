@@ -33,6 +33,11 @@ from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
 from pprint import pprint
 
+
+# The current version of the network serialization schema.
+SERIAL_VERSION = "1.0.0"
+
+
 def get_theme_fn(name):
     return partial(get_theme, name, convert_color=False)
 
@@ -103,6 +108,12 @@ class TAliasNode(TAbstractNode):
 
 
 class TNetwork:
+    '''Represents an entire reaction network.
+
+    **NOTE IMPORTANT** whenever any change is made to the code that changes how the network is
+    serialized/deserialized, one must bump the global variable SERIAL_VERSION to reflect that. See
+    NetworkSchema::serialVersion for more information.
+    '''
     id: str
     nodes: Dict[int, TAbstractNode]
     reactions: Dict[int, 'TReaction']
@@ -116,7 +127,8 @@ class TNetwork:
 
     def __init__(self, id: str, nodes: Dict[int, TAbstractNode] = None,
                  reactions: Dict[int, 'TReaction'] = None,
-                 compartments: Dict[int, 'TCompartment'] = None):
+                 compartments: Dict[int, 'TCompartment'] = None,
+                 ):
         if nodes is None:
             nodes = dict()
         if reactions is None:
@@ -2633,6 +2645,19 @@ class NetworkSchema(Schema):
 
     @pre_load
     def pre_load(self, data: Any, **kwargs):
+        # load serialization version
+        # this records the version of the serialization. Whenever the serialization scheme is changed,
+        # we update the version number, so that if a user is trying to load a network with an
+        # older serialization version than the current application (or vice versa), we can either fail
+        # to try to do some conversion.
+        serial_version = data.get('serialVersion', 'pre-release')
+        if serial_version != SERIAL_VERSION:
+            # we have a mismatch
+            print(("Warning: loaded network has serial version '{}', which does not match that of "
+                   "the application: '{}'").format(serial_version, SERIAL_VERSION))
+        if 'serialVersion' in data:
+            del data['serialVersion']
+
         for nodei, nodedata in data['nodes'].items():
             nodedata['index'] = int(nodei)
 
@@ -2641,6 +2666,11 @@ class NetworkSchema(Schema):
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNetwork:
         return TNetwork(**data)
+    
+    @post_dump
+    def post_dump(self, data, **kwargs):
+        data['serialVersion'] = SERIAL_VERSION
+        return data
 
 
 net_schema = NetworkSchema()

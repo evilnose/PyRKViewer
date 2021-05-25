@@ -12,7 +12,7 @@ import logging
 from rkviewer.iodine import Color, getReactionModifiers
 from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidRedoEvent, DidUndoEvent, post_event
-from .canvas.data import Compartment, Node, Reaction, TCompositeShape
+from .canvas.data import Compartment, Node, Reaction, CompositeShape
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView, ModelError, ModifierTipStyle
@@ -142,13 +142,13 @@ class Controller(IController):
     def get_application_position(self) -> wx.Point:
         return self.initial_position
 
-    def get_composite_shape_list(self, neti: int) -> List[TCompositeShape]:
+    def get_composite_shape_list(self, neti: int) -> List[CompositeShape]:
         return iod.getListOfCompositeShapes(neti)
 
-    def get_composite_shape_at(self, neti: int, shapei: int) -> TCompositeShape:
+    def get_composite_shape_at(self, neti: int, shapei: int) -> CompositeShape:
         return iod.getCompositeShapeAt(neti, shapei)
 
-    def get_node_shape(self, neti: int, nodei: int) -> TCompositeShape:
+    def get_node_shape(self, neti: int, nodei: int) -> CompositeShape:
         return iod.getNodeShape(neti, nodei)
 
     def get_node_shape_index(self, neti: int, nodei: int) -> int:

@@ -7,7 +7,7 @@ from itertools import chain
 from math import pi, cos, sin
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
-from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTrianglePrim, TTransform, TTextPrim, THexagonPrim, TLinePrim
+from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, TTransform, TextPrim, HexagonPrim, LinePrim
 
 import wx
 
@@ -19,7 +19,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, TPolygonPrim, TextAlignment
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment
 from .geometry import (
     Rect,
     Vec2,
@@ -1186,7 +1186,7 @@ def primitive_brush(color: Color, is_alias: bool):
     return brush
 
 
-def draw_circle_to_gc(gc: wx.GraphicsContext, box: Rect, circle: TCirclePrim, is_alias: bool):
+def draw_circle_to_gc(gc: wx.GraphicsContext, box: Rect, circle: CirclePrim, is_alias: bool):
     peninfo = primitive_peninfo(circle.border_color, circle.border_width, is_alias)
     pen = gc.CreatePen(peninfo)
     brush = gc.CreateBrush(primitive_brush(circle.fill_color, is_alias))
@@ -1197,7 +1197,7 @@ def draw_circle_to_gc(gc: wx.GraphicsContext, box: Rect, circle: TCirclePrim, is
     gc.DrawPath(path)
 
 
-def draw_rect_to_gc(gc: wx.GraphicsContext, box: Rect, rect: TRectanglePrim, is_alias: bool):
+def draw_rect_to_gc(gc: wx.GraphicsContext, box: Rect, rect: RectanglePrim, is_alias: bool):
     # restrict the border width of the node to an even integer
     # this is necessary for aligning the node rectangle to the selection rectangle
     # why? see Rect::aligned().
@@ -1213,7 +1213,7 @@ def draw_rect_to_gc(gc: wx.GraphicsContext, box: Rect, rect: TRectanglePrim, is_
     gc.DrawRoundedRectangle(box.position.x, box.position.y, box.size.x, box.size.y, rect.corner_radius)
 
 
-def draw_polygon_to_gc(gc: wx.GraphicsContext, box: Rect, poly: TPolygonPrim, is_alias: bool):
+def draw_polygon_to_gc(gc: wx.GraphicsContext, box: Rect, poly: PolygonPrim, is_alias: bool):
     pen = gc.CreatePen(primitive_peninfo(poly.border_color, poly.border_width, is_alias))
     brush = gc.CreateBrush(primitive_brush(poly.fill_color, is_alias))
     gc.SetPen(pen)
@@ -1225,11 +1225,11 @@ def draw_polygon_to_gc(gc: wx.GraphicsContext, box: Rect, poly: TPolygonPrim, is
 
 
 draw_fn_map = {
-    TCirclePrim: draw_circle_to_gc,
-    TRectanglePrim: draw_rect_to_gc,
-    THexagonPrim: draw_polygon_to_gc,
-    TLinePrim: draw_polygon_to_gc,
-    TTrianglePrim: draw_polygon_to_gc
+    CirclePrim: draw_circle_to_gc,
+    RectanglePrim: draw_rect_to_gc,
+    HexagonPrim: draw_polygon_to_gc,
+    LinePrim: draw_polygon_to_gc,
+    TrianglePrim: draw_polygon_to_gc
 }
 
 
@@ -1278,7 +1278,7 @@ def _truncate_text(gc: wx.GraphicsContext, max_width: float, text: str):
     return text
 
 
-def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TTextPrim, TTransform]):
+def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TextPrim, TTransform]):
     primitive, transform = text_item
 
     # Maybe cache this?

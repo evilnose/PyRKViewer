@@ -34,12 +34,12 @@ class TTransform:
     scale: Vec2 = Vec2(1, 1)
 
 
-class TPrimitive:
+class Primitive:
     name: ClassVar[str] = 'generic primitive'
 
 
 @dataclass
-class TCirclePrim(TPrimitive):
+class CirclePrim(Primitive):
     name: ClassVar[str] = 'circle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
@@ -47,7 +47,7 @@ class TCirclePrim(TPrimitive):
 
 
 @dataclass
-class TRectanglePrim(TPrimitive):
+class RectanglePrim(Primitive):
     name: ClassVar[str] = 'rectangle'
     fill_color: Color = Color(255, 0, 0, 255)
     border_color: Color = Color(0, 255, 0, 255)
@@ -95,7 +95,7 @@ TEXT_ALIGNMENT_CHOICES = [
 
 
 @dataclass
-class TTextPrim(TPrimitive):
+class TextPrim(Primitive):
     name: ClassVar[str] = 'text'
     bg_color: Color = Color(255, 255, 0, 0)
     font_color: Color = Color(0, 0, 0, 255)
@@ -126,7 +126,7 @@ def gen_polygon_pts(n, r=0.5, phase=0) -> Tuple[Vec2, ...]:
 
 
 @dataclass
-class TPolygonPrim(TPrimitive):
+class PolygonPrim(Primitive):
     name: ClassVar[str] = 'polygon'
     points: Tuple[Vec2, ...]
     fill_color: Color = Color(255, 0, 0, 255)
@@ -136,34 +136,34 @@ class TPolygonPrim(TPrimitive):
 
 
 @dataclass
-class THexagonPrim(TPolygonPrim):
+class HexagonPrim(PolygonPrim):
     name: ClassVar[str] = 'hexagon'
     points: Tuple[Vec2, ...] = gen_polygon_pts(6)
 
 
 @dataclass
-class TLinePrim(TPolygonPrim):
+class LinePrim(PolygonPrim):
     name: ClassVar[str] = 'line'
     # exclude the last point since we don't need the lines to be closed
     points: Tuple[Vec2, ...] = gen_polygon_pts(2)[:-1]
 
 
 @dataclass
-class TTrianglePrim(TPolygonPrim):
+class TrianglePrim(PolygonPrim):
     name: ClassVar[str] = 'triangle'
     points: Tuple[Vec2, ...] = gen_polygon_pts(3)
 
 
-class TCompositeShape:
-    text_item: Tuple[TTextPrim, TTransform]
+class CompositeShape:
+    text_item: Tuple[TextPrim, TTransform]
     def __init__(self, items: List[Tuple[Any, TTransform]],
-                 text_item: Tuple[TTextPrim, TTransform], name: str):
+                 text_item: Tuple[TextPrim, TTransform], name: str):
         self.items = items
         self.name = name
         self.text_item = text_item
 
     def __copy__(self):
-        return TCompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.text_item), self.name)
+        return CompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.text_item), self.name)
 
 
 class PrimitiveFactory:
@@ -212,7 +212,7 @@ class CompositeShapeFactory:
     def produce(self):
         items = [(prim.produce(), tf) for prim, tf in self.item_factories]
         textitem = (self.text_factory[0].produce(), self.text_factory[1])
-        return TCompositeShape(items, textitem, self.name)
+        return CompositeShape(items, textitem, self.name)
 
 
 class RectData:
@@ -246,7 +246,7 @@ class Node(RectData):
     floatingNode: bool
     lockNode: bool  # Prevent users from moving the node
     shape_index: int
-    composite_shape: Optional[TCompositeShape]
+    composite_shape: Optional[CompositeShape]
     # -1 if this is an original node, or if this is an alias node, then the index of the original copy
     original_index: int
                         
@@ -256,7 +256,7 @@ class Node(RectData):
                  floatingNode: bool = True,
                  lockNode: bool = False,
                  shape_index: int = 0,
-                 composite_shape: Optional[TCompositeShape] = None,
+                 composite_shape: Optional[CompositeShape] = None,
                  index: int = -1,
                  original_index: int = -1):
         self.index = index

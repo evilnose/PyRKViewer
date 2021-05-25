@@ -15,10 +15,10 @@ from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyR
 from .mvc import IController, ModifierTipStyle
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
-from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, Reaction, TEXT_ALIGNMENT_CHOICES, TLinePrim, TPolygonPrim, TPrimitive, compute_centroid
+from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, Reaction, TEXT_ALIGNMENT_CHOICES, LinePrim, PolygonPrim, Primitive, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
-from .canvas.data import TCirclePrim, TRectanglePrim, TCompositeShape
+from .canvas.data import CirclePrim, RectanglePrim, CompositeShape
 
 
 ColorCallback = Callable[[wx.Colour], None]
@@ -625,7 +625,7 @@ class PrimitiveGrid(FieldGrid):
 class PrimitiveSection(wx.Window):
     subsections: List[PrimitiveGrid]
 
-    def __init__(self, node_form: 'NodeForm', com_shape: TCompositeShape):
+    def __init__(self, node_form: 'NodeForm', com_shape: CompositeShape):
         super().__init__(node_form)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizerflags = wx.SizerFlags().Expand()
@@ -643,7 +643,7 @@ class PrimitiveSection(wx.Window):
             subsection = PrimitiveGrid(self, node_form)
             self.subsections.append(subsection)
             subsection.AppendSubtitle(subtitle_text)
-            if isinstance(one_prim, TRectanglePrim):
+            if isinstance(one_prim, RectanglePrim):
                 subsection.ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
                                                  prim_index)
                 subsection.ColorPrimitiveControl('border color', 'border opacity', 'border_color',
@@ -652,12 +652,12 @@ class PrimitiveSection(wx.Window):
                                                  prim_index)
                 subsection.FloatPrimitiveControl('corner radius', 'corner_radius',
                                                  prim_index)
-            elif isinstance(one_prim, TLinePrim):
+            elif isinstance(one_prim, LinePrim):
                 subsection.ColorPrimitiveControl('line color', 'line opacity', 'border_color',
                                                  prim_index)
                 subsection.FloatPrimitiveControl('line width', 'border_width',
                                                  prim_index)
-            elif isinstance(one_prim, TCirclePrim) or isinstance(one_prim, TPolygonPrim):
+            elif isinstance(one_prim, CirclePrim) or isinstance(one_prim, PolygonPrim):
                 subsection.ColorPrimitiveControl('fill color', 'fill opacity', 'fill_color',
                                                  prim_index)
                 subsection.ColorPrimitiveControl('border color', 'border opacity', 'border_color',

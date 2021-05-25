@@ -11,25 +11,36 @@ import unittest
 import wx
 import time
 
-def createNode(nodeID, nodei= 0, shapei= 0):
+def createNode(nodeID, shapei= 0):
     #netID, nodeID, x, y, w, h, floatingNode, nodeLocked
-    iodine.addNode(0, nodeID, 0.3, 0.4, 3, 4)
+    nodei = iodine.addNode(0, nodeID, 0.3, 0.4, 3, 4) 
     iodine.setNodeShapeIndex(0, nodei, shapei)
+    return nodei
 
-def createAlias(nodeID, nodei = 0, shapei = 0):
-    createNode(nodeID, nodei, shapei)
+def createAlias(nodeID, shapei = 0):
+    nodei = createNode(nodeID, shapei)
     iodine.addAliasNode(0, nodei, 0.3, 0.4, 3, 4)
 
 def createReaction():
-    #reactant = createNode("reactant", 0, 0)
-    #product = createNode("product", 1, 0)
-    reactant = iodine.TNode(0, "reactant", Vec2(0.3,0.4), Vec2(3,4), floating= True, 
-    nodeLocked= False)
-    product = iodine.TNode(1, "product", Vec2(0.6,0.8), Vec2(6,8), floating= True, 
-    nodeLocked= False)
-    rxn = iodine.TReaction("rxn1", reactants={0: iodine.TSpeciesNode(1, reactant.position)}, products= {1: iodine.TSpeciesNode(1, product.position)})
-    network = iodine.TNetwork("0", {0:reactant,1:product}, reactions={0:rxn})
-    network.addReaction(rxn)
+    reactanti = createNode("reactant", 0)
+    producti = createNode("product", 0)
+    # reactant = iodine.TNode(0, "reactant", Vec2(0.3,0.4), Vec2(3,4), floating= True, 
+    # nodeLocked= False)
+    # product = iodine.TNode(1, "product", Vec2(0.6,0.8), Vec2(6,8), floating= True, 
+    # nodeLocked= False)
+    # rxn = iodine.TReaction("rxn1", reactants={0: iodine.TSpeciesNode(1, reactant.position)}, products= {1: iodine.TSpeciesNode(1, product.position)})
+    # network = iodine.TNetwork("net1", {0:reactant,1:product}, reactions={0:rxn})
+    # network.addReaction(rxn)
+    iodine.createReaction(0, "rxn1", [reactanti], [producti])
+
+def createCompartment():
+    iodine.addCompartment(0, "comp0", 0, 0, 100, 100)
+    iodine.addCompartment(0, "comp1", 0, 0, 100, 100)
+    node = createNode("node0")
+    #move node to compartment
+    iodine.setCompartmentOfNode(0, 0, 0)
+
+    #add following reaction
 
 class TestSerialization(TestWithApp):
     def setUp(self):
@@ -98,7 +109,7 @@ class TestSerialization(TestWithApp):
         #testing 100 nodes
         num_nodes = 100
         for i in range(num_nodes):
-            createNode("node"+str(i),nodei = i, shapei = i%8)
+            createNode("node"+str(i), shapei = i%8)
 
         dump_object = iodine.dumpNetwork(0)
         nodeDict = dump_object["nodes"]
@@ -115,7 +126,7 @@ class TestSerialization(TestWithApp):
     def testMultipleShapes(self):
         num_nodes = 100
         for i in range(num_nodes):
-            createNode("node"+str(i),nodei = i, shapei = i%8)
+            createNode("node"+str(i), shapei = i%8)
 
         dump_object = iodine.dumpNetwork(0)
         nodeDict = dump_object["nodes"]
@@ -148,7 +159,7 @@ class TestSerialization(TestWithApp):
 
     def testAlias(self):
         #since original node is at 0, alias is at 1
-        node = createAlias("node0")
+        anode = createAlias("node0")
         dump_object = iodine.dumpNetwork(0)
 
         nodeDict = dump_object["nodes"]
@@ -160,6 +171,9 @@ class TestSerialization(TestWithApp):
         self.assertEqual(2, len(anodeObj["rectSize"]))
     
     def testCompartment(self):
+        #compartment with no node
+        #a node in compartment
+        # compartment with reaction
         pass
 
     def testReaction(self):
@@ -167,8 +181,11 @@ class TestSerialization(TestWithApp):
         dump_object = iodine.dumpNetwork(0)
 
         rxnDict = dump_object["reactions"]
-        print(rxnDict)
+        #print(rxnDict)
         self.assertEqual(1, len(rxnDict))
+
+        #a node as a reactant and product: 0 as reactant, 0 and 1 are products
+        #multiple reactants and products
 
     def tearDown(self):
         iodine.clearNetworks()

@@ -783,6 +783,8 @@ def set_node_shape_property(net_index: int, node_index: int, primitive_index: in
                             prop_name: str, prop_value: Any):
     '''Set a property of the node's composite shape, e.g. fill color.
 
+    NOTE specify -1 for `primitive_index` to modify the text primitive of the node.
+
     For this, one needs to specify a particular primitive inside the composite shape. For example,
     if a node is composed of two circles, there are two circle primitives (CirclePrim) inside
     the node's shape. One can only update the property of one primitive at a time, e.g.
@@ -806,7 +808,8 @@ def set_node_shape_property(net_index: int, node_index: int, primitive_index: in
     Args:
         net_index:          The network index.
         node_index:         The index of the node.
-        primitive_index:    The index of the shape primitive whose property to update.
+        primitive_index:    The index of the shape primitive whose property to update. To set the
+                            text properties of the node, specify -1 here.
         prop_name:          The name of the property whose value to set.
         prop_value:         The new value of the property.
     '''

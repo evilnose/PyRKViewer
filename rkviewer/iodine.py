@@ -603,7 +603,7 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
 
         _pushUndoStack()
         newNode = TNode(n.lastNodeIdx, nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked)
-        n.addNode(newNode)
+        return n.addNode(newNode)
     finally:
         if errCode < 0:
             raise ExceptionDict[errCode](errorDict[errCode])
@@ -2721,7 +2721,7 @@ def validateState():
     assert isinstance(networkDict, dict)
     for neti, net in networkDict.items():
         assert isinstance(neti, int)
-        assert isinstance(neti, TNetwork)
+        assert isinstance(net, TNetwork)
 
         validateNodes(net.nodes)
         # TODO validate reactions, compartments, and cross-validate

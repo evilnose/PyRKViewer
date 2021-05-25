@@ -5,6 +5,7 @@ from rkviewer.canvas.data import Reaction
 from rkviewer.mvc import CompartmentIndexError, NetIndexError, NodeIndexError, ReactionIndexError
 from rkviewer.plugin.api import Node, NodeData, Vec2
 from rkviewer.plugin import api
+from rkviewer import iodine
 import wx
 import time
 

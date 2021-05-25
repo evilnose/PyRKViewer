@@ -27,18 +27,19 @@ NODE_EDGE_GAP_DISTANCE = 4  # Distance between node and start of bezier line
 TIP_DISPLACEMENT = 4
 
 
-@dataclass
-class TTransform:
+@dataclass(frozen=True)
+class Transform:
     translation: Vec2 = Vec2()
     rotation: float = 0
     scale: Vec2 = Vec2(1, 1)
 
 
+@dataclass()
 class Primitive:
     name: ClassVar[str] = 'generic primitive'
 
 
-@dataclass
+@dataclass()
 class CirclePrim(Primitive):
     name: ClassVar[str] = 'circle'
     fill_color: Color = Color(255, 0, 0, 255)
@@ -46,7 +47,7 @@ class CirclePrim(Primitive):
     border_width: float = 2
 
 
-@dataclass
+@dataclass()
 class RectanglePrim(Primitive):
     name: ClassVar[str] = 'rectangle'
     fill_color: Color = Color(255, 0, 0, 255)
@@ -94,7 +95,7 @@ TEXT_ALIGNMENT_CHOICES = [
 ]
 
 
-@dataclass
+@dataclass()
 class TextPrim(Primitive):
     name: ClassVar[str] = 'text'
     bg_color: Color = Color(255, 255, 0, 0)
@@ -125,7 +126,7 @@ def gen_polygon_pts(n, r=0.5, phase=0) -> Tuple[Vec2, ...]:
                  for i in range(n + 1))
 
 
-@dataclass
+@dataclass()
 class PolygonPrim(Primitive):
     name: ClassVar[str] = 'polygon'
     points: Tuple[Vec2, ...]
@@ -135,32 +136,29 @@ class PolygonPrim(Primitive):
     radius: float = 0.5
 
 
-@dataclass
+@dataclass()
 class HexagonPrim(PolygonPrim):
     name: ClassVar[str] = 'hexagon'
     points: Tuple[Vec2, ...] = gen_polygon_pts(6)
 
 
-@dataclass
+@dataclass()
 class LinePrim(PolygonPrim):
     name: ClassVar[str] = 'line'
     # exclude the last point since we don't need the lines to be closed
     points: Tuple[Vec2, ...] = gen_polygon_pts(2)[:-1]
 
 
-@dataclass
+@dataclass()
 class TrianglePrim(PolygonPrim):
     name: ClassVar[str] = 'triangle'
     points: Tuple[Vec2, ...] = gen_polygon_pts(3)
 
-
+@dataclass()
 class CompositeShape:
-    text_item: Tuple[TextPrim, TTransform]
-    def __init__(self, items: List[Tuple[Any, TTransform]],
-                 text_item: Tuple[TextPrim, TTransform], name: str):
-        self.items = items
-        self.name = name
-        self.text_item = text_item
+    items: List[Tuple[Primitive, Transform]]
+    text_item: Tuple[TextPrim, Transform]
+    name: str
 
     def __copy__(self):
         return CompositeShape(copy.deepcopy(self.items), copy.deepcopy(self.text_item), self.name)
@@ -203,8 +201,8 @@ class PrimitiveFactory:
 class CompositeShapeFactory:
     '''A factory for a composite shape, see PrimitiveFactory for more information.
     '''
-    def __init__(self, item_factories: List[Tuple[PrimitiveFactory, TTransform]],
-                 text_factory: Tuple[PrimitiveFactory, TTransform], name: str):
+    def __init__(self, item_factories: List[Tuple[PrimitiveFactory, Transform]],
+                 text_factory: Tuple[PrimitiveFactory, Transform], name: str):
         self.item_factories = item_factories
         self.text_factory = text_factory
         self.name = name

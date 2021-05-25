@@ -7,7 +7,7 @@ from itertools import chain
 from math import pi, cos, sin
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
-from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, TTransform, TextPrim, HexagonPrim, LinePrim
+from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, Transform, TextPrim, HexagonPrim, LinePrim
 
 import wx
 
@@ -1224,7 +1224,8 @@ def draw_polygon_to_gc(gc: wx.GraphicsContext, box: Rect, poly: PolygonPrim, is_
     gc.DrawLines([wx.Point2D(*p) for p in transformed_pts])
 
 
-draw_fn_map = {
+# HACK bypass Python typing warnings with Type variables
+draw_fn_map: Dict[Any, Any] = {
     CirclePrim: draw_circle_to_gc,
     RectanglePrim: draw_rect_to_gc,
     HexagonPrim: draw_polygon_to_gc,
@@ -1233,7 +1234,7 @@ draw_fn_map = {
 }
 
 
-# def apply_transform_to_gc(gc: wx.GraphicsContext, transform: TTransform):
+# def apply_transform_to_gc(gc: wx.GraphicsContext, transform: Transform):
 #     gc.Translate(*transform.translation)
 #     gc.Rotate(transform.rotation)
 #     gc.Scale(*transform.scale)
@@ -1278,7 +1279,7 @@ def _truncate_text(gc: wx.GraphicsContext, max_width: float, text: str):
     return text
 
 
-def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TextPrim, TTransform]):
+def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TextPrim, Transform]):
     primitive, transform = text_item
 
     # Maybe cache this?

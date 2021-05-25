@@ -22,7 +22,7 @@ from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeE
 from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField, get_theme
 from .canvas.geometry import Vec2
 from .canvas.data import CompositeShapeFactory, PrimitiveFactory, CirclePrim, CompositeShape, Primitive, \
-    RectanglePrim, HexagonPrim, LinePrim, TrianglePrim, TTransform, TextPrim, ChoiceItem,\
+    RectanglePrim, HexagonPrim, LinePrim, TrianglePrim, Transform, TextPrim, ChoiceItem,\
     FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, TEXT_ALIGNMENT_CHOICES
 import copy
 from dataclasses import dataclass, field
@@ -55,21 +55,23 @@ hexFact = PrimitiveFactory(HexagonPrim, **geometry_kwargs)
 lineFact = PrimitiveFactory(LinePrim, **geometry_kwargs)
 triangleFact = PrimitiveFactory(TrianglePrim, **geometry_kwargs)
 textFact = PrimitiveFactory(TextPrim)
-singletonTrans = TTransform()  # fills the entire bounding box
+singletonTrans = Transform()  # fills the entire bounding box
 
+DEFAULT_SHAPE_FACTORY = CompositeShapeFactory([(rectFact, singletonTrans)],
+                        (textFact, singletonTrans), 'rectangle')
 # These are the default shape factories. They should never be modified by the user.
 shapeFactories = [
-    CompositeShapeFactory([(rectFact, singletonTrans)], (textFact, singletonTrans), 'rectangle'),
+    DEFAULT_SHAPE_FACTORY,
     CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, singletonTrans), 'circle'),
     CompositeShapeFactory([(hexFact, singletonTrans)], (textFact, singletonTrans), 'hexagon'),
     CompositeShapeFactory([(lineFact, singletonTrans)], (textFact, singletonTrans), 'line'),
     CompositeShapeFactory([(triangleFact, singletonTrans)], (textFact, singletonTrans), 'triangle'),
     CompositeShapeFactory([], (textFact, singletonTrans), 'text-only'),
-    CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, TTransform(translation=Vec2(1, 1))), 'text outside'),
-    CompositeShapeFactory([(circleFact, TTransform(scale=Vec2.repeat(0.5))),
-                           (circleFact, TTransform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
+    CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, Transform(translation=Vec2(1, 1))), 'text outside'),
+    CompositeShapeFactory([(circleFact, Transform(scale=Vec2.repeat(0.5))),
+                           (circleFact, Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
                            (PrimitiveFactory(RectanglePrim, fill_color=Color(255, 0, 0, 255)),
-                                TTransform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.25)))
+                                Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.25)))
                            ],
         (PrimitiveFactory(TextPrim, font_color=Color(255, 255, 255, 255)), singletonTrans), 'demo combo'),
 ]
@@ -943,8 +945,9 @@ def getNodeFillColor(neti: int, nodei: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.fill_color, Color)
-            return prim.fill_color
+            ret = getattr(prim, 'fill_color')
+            assert isinstance(ret, Color)
+            return ret
     return None
 
 
@@ -982,8 +985,9 @@ def getNodeBorderColor(neti: int, nodei: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.border_color, Color)
-            return prim.border_color
+            ret = getattr(prim, 'border_color')
+            assert isinstance(ret, Color)
+            return ret
     return None
 
 
@@ -1020,7 +1024,7 @@ def getNodeBorderWidth(neti: int, nodei: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_width' in prim.__dataclass_fields__:
-            return prim.border_width
+            return getattr(prim, 'border_width')
     return None
 
 
@@ -1162,8 +1166,9 @@ def setNodeFillColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.fill_color, Color)
-            prim.fill_color = prim.fill_color.swapped(r, g, b)
+            old_color = getattr(prim, 'fill_color')
+            assert isinstance(old_color, Color)
+            setattr(prim, 'fill_color', old_color.swapped(r, g, b))
 
 
 def setNodeFillColorAlpha(neti: int, nodei: int, a: float):
@@ -1179,9 +1184,10 @@ def setNodeFillColorAlpha(neti: int, nodei: int, a: float):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.fill_color, Color)
             a_int = int(a * 255)
-            prim.fill_color = prim.fill_color.swapped(a=a_int)
+            old_color = getattr(prim, 'fill_color')
+            assert isinstance(old_color, Color)
+            setattr(prim, 'fill_color', old_color.swapped(a=a_int))
 
 
 def setNodeBorderColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
@@ -1197,8 +1203,9 @@ def setNodeBorderColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.border_color, Color)
-            prim.border_color = prim.border_color.swapped(r, g, b)
+            old_color = getattr(prim, 'border_color')
+            assert isinstance(old_color, Color)
+            setattr(prim, 'border_color', old_color.swapped(r, g, b))
 
 
 def setNodeBorderColorAlpha(neti: int, nodei: int, a: float):
@@ -1213,9 +1220,10 @@ def setNodeBorderColorAlpha(neti: int, nodei: int, a: float):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.border_color, Color)
             a_int = int(a * 255)
-            prim.border_color = prim.border_color.swapped(a=a_int)
+            old_color = getattr(prim, 'border_color')
+            assert isinstance(old_color, Color)
+            setattr(prim, 'border_color', old_color.swapped(a=a_int))
 
 
 def setNodeBorderWidth(neti: int, nodei: int, width: float):
@@ -1230,8 +1238,7 @@ def setNodeBorderWidth(neti: int, nodei: int, width: float):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_width' in prim.__dataclass_fields__:
-            prim.border_width = width
-
+            setattr(prim, 'border_width', width)
 
 
 def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]):
@@ -2318,6 +2325,14 @@ def setNodePrimitiveProperty(neti: int, nodei: int, prim_index: int, prop_name: 
         raise ValueError('`{}` is not a property of primitive `{}`'.format(
             prop_name, primitive.__class__.__name__))
 
+    field = primitive.__dataclass_fields__[prop_name]
+    # ensure that the assigned type is correct
+    if not isinstance(prop_value, field.type):
+        raise ValueError(f'Could not set primitive property `{prop_name}` of node {nodei} at '
+                         f'primitive index {prim_index}. Expected object of type `{field.type.__name__}`; got '
+                         f'`{prop_value}`(`{type(prop_value).__name__}`) instead. Note: the primitive '
+                         f'is of type `{type(primitive).__name__}`.')
+
     # This is not very safe, but this is very simple to implement, so it shall be like this for now
     setattr(primitive, prop_name, prop_value)
 
@@ -2428,8 +2443,8 @@ class TransformSchema(Schema):
     scale = Dim2()
 
     @post_load
-    def post_load(self, data: Any, **kwargs) -> TTransform:
-        return TTransform(**data)
+    def post_load(self, data: Any, **kwargs) -> Transform:
+        return Transform(**data)
 
 
 class PrimitiveSchema(Schema):

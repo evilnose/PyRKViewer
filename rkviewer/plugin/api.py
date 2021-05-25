@@ -6,6 +6,7 @@ API for the RKViewer GUI and model. Allows viewing and modifying the network mod
 #from rkviewer.mvc import NetIndexError
 # from __future__ import annotations
 from dataclasses import field, dataclass
+from rkviewer.iodine import DEFAULT_SHAPE_FACTORY
 from rkviewer.canvas.canvas import Canvas
 from rkviewer.events import DidChangeCompartmentOfNodesEvent, post_event
 from rkviewer.canvas.utils import default_handle_positions as _default_handle_positions
@@ -16,12 +17,12 @@ import wx
 import copy
 from contextlib import contextmanager
 from rkviewer.mvc import IController, ModifierTipStyle
-from typing import KeysView, List, Optional, Set, Tuple, Union
+from typing import Any, KeysView, List, Optional, Set, Tuple, Union
 from rkviewer.canvas import data
 from rkviewer.canvas.state import cstate, ArrowTip
 from rkviewer.config import get_setting, get_theme
 # re-export events and data "structs" TODO how will documentation work here?
-from rkviewer.canvas.data import Node, Reaction, Compartment, Vec2
+from rkviewer.canvas.data import CompositeShape, Node, Reaction, Compartment, Vec2
 from rkviewer.canvas import data
 import logging
 from logging import Logger
@@ -87,19 +88,26 @@ class NodeData:
     """Class that holds all the necessary data for a Node.
 
     Attributes:
-        index: node index. Despite the name, this is the value that acts as the constant
-               identifier for nodes. ID, on the other hand, may be modified. If this is -1, it
-               means that this Node is not currently part of a network.
-        id: Node ID. Note: NOT constant; see `index` for constant identifiers.
-        net_index: The index of the network that this node is in.
-        position: The top-left position of the node bounding box as (x, y).
-        size: The size of the node bounding box as (w, h).
-        comp_idx: The index of the compartment that this node is in, or -1 if it is in the base
-                  compartment.
-        floatingNode: Set true if you want the node to have floating status or false for boundary status (default is floating)
-        lockNode: Set false if you want the node to move or true for block (default is false)
-        original_index = If this is an alias node, this is the index of the original node. Otherwise
-                         this is -1.
+        index:          Node index. Despite the name, this is the value that acts as the constant
+                            identifier for nodes. ID, on the other hand, may be modified. If this is -1, it
+                            means that this Node is not currently part of a network.
+        id:             Node ID. Note: NOT constant; see `index` for constant identifiers.
+        net_index:      The index of the network that this node is in.
+        position:       The top-left position of the node bounding box as (x, y).
+        size:           The size of the node bounding box as (w, h).
+        comp_idx:       The index of the compartment that this node is in, or -1 if it is in the base
+                            compartment.
+        floating_node:   Set true if you want the node to have floating status or false for boundary
+                            status (default is floating)
+        lock_node:       Set false if you want the node to move or true for block (default is false)
+        original_index: If this is an alias node, this is the index of the original node. Otherwise
+                            this is -1.
+        shape_index:    The composite shape index of the node. 0 for rectangle, 1 for circle, and
+                            so on. For the full list of shapes, view iodine.py
+        shape:          The CompositeShape object of the node. This is guaranteed to match the shape
+                            as indicated by shape_index. This field is present for convenient access
+                            of the shape's properties, including the primitives contained within and
+                            the properties of the primitive.
     """
     net_index: int = field()
     id: str = field()
@@ -107,9 +115,11 @@ class NodeData:
     size: Vec2 = field(default=Vec2())
     comp_idx: int = field(default=-1)
     index: int = field(default=-1)
-    floatingNode: bool = field(default=True)
-    lockNode: bool = field(default=False)
+    floating_node: bool = field(default=True)
+    lock_node: bool = field(default=False)
     original_index: int = field(default=-1)
+    shape_index: int = field(default=0)
+    shape: CompositeShape = field(default_factory=DEFAULT_SHAPE_FACTORY.produce)
 
     @property
     def bounding_rect(self) -> Rect:
@@ -294,6 +304,9 @@ def set_zoom_level(level: int, anchor: Vec2):
 
 def _translate_node(node: Node) -> NodeData:
     """Translate Node (internal data structure for rkviewer) to NodeData (for API)"""
+    # composite_shape can only be done when the Node is created outside of iodine and then passed
+    # into it. Any Node obtained from iodine (or controller) must have its composite_shape populated
+    assert node.composite_shape is not None
     return NodeData(
         id=node.id,
         net_index=node.net_index,
@@ -301,9 +314,11 @@ def _translate_node(node: Node) -> NodeData:
         size=node.size,
         comp_idx=node.comp_idx,
         index=node.index,
-        floatingNode=node.floatingNode,
-        lockNode=node.lockNode,
-        original_index=node.original_index
+        floating_node=node.floatingNode,
+        lock_node=node.lockNode,
+        original_index=node.original_index,
+        shape_index=node.shape_index,
+        shape=copy.copy(node.composite_shape),
     )
 
 
@@ -616,7 +631,7 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
 
 def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
              border_width: float = None, position: Vec2 = None, size: Vec2 = None,
-             floatingNode: bool = True, lockNode: bool = False) -> int:
+             floating_node: bool = True, lock_node: bool = False, shape_index: int = 0) -> int:
     """Adds a node to the given network.
 
     The node indices are assigned in increasing order, regardless of deletion.
@@ -629,6 +644,7 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         border_width: The border width of the node, or leave as None to use current theme.
         position: The position of the node, or leave as None to use default, (0, 0).
         size: The size of the node, or leave as None to use default, (0, 0).
+        shape_index: The index of the CompositeShape of the node. 0 (rectangle) by default.
 
     Returns:
         The index of the node that was added.
@@ -653,8 +669,9 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         net_index,
         pos=position,
         size=size,
-        floatingNode=floatingNode,
-        lockNode=lockNode,
+        floatingNode=floating_node,
+        lockNode=lock_node,
+        shape_index=shape_index,
     )
     with group_action():
         nodei = _controller.add_node_g(net_index, node)
@@ -710,7 +727,8 @@ def resize_node(net_index: int, node_index: int, size: Vec2):
 # should be ignored.
 def update_node(net_index: int, node_index: int, id: str = None, fill_color: Color = None,
                 border_color: Color = None, border_width: float = None, position: Vec2 = None,
-                size: Vec2 = None, floatingNode: bool = True, lockNode: bool = False):
+                size: Vec2 = None, floating_node: bool = True, lock_node: bool = False,
+                shape_index: int = None):
     """
     Update one or multiple properties of a node.
 
@@ -723,6 +741,9 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
         border_width: If specified, the new border width of the node.
         position: If specified, the new position of the node.
         size: If specified, the new size of the node.
+        floating_node: If specified, the floating status of the node.
+        lock_node: If specified, whether the node is locked.
+        shape_index: If specified, the new shape of the node.
 
     Note:
         This is *not* an atomic function, meaning if we failed to set one specific property, the
@@ -730,7 +751,7 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
         is caught. To go around that, make one calls to update_node() for each property instead.
 
         Also note the behavior if the given node_index refers to an alias node.
-        The properties 'position', 'size', and 'lockNode' pertain to the alias node itself.
+        The properties 'position', 'size', and 'lock_node' pertain to the alias node itself.
         But all other properties pertain to the original node that the alias refers to. For example,
         if one sets the 'position' of an alias node, the position of the alias is updated. But if
         one sets the 'id' of an alias node, the ID of the original node is modified (and that of
@@ -785,10 +806,47 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
             _controller.move_node(net_index, node_index, position)
         if size is not None:
             _controller.set_node_size(net_index, node_index, size)
-        if floatingNode is not None:
-            _controller.set_node_floating_status(net_index, node_index, floatingNode)
-        if lockNode is not None:
-            _controller.set_node_locked_status(net_index, node_index, lockNode)
+        if floating_node is not None:
+            _controller.set_node_floating_status(net_index, node_index, floating_node)
+        if lock_node is not None:
+            _controller.set_node_locked_status(net_index, node_index, lock_node)
+        if shape_index is not None:
+            _controller.set_node_shape_index(net_index, node_index, shape_index)
+        
+
+def set_node_shape_property(net_index: int, node_index: int, primitive_index: int,
+                            prop_name: str, prop_value: Any):
+    '''Set a property of the node's composite shape, e.g. fill color.
+
+    For this, one needs to specify a particular primitive inside the composite shape. For example,
+    if a node is composed of two circles, there are two circle primitives (CirclePrim) inside
+    the node's shape. One can only update the property of one primitive at a time, e.g.
+    primitive_index = 0 for the first circle, and primitive_index = 1 for the second.
+
+    One also must specify the property name (prop_name), which is a string. Some common property
+    names are 'fill_color', 'border_color', 'border_width'. Each particular primitive may have
+    other properties. For more details, see the subclasses of Primitive in rkviewer/canvas/data.py.
+
+    As an example, for node with index 5 in network 0 with two circles in its CompositeShape, to set
+    the fill color of circle 1 to red, do
+    `set_node_shape_property(0, 5, 1, 'fill_color', Color(255, 0, 0)).
+
+    Note that an error will be thrown if there is a mismatch between the supplied prop_value and
+    the expected type. For example, you cannot assign 1 to 'fill_color', only objects of type Color.
+    Also an error will be thrown if the primitive index is out of bounds on the current shape that
+    the node has. Therefore, you should make sure that the node has the shape (or
+    at least the primitive count and primitive properties) that you expect before calling this 
+    function.
+
+    Args:
+        net_index:          The network index.
+        node_index:         The index of the node.
+        primitive_index:    The index of the shape primitive whose property to update.
+        prop_name:          The name of the property whose value to set.
+        prop_value:         The new value of the property.
+    '''
+    _controller.set_node_primitive_property(net_index, node_index, primitive_index, prop_name,
+                                            prop_value)
 
 
 def compute_centroid(net_index: int, reactants: List[int], products: List[int]):

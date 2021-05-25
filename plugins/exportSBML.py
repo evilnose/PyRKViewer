@@ -105,7 +105,7 @@ class ExportSBML(WindowedPlugin):
                         species.setHasOnlySubstanceUnits(False)
                         species.setBoundaryCondition(False)
                         species.setConstant(False)             
-                        if allNodes[allcompartments[i].nodes[j]].floatingNode == False:
+                        if allNodes[allcompartments[i].nodes[j]].floating_node == False:
                             species.setBoundaryCondition(True)
             else: #set default compartment
                 compartment = model.createCompartment()
@@ -121,7 +121,7 @@ class ExportSBML(WindowedPlugin):
                     species.setHasOnlySubstanceUnits(False)
                     species.setBoundaryCondition(False)
                     species.setConstant(False)             
-                    if allNodes[i].floatingNode == False:
+                    if allNodes[i].floating_node == False:
                         species.setBoundaryCondition(True)
                         species.setConstant(True)
 

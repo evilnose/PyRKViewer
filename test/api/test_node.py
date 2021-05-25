@@ -91,19 +91,19 @@ class TestAlias(DummyAppTest):
         new_pos = Vec2(33, 33)
         new_size = Vec2(66, 66)
         new_lockNode = True
-        api.update_node(self.neti, nodei, position=Vec2(33, 33), size=Vec2(66, 66), lockNode=True)
+        api.update_node(self.neti, nodei, position=Vec2(33, 33), size=Vec2(66, 66), lock_node=True)
         node = api.get_node_by_index(self.neti, nodei)
         alias = api.get_node_by_index(self.neti, aliasi)
 
         # alias remains the same
         self.assertEqual(alias_pos, alias.position)
         self.assertEqual(alias_size, alias.size)
-        self.assertEqual(False, alias.lockNode)
+        self.assertEqual(False, alias.lock_node)
 
         # node is updated
         self.assertEqual(new_pos, node.position)
         self.assertEqual(new_size, node.size)
-        self.assertEqual(new_lockNode, node.lockNode)
+        self.assertEqual(new_lockNode, node.lock_node)
 
         # TODO also comp index
 

@@ -36,7 +36,7 @@ def GetThemeSettingsPath ():
     return os.path.join(config_dir, 'rkViewer', 'settings.json')
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=True)
 class Color:
     r: int
     g: int
@@ -56,6 +56,12 @@ class Color:
 
     def to_wxcolour(self):
         return wx.Colour(self.r, self.g, self.b, self.a)
+
+    @classmethod
+    def from_rgb(cls, val: int) -> 'Color':
+        """Create color from RGB hex value: #00BBGGRR"""
+        return Color((val >> 0) & 255, (val >> 8) & 255, (val >> 16) & 255)
+
 
 
 @dataclass

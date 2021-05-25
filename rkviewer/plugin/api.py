@@ -20,7 +20,7 @@ from rkviewer.mvc import IController, ModifierTipStyle
 from typing import Any, KeysView, List, Optional, Set, Tuple, Union
 from rkviewer.canvas import data
 from rkviewer.canvas.state import cstate, ArrowTip
-from rkviewer.config import get_setting, get_theme
+from rkviewer.config import Color, get_setting, get_theme
 # re-export events and data "structs" TODO how will documentation work here?
 from rkviewer.canvas.data import CompositeShape, Node, Reaction, Compartment, Vec2
 from rkviewer.canvas import data
@@ -45,41 +45,6 @@ def get_canvas() -> Optional[Canvas]:
 
 def get_controller() -> Optional[IController]:
     return _controller
-
-
-class Color:
-    """RGBA Color. Each of R, G, B, A ranges from 0-255."""
-    _r: int
-    _g: int
-    _b: int
-    _alpha: int = 255
-
-    def __init__(self, r, g, b, alpha=255):
-        self._r = r
-        self._g = g
-        self._b = b
-        self._alpha = alpha
-
-    @property
-    def r(self):
-        return self._r
-
-    @property
-    def g(self):
-        return self._g
-
-    @property
-    def b(self):
-        return self._b
-
-    @property
-    def alpha(self):
-        return self._alpha
-
-    @classmethod
-    def from_rgb(cls, val: int) -> 'Color':
-        """Create color from RGB hex value: #00BBGGRR"""
-        return Color((val >> 0) & 255, (val >> 8) & 255, (val >> 16) & 255)
 
 
 # @require_kwargs_on_init
@@ -204,7 +169,7 @@ def _to_color(color: wx.Colour) -> Color:
 
 
 def _to_wxcolour(color: Color) -> wx.Colour:
-    return wx.Colour(color.r, color.g, color.b, color.alpha)
+    return wx.Colour(color.r, color.g, color.b, color.a)
 
 
 def init_api(canvas: Canvas, controller: IController):
@@ -676,9 +641,9 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
     with group_action():
         nodei = _controller.add_node_g(net_index, node)
         _controller.set_node_fill_rgb(net_index, nodei, _to_wxcolour(fill_color))
-        _controller.set_node_fill_alpha(net_index, nodei, fill_color.alpha)
+        _controller.set_node_fill_alpha(net_index, nodei, fill_color.a)
         _controller.set_node_border_rgb(net_index, nodei, _to_wxcolour(border_color))
-        _controller.set_node_border_alpha(net_index, nodei, border_color.alpha)
+        _controller.set_node_border_alpha(net_index, nodei, border_color.a)
         _controller.set_node_border_width(net_index, nodei, border_width)
     return nodei
 
@@ -796,10 +761,10 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
             _controller.rename_node(net_index, node_index, id)
         if fill_color is not None:
             _controller.set_node_fill_rgb(net_index, node_index, _to_wxcolour(fill_color))
-            _controller.set_node_fill_alpha(net_index, node_index, fill_color.alpha)
+            _controller.set_node_fill_alpha(net_index, node_index, fill_color.a)
         if border_color is not None:
             _controller.set_node_border_rgb(net_index, node_index, _to_wxcolour(border_color))
-            _controller.set_node_border_alpha(net_index, node_index, border_color.alpha)
+            _controller.set_node_border_alpha(net_index, node_index, border_color.a)
         if border_width is not None:
             _controller.set_node_border_width(net_index, node_index, border_width)
         if position is not None:
@@ -1009,7 +974,7 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
             _controller.rename_reaction(net_index, reaction_index, id)
         if fill_color is not None:
             _controller.set_reaction_fill_rgb(net_index, reaction_index, _to_wxcolour(fill_color))
-            _controller.set_reaction_fill_alpha(net_index, reaction_index, fill_color.alpha)
+            _controller.set_reaction_fill_alpha(net_index, reaction_index, fill_color.a)
         if thickness is not None:
             _controller.set_reaction_line_thickness(net_index, reaction_index, thickness)
         if ratelaw is not None:

@@ -19,7 +19,7 @@ import wx
 import os
 import math
 
-from ..config import get_setting, get_theme, pop_settings_err
+from ..config import get_setting, get_theme, is_fast_mode, pop_settings_err
 from ..events import (
     CanvasDidUpdateEvent,
     DidCommitDragEvent, DidDeleteEvent, DidMoveNodesEvent,
@@ -128,7 +128,6 @@ class Canvas(wx.ScrolledWindow):
     _reaction_elements: List[ReactionElement]
     _compartment_elements: List[CompartmentElt]
     _plugin_elements: Set[CanvasElement]
-    _elements: SortedKeyList
     _zoom_level: int  #: The current zoom level. See SetZoomLevel() for more detail.
     #: The zoom scale. This always corresponds one-to-one with zoom_level. See property for detail.
     _reactant_idx: Set[int]  #: The list of indices of the currently designated reactant nodes.
@@ -184,7 +183,8 @@ class Canvas(wx.ScrolledWindow):
         self._reaction_elements = list()
         self._compartment_elements = list()
         # TODO document below
-        self._elements = SortedKeyList(key=lambda e: e.layers)
+        self._model_elements = SortedKeyList(key=lambda e: e.layers)
+        self._widget_elements = SortedKeyList(key=lambda e: e.layers)
         self._plugin_elements = set()
         self.hovered_element = None
         self.dragged_element = None
@@ -289,8 +289,7 @@ class Canvas(wx.ScrolledWindow):
         evt.Skip()
 
     def OnIdle(self, evt):
-        print('hi')
-        if not self.LazyRefresh():
+        if not self.Redraw():
             # Not processed; request more
             evt.RequestMore()
 
@@ -421,7 +420,7 @@ class Canvas(wx.ScrolledWindow):
     def Reset(self, nodes: List[Node], reactions: List[Reaction], compartments: List[Compartment]):
         """Update the list of nodes and apply the current scale."""
         # destroy old elements
-        for elt in self._elements:
+        for elt in chain(self._model_elements, self._widget_elements):
             if elt not in self._plugin_elements:
                 elt.destroy()
 
@@ -493,15 +492,16 @@ class Canvas(wx.ScrolledWindow):
         for plugin_el in self._plugin_elements:
             select_elements.append(plugin_el)
 
-        self._elements = SortedKeyList(select_elements, lambda e: e.layers)
+        self._model_elements = SortedKeyList(select_elements, lambda e: e.layers)
         self._select_box.update(self.GetSelectedNodes(),
                                 [c for c in self._compartments if self.sel_compartments_idx.contains(c.index)])
         self._UpdateSelectBoxLayer()
         self._select_box.related_elts = select_elements
-        self._elements.add(self._select_box)
-        self._minimap.elements = self._elements
+        self._widget_elements = SortedKeyList([self._select_box], lambda e: e.layers)
+        self._minimap.elements = self._model_elements
 
         self._UpdateSelectedLists()
+        self.Redraw()
 
         post_event(CanvasDidUpdateEvent())
 
@@ -570,7 +570,7 @@ class Canvas(wx.ScrolledWindow):
 
         self._SetStatusText('zoom', '{:.2f}x'.format(cstate.scale))
 
-        self.LazyRefresh()
+        self.Redraw()
 
     def ZoomCenter(self, zooming_in: bool):
         """Zoom in on the center of the visible window."""
@@ -597,9 +597,9 @@ class Canvas(wx.ScrolledWindow):
                 # TODO set font
                 tp = node.composite_shape.text_item[0]
                 font = wx.Font(wx.FontInfo(tp.font_size)
-                            .Family(tp.font_family)
-                            .Style(tp.font_style)
-                            .Weight(tp.font_weight))
+                               .Family(tp.font_family)
+                               .Style(tp.font_style)
+                               .Weight(tp.font_weight))
                 gfont = gc.CreateFont(font)
                 gc.SetFont(gfont)
                 w, h, _, _ = gc.GetFullTextExtent(node.id)
@@ -608,7 +608,6 @@ class Canvas(wx.ScrolledWindow):
                 w = max(w, min_w)
                 h = max(h, min_h)
                 self.controller.set_node_size(self.net_index, node.index, Vec2(w, h))
-
 
     def _GetUniqueName(self, base: str, names: Collection[str], *args: Collection[str]) -> str:
         """Given a base name "x", try "x_0", "x_1", ... until it is unique in all the collections.
@@ -649,7 +648,7 @@ class Canvas(wx.ScrolledWindow):
                     ol.hovering = False
 
             if cstate.input_mode == InputMode.SELECT:
-                for el in reversed(self._elements):
+                for el in reversed(self._model_elements + self._widget_elements):
                     if not el.enabled:
                         continue
                     if el.pos_inside(logical_pos) and el.on_left_down(logical_pos):
@@ -759,13 +758,14 @@ class Canvas(wx.ScrolledWindow):
 
                 with self.controller.group_action():
                     nodei = self.controller.add_node_g(self._net_index, node)
-                    fill_color=get_theme('node_fill')
-                    border_color=get_theme('node_border')
-                    border_width=get_theme('node_border_width')
+                    fill_color = get_theme('node_fill')
+                    border_color = get_theme('node_border')
+                    border_width = get_theme('node_border_width')
                     self.controller.set_node_fill_rgb(self._net_index, nodei, fill_color)
                     self.controller.set_node_fill_alpha(self._net_index, nodei, fill_color.Alpha())
                     self.controller.set_node_border_rgb(self._net_index, nodei, border_color)
-                    self.controller.set_node_border_alpha(self._net_index, nodei, border_color.Alpha())
+                    self.controller.set_node_border_alpha(
+                        self._net_index, nodei, border_color.Alpha())
                     self.controller.set_node_border_width(self._net_index, nodei, border_width)
 
                 index = self.controller.get_node_index(self._net_index, node.id)
@@ -783,7 +783,7 @@ class Canvas(wx.ScrolledWindow):
                 self.IncrementZoom(zooming_in, Vec2(device_pos))
 
         finally:
-            self.LazyRefresh()
+            self.Redraw()
             evt.Skip()
             wx.CallAfter(self.SetFocus)
 
@@ -820,7 +820,7 @@ class Canvas(wx.ScrolledWindow):
             # self._UnfloatNodes()
             self._nodes_floating = False
         finally:
-            self.LazyRefresh()
+            self.Redraw()
             evt.Skip()
 
     def OnRightUp(self, evt):
@@ -839,7 +839,7 @@ class Canvas(wx.ScrolledWindow):
         node_el: Optional[NodeElement] = None
         reaction_el: Optional[ReactionElement] = None
         comp_el: Optional[CompartmentElt] = None
-        for el in reversed(self._elements):
+        for el in reversed(self._model_elements + self._widget_elements):
             if not el.enabled:
                 continue
             if el.pos_inside(logical_pos):
@@ -895,8 +895,7 @@ class Canvas(wx.ScrolledWindow):
         total_selected = len(selected_nodes) + len(selected_reactions) + len(selected_comps)
         menu = wx.Menu()
 
-
-        #def add_item(menu: wx.Menu, menu_name, callback):
+        # def add_item(menu: wx.Menu, menu_name, callback):
         #    qmi = wx.MenuItem(menu, -1, menu_name)
         #    #qmi.SetBitmap(wx.Bitmap('exit.png'))
         #    id_ = menu.Append(qmi) # (-1, menu_name).Id
@@ -906,7 +905,7 @@ class Canvas(wx.ScrolledWindow):
             item = menu.Append(-1, menu_name)
 
             if image_name != None:
-               item.SetBitmap(wx.Bitmap(resource_path(image_name)))
+                item.SetBitmap(wx.Bitmap(resource_path(image_name)))
             menu.Bind(wx.EVT_MENU, lambda _: callback(), id=item.Id)
 
         if total_selected != 0:
@@ -936,13 +935,13 @@ class Canvas(wx.ScrolledWindow):
                          lambda: self.AlignSelectedNodes(Alignment.CENTER),
                          'alignHorizCenter_XP.png')
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Align Top', 
+                add_item(align_menu, 'Align Top',
                          lambda: self.AlignSelectedNodes(Alignment.TOP),
                          'alignTop_XP.png')
                 add_item(align_menu, 'Align Bottom',
                          lambda: self.AlignSelectedNodes(Alignment.BOTTOM),
                          'AlignBottom_XP.png')
-                add_item(align_menu, 'Align Middle', 
+                add_item(align_menu, 'Align Middle',
                          lambda: self.AlignSelectedNodes(Alignment.MIDDLE),
                          'alignVertCenter_XP.png')
                 align_menu.AppendSeparator()
@@ -950,10 +949,10 @@ class Canvas(wx.ScrolledWindow):
                          lambda: self.AlignSelectedNodes(Alignment.GRID),
                          'alignOnGrid_XP.png')
                 align_menu.AppendSeparator()
-                add_item(align_menu, 'Arrange Horizontally', 
+                add_item(align_menu, 'Arrange Horizontally',
                          lambda: self.AlignSelectedNodes(Alignment.HORIZONTAL),
                          'alignHorizEqually_XP.png')
-                add_item(align_menu, 'Arrange Vertically', 
+                add_item(align_menu, 'Arrange Vertically',
                          lambda: self.AlignSelectedNodes(Alignment.VERTICAL),
                          'alignVertEqually_XP.png')
                 menu.AppendSubMenu(align_menu, text='Align...')
@@ -971,13 +970,13 @@ class Canvas(wx.ScrolledWindow):
                 if node.comp_idx >= 0:
                     comp = self.comp_idx_map[node.comp_idx]
                     alias_pos = clamp_rect_pos(Rect(alias_pos, node.size), comp.rect)
-                
+
                 new_idx = self.controller.add_alias_node(self.net_index, node.index,
-                                                        alias_pos,
-                                                        node.size)
+                                                         alias_pos,
+                                                         node.size)
                 new_indices.add(new_idx)
         self.sel_nodes_idx.set_item(new_indices)
-    
+
     def SplitAliasesOnReactions(self, node: Node):
         rea_els = [re for re in self._reaction_elements if re.reaction.index in self.reaction_map[node.index]]
         with self.controller.group_action():
@@ -1194,19 +1193,19 @@ class Canvas(wx.ScrolledWindow):
 
         if alignment == Alignment.HORIZONTAL:
 
-           # Sort the selected nodes in x position ascending order
-           nodes = api.get_nodes(0)
-           nodes.sort(key=lambda x: x.position.x, reverse=False)
-           
-           # find the average distance beteeen the selected nodes
-           averageDistance = 0.0
-           for count in range (1, len (nodes)):
-               node2 = api.get_node_by_index (0, nodes[count-1].index)
-               node1 = api.get_node_by_index (0, nodes[count].index)             
-               averageDistance += (node1.position.x + node1.size.x) - node2.position.x
-           averageDistance = averageDistance / len (nodes)
-           
-           with api.group_action():
+            # Sort the selected nodes in x position ascending order
+            nodes = api.get_nodes(0)
+            nodes.sort(key=lambda x: x.position.x, reverse=False)
+
+            # find the average distance beteeen the selected nodes
+            averageDistance = 0.0
+            for count in range(1, len(nodes)):
+                node2 = api.get_node_by_index(0, nodes[count-1].index)
+                node1 = api.get_node_by_index(0, nodes[count].index)
+                averageDistance += (node1.position.x + node1.size.x) - node2.position.x
+            averageDistance = averageDistance / len(nodes)
+
+            with api.group_action():
                 # x = Position of left most node
                 x = nodes[0].position.x
                 # Arrange nodes with equal distance between them
@@ -1218,28 +1217,28 @@ class Canvas(wx.ScrolledWindow):
 
         if alignment == Alignment.VERTICAL:
 
-           # Sort the selected nodes in y position ascending order
-           nodes = api.get_nodes(0)
-           nodes.sort(key=lambda x: x.position.y, reverse=False)
-           
-           # find the average distance beteeen the selected nodes
-           averageDistance = 0.0
-           for count in range (1, len (nodes)):
-               node2 = api.get_node_by_index (0, nodes[count-1].index)
-               node1 = api.get_node_by_index (0, nodes[count].index)             
-               averageDistance += (node1.position.y + node1.size.y) - node2.position.y
-           averageDistance = averageDistance / len (nodes)
-           
-           with api.group_action():
+            # Sort the selected nodes in y position ascending order
+            nodes = api.get_nodes(0)
+            nodes.sort(key=lambda x: x.position.y, reverse=False)
+
+            # find the average distance beteeen the selected nodes
+            averageDistance = 0.0
+            for count in range(1, len(nodes)):
+                node2 = api.get_node_by_index(0, nodes[count-1].index)
+                node1 = api.get_node_by_index(0, nodes[count].index)
+                averageDistance += (node1.position.y + node1.size.y) - node2.position.y
+            averageDistance = averageDistance / len(nodes)
+
+            with api.group_action():
                 # y = Position of top most node
                 y = nodes[0].position.y
                 # Arrange nodes with equal distance between them
-                for count in range (len (nodes)):
+                for count in range(len(nodes)):
                     newPos = Vec2(nodes[count].position.x, y)
                     api.move_node(0, nodes[count].index, newPos)
                     y = y + averageDistance
-                self.setDefaultHandles()            
-            
+                self.setDefaultHandles()
+
     # TODO improve this. we might want a special mouseLeftWindow event
 
     def _EndDrag(self, evt: wx.MouseEvent):
@@ -1303,7 +1302,7 @@ class Canvas(wx.ScrolledWindow):
                 self.hovered_element.on_mouse_leave(logical_pos)
                 self.hovered_element = None
             elif evt.LeftIsDown():
-                for el in reversed(self._elements):
+                for el in reversed(self._model_elements + self._widget_elements):
                     if not el.enabled:
                         continue
                     if el.pos_inside(logical_pos) and el.on_left_up(logical_pos):
@@ -1407,7 +1406,7 @@ class Canvas(wx.ScrolledWindow):
 
             # Likely hovering on something else
             hovered: Optional[CanvasElement] = None
-            for el in reversed(self._elements):
+            for el in reversed(self._model_elements + self._widget_elements):
                 if not el.enabled:
                     continue
                 if el.pos_inside(logical_pos):
@@ -1415,8 +1414,8 @@ class Canvas(wx.ScrolledWindow):
                     break
 
             if cstate.input_mode == InputMode.ADD_NODES and (
-                isinstance(self.hovered_element, CompartmentElt)
-                or isinstance(hovered, CompartmentElt)):
+                    isinstance(self.hovered_element, CompartmentElt)
+                    or isinstance(hovered, CompartmentElt)):
                 # set redraw to True whenever input mode is ADD_NODES and mouse enters, exits,
                 # or moves in a compartment. This is for updating the hightlight of the compartment.
                 # (see CompartmentElt.on_paint).
@@ -1436,6 +1435,14 @@ class Canvas(wx.ScrolledWindow):
                 self.LazyRefresh()
             evt.Skip()
 
+    def Redraw(self):
+        '''Function to signal that the entire canvas needs to be redrawn.'''
+        self.LazyRefresh()
+        if is_fast_mode():
+            # If we're in fast mode, in OnPaint we only copy the model elements buffer to the
+            # canvas, so we need to redraw the model elements here.
+            self.RedrawModelElements()
+
     def LazyRefresh(self) -> bool:
         now = time.time() * 1000
         diff = now - self._last_refresh
@@ -1445,6 +1452,12 @@ class Canvas(wx.ScrolledWindow):
             self._last_refresh = int(now)
             self.Refresh()
             return True
+
+    def RedrawModelElements(self):
+        '''Redraw the 'model', i.e. non-widget, elements, such as nodes and reactions. This is used
+        for optimizing drawing.
+        '''
+        pass
 
     def OnPaint(self, evt):
         self._accum_frames += 1
@@ -1466,7 +1479,13 @@ class Canvas(wx.ScrolledWindow):
         self.DoPrepareDC(dc)
 
         # Draw everything
-        gc = self.DrawToDC(dc)
+        gc = wx.GraphicsContext.Create(dc)
+        self.DrawBackgroundToGC(gc)
+        gc.PushState()
+        gc.Scale(cstate.scale, cstate.scale)
+        self.DrawModelToGC(gc)
+        self.DrawWidgetsToGC(gc)
+        gc.PopState()
 
         # Draw minimap
         self._minimap.DoPaint(gc)
@@ -1479,7 +1498,7 @@ class Canvas(wx.ScrolledWindow):
         bounding_rect = self.GetBoundingRect()
         if bounding_rect is None:
             return None
-        
+
         bounding_rect = padded_rect(bounding_rect, padding=10)
         bounding_rect = wx.Rect(*bounding_rect.position, *bounding_rect.size)
         bounding_rect.Intersect(wx.Rect(0, 0, *self.realsize))
@@ -1487,43 +1506,28 @@ class Canvas(wx.ScrolledWindow):
         bmp = wx.Bitmap(*self.realsize)
         dc = wx.MemoryDC()
         dc.SelectObject(bmp)
-        self.DrawToDC(dc)
+        gc = wx.GraphicsContext.Create(dc)
+        self.DrawModelToGC(gc)
         img = bmp.ConvertToImage()
         ret = img.GetSubImage(bounding_rect)
         return ret
 
-    def DrawToDC(self, dc):
-        # Create graphics context since we need transparency
-        gc = wx.GraphicsContext.Create(dc)
-
-        assert gc is not None
-
+    def DrawBackgroundToGC(self, gc):
         # Draw gray background
         draw_rect(
             gc,
             Rect(Vec2(), Vec2(self.GetVirtualSize()) + Vec2(10, 10)),
             fill=get_theme('canvas_outside_bg'),
         )
-        gc.PushState()
-        gc.Scale(cstate.scale, cstate.scale)
-        # Draw background
+        # Draw background TODO move this before gc.Scale()
         draw_rect(
             gc,
             Rect(Vec2(), self.realsize),
             fill=get_theme('canvas_bg'),
         )
 
-        # transform = Transform(Vec2(0.5, 0.5), 0, Vec2(0.5, 0.5))
-        # primitives = [
-        #     (CirclePrim(wx.RED, wx.BLUE, 0.02), transform),
-        #     (RectanglePrim(wx.YELLOW, wx.CYAN, 0.02), Transform(Vec2(0.5, 1), 3.1415/4, Vec2(0, 0))),
-        # ]
-        # shape = CompositeShape(primitives)
-        # bounding_rect = Rect(Vec2(100, 100), Vec2(100, 100))
-        # draw_rect(gc, bounding_rect, fill=wx.GREEN)
-        # shape.draw(gc, bounding_rect)
-
-        # Draw nodes
+    def DrawModelToGC(self, gc):
+        # TODO this is not model
         within_comp = None
         if cstate.input_mode == InputMode.ADD_NODES and self._cursor_logical_pos is not None:
             size = Vec2(get_theme('node_width'), get_theme('node_height'))
@@ -1532,8 +1536,8 @@ class Canvas(wx.ScrolledWindow):
         elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
             within_comp = self.InWhichCompartment(self._select_box.nodes)
 
-        # create font for nodes
-        for el in self._elements:
+        # TODO this is not model
+        for el in self._model_elements:
             if not el.enabled:
                 continue
             if isinstance(el, CompartmentElt) and el.compartment.index == within_comp:
@@ -1542,9 +1546,15 @@ class Canvas(wx.ScrolledWindow):
             else:
                 el.on_paint(gc)
 
+    def DrawWidgetsToGC(self, gc):
         # TODO Put this in SelectionChanged
+        for el in self._widget_elements:
+            if not el.enabled:
+                continue
+            el.on_paint(gc)
+
         sel_rects = ([n.rect for n in self.sel_nodes] +
-                        [c.rect for c in self.sel_comps])
+                     [c.rect for c in self.sel_comps])
 
         # If we are not drag-selecting, don't draw selection outlines if there is only one rect
         # selected (for aesthetics); but do draw outlines if drawing_drag is True (as
@@ -1556,8 +1566,8 @@ class Canvas(wx.ScrolledWindow):
                 rect = padded_rect(rect, get_theme('select_outline_padding'))
                 # draw rect
                 draw_rect(gc, rect, border=get_theme('handle_color'),
-                            border_width=get_theme('select_outline_width'),
-                            corner_radius=0)
+                          border_width=get_theme('select_outline_width'),
+                          corner_radius=0)
 
         # Draw reactant and product marker outlines
         def draw_reaction_outline(node: Node, color: wx.Colour, padding: int):
@@ -1573,14 +1583,14 @@ class Canvas(wx.ScrolledWindow):
         reactants = get_nodes_by_idx(self._nodes, self._reactant_idx)
         for node in reactants:
             draw_reaction_outline(node, get_theme('reactant_border'),
-                                    get_theme('react_node_padding'))
+                                  get_theme('react_node_padding'))
 
         products = get_nodes_by_idx(self._nodes, self._product_idx)
         for node in products:
             pad = get_theme('react_node_border_width') + \
                 3 if node.index in self._reactant_idx else 0
             draw_reaction_outline(node, get_theme('product_border'),
-                                    pad + get_theme('react_node_padding'))
+                                  pad + get_theme('react_node_padding'))
 
         # Draw drag-selection rect
         if self._drag_selecting:
@@ -1611,14 +1621,16 @@ class Canvas(wx.ScrolledWindow):
                 border_width=bwidth,
                 corner_radius=corner_radius,
             )
-        gc.PopState()
-        return gc
 
     def ResetLayer(self, elt: CanvasElement, layers: Layer):
-        if elt in self._elements:
-            self._elements.remove(elt)
-        elt.set_layers(layers)
-        self._elements.add(elt)
+        if elt in self._model_elements:
+            self._model_elements.remove(elt)
+            elt.set_layers(layers)
+            self._model_elements.add(elt)
+        elif elt in self._widget_elements:
+            self._widget_elements.remove(elt)
+            elt.set_layers(layers)
+            self._widget_elements.add(elt)
 
     def GetSelectedNodes(self, copy=False) -> List[Node]:
         """Get the list of selected nodes using self.sel_nodes_idx."""
@@ -1632,7 +1644,7 @@ class Canvas(wx.ScrolledWindow):
         # position of the dragged node
         evt.Skip()
         self.SetOverlayPositions()
-        self.LazyRefresh()
+        self.Redraw()
 
     def OnMouseWheel(self, evt):
         rot = evt.GetWheelRotation()
@@ -1744,7 +1756,7 @@ class Canvas(wx.ScrolledWindow):
         Right now, a group of nodes are considered to be inside a compartment iff all the nodes are
         entirely within in the compartment boundaries.
         """
-        for el in reversed(self._elements):
+        for el in reversed(self._model_elements + self._widget_elements):
             if isinstance(el, CompartmentElt):
                 comp = cast(CompartmentElt, el).compartment
                 comp_rect = comp.rect
@@ -1754,7 +1766,7 @@ class Canvas(wx.ScrolledWindow):
 
     def RectInWhichCompartment(self, rect: Rect) -> int:
         """Same as InWhichCompartment but for a single rect"""
-        for el in reversed(self._elements):
+        for el in reversed(self._model_elements + self._widget_elements):
             if isinstance(el, CompartmentElt):
                 comp = cast(CompartmentElt, el).compartment
                 comp_rect = comp.rect
@@ -1793,24 +1805,24 @@ class Canvas(wx.ScrolledWindow):
             for index in sel_comp_idx:
                 self.controller.delete_compartment(self._net_index, index)
             post_event(DidDeleteEvent(node_indices=sel_nodes_idx, reaction_indices=sel_reactions_idx,
-                                    compartment_indices=sel_comp_idx))
+                                      compartment_indices=sel_comp_idx))
 
     def SelectAll(self):
         with self._SelectGroupEvent():
             self.sel_nodes_idx.set_item({n.index for n in self._nodes})
             self.sel_reactions_idx.set_item({r.index for r in self._reactions})
             self.sel_compartments_idx.set_item({c.index for c in self._compartments})
-        self.LazyRefresh()
+        self.Redraw()
 
     def SelectAllNodes(self):
         with self._SelectGroupEvent():
             self.sel_nodes_idx.set_item({n.index for n in self._nodes})
-        self.LazyRefresh()
+        self.Redraw()
 
     def SelectAllReactions(self):
         with self._SelectGroupEvent():
             self.sel_reactions_idx.set_item({r.index for r in self._reactions})
-        self.LazyRefresh()
+        self.Redraw()
 
     def ClearCurrentSelection(self):
         """Clear the current highest level of selection.
@@ -1821,21 +1833,21 @@ class Canvas(wx.ScrolledWindow):
         if len(self._reactant_idx) + len(self._product_idx) != 0:
             self._reactant_idx = set()
             self._product_idx = set()
-            self.LazyRefresh()
+            self.Redraw()
         else:
             with self._SelectGroupEvent():
                 self.sel_nodes_idx.set_item(set())
                 self.sel_reactions_idx.set_item(set())
                 self.sel_compartments_idx.set_item(set())
-            self.LazyRefresh()
+            self.Redraw()
 
     def MarkSelectedAsReactants(self):
         self._reactant_idx = self.sel_nodes_idx.item_copy()
-        self.LazyRefresh()
+        self.Redraw()
 
     def MarkSelectedAsProducts(self):
         self._product_idx = self.sel_nodes_idx.item_copy()
-        self.LazyRefresh()
+        self.Redraw()
 
     def CreateReactionFromMarked(self, id='r'):
         if len(self._reactant_idx) == 0:
@@ -1872,7 +1884,7 @@ class Canvas(wx.ScrolledWindow):
             self.sel_compartments_idx.set_item(set())
             self.sel_reactions_idx.set_item(
                 {self.controller.get_reaction_index(self._net_index, id)})
-        self.LazyRefresh()
+        self.Redraw()
 
     def CopySelected(self):
         self._copied_nodes = copy.deepcopy(self.GetSelectedNodes())
@@ -1906,13 +1918,13 @@ class Canvas(wx.ScrolledWindow):
     def AddPluginElement(self, net_index: int, element: CanvasElement):
         # TODO currently not accounting for net_index
         self._plugin_elements.add(element)
-        self._elements.add(element)
+        self._widget_elements.add(element)
 
     def RemovePluginElement(self, net_index: int, element: CanvasElement):
         if element not in self._plugin_elements:
             raise ValueError("Tried to remove an element that is not on canvas.")
         self._plugin_elements.remove(element)
-        self._elements.remove(element)
+        self._widget_elements.remove(element)
 
     def GetReactionCentroids(self, net_index: int) -> Dict[int, Vec2]:
         """Helper method for ReactionForm to get access to the centroid positions.

@@ -920,4 +920,3 @@ class RKView(IView):
         Note that RKView takes ownership of the list of nodes and may modify it.
         """
         self.canvas_panel.Reset(nodes, reactions, compartments)
-        self.canvas_panel.LazyRefresh()

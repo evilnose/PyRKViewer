@@ -475,6 +475,11 @@ def get_setting(setting_attr) -> Any:
     return _settings[setting_attr]
 
 
+def is_fast_mode() -> bool:
+    '''Convenience method for getting whether we're currently in fast mode'''
+    return _settings.get('fast_mode', True)
+
+
 def get_theme(theme_attr, convert_color=True) -> Any:
     '''convert_color: if True, convert Color instances to wx.Colour instances automatically
     '''

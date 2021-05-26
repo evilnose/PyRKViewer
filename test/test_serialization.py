@@ -73,7 +73,7 @@ class TestSerialization(TestWithApp):
 
         shape_items = shapeDict["items"][0]
         
-        test_rectangle_primitive(self, shape_item = shape_items)
+        match_rectangle_primitive(self, shape_item = shape_items)
         # self.assertEqual(3, len(shape_items[0]["border_color"]))
         # self.assertIsInstance(shape_items[0]["border_width"], float)
         # self.assertEqual("rectangle", shape_items[0]["name"])
@@ -146,16 +146,16 @@ class TestSerialization(TestWithApp):
             
 
             if shapeDict["name"] =="rectangle":
-                test_primitive(self, shape_items, "rectangle")
+                match_primitive(self, shape_items, "rectangle")
             elif shapeDict["name"] =="circle":
-                test_primitive(self, shape_items, "circle")
+                match_primitive(self, shape_items, "circle")
             elif shapeDict["name"] == "text outside":
                 #self.assertEqual("circle", shape_items[0]["name"])
-                test_primitive(self, shape_items, "circle")
+                match_primitive(self, shape_items, "circle")
             elif shapeDict["name"] == "demo combo":
-                test_primitive(self, shape_items[0], "circle")
-                test_primitive(self, shape_items[1], "circle")
-                test_primitive(self, shape_items, "rectangle")
+                match_primitive(self, shape_items[0], "circle")
+                match_primitive(self, shape_items[1], "circle")
+                match_primitive(self, shape_items, "rectangle")
 
     def testAlias(self):
         #since original node is at 0, alias is at 1
@@ -199,16 +199,15 @@ poly_shapes = {
     'triangle':3,
     'line':2
 }
-def test_primitive(test_obj, shape_item, shape_name):
+def match_primitive(test_obj, shape_item, shape_name):
     if shape_name == "rectangle":
-        test_rectangle_primitive(test_obj, shape_item)
+        match_rectangle_primitive(test_obj, shape_item)
     elif shape_name =="circle":
-        test_circle_primitive(test_obj, shape_item)
+        match_circle_primitive(test_obj, shape_item)
     else:
-        test_polygon_primitive(test_obj, shape_item, shape_name)
+        match_polygon_primitive(test_obj, shape_item, shape_name)
 
-def test_rectangle_primitive(test_obj, shape_item):
-
+def match_rectangle_primitive(test_obj, shape_item):
     test_obj.assertEqual(3, len(shape_item[0]["border_color"]))
     test_obj.assertIsInstance(shape_item[0]["border_width"], float)
     test_obj.assertEqual("rectangle", shape_item[0]["name"])
@@ -220,7 +219,7 @@ def test_rectangle_primitive(test_obj, shape_item):
     test_obj.assertEqual(2, len(shape_item[1]["scale"]))
     test_obj.assertEqual(2, len(shape_item[1]["translation"]))
 
-def test_circle_primitive(test_obj, shape_item):
+def match_circle_primitive(test_obj, shape_item):
     test_obj.assertEqual(3, len(shape_item[0]["border_color"]))
     test_obj.assertIsInstance(shape_item[0]["border_width"], float)
     test_obj.assertEqual("circle", shape_item[0]["name"])
@@ -231,7 +230,7 @@ def test_circle_primitive(test_obj, shape_item):
     test_obj.assertEqual(2, len(shape_item[1]["scale"]))
     test_obj.assertEqual(2, len(shape_item[1]["translation"]))
 
-def test_polygon_primitive(test_obj, shape_item, shape_name):
+def match_polygon_primitive(test_obj, shape_item, shape_name):
     test_obj.assertEqual(3, len(shape_item[0]["border_color"]))
     test_obj.assertIsInstance(shape_item[0]["border_width"], float)
     test_obj.assertEqual(4, len(shape_item[0]["fill_color"]))

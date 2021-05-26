@@ -22,17 +22,22 @@ class TestDeserialization(TestWithApp):
         iodine.clearNetworks()
 
     def testNetwork(self):
+        '''Load network, validate its state, dump it, and compare the dumped object with the
+        object before it was deserialized'''
         dirname = os.path.dirname(__file__)
         pathname = os.path.join(dirname, 'test.json')
 
         with open(pathname, 'r') as file:
-            net_json = json.load(file)
-        network = iodine.loadNetwork(net_json)
+            original_obj = json.load(file)
+
+        iodine.loadNetwork(original_obj)
         iodine.validateState()
 
+        self.maxDiff = None
         dump_object = iodine.dumpNetwork(0)
-        print(json.dumps(dump_object, indent = 4))
-        self.assertDictEqual(net_json, dump_object)
+        dumped_str = json.dumps(dump_object, indent=4, sort_keys=True)
+        original_str = json.dumps(original_obj, indent=4, sort_keys=True)
+        self.assertEqual(original_str, dumped_str)
 
         
         #self.assertEqual(0, iodine.getNetworkID(0))

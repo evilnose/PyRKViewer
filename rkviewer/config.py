@@ -1,7 +1,7 @@
 """Configuration parameters.
 """
 # pylint: disable=maybe-no-member
-from __future__ import annotations
+# from __future__ import annotations
 
 import copy
 import os
@@ -36,14 +36,14 @@ def GetThemeSettingsPath ():
     return os.path.join(config_dir, 'rkViewer', 'settings.json')
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=True)
 class Color:
     r: int
     g: int
     b: int
     a: int = 255
 
-    def swapped(self, r: int = None, g: int = None, b: int = None, a: int = None) -> Color:
+    def swapped(self, r: int = None, g: int = None, b: int = None, a: int = None) -> 'Color':
         if r is None:
             r = self.r
         if g is None:
@@ -56,6 +56,12 @@ class Color:
 
     def to_wxcolour(self):
         return wx.Colour(self.r, self.g, self.b, self.a)
+
+    @classmethod
+    def from_rgb(cls, val: int) -> 'Color':
+        """Create color from RGB hex value: #00BBGGRR"""
+        return Color((val >> 0) & 255, (val >> 8) & 255, (val >> 16) & 255)
+
 
 
 @dataclass
@@ -288,7 +294,7 @@ class ThemeSchema(Schema):
     node_width = Dim(missing=50)
     node_height = Dim(missing=30)
     # node_corner_radius = Dim(missing=0.15)
-    node_border_width = Dim(missing=0.05)
+    node_border_width = Dim(missing=2)
     node_font_size = Pixel(missing=10)
     node_font_color = ColorField(missing=Color(255, 0, 0, 100))
     # Width of the outline around each selected node

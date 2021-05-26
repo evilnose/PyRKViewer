@@ -1,7 +1,7 @@
 Plugin Base Classes
 ==============
 
-.. automodule:: rkplugin.plugins
+.. automodule:: rkviewer.plugin.classes
    :members:
    :undoc-members:
    :noindex:

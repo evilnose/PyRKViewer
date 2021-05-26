@@ -8,7 +8,7 @@ Adapted by:         Gary Geng
 TODOs
     * Phase out errCode, or at least provide more detalis in error messages.
 """
-from __future__ import annotations
+# from __future__ import annotations
 import abc
 from re import S, X
 from functools import partial
@@ -21,8 +21,8 @@ from .mvc import (ModifierTipStyle, IDNotFoundError, IDRepeatError, NodeNotFreeE
                   StackEmptyError, JSONError, FileError)
 from .config import ColorField, Pixel, Dim, Dim2, Color, Font, FontField, get_theme
 from .canvas.geometry import Vec2
-from .canvas.data import CompositeShapeFactory, PrimitiveFactory, TCirclePrim, TCompositeShape, TPrimitive, \
-    TRectanglePrim, THexagonPrim, TLinePrim, TTrianglePrim, TTransform, TTextPrim, ChoiceItem,\
+from .canvas.data import CompositeShapeFactory, PrimitiveFactory, CirclePrim, CompositeShape, Primitive, \
+    RectanglePrim, HexagonPrim, LinePrim, TrianglePrim, Transform, TextPrim, ChoiceItem,\
     FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, TEXT_ALIGNMENT_CHOICES
 import copy
 from dataclasses import dataclass, field
@@ -32,6 +32,11 @@ from enum import Enum
 from collections import defaultdict
 from marshmallow import Schema, fields, validate, missing as missing_, ValidationError, pre_dump
 from pprint import pprint
+
+
+# The current version of the network serialization schema.
+SERIAL_VERSION = "1.0.0"
+
 
 def get_theme_fn(name):
     return partial(get_theme, name, convert_color=False)
@@ -44,29 +49,31 @@ geometry_kwargs = {
 }
 
 # Default primitive factories
-rectFact = PrimitiveFactory(TRectanglePrim, **geometry_kwargs)
-circleFact = PrimitiveFactory(TCirclePrim, **geometry_kwargs)
-hexFact = PrimitiveFactory(THexagonPrim, **geometry_kwargs)
-lineFact = PrimitiveFactory(TLinePrim, **geometry_kwargs)
-triangleFact = PrimitiveFactory(TTrianglePrim, **geometry_kwargs)
-textFact = PrimitiveFactory(TTextPrim)
-singletonTrans = TTransform()  # fills the entire bounding box
+rectFact = PrimitiveFactory(RectanglePrim, **geometry_kwargs)
+circleFact = PrimitiveFactory(CirclePrim, **geometry_kwargs)
+hexFact = PrimitiveFactory(HexagonPrim, **geometry_kwargs)
+lineFact = PrimitiveFactory(LinePrim, **geometry_kwargs)
+triangleFact = PrimitiveFactory(TrianglePrim, **geometry_kwargs)
+textFact = PrimitiveFactory(TextPrim)
+singletonTrans = Transform()  # fills the entire bounding box
 
+DEFAULT_SHAPE_FACTORY = CompositeShapeFactory([(rectFact, singletonTrans)],
+                        (textFact, singletonTrans), 'rectangle')
 # These are the default shape factories. They should never be modified by the user.
 shapeFactories = [
-    CompositeShapeFactory([(rectFact, singletonTrans)], (textFact, singletonTrans), 'rectangle'),
+    DEFAULT_SHAPE_FACTORY,
     CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, singletonTrans), 'circle'),
     CompositeShapeFactory([(hexFact, singletonTrans)], (textFact, singletonTrans), 'hexagon'),
     CompositeShapeFactory([(lineFact, singletonTrans)], (textFact, singletonTrans), 'line'),
     CompositeShapeFactory([(triangleFact, singletonTrans)], (textFact, singletonTrans), 'triangle'),
     CompositeShapeFactory([], (textFact, singletonTrans), 'text-only'),
-    CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, TTransform(translation=Vec2(1, 1))), 'text outside'),
-    CompositeShapeFactory([(circleFact, TTransform(scale=Vec2.repeat(0.5))),
-                           (circleFact, TTransform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
-                           (PrimitiveFactory(TRectanglePrim, fill_color=Color(255, 0, 0, 255)),
-                                TTransform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.25)))
+    CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, Transform(translation=Vec2(1, 1))), 'text outside'),
+    CompositeShapeFactory([(circleFact, Transform(scale=Vec2.repeat(0.5))),
+                           (circleFact, Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
+                           (PrimitiveFactory(RectanglePrim, fill_color=Color(255, 0, 0, 255)),
+                                Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.25)))
                            ],
-        (PrimitiveFactory(TTextPrim, font_color=Color(255, 255, 255, 255)), singletonTrans), 'demo combo'),
+        (PrimitiveFactory(TextPrim, font_color=Color(255, 255, 255, 255)), singletonTrans), 'demo combo'),
 ]
 
 
@@ -89,7 +96,7 @@ class TNode(TAbstractNode):
     nodeLocked: bool #if false it means the node can be moved
     compi: int = -1
     shapei: int = 0
-    shape: TCompositeShape = field(default_factory=lambda: shapeFactories[0].produce())
+    shape: CompositeShape = field(default_factory=lambda: shapeFactories[0].produce())
 
 
 @dataclass
@@ -103,10 +110,16 @@ class TAliasNode(TAbstractNode):
 
 
 class TNetwork:
+    '''Represents an entire reaction network.
+
+    **NOTE IMPORTANT** whenever any change is made to the code that changes how the network is
+    serialized/deserialized, one must bump the global variable SERIAL_VERSION to reflect that. See
+    NetworkSchema::serialVersion for more information.
+    '''
     id: str
     nodes: Dict[int, TAbstractNode]
-    reactions: Dict[int, TReaction]
-    compartments: Dict[int, TCompartment]
+    reactions: Dict[int, 'TReaction']
+    compartments: Dict[int, 'TCompartment']
     baseNodes: Set[int]  #: Set of node indices not in any compartment
     srcMap: DefaultDict[int, MutableSet[int]]  #: Map nodes to reactions of which it is a source
     destMap: DefaultDict[int, MutableSet[int]]  #: Map nodes to reactions of which it is a target
@@ -115,8 +128,9 @@ class TNetwork:
     lastCompartmentIdx: int
 
     def __init__(self, id: str, nodes: Dict[int, TAbstractNode] = None,
-                 reactions: Dict[int, TReaction] = None,
-                 compartments: Dict[int, TCompartment] = None):
+                 reactions: Dict[int, 'TReaction'] = None,
+                 compartments: Dict[int, 'TCompartment'] = None,
+                 ):
         if nodes is None:
             nodes = dict()
         if reactions is None:
@@ -148,7 +162,7 @@ class TNetwork:
         self.lastNodeIdx += 1
         return ret
 
-    def addReaction(self, rea: TReaction):
+    def addReaction(self, rea: 'TReaction'):
         self.reactions[self.lastReactionIdx] = rea
 
         # update nodeToReactions
@@ -159,7 +173,7 @@ class TNetwork:
 
         self.lastReactionIdx += 1
 
-    def addCompartment(self, comp: TCompartment) -> int:
+    def addCompartment(self, comp: 'TCompartment') -> int:
         ind = self.lastCompartmentIdx
         self.compartments[ind] = comp
         self.lastCompartmentIdx += 1
@@ -171,8 +185,8 @@ class TReaction:
     id: str
     centerPos: Optional[Vec2] = None
     rateLaw: str = ""
-    reactants: Dict[int, TSpeciesNode] = field(default_factory=dict)
-    products: Dict[int, TSpeciesNode] = field(default_factory=dict)
+    reactants: Dict[int, 'TSpeciesNode'] = field(default_factory=dict)
+    products: Dict[int, 'TSpeciesNode'] = field(default_factory=dict)
     fillColor: Color = Color(255, 150, 80, 255)
     thickness: float = 3.0
     centerHandlePos: Vec2 = Vec2()
@@ -200,7 +214,7 @@ class TCompartment:
 
 
 class TStack:
-    items: List[TNetworkDict]
+    items: List['TNetworkDict']
 
     def __init__(self):
         self.items = []
@@ -208,7 +222,7 @@ class TStack:
     def isEmpty(self):
         return self.items == []
 
-    def push(self, netDict: TNetworkDict):
+    def push(self, netDict: 'TNetworkDict'):
         theSet = copy.deepcopy(netDict)
         self.items.append(theSet)
 
@@ -925,8 +939,9 @@ def getNodeFillColor(neti: int, nodei: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.fill_color, Color)
-            return prim.fill_color
+            ret = getattr(prim, 'fill_color')
+            assert isinstance(ret, Color)
+            return ret
     return None
 
 
@@ -964,8 +979,9 @@ def getNodeBorderColor(neti: int, nodei: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.border_color, Color)
-            return prim.border_color
+            ret = getattr(prim, 'border_color')
+            assert isinstance(ret, Color)
+            return ret
     return None
 
 
@@ -1002,7 +1018,7 @@ def getNodeBorderWidth(neti: int, nodei: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_width' in prim.__dataclass_fields__:
-            return prim.border_width
+            return getattr(prim, 'border_width')
     return None
 
 
@@ -1144,8 +1160,9 @@ def setNodeFillColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.fill_color, Color)
-            prim.fill_color = prim.fill_color.swapped(r, g, b)
+            old_color = getattr(prim, 'fill_color')
+            assert isinstance(old_color, Color)
+            setattr(prim, 'fill_color', old_color.swapped(r, g, b))
 
 
 def setNodeFillColorAlpha(neti: int, nodei: int, a: float):
@@ -1161,9 +1178,10 @@ def setNodeFillColorAlpha(neti: int, nodei: int, a: float):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'fill_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.fill_color, Color)
             a_int = int(a * 255)
-            prim.fill_color = prim.fill_color.swapped(a=a_int)
+            old_color = getattr(prim, 'fill_color')
+            assert isinstance(old_color, Color)
+            setattr(prim, 'fill_color', old_color.swapped(a=a_int))
 
 
 def setNodeBorderColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
@@ -1179,8 +1197,9 @@ def setNodeBorderColorRGB(neti: int, nodei: int, r: int, g: int, b: int):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.border_color, Color)
-            prim.border_color = prim.border_color.swapped(r, g, b)
+            old_color = getattr(prim, 'border_color')
+            assert isinstance(old_color, Color)
+            setattr(prim, 'border_color', old_color.swapped(r, g, b))
 
 
 def setNodeBorderColorAlpha(neti: int, nodei: int, a: float):
@@ -1195,9 +1214,10 @@ def setNodeBorderColorAlpha(neti: int, nodei: int, a: float):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_color' in prim.__dataclass_fields__:
-            assert isinstance(prim.border_color, Color)
             a_int = int(a * 255)
-            prim.border_color = prim.border_color.swapped(a=a_int)
+            old_color = getattr(prim, 'border_color')
+            assert isinstance(old_color, Color)
+            setattr(prim, 'border_color', old_color.swapped(a=a_int))
 
 
 def setNodeBorderWidth(neti: int, nodei: int, width: float):
@@ -1212,8 +1232,7 @@ def setNodeBorderWidth(neti: int, nodei: int, width: float):
     node = _getConcreteNode(neti, nodei)
     for prim, _ in node.shape.items:
         if 'border_width' in prim.__dataclass_fields__:
-            prim.border_width = width
-
+            setattr(prim, 'border_width', width)
 
 
 def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]):
@@ -1226,7 +1245,7 @@ def createReaction(neti: int, reaID: str, sources: List[int], targets: List[int]
     errCode = 0
 
     if len(sources) == 0 or len(targets) == 0:
-        raise ValueError('Both the sources and targets of a reaction must be nonempty.')
+        raise ValueError("Reaction '{}' has no reactants or it has no products".format(reaID))
 
     net = _getNetwork(neti)
     # duplicate ID?
@@ -2258,7 +2277,7 @@ def getCompositeShapeAt(neti: int, shapei: int):
     return shapeFactories[shapei].produce()
 
 
-def getNodeShape(neti: int, nodei: int) -> TCompositeShape:
+def getNodeShape(neti: int, nodei: int) -> CompositeShape:
     return copy.copy(_getConcreteNode(neti, nodei).shape)
 
 
@@ -2299,6 +2318,14 @@ def setNodePrimitiveProperty(neti: int, nodei: int, prim_index: int, prop_name: 
     if prop_name not in primitive.__dataclass_fields__:
         raise ValueError('`{}` is not a property of primitive `{}`'.format(
             prop_name, primitive.__class__.__name__))
+
+    field = primitive.__dataclass_fields__[prop_name]
+    # ensure that the assigned type is correct
+    if not isinstance(prop_value, field.type):
+        raise ValueError(f'Could not set primitive property `{prop_name}` of node {nodei} at '
+                         f'primitive index {prim_index}. Expected object of type `{field.type.__name__}`; got '
+                         f'`{prop_value}`(`{type(prop_value).__name__}`) instead. Note: the primitive '
+                         f'is of type `{type(primitive).__name__}`.')
 
     # This is not very safe, but this is very simple to implement, so it shall be like this for now
     setattr(primitive, prop_name, prop_value)
@@ -2410,8 +2437,8 @@ class TransformSchema(Schema):
     scale = Dim2()
 
     @post_load
-    def post_load(self, data: Any, **kwargs) -> TTransform:
-        return TTransform(**data)
+    def post_load(self, data: Any, **kwargs) -> Transform:
+        return Transform(**data)
 
 
 class PrimitiveSchema(Schema):
@@ -2425,16 +2452,16 @@ class RectangleSchema(PrimitiveSchema):
     corner_radius = Dim()
 
     @post_load
-    def post_load(self, data: Any, **kwargs) -> TRectanglePrim:
+    def post_load(self, data: Any, **kwargs) -> RectanglePrim:
         del data['name']
-        return TRectanglePrim(**data)
+        return RectanglePrim(**data)
 
 
 class CircleSchema(PrimitiveSchema):
     @post_load
-    def post_load(self, data: Any, **kwargs) -> TCirclePrim:
+    def post_load(self, data: Any, **kwargs) -> CirclePrim:
         del data['name']
-        return TCirclePrim(**data)
+        return CirclePrim(**data)
 
 
 class PolygonSchema(PrimitiveSchema):
@@ -2448,34 +2475,34 @@ class PolygonSchema(PrimitiveSchema):
 class LineSchema(PrimitiveSchema):
     points = fields.Tuple(([Dim2()]*2))
     @post_load
-    def post_load(self, data: Any, **kwargs) -> TLinePrim:
+    def post_load(self, data: Any, **kwargs) -> LinePrim:
         del data['name']
-        return TLinePrim(**data)
+        return LinePrim(**data)
 
 
 class TriangleSchema(PolygonSchema):
     points = fields.Tuple(((Dim2(),)*4))
     @post_load
-    def post_load(self, data: Any, **kwargs) -> TTrianglePrim:
+    def post_load(self, data: Any, **kwargs) -> TrianglePrim:
         del data['name']
-        return TTrianglePrim(**data)
+        return TrianglePrim(**data)
 
 
 class HexagonSchema(PolygonSchema):
     points = fields.Tuple((Dim2(),)*7)
     @post_load
-    def post_load(self, data: Any, **kwargs) -> THexagonPrim:
+    def post_load(self, data: Any, **kwargs) -> HexagonPrim:
         del data['name']
-        return THexagonPrim(**data)
+        return HexagonPrim(**data)
 
 
 def primitive_dump(base_obj, parent_obj):
     ret = {
-        TRectanglePrim.__name__: RectangleSchema,
-        TCirclePrim.__name__: CircleSchema,
-        TLinePrim.__name__: LineSchema,
-        TTrianglePrim.__name__: TriangleSchema,
-        THexagonPrim.__name__: HexagonSchema
+        RectanglePrim.__name__: RectangleSchema,
+        CirclePrim.__name__: CircleSchema,
+        LinePrim.__name__: LineSchema,
+        TrianglePrim.__name__: TriangleSchema,
+        HexagonPrim.__name__: HexagonSchema
         
     }[base_obj.__class__.__name__]()
     return ret
@@ -2507,8 +2534,8 @@ class TextSchema(Schema):
     alignment = ChoiceField(TEXT_ALIGNMENT_CHOICES)
 
     @post_load
-    def post_load(self, data: Any, **kwargs) -> TTextPrim:
-        return TTextPrim(**data)
+    def post_load(self, data: Any, **kwargs) -> TextPrim:
+        return TextPrim(**data)
 
 class CompositeShapeSchema(Schema):
     name = fields.Str()
@@ -2516,8 +2543,8 @@ class CompositeShapeSchema(Schema):
     items = fields.List(fields.Tuple((primitiveField, fields.Nested(TransformSchema))))
 
     @post_load
-    def post_load(self, data: Any, **kwargs) -> TCompositeShape:
-        return TCompositeShape(**data)
+    def post_load(self, data: Any, **kwargs) -> CompositeShape:
+        return CompositeShape(**data)
 
 class AbstractNodeSchema(Schema):
     index = fields.Int()
@@ -2628,6 +2655,19 @@ class NetworkSchema(Schema):
 
     @pre_load
     def pre_load(self, data: Any, **kwargs):
+        # load serialization version
+        # this records the version of the serialization. Whenever the serialization scheme is changed,
+        # we update the version number, so that if a user is trying to load a network with an
+        # older serialization version than the current application (or vice versa), we can either fail
+        # to try to do some conversion.
+        serial_version = data.get('serialVersion', 'pre-release')
+        if serial_version != SERIAL_VERSION:
+            # we have a mismatch
+            print(("Warning: loaded network has serial version '{}', which does not match that of "
+                   "the application: '{}'").format(serial_version, SERIAL_VERSION))
+        if 'serialVersion' in data:
+            del data['serialVersion']
+
         # populate the index field of nodes. This is a redundancy, so we don't expect this field
         # to be serialized/deserialized
         for nodei, nodedata in data['nodes'].items():
@@ -2638,6 +2678,11 @@ class NetworkSchema(Schema):
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNetwork:
         return TNetwork(**data)
+    
+    @post_dump
+    def post_dump(self, data, **kwargs):
+        data['serialVersion'] = SERIAL_VERSION
+        return data
 
 
 net_schema = NetworkSchema()

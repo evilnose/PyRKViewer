@@ -14,7 +14,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath("../.."))
 sys.path.insert(0, os.path.abspath("../../plugins"))
-# sys.path.insert(0, os.path.abspath("../../rkplugin"))
+# sys.path.insert(0, os.path.abspath("../../rkviewer/plugin"))
 
 # -- Project information -----------------------------------------------------
 
@@ -27,7 +27,7 @@ release = '0.0.1'
 import sphinx_rtd_theme
 
 # readthedocs can't deal with wx, so we tell it to pretend it can
-autodoc_mock_imports = ['sortedcontainers', 'scipy', 'numpy', 'wx', 'wxpython', 'gtk', 'gtk+', 'glib', 'pillow']
+autodoc_mock_imports = ['sortedcontainers', 'numpy', 'wx', 'wxpython', 'gtk', 'gtk+', 'glib', 'pillow']
 
 # -- General configuration ---------------------------------------------------
 

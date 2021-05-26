@@ -2,7 +2,7 @@
 """
 import os
 from pathlib import Path
-from rkplugin.plugins import CATEGORY_NAMES, PluginCategory
+from rkviewer.plugin.classes import CATEGORY_NAMES, PluginCategory
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import json
 
@@ -12,7 +12,7 @@ import wx
 from wx.lib.buttons import GenBitmapButton, GenBitmapTextButton
 import wx.lib.agw.flatnotebook as fnb
 from commentjson.commentjson import JSONLibraryException
-from rkplugin.api import init_api
+from rkviewer.plugin.api import init_api
 import wx.adv
 
 import rkviewer
@@ -499,7 +499,7 @@ class MainFrame(wx.Frame):
         self.menu_events = list()
         file_menu = wx.Menu()
 
-        self.AddMenuItem(file_menu, '&New...', 'Start a new network',
+        self.AddMenuItem(file_menu, '&New', 'Start a new network',
                          lambda _: self.NewNetwork(),  entries, key=(wx.ACCEL_CTRL, ord('N')))
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Load...', 'Load network from JSON file',
@@ -565,6 +565,12 @@ class MainFrame(wx.Frame):
         self.AddMenuItem(view_menu, '&Reset Zoom', 'Reset canva zoom',
                          lambda _: canvas.ResetZoom(), entries, key=(wx.ACCEL_CTRL, ord(' ')))
 
+        canvas_menu = wx.Menu()
+        self.AddMenuItem(canvas_menu, '&Fit all node size to text',
+                         'Fit the size of every node to its containing text',
+                         lambda _: canvas.FitNodeSizeToText(), entries,
+                         key=(wx.ACCEL_ALT | wx.ACCEL_SHIFT, ord('F')))
+
         reaction_menu = wx.Menu()
         self.AddMenuItem(reaction_menu, 'Mark Selected as &Reactants',
                          'Mark selected nodes as reactants',
@@ -595,6 +601,7 @@ class MainFrame(wx.Frame):
         menu_bar.Append(edit_menu, '&Edit')
         menu_bar.Append(select_menu, '&Select')
         menu_bar.Append(view_menu, '&View')
+        menu_bar.Append(canvas_menu, '&Canvas')
         menu_bar.Append(reaction_menu, '&Reaction')
         menu_bar.Append(self.plugins_menu, '&Plugins')
         menu_bar.Append(help_menu, '&Help')
@@ -861,8 +868,9 @@ class MainFrame(wx.Frame):
         """
         if isinstance(widget, wx.TextCtrl):
             def OnFocus(evt):
-                for cb, item in self.menu_events:
-                    self.Unbind(wx.EVT_MENU, handler=cb, source=item)
+                # for cb, item in self.menu_events:
+                #     self.Unbind(wx.EVT_MENU, handler=cb, source=item)
+
                 # For some reason, we need to do this for both self and menubar to disable the
                 # AcceleratorTable. Don't ever lose this sacred knowledge, for it came at the cost
                 # of 50 minutes.
@@ -871,8 +879,8 @@ class MainFrame(wx.Frame):
                 evt.Skip()
 
             def OnUnfocus(evt):
-                for cb, item in self.menu_events:
-                    self.Bind(wx.EVT_MENU, handler=cb, source=item)
+                # for cb, item in self.menu_events:
+                #     self.Bind(wx.EVT_MENU, handler=cb, source=item)
                 self.SetAcceleratorTable(self.atable)
                 evt.Skip()
 

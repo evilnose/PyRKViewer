@@ -1,12 +1,12 @@
 # pylint: disable=maybe-no-member
 from numpy.core.fromnumeric import shape
 from numpy.lib.polynomial import poly
-from test.api.common import TestWithApp
+from test.api.common import DummyAppTest
 from typing import List
 from rkviewer.canvas.data import Reaction
 from rkviewer.mvc import CompartmentIndexError, NetIndexError, NodeIndexError, ReactionIndexError
 from rkviewer import iodine
-from rkplugin.api import Node, NodeData, Vec2
+from rkviewer.plugin.api import Node, NodeData, Vec2
 import unittest
 import wx
 import time
@@ -20,6 +20,7 @@ def createNode(nodeID, shapei= 0):
 def createAlias(nodeID, shapei = 0):
     nodei = createNode(nodeID, shapei)
     iodine.addAliasNode(0, nodei, 0.3, 0.4, 3, 4)
+    return nodei
 
 def createReaction():
     reactanti = createNode("reactant", 0)
@@ -42,7 +43,7 @@ def createCompartment():
 
     #add following reaction
 
-class TestSerialization(TestWithApp):
+class TestSerialization(DummyAppTest):
     def setUp(self):
         iodine.newNetwork("net1")
 

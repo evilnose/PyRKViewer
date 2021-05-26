@@ -10,9 +10,9 @@ from inspect import Parameter
 #from libsbml import KineticLaw
 #from tesbml.libsbml import BoundaryCondition
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
-from rkplugin import api
-from rkplugin.api import Node, Vec2, Reaction, Color
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin import api
+from rkviewer.plugin.api import Node, Vec2, Reaction, Color
 import os
 from libsbml import * # does not have to import in the main.py too
 
@@ -105,7 +105,7 @@ class ExportSBML(WindowedPlugin):
                         species.setHasOnlySubstanceUnits(False)
                         species.setBoundaryCondition(False)
                         species.setConstant(False)             
-                        if allNodes[allcompartments[i].nodes[j]].floatingNode == False:
+                        if allNodes[allcompartments[i].nodes[j]].floating_node == False:
                             species.setBoundaryCondition(True)
             else: #set default compartment
                 compartment = model.createCompartment()
@@ -121,7 +121,7 @@ class ExportSBML(WindowedPlugin):
                     species.setHasOnlySubstanceUnits(False)
                     species.setBoundaryCondition(False)
                     species.setConstant(False)             
-                    if allNodes[i].floatingNode == False:
+                    if allNodes[i].floating_node == False:
                         species.setBoundaryCondition(True)
                         species.setConstant(True)
 

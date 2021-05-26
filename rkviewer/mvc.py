@@ -7,7 +7,7 @@ import abc
 import copy
 from typing import Any, List, Optional, Set, Tuple
 from .canvas.geometry import Vec2
-from .canvas.data import Compartment, Node, Reaction, ModifierTipStyle, TCompositeShape
+from .canvas.data import Compartment, Node, Reaction, ModifierTipStyle, CompositeShape
 
 
 class IController(abc.ABC):
@@ -58,12 +58,12 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def move_node(self, neti: int, nodei: int, pos: Vec2, programmatic: bool = False) -> bool:
+    def move_node(self, neti: int, nodei: int, pos: Vec2, allowNegativeCoords: bool = False) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
     @abc.abstractmethod
-    def set_node_size(self, neti: int, nodei: int, size: Vec2, programmatic: bool = False) -> bool:
+    def set_node_size(self, neti: int, nodei: int, size: Vec2) -> bool:
         """Try to move the give node. TODO only accept node ID and new location"""
         pass
 
@@ -339,15 +339,15 @@ class IController(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_composite_shape_list(self, neti: int) -> List[TCompositeShape]:
+    def get_composite_shape_list(self, neti: int) -> List[CompositeShape]:
         pass
 
     @abc.abstractmethod
-    def get_composite_shape_at(self, neti: int, shapei: int) -> List[TCompositeShape]:
+    def get_composite_shape_at(self, neti: int, shapei: int) -> List[CompositeShape]:
         pass
 
     @abc.abstractmethod
-    def get_node_shape(self, neti: int, nodei: int) -> TCompositeShape:
+    def get_node_shape(self, neti: int, nodei: int) -> CompositeShape:
         pass
 
     @abc.abstractmethod

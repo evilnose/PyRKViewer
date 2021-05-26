@@ -9,9 +9,9 @@ Version 0.02: Author: Jin Xu (2021)
 from inspect import Parameter
 #from libsbml import KineticLaw
 import wx
-from rkplugin.plugins import PluginMetadata, WindowedPlugin, PluginCategory
-from rkplugin import api
-from rkplugin.api import Node, Vec2, Reaction, Color
+from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
+from rkviewer.plugin import api
+from rkviewer.plugin.api import Node, Vec2, Reaction, Color
 import os
 import simplesbml # does not have to import in the main.py too
 from libsbml import *
@@ -223,7 +223,7 @@ class IMPORTSBML(WindowedPlugin):
                         if temp_id == spec_id_list[j]:
                             dimension = spec_dimension_list[j]
                             position = spec_position_list[j] 
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, floatingNode = True, 
+                    nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = True, 
                     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]), 
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
@@ -239,7 +239,7 @@ class IMPORTSBML(WindowedPlugin):
                         if temp_id == spec_id_list[j]:
                             dimension = spec_dimension_list[j]
                             position = spec_position_list[j] 
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, floatingNode = False, 
+                    nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = False, 
                     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]), 
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
@@ -254,7 +254,7 @@ class IMPORTSBML(WindowedPlugin):
                 for i in range (numFloatingNodes):
                     temp_id = FloatingNodes_ids[i]
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floatingNode = True, 
+                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = True, 
                     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
@@ -266,7 +266,7 @@ class IMPORTSBML(WindowedPlugin):
                 for i in range (numBoundaryNodes):
                     temp_id = BoundaryNodes_ids[i]
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floatingNode = False, 
+                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = False, 
                     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
@@ -296,7 +296,6 @@ class IMPORTSBML(WindowedPlugin):
                 kinetics = model.getRateLaw(i)
                 rct_num = model.getNumReactants(i)
                 prd_num = model.getNumProducts(i)
-
 
                 for j in range(rct_num):
                     rct_id = model.getReactant(temp_id,j)

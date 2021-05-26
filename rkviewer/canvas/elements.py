@@ -1,4 +1,4 @@
-from __future__ import annotations
+# from __future__ import annotations
 # pylint: disable=maybe-no-member
 from abc import abstractmethod
 import enum
@@ -7,7 +7,7 @@ from itertools import chain
 from math import pi, cos, sin
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
-from rkviewer.canvas.data import TCirclePrim, TCompositeShape, TRectanglePrim, TTrianglePrim, TTransform, TTextPrim, THexagonPrim, TLinePrim
+from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, Transform, TextPrim, HexagonPrim, LinePrim
 
 import wx
 
@@ -19,7 +19,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, TPolygonPrim, TextAlignment
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment
 from .geometry import (
     Rect,
     Vec2,
@@ -265,10 +265,10 @@ class BezierHandle(CanvasElement):
 
 
 class ReactionCenter(CanvasElement):
-    parent: ReactionElement
+    parent: 'ReactionElement'
     _moved: bool
 
-    def __init__(self, parent: ReactionElement, layers: Layer):
+    def __init__(self, parent: 'ReactionElement', layers: Layer):
         super().__init__(layers)
         self.parent = parent
         self._moved = False
@@ -643,7 +643,7 @@ class SelectBox(CanvasElement):
     #: the bounding rect when dragging/resizing started
     _orig_rect: Optional[Rect]
     _bounds: Rect  #: the bounds that the bounding rect may not exceed
-    special_mode: SelectBox.SMode
+    special_mode: 'SelectBox.SMode'
 
     class Mode(enum.Enum):
         IDLE = 0
@@ -1186,67 +1186,100 @@ def primitive_brush(color: Color, is_alias: bool):
     return brush
 
 
-def draw_circle_to_gc(gc: wx.GraphicsContext, circle: TCirclePrim, is_alias: bool):
+def draw_circle_to_gc(gc: wx.GraphicsContext, box: Rect, circle: CirclePrim, is_alias: bool):
     peninfo = primitive_peninfo(circle.border_color, circle.border_width, is_alias)
     pen = gc.CreatePen(peninfo)
     brush = gc.CreateBrush(primitive_brush(circle.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
     path = gc.CreatePath()
-    path.AddCircle(0.0, 0.0, 0.5)
+    path.AddEllipse(box.position.x, box.position.y, box.size.x, box.size.y)
     gc.DrawPath(path)
 
 
-def draw_rect_to_gc(gc: wx.GraphicsContext, rect: TRectanglePrim, is_alias: bool):
-    pen = gc.CreatePen(primitive_peninfo(rect.border_color, rect.border_width, is_alias))
+def draw_rect_to_gc(gc: wx.GraphicsContext, box: Rect, rect: RectanglePrim, is_alias: bool):
+    # restrict the border width of the node to an even integer
+    # this is necessary for aligning the node rectangle to the selection rectangle
+    # why? see Rect::aligned().
+    box = box.aligned()
+    if rect.border_width == 0:
+        border_width = 0
+    else:
+        border_width = max(even_round(rect.border_width), 2)
+    pen = gc.CreatePen(primitive_peninfo(rect.border_color, border_width, is_alias))
     brush = gc.CreateBrush(primitive_brush(rect.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
-    gc.DrawRoundedRectangle(-0.5, -0.5, 1, 1, rect.corner_radius)
+    gc.DrawRoundedRectangle(box.position.x, box.position.y, box.size.x, box.size.y, rect.corner_radius)
 
 
-def draw_polygon_to_gc(gc: wx.GraphicsContext, poly: TPolygonPrim, is_alias: bool):
+def draw_polygon_to_gc(gc: wx.GraphicsContext, box: Rect, poly: PolygonPrim, is_alias: bool):
     pen = gc.CreatePen(primitive_peninfo(poly.border_color, poly.border_width, is_alias))
     brush = gc.CreateBrush(primitive_brush(poly.fill_color, is_alias))
     gc.SetPen(pen)
     gc.SetBrush(brush)
-    gc.DrawLines([wx.Point2D(*p) for p in poly.points])
+    # offset so polygon is centered at (0.5, 0.5)
+    points = [p + Vec2.repeat(0.5) for p in poly.points]
+    transformed_pts = [box.position + p.elem_mul(box.size) for p in points]
+    gc.DrawLines([wx.Point2D(*p) for p in transformed_pts])
 
 
-draw_fn_map = {
-    TCirclePrim: draw_circle_to_gc,
-    TRectanglePrim: draw_rect_to_gc,
-    THexagonPrim: draw_polygon_to_gc,
-    TLinePrim: draw_polygon_to_gc,
-    TTrianglePrim: draw_polygon_to_gc
+# HACK bypass Python typing warnings with Type variables
+draw_fn_map: Dict[Any, Any] = {
+    CirclePrim: draw_circle_to_gc,
+    RectanglePrim: draw_rect_to_gc,
+    HexagonPrim: draw_polygon_to_gc,
+    LinePrim: draw_polygon_to_gc,
+    TrianglePrim: draw_polygon_to_gc
 }
 
 
-def apply_transform_to_gc(gc: wx.GraphicsContext, transform: TTransform):
-    gc.Translate(*transform.translation)
-    gc.Rotate(transform.rotation)
-    gc.Scale(*transform.scale)
+# def apply_transform_to_gc(gc: wx.GraphicsContext, transform: Transform):
+#     gc.Translate(*transform.translation)
+#     gc.Rotate(transform.rotation)
+#     gc.Scale(*transform.scale)
 
 
 def draw_composite_shape(gc: wx.GraphicsContext, bounding_rect: Rect, node: Node):
     shape = node.composite_shape
     gc.PushState()
-    gc.Translate(*bounding_rect.position)
-    gc.Scale(*bounding_rect.size)
+    # gc.Translate(*(bounding_rect.position.elem_mul(bounding_rect.size)))
+    # gc.Scale(*bounding_rect.size)
     for primitive, transform in shape.items:
         gc.PushState()
-        apply_transform_to_gc(gc, transform)
-        draw_fn_map[primitive.__class__](gc, primitive, node.original_index != -1)
+        # apply_transform_to_gc(gc, transform)
+        box = Rect(bounding_rect.position + bounding_rect.size.elem_mul(transform.translation),
+                   bounding_rect.size.elem_mul(transform.scale))
+        draw_fn_map[primitive.__class__](gc, box, primitive, node.original_index != -1)
         gc.PopState()
     gc.PopState()
 
     gc.PushState()
-    apply_transform_to_gc(gc, node.composite_shape.text_item[1])
+    # apply_transform_to_gc(gc, node.composite_shape.text_item[1])
     draw_text_to_gc(gc, bounding_rect, node.id, node.composite_shape.text_item)
     gc.PopState()
 
 
-def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TTextPrim, TTransform]):
+def _truncate_text(gc: wx.GraphicsContext, max_width: float, text: str):
+    '''Truncate the given text (add ellipsis to the end) so that its width fits inside `max_width`.
+
+    Assume that we are using the currently selected font in gc.
+    '''
+
+    tw, th, _, _ = gc.GetFullTextExtent(text)
+    # very rough chopping
+    if tw > max_width:
+        text_len = int((max_width / tw) * len(text))
+        text = text[:text_len]
+        if len(text) > 2:
+            text = text[:-2] + '..'
+        else:
+            text = '..'
+    
+    return text
+
+
+def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TextPrim, Transform]):
     primitive, transform = text_item
 
     # Maybe cache this?
@@ -1260,8 +1293,9 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
     brush = gc.CreateBrush(wx.Brush(primitive.bg_color.to_wxcolour()))
 
     width, height = bounding_rect.size
-    tw, th, _, _ = gc.GetFullTextExtent(
-        text_string)
+    text_string = _truncate_text(gc, bounding_rect.size.x, text_string)
+    tw, th, _, _ = gc.GetFullTextExtent(text_string)
+    
     # remaining x and y
     rx = width - tw
     ry = height - th

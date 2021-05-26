@@ -1,4 +1,4 @@
-from __future__ import annotations
+# from __future__ import annotations
 from functools import partial
 from re import S
 from rkviewer.utils import T, int_round
@@ -58,7 +58,7 @@ class Vec2:
     def y(self):
         return self._y
 
-    def __iter__(self) -> Vec2:
+    def __iter__(self) -> 'Vec2':
         self._i = 0
         return self
 
@@ -72,24 +72,24 @@ class Vec2:
         else:
             raise StopIteration
 
-    def __add__(self, other) -> Vec2:
+    def __add__(self, other) -> 'Vec2':
         return Vec2(self.x + other.x, self.y + other.y)
 
     __iadd__ = __add__
 
-    def __sub__(self, other) -> Vec2:
+    def __sub__(self, other) -> 'Vec2':
         return Vec2(self.x - other.x, self.y - other.y)
 
     __isub__ = __sub__
 
-    def __mul__(self, k) -> Vec2:
+    def __mul__(self, k) -> 'Vec2':
         return Vec2(self.x * k, self.y * k)
 
     __rmul__ = __mul__
 
     __imul__ = __mul__
 
-    def __truediv__(self, k) -> Vec2:
+    def __truediv__(self, k) -> 'Vec2':
         return Vec2(self.x / k, self.y / k)
 
     def __repr__(self) -> str:
@@ -115,7 +115,7 @@ class Vec2:
     def __len__(self) -> int:
         return 2
 
-    def __eq__(self, other: Vec2) -> bool:
+    def __eq__(self, other: 'Vec2') -> bool:
         return abs(self.x - other.x) < 1e-6 and abs(self.y - other.y) < 1e-6
 
     def to_wx_point(self) -> wx.Point:
@@ -123,7 +123,7 @@ class Vec2:
         return wx.Point(self.x, self.y)
 
     # element-wise multiplication
-    def elem_mul(self, other: Vec2) -> Vec2:
+    def elem_mul(self, other: 'Vec2') -> 'Vec2':
         """Return the resulting Vec2 by performing element-wise multiplication.
 
         Examples:
@@ -132,7 +132,7 @@ class Vec2:
         """
         return Vec2(self.x * other.x, self.y * other.y)
 
-    def elem_div(self, other: Vec2) -> Vec2:
+    def elem_div(self, other: 'Vec2') -> 'Vec2':
         """Return the resulting Vec2 by performing element-wise division.
 
         Examples:
@@ -141,18 +141,18 @@ class Vec2:
         """
         return Vec2(self.x / other.x, self.y / other.y)
 
-    def elem_abs(self) -> Vec2:
+    def elem_abs(self) -> 'Vec2':
         """Return the Vec2 obtained by taking the element-wise absolute value of this Vec2."""
         return Vec2(abs(self.x), abs(self.y))
 
-    def map(self, op: Callable[[TNum], Any]) -> Vec2:
+    def map(self, op: Callable[[TNum], Any]) -> 'Vec2':
         """Map the given operation across the two elements of the vector."""
         return Vec2(op(self.x), op(self.y))
 
-    def reduce2(self, op: Callable[[TNum, TNum], Any], other: Vec2) -> Vec2:
+    def reduce2(self, op: Callable[[TNum, TNum], Any], other: 'Vec2') -> 'Vec2':
         return Vec2(op(self.x, other.x), op(self.y, other.y))
     
-    def as_int(self) -> Vec2:
+    def as_int(self) -> 'Vec2':
         """Convert each element to integers using `int()`"""
         return self.map(int)
 
@@ -164,16 +164,16 @@ class Vec2:
     def norm_sq(self) -> TNum:
         return self.x ** 2 + self.y ** 2
 
-    def normalized(self, norm: TNum = 1) -> Vec2:
+    def normalized(self, norm: TNum = 1) -> 'Vec2':
         old_norm = self.norm
         assert old_norm != 0, "Cannot normalize a zero vector!"
         return self * (norm / old_norm)
 
-    def dot(self, other: Vec2) -> TNum:
+    def dot(self, other: 'Vec2') -> TNum:
         return self.x * other.x + self.y * other.y
 
     @classmethod
-    def repeat(cls, val: TNum = 1) -> Vec2:
+    def repeat(cls, val: TNum = 1) -> 'Vec2':
         """Return the Vec2 obtained by repeating the given scalar value across the two elements.
 
         Examples:
@@ -190,19 +190,19 @@ class Vec2:
 class Rect:
     """Class that represents a rectangle by keeping a position and a size."""
 
-    def __init__(self, pos: Vec2, size: Vec2):
+    def __init__(self, pos: 'Vec2', size: 'Vec2'):
         assert size.x >= 0 and size.y >= 0
         self.position = pos
         self.size = size
 
     @property
-    def center_point(self) -> Vec2:
+    def center_point(self) -> 'Vec2':
         return self.position + self.size / 2
 
-    def __eq__(self, other: Rect) -> bool:
+    def __eq__(self, other: 'Rect') -> bool:
         return self.position == other.position and self.size == other.size
 
-    def __mul__(self, k) -> Rect:
+    def __mul__(self, k) -> 'Rect':
         return Rect(self.position * k, self.size * k)
 
     __rmul__ = __mul__
@@ -240,13 +240,13 @@ class Rect:
         return wx.Rect(int(self.position.x), int(self.position.y), int(self.size.x),
                        int(self.size.y))
 
-    def union(self, other: Rect) -> Rect:
+    def union(self, other: 'Rect') -> 'Rect':
         """Return a Rect that contains both self and other"""
         pos = self.position.reduce2(min, other.position)
         botright = (self.position + self.size).reduce2(max, other.position + other.size)
         return Rect(pos, botright - pos)
 
-    def aligned(self) -> Rect:
+    def aligned(self) -> 'Rect':
         """Return rectangle aligned to the pixel coordinate system.
 
         Note:
@@ -260,7 +260,7 @@ class Rect:
     def __repr__(self):
         return 'Rect({}, {})'.format(self.position, self.size)
 
-    def contains(self, other: Rect) -> bool:
+    def contains(self, other: 'Rect') -> bool:
         """Returns whether self contains the other rectangle entirely."""
         botright = self.position + self.size
         other_botright = other.position + other.size
@@ -275,7 +275,7 @@ class Direction(Enum):
     BOTTOM = 3
 
 
-def clamp_rect_pos(rect: Rect, bounds: Rect, padding=0) -> Vec2:
+def clamp_rect_pos(rect: Rect, bounds: Rect, padding=0) -> 'Vec2':
     """Clamp the position of rect, so that it is entirely within the bounds rectangle.
 
     The position is clamped such that the new position of the rectangle moves the least amount
@@ -302,7 +302,7 @@ def clamp_rect_pos(rect: Rect, bounds: Rect, padding=0) -> Vec2:
     return ret
 
 
-def clamp_rect_size(rect: Rect, botright: Vec2, padding: int = 0) -> Vec2:
+def clamp_rect_size(rect: Rect, botright: 'Vec2', padding: int = 0) -> 'Vec2':
     """Clamp the size of the given rectangle if its bottom-right corner exceeds botright."""
     limit = botright - rect.position - Vec2.repeat(padding)
     assert limit.x > 0 and limit.y > 0
@@ -310,7 +310,7 @@ def clamp_rect_size(rect: Rect, botright: Vec2, padding: int = 0) -> Vec2:
     return Vec2(min(limit.x, rect.size.x), min(limit.y, rect.size.y))
 
 
-def clamp_point(pos: Vec2, bounds: Rect, padding: int = 0) -> Vec2:
+def clamp_point(pos: 'Vec2', bounds: Rect, padding: int = 0) -> 'Vec2':
     """Clamp the given point (pos) so that it is entirely within the bounds rectangle. 
 
     This is the same as calling clamp_rect_pos() with a clamped rectangle of size 1x1.
@@ -331,7 +331,7 @@ def clamp_point(pos: Vec2, bounds: Rect, padding: int = 0) -> Vec2:
     return ret
 
 
-def clamp_point_outside(pos: Vec2, bounds: Rect) -> Vec2:
+def clamp_point_outside(pos: 'Vec2', bounds: Rect) -> 'Vec2':
     """Clamp the point so that it is outside the given bounds rectangle.
 
     The point is clamped so that its new position differs minimally from the old position.
@@ -402,17 +402,17 @@ def rects_overlap(r1: Rect, r2: Rect) -> bool:
     return True
 
 
-# def circle_overlaps_rect(center: Vec2, radius: float, rect: Rect) -> bool:
+# def circle_overlaps_rect(center: 'Vec2', radius: float, rect: Rect) -> bool:
 #     pass
 
 
-def circle_bounds(center: Vec2, radius: float) -> Rect:
+def circle_bounds(center: 'Vec2', radius: float) -> Rect:
     """Return the bounding rectangle (actually a square) of circle."""
     offset = Vec2.repeat(radius)
     return Rect(center - offset, Vec2.repeat(radius * 2))
 
 
-def pt_on_line(a: Vec2, b: Vec2, point: Vec2, threshold: float = 0) -> bool:
+def pt_on_line(a: 'Vec2', b: 'Vec2', point: 'Vec2', threshold: float = 0) -> bool:
     """Returns whether point is on line ab, with the given threshold distance on either side."""
     delta = b - a
     b_comp_sq = delta.norm_sq
@@ -428,12 +428,12 @@ def pt_on_line(a: Vec2, b: Vec2, point: Vec2, threshold: float = 0) -> bool:
     return (point - projected).norm_sq <= threshold ** 2
 
 
-def pt_in_circle(center: Vec2, radius: float, point: Vec2) -> bool:
+def pt_in_circle(center: 'Vec2', radius: float, point: 'Vec2') -> bool:
     """Returns whether point is inside the circle with the given center and radius."""
     return (point - center).norm_sq <= radius ** 2
 
 
-def pt_in_rect(pos: Vec2, rect: Rect) -> bool:
+def pt_in_rect(pos: 'Vec2', rect: Rect) -> bool:
     """Returns whether the given position is within the rectangle, inclusive."""
     end = rect.position + rect.size
     return pos.x >= rect.position.x and pos.y >= rect.position.y and pos.x <= end.x and \
@@ -446,12 +446,12 @@ class Orientation(Enum):
     COLINEAR = 2
 
 
-def determinant(v1: Vec2, v2: Vec2):
+def determinant(v1: 'Vec2', v2: 'Vec2'):
     """Computes the 2D determinant of the two vectors."""
     return v1.x * v2.y - v2.x * v1.y
 
 
-def orientation(p1: Vec2, p2: Vec2, p3: Vec2) -> Orientation:
+def orientation(p1: 'Vec2', p2: 'Vec2', p3: 'Vec2') -> Orientation:
     """Compute the orientation of the three points listed in order."""
     det = determinant(p3 - p2, p2 - p1)
     if det == 1:
@@ -492,7 +492,7 @@ def segment_rect_intersection(segment: Tuple[Vec2, Vec2], rect: Rect) -> Optiona
     return None
 
 
-def linear_coefficients(p: Vec2, q: Vec2) -> Tuple[float, float]:
+def linear_coefficients(p: 'Vec2', q: 'Vec2') -> Tuple[float, float]:
     """Given two points that define a line ax + c, return (a, c)"""
     delta = q - p
     slope = delta.y / delta.x
@@ -522,7 +522,7 @@ def segment_intersects_line(seg: Tuple[Vec2, Vec2], line: Tuple[Vec2, Vec2]) -> 
         return None
 
 
-def rotate_unit(vec: Vec2, rad: float) -> Vec2:
+def rotate_unit(vec: 'Vec2', rad: float) -> 'Vec2':
     """Rotate a vector by rad radians and return the rotated *unit vector*.
     """
     angle = math.atan2(vec.y, vec.x)

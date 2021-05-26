@@ -1,4 +1,4 @@
-rkplugin
+rkviewer.plugin
 =====================
 The main files for the plugins (inclusing api).
 

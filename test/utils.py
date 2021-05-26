@@ -2,7 +2,7 @@
 from typing import List
 from rkviewer.canvas.geometry import Vec2
 from rkviewer.canvas.data import Compartment, Node, Reaction
-from rkplugin import api
+from rkviewer.plugin import api
 from rkviewer.controller import Controller
 import wx
 from contextlib import contextmanager

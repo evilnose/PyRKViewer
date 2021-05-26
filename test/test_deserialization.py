@@ -1,12 +1,12 @@
 # pylint: disable=maybe-no-member
 from numpy.core.fromnumeric import shape
 from numpy.lib.polynomial import poly
-from test.api.common import TestWithApp
+from test.api.common import DummyAppTest
 from typing import List
 from rkviewer.canvas.data import Reaction
 from rkviewer.mvc import CompartmentIndexError, NetIndexError, NodeIndexError, ReactionIndexError
 from rkviewer import iodine
-from rkplugin.api import Node, NodeData, Vec2
+from rkviewer.plugin.api import Node, NodeData, Vec2
 import unittest
 import os
 import json
@@ -14,7 +14,7 @@ import wx
 import time
 
 
-class TestDeserialization(TestWithApp):
+class TestDeserialization(DummyAppTest):
     #def setUp(self):
         
 

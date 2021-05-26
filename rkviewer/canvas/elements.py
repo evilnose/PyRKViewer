@@ -29,11 +29,11 @@ from .geometry import (
     pt_in_circle,
     pt_in_rect, rotate_unit, segment_rect_intersection,
 )
-from .state import cstate
+from .state import InputMode, cstate
 from .utils import draw_rect
 
 
-SetCursorFn = Callable[[wx.Cursor], None]
+# SetCursorFn = Callable[[wx.Cursor], None]
 Layer = Union[int, Tuple[int, ...]]
 
 
@@ -796,6 +796,8 @@ class SelectBox(CanvasElement):
         self.on_mouse_move(logical_pos)
 
     def on_mouse_move(self, logical_pos: Vec2):
+        if cstate.input_mode != InputMode.SELECT:
+            return False  # clearly, don't change the cursor if we're not in select mode
         self._hovered_part = self._pos_inside_part(logical_pos)
         if self._hovered_part >= 0:
             cursor = SelectBox.CURSOR_TYPES[self._hovered_part]

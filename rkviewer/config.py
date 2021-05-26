@@ -343,6 +343,7 @@ class RootSchema(Schema):
         theme: The theme settings (i.e. colors and dimensions) of the application.
     """
     theme = fields.Nested(ThemeSchema, missing=ThemeSchema().load({}))
+    fast_mode = fields.Bool(missing=True)
 
 
 # TODO put this in the schema somewhere

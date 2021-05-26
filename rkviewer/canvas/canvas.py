@@ -1376,54 +1376,60 @@ class Canvas(wx.ScrolledWindow):
                 return
 
             # dragging takes priority here
-            if cstate.input_mode == InputMode.SELECT:
-                if evt.leftIsDown:  # dragging
-                    if self.dragged_element is not None:
-                        rel_pos = logical_pos - self._last_drag_pos
-                        if self.dragged_element.on_mouse_drag(logical_pos, rel_pos):
-                            redraw = True
-                        self._last_drag_pos = logical_pos
-                        # If redrawing, i.e. dragged element moved, return immediately. Otherwise
-                        # we need to check if the mouse is still inside the dragged element.
-                        # The early return is for performance.
-                        if redraw:
-                            return
-                    elif self._minimap.dragging:
-                        self._minimap.OnMotion(device_pos, evt.LeftIsDown())
+            if evt.leftIsDown:  # dragging
+                if self.dragged_element is not None:
+                    rel_pos = logical_pos - self._last_drag_pos
+                    if self.dragged_element.on_mouse_drag(logical_pos, rel_pos):
                         redraw = True
+                    self._last_drag_pos = logical_pos
+                    # If redrawing, i.e. dragged element moved, return immediately. Otherwise
+                    # we need to check if the mouse is still inside the dragged element.
+                    # The early return is for performance.
+                    if redraw:
                         return
-                else:
-                    overlay = self._InWhichOverlay(device_pos)
-                    if overlay is not None:
-                        overlay.OnMotion(device_pos, evt.LeftIsDown())
-                        overlay.hovering = True
+                elif self._minimap.dragging:
+                    self._minimap.OnMotion(device_pos, evt.LeftIsDown())
+                    redraw = True
+                    return
+            else:
+                overlay = self._InWhichOverlay(device_pos)
+                if overlay is not None:
+                    overlay.OnMotion(device_pos, evt.LeftIsDown())
+                    overlay.hovering = True
+                    redraw = True
+
+                # un-hover all other overlays TODO keep track of the currently hovering overlay
+                for ol in self._overlays:
+                    if ol is not overlay and ol.hovering:
+                        ol.hovering = False
                         redraw = True
 
-                    # un-hover all other overlays TODO keep track of the currently hovering overlay
-                    for ol in self._overlays:
-                        if ol is not overlay and ol.hovering:
-                            ol.hovering = False
-                            redraw = True
+            # Likely hovering on something else
+            hovered: Optional[CanvasElement] = None
+            for el in reversed(self._elements):
+                if not el.enabled:
+                    continue
+                if el.pos_inside(logical_pos):
+                    hovered = el
+                    break
 
-                # Likely hovering on something else
-                hovered: Optional[CanvasElement] = None
-                for el in reversed(self._elements):
-                    if not el.enabled:
-                        continue
-                    if el.pos_inside(logical_pos):
-                        hovered = el
-                        break
+            if cstate.input_mode == InputMode.ADD_NODES and (
+                isinstance(self.hovered_element, CompartmentElt)
+                or isinstance(hovered, CompartmentElt)):
+                # set redraw to True whenever input mode is ADD_NODES and mouse enters, exits,
+                # or moves in a compartment. This is for updating the hightlight of the compartment.
+                # (see CompartmentElt.on_paint).
+                redraw = True
 
-                if hovered is not None and hovered is self.hovered_element:
-                    moved = self.hovered_element.on_mouse_move(logical_pos)
-                    redraw = moved
-                else:
-                    if self.hovered_element is not None:
-                        self.hovered_element.on_mouse_leave(logical_pos)
-                    if hovered is not None:
-                        hovered.on_mouse_enter(logical_pos)
-                    redraw = True
-                    self.hovered_element = hovered
+            if hovered is not None and hovered is self.hovered_element:
+                moved = self.hovered_element.on_mouse_move(logical_pos)
+                redraw = redraw or moved
+            else:
+                if self.hovered_element is not None:
+                    redraw = redraw or self.hovered_element.on_mouse_leave(logical_pos)
+                if hovered is not None:
+                    redraw = redraw or hovered.on_mouse_enter(logical_pos)
+                self.hovered_element = hovered
         finally:
             if redraw:
                 self.LazyRefresh()

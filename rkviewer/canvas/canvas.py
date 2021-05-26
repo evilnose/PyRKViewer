@@ -289,6 +289,7 @@ class Canvas(wx.ScrolledWindow):
         evt.Skip()
 
     def OnIdle(self, evt):
+        print('hi')
         if not self.LazyRefresh():
             # Not processed; request more
             evt.RequestMore()

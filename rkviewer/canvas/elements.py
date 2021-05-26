@@ -573,7 +573,8 @@ class CompartmentElt(CanvasElement):
             border = change_opacity(border.ChangeLightness(130), border.Alpha())
             fill = change_opacity(fill.ChangeLightness(130), fill.Alpha())
         draw_rect(gc, rect, border=border,
-                  border_width=self.compartment.border_width, fill=fill, corner_radius=get_theme('comp_corner_radius'))
+                  border_width=self.compartment.border_width, fill=fill,
+                  corner_radius=get_theme('comp_corner_radius'))
 
     def bounding_rect(self) -> Rect:
         return self.compartment.rect

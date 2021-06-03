@@ -30,7 +30,7 @@ from .events import (CanvasDidUpdateEvent, DidMoveCompartmentsEvent,
                      bind_handler)
 from .forms import CompartmentForm, NodeForm, ReactionForm
 from .mvc import IController, IView
-from .utils import ButtonGroup, get_bundled_path, on_msw, resource_path, start_file
+from .utils import ButtonGroup, on_msw, resource_path, start_file
 from rkviewer.config import AppSettings
 
 

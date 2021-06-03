@@ -311,7 +311,7 @@ class FieldGrid(wx.Window):
             ctrl_id: The ID of the control.
             message: The message displayed, if the control is not valid.
         """
-        self.Freeze()
+        # self.Freeze()
         badge = self.badges[ctrl_id]
         if good:
             badge.Show(False)
@@ -319,7 +319,7 @@ class FieldGrid(wx.Window):
             badge.Show(True)
             badge.SetToolTip(message)
         self.Layout()
-        self.Thaw()
+        # self.Thaw()
 
     def CreateTextCtrl(self, **kwargs):
         """Create a text control that confirms to the theme."""

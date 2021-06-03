@@ -581,7 +581,7 @@ def _pushUndoStack():
         undoStack.push(networkDict)
 
 
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, nodeLocked: bool = False):
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, nodeLocked: bool = False) -> int:
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -590,23 +590,17 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
     """
     global stackFlag, errCode, networkDict, undoStack, redoStack
     errCode = 0
-    try:
-        n = _getNetwork(neti)
-        for node in n.nodes.values():
-            if isinstance(node, TNode) and node.id == nodeID:
-                errCode = -3
-                return
+    n = _getNetwork(neti)
+    for node in n.nodes.values():
+        if isinstance(node, TNode) and node.id == nodeID:
+            _raiseError(-3)
 
-        if x < 0 or y < 0 or w <= 0 or h <= 0:
-            errCode = -12
-            return
+    if x < 0 or y < 0 or w <= 0 or h <= 0:
+        _raiseError(-12)
 
-        _pushUndoStack()
-        newNode = TNode(n.lastNodeIdx, nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked)
-        return n.addNode(newNode)
-    finally:
-        if errCode < 0:
-            raise ExceptionDict[errCode](errorDict[errCode])
+    _pushUndoStack()
+    newNode = TNode(n.lastNodeIdx, nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked)
+    return n.addNode(newNode)
 
 
 def addAliasNode(neti: int, originalIdx: int, x: float, y: float, w: float, h: float) -> int:
@@ -2579,6 +2573,7 @@ class NodeSchema(AbstractNodeSchema):
         data['shapei'] = shapei
         return TNode(**data)
 
+
 class AliasSchema(AbstractNodeSchema):
     originalIdx = fields.Int()
 
@@ -2673,6 +2668,8 @@ class NetworkSchema(Schema):
         if 'serialVersion' in data:
             del data['serialVersion']
 
+        # populate the index field of nodes. This is a redundancy, so we don't expect this field
+        # to be serialized/deserialized
         for nodei, nodedata in data['nodes'].items():
             nodedata['index'] = int(nodei)
 
@@ -2704,8 +2701,10 @@ def loadNetwork(net_object) -> int:
     Note:
         For now this overwrites the network at index 0.
     """
-    # TODO save old
-    net = net_schema.load(net_object)
+    # NOTE marshmallow::load does not guarantee that the input object is not modified. Therefore,
+    # we need to make a deepcopy
+    obj_copy = copy.deepcopy(net_object)
+    net = net_schema.load(obj_copy)
     clearNetworks()
     _addNetwork(net)
     return 0

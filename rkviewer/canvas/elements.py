@@ -7,6 +7,8 @@ from itertools import chain
 from math import pi, cos, sin
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
+
+from numpy.lib.utils import source
 from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, Transform, TextPrim, HexagonPrim, LinePrim
 
 import wx
@@ -29,11 +31,11 @@ from .geometry import (
     pt_in_circle,
     pt_in_rect, rotate_unit, segment_rect_intersection,
 )
-from .state import cstate
+from .state import InputMode, cstate
 from .utils import draw_rect
 
 
-SetCursorFn = Callable[[wx.Cursor], None]
+# SetCursorFn = Callable[[wx.Cursor], None]
 Layer = Union[int, Tuple[int, ...]]
 
 
@@ -91,6 +93,10 @@ class CanvasElement:
         This draws onto the scrolled canvas, i.e. the position of the drawn item will respond to
         scrolling, so you don't need to account for that.
         """
+        pass
+
+    def on_paint_cue(self, gc: wx.GraphicsContext):
+        '''This is called to paint special visual cues tha tthe element may need to display'''
         pass
 
     def on_mouse_enter(self, logical_pos: Vec2) -> bool:
@@ -212,28 +218,36 @@ class BezierHandle(CanvasElement):
     def pos_inside(self, logical_pos: Vec2):
         return pt_in_circle(logical_pos, BezierHandle.HANDLE_RADIUS, self.data.tip)
 
+    def _paint(self, gc: wx.GraphicsContext, handle_color: wx.Colour):
+        brush = wx.Brush(handle_color)
+        pen = gc.CreatePen(wx.GraphicsPenInfo(handle_color))
+
+        sbase = self.data.base
+        stip = self.data.tip
+
+        gc.SetPen(pen)
+
+        # Draw handle lines
+        gc.StrokeLine(*sbase, *stip)
+
+        # Draw handle circles
+        gc.SetBrush(brush)
+        gc.DrawEllipse(stip.x - BezierHandle.HANDLE_RADIUS,
+                        stip.y - BezierHandle.HANDLE_RADIUS,
+                        2 * BezierHandle.HANDLE_RADIUS, 2 * BezierHandle.HANDLE_RADIUS)
+
     def on_paint(self, gc: wx.GraphicsContext):
         """Paint the handle as given by its base and tip positions, highlighting it if hovering."""
         assert self.data.base is not None
         if self.reaction.bezierCurves:
-            c = get_theme('highlighted_handle_color') if self.hovering else get_theme(
-                'handle_color')
-            brush = wx.Brush(c)
-            pen = gc.CreatePen(wx.GraphicsPenInfo(c))
+            c = get_theme('handle_color')
+            self._paint(gc, c)
 
-            sbase = self.data.base
-            stip = self.data.tip
-
-            gc.SetPen(pen)
-
-            # Draw handle lines
-            gc.StrokeLine(*sbase, *stip)
-
-            # Draw handle circles
-            gc.SetBrush(brush)
-            gc.DrawEllipse(stip.x - BezierHandle.HANDLE_RADIUS,
-                           stip.y - BezierHandle.HANDLE_RADIUS,
-                           2 * BezierHandle.HANDLE_RADIUS, 2 * BezierHandle.HANDLE_RADIUS)
+    def on_paint_cue(self, gc: wx.GraphicsContext):
+        if self.hovering and self.reaction.bezierCurves:
+            assert self.data.base is not None
+            c = get_theme('highlighted_handle_color')
+            self._paint(gc, c)
 
     def on_mouse_enter(self, logical_pos: Vec2) -> bool:
         self.hovering = True
@@ -274,17 +288,7 @@ class ReactionCenter(CanvasElement):
         self._moved = False
         self.hovering = False
 
-    def on_paint(self, gc: wx.GraphicsContext):
-        if not self.parent.selected:
-            return
-
-        # draw centroid
-        color = self.parent.reaction.fill_color
-        if self.parent.selected:
-            if self.hovering:
-                color = get_theme('highlighted_handle_color')
-            else:
-                color = get_theme('handle_color')
+    def _paint(self, gc: wx.GraphicsContext, color: wx.Colour):
         pen = wx.Pen(color)
         brush = wx.Brush(color)
         gc.SetPen(pen)
@@ -292,6 +296,21 @@ class ReactionCenter(CanvasElement):
         radius = get_theme('reaction_radius')
         center = self.parent.bezier.real_center - Vec2.repeat(radius)
         gc.DrawEllipse(center.x, center.y, radius * 2, radius * 2)
+
+    def on_paint(self, gc: wx.GraphicsContext):
+        if not self.parent.selected:
+            return
+
+        # draw centroid
+        color = self.parent.reaction.fill_color
+        if self.parent.selected:
+            color = get_theme('handle_color')
+        self._paint(gc, color)
+
+    def on_paint_cue(self, gc: wx.GraphicsContext):
+        if self.parent.selected and self.hovering:
+            color = get_theme('highlighted_handle_color')
+            self._paint(gc, color)
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
         # If not selected, then nothing is done to prevent accidental dragging
@@ -314,7 +333,7 @@ class ReactionCenter(CanvasElement):
         with ctrl.group_action():
             ctrl.set_reaction_center(neti, reai, self.parent.reaction.center_pos)
             ctrl.set_center_handle(neti, reai, self.parent.reaction.src_c_handle.tip)
-            post_event(DidCommitDragEvent())
+            post_event(DidCommitDragEvent(self))
         self._moved = False
         return True
 
@@ -366,6 +385,7 @@ class ReactionElement(CanvasElement):
                  handle_layer: Layer):
         super().__init__(layers)
         self.reaction = reaction
+        self.containing_node_indices = set(chain(reaction.sources, reaction.targets))
         self.bezier = bezier
         self.moved_handler_id = bind_handler(DidMoveNodesEvent, self.nodes_moved)
         # i is 0 for source Beziers, but 1 for dest Beziers. "not" it to get the correct bool.
@@ -393,7 +413,8 @@ class ReactionElement(CanvasElement):
         def centroid_handle_dropped(p: Vec2):
             with ctrl.group_action():
                 ctrl.set_center_handle(neti, reai, reaction.src_c_handle.tip)
-                post_event(DidCommitDragEvent())
+                # NOTE important to do this within the group action
+                post_event(DidCommitDragEvent(self))
 
         src_bh = BezierHandle(reaction.src_c_handle, handle_layer,
                               lambda _: bezier.src_handle_moved(),
@@ -413,13 +434,13 @@ class ReactionElement(CanvasElement):
         if is_source:
             def ret(p):
                 ctrl.set_src_node_handle(neti, reai, nodei, p)
-                post_event(DidCommitDragEvent())
+                post_event(DidCommitDragEvent(self))
             return ret
         else:
             # Avoid IDE warnings
             def ret1(p):
                 ctrl.set_dest_node_handle(neti, reai, nodei, p)
-                post_event(DidCommitDragEvent())
+                post_event(DidCommitDragEvent(self))
             return ret1
 
     @property
@@ -437,15 +458,16 @@ class ReactionElement(CanvasElement):
         """Handler for after a node has moved."""
         # If already moving (i.e. self._dirty_indices is not empty), then skip forward
         c_evt = cast(DidMoveNodesEvent, evt)
-        node_indices = c_evt.node_indices
+        node_indices = set(c_evt.node_indices) & self.containing_node_indices
+        if not node_indices:
+            return
         offset = c_evt.offset
         rects = [self.canvas.node_idx_map[idx].rect for idx in chain(
             self.reaction.sources, self.reaction.targets)]
         self.bezier.nodes_moved(rects)
         if len(self._dirty_indices) == 0:
-            self._dirty_indices = {idx for idx in node_indices}
-            my_indices = {idx for idx in chain(
-                self.reaction.sources, self.reaction.targets)}
+            self._dirty_indices = node_indices
+            my_indices = set(chain(self.reaction.sources, self.reaction.targets))
             self._moving_all = my_indices <= self._dirty_indices
 
         neti = 0
@@ -562,18 +584,25 @@ class CompartmentElt(CanvasElement):
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
         return True
-
-    def on_paint(self, gc: wx.GraphicsContext, highlight=False):
+    
+    def _paint(self, gc: wx.GraphicsContext, highlight: bool):
         rect = Rect(self.compartment.position,
                     self.compartment.size)
-        border = self.compartment.border
-        fill = self.compartment.fill
         if highlight:
-            # need to reset alpha
-            border = change_opacity(border.ChangeLightness(130), border.Alpha())
-            fill = change_opacity(fill.ChangeLightness(130), fill.Alpha())
+            border = wx.Colour(255, 255, 255, 100)
+            fill = wx.Colour(255, 255, 255, 100)
+        else:
+            border = self.compartment.border
+            fill = self.compartment.fill
         draw_rect(gc, rect, border=border,
-                  border_width=self.compartment.border_width, fill=fill, corner_radius=get_theme('comp_corner_radius'))
+                  border_width=self.compartment.border_width, fill=fill,
+                  corner_radius=get_theme('comp_corner_radius'))
+
+    def on_paint(self, gc: wx.GraphicsContext):
+        self._paint(gc, False)
+
+    def highlight_paint(self, gc: wx.GraphicsContext):
+        self._paint(gc, True)
 
     def bounding_rect(self) -> Rect:
         return self.compartment.rect
@@ -795,6 +824,8 @@ class SelectBox(CanvasElement):
         self.on_mouse_move(logical_pos)
 
     def on_mouse_move(self, logical_pos: Vec2):
+        if cstate.input_mode != InputMode.SELECT:
+            return False  # clearly, don't change the cursor if we're not in select mode
         self._hovered_part = self._pos_inside_part(logical_pos)
         if self._hovered_part >= 0:
             cursor = SelectBox.CURSOR_TYPES[self._hovered_part]
@@ -941,7 +972,7 @@ class SelectBox(CanvasElement):
                 for comp in self.compartments:
                     self.controller.move_compartment(self.net_index, comp.index, comp.position)
                     self.controller.set_compartment_size(self.net_index, comp.index, comp.size)
-                    post_event(DidCommitDragEvent())
+                post_event(DidCommitDragEvent(self))
 
             # Need to do this in case _special_mode == NOT_CONTAINED, so that the mouse has now
             # left the handle. on_mouse_leave is not triggered because it's considered to be dragging.
@@ -1169,7 +1200,7 @@ class SelectBox(CanvasElement):
                         new_compi=compi
                     ))
 
-            post_event(DidCommitDragEvent())
+            post_event(DidCommitDragEvent(self))
 
 
 def primitive_peninfo(color: Color, width: float, is_alias: bool):

@@ -1,0 +1,87 @@
+{
+    "compartments": {},
+    "id": "the one",
+    "nodes": {
+        "0": {
+            "compi": -1,
+            "floating": true,
+            "id": "x_0",
+            "nodeLocked": false,
+            "position": [
+                178.0,
+                86.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 0.05,
+                            "corner_radius": 0.15,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "rectangle"
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                1,
+                                1
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                ],
+                "name": "rectangle",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "reactions": {},
+    "serialVersion": "1.0.0"
+}

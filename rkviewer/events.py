@@ -8,6 +8,7 @@ handlers to these events.
 from collections import defaultdict
 from dataclasses import dataclass, fields, is_dataclass
 from typing import (
+    Any,
     Callable,
     DefaultDict,
     Dict,
@@ -129,6 +130,7 @@ class DidCommitDragEvent(CanvasEvent):
     and DidResizeMoveBezierHandlesEvent. This event is emitted after the left mouse button is
     released, the model is notified of the change, and the action is complete.
     """
+    source: Any
 
 
 @dataclass

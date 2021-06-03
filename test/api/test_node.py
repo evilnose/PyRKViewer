@@ -19,14 +19,15 @@ class TestNode(DummyAppTest):
         api.add_node(self.neti, id=node.id,
                         position=node.position,
                         size=node.size,
-                        fill_color=api._to_color(wx.RED),  # HACK using API private methods
-                        border_color=api._to_color(wx.BLUE),
-                        border_width=2,
+                        # fill_color=api._to_color(wx.RED),  # HACK using API private methods
+                        # border_color=api._to_color(wx.BLUE),
+                        # border_width=2,
                         )
         nodes = api.get_nodes(self.neti)
         self.assertEqual(len(nodes), 1)
         self.assertEqual(0, nodes[0].index)
         expected = NodeData(id='Charles', net_index=self.neti, position=Vec2(50, 50), size=Vec2(50, 30), index=0)
+        self.assertEqual(str(expected), str(nodes[0]))
         self.assertEqual(expected, nodes[0])
     
     #TODO test more properties

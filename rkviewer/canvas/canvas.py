@@ -19,7 +19,7 @@ import wx
 import os
 import math
 
-from ..config import get_setting, get_theme, is_fast_mode, pop_settings_err
+from ..config import get_setting, get_theme, pop_settings_err
 from ..events import (
     CanvasDidUpdateEvent,
     DidCommitDragEvent, DidDeleteEvent, DidMoveNodesEvent,

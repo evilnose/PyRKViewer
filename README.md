@@ -47,6 +47,7 @@ If you don't have poetry, you can simply run `pip install -r <>` for any of the 
 ## Distributing
 * Use `poetry build` and `poetry publish`. Refer to [poetry docs](https://python-poetry.org/docs/)
 for more detail.
+* To re-generate the `requirements*.txt`, run `scripts/gen_requirements.py`.
 
 ### Bundling an Executable with PyInstaller
 **NOTE: This section is obsolete for now, as we are currently distributing with pip.**

@@ -248,8 +248,6 @@ class TabbedToolbar(fnb.FlatNotebook):
                            wx.ArtProvider.GetBitmap(wx.ART_HELP_SIDE_PANEL, wx.ART_MENU))
         self.AddPage(file_tb, text='Main')
 
-        self.AddPluginPages()
-
     def AddPluginPages(self):
         categories = self.manager.get_plugins_by_category()
         for cat in PluginCategory:
@@ -630,6 +628,7 @@ class MainFrame(wx.Frame):
         if runtime_vars().enable_plugins:
             self.manager.load_from('plugins')
             self.manager.register_menu(self.plugins_menu)
+            self.main_panel.toolbar.AddPluginPages()
         evt.Skip()
 
     # Anything we need to do when the app closes can be included here
@@ -731,10 +730,12 @@ class MainFrame(wx.Frame):
         if not self.CreateConfigDir(GetConfigDir()):
             return
 
-        if os.path.exists(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json')) and not os.path.isfile(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json')):
+        if os.path.exists(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json')) and \
+            not os.path.isfile(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json')):
             self.main_panel.canvas.ShowWarningDialog('Could not open default settings file '
                                                      'since a directory already exists at path '
-                                                     '{}.'.format(os.path.join(GetConfigDir(), 'rkViewer', '.default-settings.json')))
+                                                     '{}.'.format(os.path.join(GetConfigDir(),
+                                                     'rkViewer', '.default-settings.json')))
             return
         # TODO prepopulate file with help text, i.e link to docs about schema
         json_str = json.dumps(get_default_raw_settings(), indent=4, sort_keys=True)

@@ -516,9 +516,12 @@ class MainFrame(wx.Frame):
                          lambda _: self.ReloadSettings(),  entries)
         file_menu.AppendSeparator()
         align_menu = wx.Menu()
-        add_item(align_menu, 'Export .png...', lambda: self.ExportAs(wx.BITMAP_TYPE_PNG, 'PNG', 'PNG files (.png)|.png'))
-        add_item(align_menu, 'Export .jpg...', lambda: self.ExportAs(wx.BITMAP_TYPE_JPEG, 'JPEG', 'JPEG files (.jpg)|.jpg'))
-        add_item(align_menu, 'Export .bmp...', lambda: self.ExportAs(wx.BITMAP_TYPE_BMP, 'BMP', 'BMP files (.bmp)|.bmp'))
+        add_item(align_menu, 'Export .png...',
+            lambda: self.ExportAs(wx.BITMAP_TYPE_PNG, 'PNG', 'PNG files (.png)|*.png'))
+        add_item(align_menu, 'Export .jpg...',
+            lambda: self.ExportAs(wx.BITMAP_TYPE_JPEG, 'JPEG', 'JPEG files (.jpg)|*.jpg'))
+        add_item(align_menu, 'Export .bmp...',
+            lambda: self.ExportAs(wx.BITMAP_TYPE_BMP, 'BMP', 'BMP files (.bmp)|*.bmp'))
         file_menu.AppendSubMenu(align_menu, '&Export As...')
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Print...', 'Print Network',
@@ -662,7 +665,7 @@ class MainFrame(wx.Frame):
         info.Description = "Create reaction networks"
         info.SetWebSite("https://github.com/evilnose/PyRKViewer",
                         "Home Page")  # TODO update home page?
-        info.Developers = ["Gary Geng, Jin Xu, Carmen Pereña Cortés, Herbert Sauro"]
+        info.Developers = ["Gary Geng, Jin Xu, Carmen Pereña Cortés, Herbert Sauro"]  # TODO update authors
         info.License = "MIT"
 
         # Show the wx.AboutBox

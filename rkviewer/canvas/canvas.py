@@ -1536,7 +1536,7 @@ class Canvas(wx.ScrolledWindow):
         if bounding_rect is None:
             return None
 
-        bounding_rect = padded_rect(bounding_rect, padding=10)
+        bounding_rect = padded_rect(bounding_rect, padding=50)
         bounding_rect = wx.Rect(*bounding_rect.position, *bounding_rect.size)
         bounding_rect.Intersect(wx.Rect(0, 0, *self.realsize))
 
@@ -1544,6 +1544,7 @@ class Canvas(wx.ScrolledWindow):
         dc = wx.MemoryDC()
         dc.SelectObject(bmp)
         gc = wx.GraphicsContext.Create(dc)
+        self.DrawBackgroundToGC(gc)
         self.DrawModelToGC(gc)
         img = bmp.ConvertToImage()
         ret = img.GetSubImage(bounding_rect)

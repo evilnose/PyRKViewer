@@ -1,15 +1,40 @@
 {
-    "compartments": {},
+    "compartments": {
+        "0": {
+            "fillColor": [
+                158,
+                169,
+                255,
+                200
+            ],
+            "id": "c_0",
+            "outlineColor": [
+                0,
+                29,
+                255
+            ],
+            "outlineThickness": 2.0,
+            "position": [
+                79.5,
+                76.0
+            ],
+            "rectSize": [
+                350,
+                200
+            ],
+            "volume": 1.0
+        }
+    },
     "id": "the one",
     "nodes": {
         "0": {
-            "compi": -1,
+            "compi": 0,
             "floating": true,
             "id": "x_0",
             "nodeLocked": false,
             "position": [
-                178.0,
-                86.0
+                94.0,
+                119.0
             ],
             "rectSize": [
                 50,
@@ -24,8 +49,8 @@
                                 108,
                                 9
                             ],
-                            "border_width": 0.05,
-                            "corner_radius": 0.15,
+                            "border_width": 2.0,
+                            "corner_radius": 4.0,
                             "fill_color": [
                                 255,
                                 204,

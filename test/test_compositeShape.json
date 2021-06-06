@@ -1,0 +1,641 @@
+{
+    "compartments": {},
+    "id": "the one",
+    "nodes": {
+        "0": {
+            "compi": -1,
+            "floating": true,
+            "id": "x_0",
+            "nodeLocked": false,
+            "position": [
+                206.0,
+                161.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "hexagon",
+                            "points": [
+                                [
+                                    0.5,
+                                    0.0
+                                ],
+                                [
+                                    0.25000000000000006,
+                                    0.4330127018922193
+                                ],
+                                [
+                                    -0.2499999999999999,
+                                    0.4330127018922194
+                                ],
+                                [
+                                    -0.5,
+                                    6.123233995736766e-17
+                                ],
+                                [
+                                    -0.2500000000000002,
+                                    -0.4330127018922192
+                                ],
+                                [
+                                    0.24999999999999964,
+                                    -0.4330127018922195
+                                ],
+                                [
+                                    0.5,
+                                    -1.2246467991473532e-16
+                                ]
+                            ],
+                            "radius": 0.5
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                1,
+                                1
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                ],
+                "name": "hexagon",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        },
+        "1": {
+            "compi": -1,
+            "floating": true,
+            "id": "x_1",
+            "nodeLocked": false,
+            "position": [
+                412.0,
+                143.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "triangle",
+                            "points": [
+                                [
+                                    0.5,
+                                    0.0
+                                ],
+                                [
+                                    -0.2499999999999999,
+                                    0.4330127018922194
+                                ],
+                                [
+                                    -0.2500000000000002,
+                                    -0.4330127018922192
+                                ],
+                                [
+                                    0.5,
+                                    -1.2246467991473532e-16
+                                ]
+                            ],
+                            "radius": 0.5
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                1,
+                                1
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                ],
+                "name": "triangle",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        },
+        "2": {
+            "compi": -1,
+            "floating": true,
+            "id": "x_2",
+            "nodeLocked": false,
+            "position": [
+                331.0,
+                307.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [],
+                "name": "text-only",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        },
+        "3": {
+            "compi": -1,
+            "floating": true,
+            "id": "x_3",
+            "nodeLocked": false,
+            "position": [
+                553.0,
+                236.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "line",
+                            "points": [
+                                [
+                                    0.5,
+                                    0.0
+                                ],
+                                [
+                                    -0.5,
+                                    6.123233995736766e-17
+                                ]
+                            ]
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                1,
+                                1
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                ],
+                "name": "line",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        },
+        "4": {
+            "compi": -1,
+            "floating": true,
+            "id": "x_4",
+            "nodeLocked": false,
+            "position": [
+                151.0,
+                292.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "circle"
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                1,
+                                1
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                ],
+                "name": "text outside",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            1,
+                            1
+                        ]
+                    }
+                ]
+            }
+        },
+        "5": {
+            "compi": -1,
+            "floating": true,
+            "id": "x_5",
+            "nodeLocked": false,
+            "position": [
+                206.0,
+                410.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "circle"
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                1,
+                                1
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                ],
+                "name": "circle",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        },
+        "6": {
+            "compi": -1,
+            "floating": true,
+            "id": "x_6",
+            "nodeLocked": false,
+            "position": [
+                531.0,
+                383.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "circle"
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                0.5,
+                                0.5
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "circle"
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                0.5,
+                                0.5
+                            ],
+                            "translation": [
+                                0.5,
+                                0.5
+                            ]
+                        }
+                    ],
+                    [
+                        {
+                            "border_color": [
+                                0,
+                                255,
+                                0
+                            ],
+                            "border_width": 2.0,
+                            "corner_radius": 4.0,
+                            "fill_color": [
+                                255,
+                                0,
+                                0
+                            ],
+                            "name": "rectangle"
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                0.5,
+                                0.5
+                            ],
+                            "translation": [
+                                0.25,
+                                0.25
+                            ]
+                        }
+                    ]
+                ],
+                "name": "demo combo",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            255,
+                            255,
+                            255
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "reactions": {},
+    "serialVersion": "1.0.0"
+}

@@ -1,0 +1,252 @@
+{
+    "compartments": {
+        "0": {
+            "fillColor": [
+                158,
+                169,
+                255,
+                200
+            ],
+            "id": "c_0",
+            "outlineColor": [
+                0,
+                29,
+                255
+            ],
+            "outlineThickness": 2.0,
+            "position": [
+                150.0,
+                108.0
+            ],
+            "rectSize": [
+                350,
+                200
+            ],
+            "volume": 1.0
+        },
+        "1": {
+            "fillColor": [
+                158,
+                169,
+                255,
+                200
+            ],
+            "id": "c_1",
+            "outlineColor": [
+                0,
+                29,
+                255
+            ],
+            "outlineThickness": 2.0,
+            "position": [
+                52.0,
+                272.0
+            ],
+            "rectSize": [
+                350,
+                200
+            ],
+            "volume": 1.0
+        }
+    },
+    "id": "the one",
+    "nodes": {
+        "0": {
+            "compi": 0,
+            "floating": true,
+            "id": "x_0",
+            "nodeLocked": false,
+            "position": [
+                156.0,
+                159.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "corner_radius": 4.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "rectangle"
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                1,
+                                1
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                ],
+                "name": "rectangle",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        },
+        "1": {
+            "compi": 1,
+            "floating": true,
+            "id": "x_1",
+            "nodeLocked": false,
+            "position": [
+                155.0,
+                361.0
+            ],
+            "rectSize": [
+                50,
+                30
+            ],
+            "shape": {
+                "items": [
+                    [
+                        {
+                            "border_color": [
+                                255,
+                                108,
+                                9
+                            ],
+                            "border_width": 2.0,
+                            "corner_radius": 4.0,
+                            "fill_color": [
+                                255,
+                                204,
+                                153,
+                                200
+                            ],
+                            "name": "rectangle"
+                        },
+                        {
+                            "rotation": 0.0,
+                            "scale": [
+                                1,
+                                1
+                            ],
+                            "translation": [
+                                0,
+                                0
+                            ]
+                        }
+                    ]
+                ],
+                "name": "rectangle",
+                "text_item": [
+                    {
+                        "alignment": "center",
+                        "bg_color": [
+                            255,
+                            255,
+                            0,
+                            0
+                        ],
+                        "font_color": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "font_family": "sans-serif",
+                        "font_size": 11,
+                        "font_style": "normal",
+                        "font_weight": "normal"
+                    },
+                    {
+                        "rotation": 0.0,
+                        "scale": [
+                            1,
+                            1
+                        ],
+                        "translation": [
+                            0,
+                            0
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "reactions": {
+        "0": {
+            "bezierCurves": true,
+            "centerHandlePos": [
+                180.66666666666669,
+                241.33333333333331
+            ],
+            "centerPos": null,
+            "fillColor": [
+                91,
+                176,
+                253
+            ],
+            "id": "r_0",
+            "modifiers": [],
+            "products": {
+                "1": {
+                    "handlePos": [
+                        180.25,
+                        325.5
+                    ],
+                    "stoich": 1.0
+                }
+            },
+            "rateLaw": "",
+            "reactants": {
+                "0": {
+                    "handlePos": [
+                        180.75,
+                        224.5
+                    ],
+                    "stoich": 1.0
+                }
+            },
+            "thickness": 3.0,
+            "tipStyle": "circle"
+        }
+    },
+    "serialVersion": "1.0.0"
+}

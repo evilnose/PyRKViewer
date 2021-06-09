@@ -1,4 +1,7 @@
-"""The interface of canvas for wxPython."""
+"""The main canvas panel.
+
+This handles user input actions, updates the model, and performs redraws after the model is updated.
+"""
 # pylint: disable=maybe-no-member
 from collections import defaultdict
 from contextlib import contextmanager
@@ -12,7 +15,6 @@ import typing
 from typing import Collection, DefaultDict, Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 from commentjson.commentjson import JSONLibraryException
 from marshmallow.exceptions import ValidationError
-from rkviewer.plugin import api
 
 from sortedcontainers import SortedKeyList
 import wx
@@ -71,8 +73,7 @@ class Canvas(wx.ScrolledWindow):
     """The main window onto which nodes, reactions, etc. will be drawn.
 
     Attributes:
-        MIN_ZOOM_LEVEL: The minimum zoom level the user is allowed to reach. See SetZoomLevel()
-            for more detail.
+        MIN_ZOOM_LEVEL: The minimum zoom level the user is allowed to reach. See SetZoomLevel() for more detail.
         MAX_ZOOM_LEVEL: The maximum zoom level the user is allowed to reach.
         NODE_LAYER: The node layer.
         REACTION_LAYER: The reaction layer.
@@ -295,7 +296,7 @@ class Canvas(wx.ScrolledWindow):
 
     def OnIdle(self, evt):
         # if self._static_bitmap is None:
-        #     self._PrepareDynamicDrawing()
+        #     self._RedrawDynamicToBuffer()
         self.LazyRefresh()
 
     def OnChar(self, evt):
@@ -353,6 +354,7 @@ class Canvas(wx.ScrolledWindow):
         for rea_el in self._reaction_elements:
             for bz in rea_el.bezier.dest_beziers:
                 bz.arrow_tip_changed()
+        self._RedrawDynamicToBuffer()
 
     def RegisterAllChildren(self, widget):
         """Connect all descendants of this widget to relevant events.
@@ -790,7 +792,7 @@ class Canvas(wx.ScrolledWindow):
 
         finally:
             if self.dragged_element is not None:
-                self._PrepareDynamicDrawing()
+                self._RedrawDynamicToBuffer()
             else:
                 self.FullRedraw()
             evt.Skip()
@@ -1019,79 +1021,63 @@ class Canvas(wx.ScrolledWindow):
         else:
             return None
 
-    def findMinX(self, l):
+    def findMinX(self, nodes: List[Node]):
         '''
         Find the left-most node's x position
         Args:
             self
             l: the list of indices of the selected nodes
         '''
-        xpos = api.get_node_by_index(0, 0).position.x
-        for a in l:
-            cur = api.get_node_by_index(0, a)
-            newX = cur.position.x
-            if(newX < xpos):
-                xpos = newX
-        return xpos
+        return min(n.position.x for n in nodes)
 
-    def findMaxX(self, l):
+    def findMaxX(self, nodes: List[Node]):
         '''
         Find the right-most node's x position
         Args:
             self
             l: the list of indices of the selected nodes
         '''
-        xpos = api.get_node_by_index(0, 0).position.x
-        for a in l:
-            cur = api.get_node_by_index(0, a)
-            newX = cur.position.x
-            if(newX > xpos):
-                xpos = newX
-        return xpos
+        return max(n.position.x for n in nodes)
 
-    def findMinY(self, l):
+    def findMinY(self, nodes: List[Node]):
         '''
         Find the left-most node's x position
         Args:
             self
             l: the list of indices of the selected nodes
         '''
-        ypos = api.get_node_by_index(0, 0).position.y
-        for a in l:
-            cur = api.get_node_by_index(0, a)
-            newY = cur.position.y
-            if(newY < ypos):
-                ypos = newY
-        return ypos
+        return min(n.position.y for n in nodes)
 
-    def findMaxY(self, l):
+    def findMaxY(self, nodes: List[Node]):
         '''
         Find the right-most node's x position
         Args:
             self
             l: the list of indices of the selected nodes
         '''
-        ypos = api.get_node_by_index(0, 0).position.y
-        for a in l:
-            cur = api.get_node_by_index(0, a)
-            newY = cur.position.y
-            if(newY > ypos):
-                ypos = newY
-        return ypos
+        return max(n.position.y for n in nodes)
+
+
+    def _DefaultHandlePositions(self, rea_el: ReactionElement):
+        center = rea_el.bezier.real_center
+        reactants = [self.node_idx_map[i] for i in rea_el.reaction.sources]
+        products = [self.node_idx_map[i] for i in rea_el.reaction.targets]
+        return default_handle_positions(center, reactants, products)
 
     def setDefaultHandles(self):
-        with api.group_action():
-            for r in api.get_reactions(0):
-                handles = api.default_handle_positions(0, r.index)  # centroid, sources, target
+        with self.controller.group_action():
+            for r_el in self._reaction_elements:
+                r = r_el.reaction
+                handles = self._DefaultHandlePositions(r_el)  # centroid, sources, target
                 sources = r.sources
                 targets = r.targets
-                api.set_reaction_center_handle(0, r.index, handles[0])
+                self.controller.set_center_handle(0, r.index, handles[0])
                 count = 1
                 for s in sources:
-                    api.set_reaction_node_handle(0, r.index, s, True, handles[count])
+                    self.controller.set_src_node_handle(0, r.index, s, handles[count])
                     count += 1
                 for t in targets:
-                    api.set_reaction_node_handle(0, r.index, t, False, handles[count])
+                    self.controller.set_dest_node_handle(0, r.index, t, handles[count])
                     count += 1
 
     def AlignSelectedNodes(self, alignment: Alignment):
@@ -1100,156 +1086,131 @@ class Canvas(wx.ScrolledWindow):
         # To access a file in the resources folder, use
         # Jin_edit:refer to plugins/arrange.py
 
+        sel_nodes = self.sel_nodes
         if alignment == Alignment.LEFT:
-            '''
-            Align selected nodes to the left-most node's x position
-            '''
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                xpos = self.findMinX(s)
-                for a in s:
-                    cur = api.get_node_by_index(0, a)
-                    y = cur.position.y
-                    newPos = Vec2(xpos, y)
-                    api.move_node(0, a, newPos)
-                self.setDefaultHandles()
+            # Align selected nodes to the left-most node's x position
+            with self.controller.group_action():
+                xpos = self.findMinX(sel_nodes)
+                for n in sel_nodes:
+                    newPos = Vec2(xpos, n.position.y)
+                    self.controller.move_node(self.net_index, n.index, newPos)
+            self.setDefaultHandles()
 
-        if alignment == Alignment.RIGHT:
+        elif alignment == Alignment.RIGHT:
             '''
             Align selected nodes to the right-most node's x position
             '''
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                xpos = self.findMaxX(s)
-                for a in s:
-                    cur = api.get_node_by_index(0, a)
-                    y = cur.position.y
-                    newPos = Vec2(xpos, y)
-                    api.move_node(0, a, newPos)
-                self.setDefaultHandles()
+            with self.controller.group_action():
+                xpos = self.findMaxX(sel_nodes)
+                for n in self.sel_nodes:
+                    newPos = Vec2(xpos, n.position.y)
+                    self.controller.move_node(self.net_index, n.index, newPos)
+            self.setDefaultHandles()
 
-        if alignment == Alignment.CENTER:
+        elif alignment == Alignment.CENTER:
             '''
             Align selected nodes to the relative center of the x positions of the nodes
             '''
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                xMin = self.findMinX(s)
-                xMax = self.findMaxX(s)
+            with self.controller.group_action():
+                xMin = self.findMinX(sel_nodes)
+                xMax = self.findMaxX(sel_nodes)
                 xpos = math.floor((xMax + xMin)/2)
-                for a in s:
-                    cur = api.get_node_by_index(0, a)
-                    y = cur.position.y
-                    newPos = Vec2(xpos, y)
-                    api.move_node(0, a, newPos)
-                self.setDefaultHandles()
+                for n in sel_nodes:
+                    newPos = Vec2(xpos, n.position.y)
+                    self.controller.move_node(self.net_index, n.index, newPos)
+            self.setDefaultHandles()
 
-        if alignment == Alignment.TOP:
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                ypos = self.findMinY(s)
-                for a in s:
-                    cur = api.get_node_by_index(0, a)
-                    x = cur.position.x
-                    newPos = Vec2(x, ypos)
-                    api.move_node(0, a, newPos)
-                self.setDefaultHandles()
+        elif alignment == Alignment.TOP:
+            with self.controller.group_action():
+                ypos = self.findMinY(sel_nodes)
+                for n in self.sel_nodes:
+                    newPos = Vec2(n.position.x, ypos)
+                    self.controller.move_node(self.net_index, n.index, newPos)
+            self.setDefaultHandles()
 
-        if alignment == Alignment.BOTTOM:
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                ypos = self.findMaxY(s)
-                for a in s:
-                    cur = api.get_node_by_index(0, a)
-                    x = cur.position.x
-                    newPos = Vec2(x, ypos)
-                    api.move_node(0, a, newPos)
-                self.setDefaultHandles()
+        elif alignment == Alignment.BOTTOM:
+            with self.controller.group_action():
+                ypos = self.findMaxY(sel_nodes)
+                for n in self.sel_nodes:
+                    newPos = Vec2(n.position.x, ypos)
+                    self.controller.move_node(self.net_index, n.index, newPos)
+            self.setDefaultHandles()
 
-        if alignment == Alignment.MIDDLE:
-            '''
-            Align selected nodes to the relative center of the x positions of the nodes
-            '''
-            with api.group_action():
-                s = api.get_selected_node_indices(0)  # TODO: 2 of these
-                yMin = self.findMinY(s)
-                yMax = self.findMaxY(s)
+        elif alignment == Alignment.MIDDLE:
+            # Align selected nodes to the relative center of the x positions of the nodes
+            with self.controller.group_action():
+                yMin = self.findMinY(sel_nodes)
+                yMax = self.findMaxY(sel_nodes)
                 ypos = math.floor((yMax + yMin)/2)
-                for a in s:
-                    cur = api.get_node_by_index(0, a)
-                    x = cur.position.x
-                    newPos = Vec2(x, ypos)
-                    api.move_node(0, a, newPos)
-                self.setDefaultHandles()
+                for n in sel_nodes:
+                    newPos = Vec2(n.position.x, ypos)
+                    self.controller.move_node(0, n.index, newPos)
+            self.setDefaultHandles()
 
-        if alignment == Alignment.GRID:
+        elif alignment == Alignment.GRID:
             '''
             Align selected nodes in a net grid manner
             '''
-            with api.group_action():
-                s = api.get_selected_node_indices(0)
+            with self.controller.group_action():
                 x = 40
                 y = 40
                 count = 1
-                for a in s:
-                    api.move_node(0, a, position=Vec2(x, y))
+                for n in sel_nodes:
+                    self.controller.move_node(0, n.index, Vec2(x, y))
                     x = x + 130
                     if count % 5 == 0:
                         y = y + 130
                         x = 40
                     count = count + 1
-                self.setDefaultHandles()
+            self.setDefaultHandles()
 
-        if alignment == Alignment.HORIZONTAL:
+        elif alignment == Alignment.HORIZONTAL:
 
             # Sort the selected nodes in x position ascending order
-            nodes = api.get_nodes(0)
-            nodes.sort(key=lambda x: x.position.x, reverse=False)
+            nodes = sorted(sel_nodes, key=lambda x: x.position.x)
 
             # find the average distance beteeen the selected nodes
             averageDistance = 0.0
             for count in range(1, len(nodes)):
-                node2 = api.get_node_by_index(0, nodes[count-1].index)
-                node1 = api.get_node_by_index(0, nodes[count].index)
+                node2 = nodes[count-1]
+                node1 = nodes[count]
                 averageDistance += (node1.position.x + node1.size.x) - node2.position.x
             averageDistance = averageDistance / len(nodes)
 
-            with api.group_action():
+            with self.controller.group_action():
                 # x = Position of left most node
                 x = nodes[0].position.x
                 # Arrange nodes with equal distance between them
                 for count in range(len(nodes)):
                     newPos = Vec2(x, nodes[count].position.y)
-                    api.move_node(0, nodes[count].index, newPos)
+                    self.controller.move_node(0, nodes[count].index, newPos)
                     x = x + averageDistance
-                self.setDefaultHandles()
+            self.setDefaultHandles()
 
-        if alignment == Alignment.VERTICAL:
+        elif alignment == Alignment.VERTICAL:
 
             # Sort the selected nodes in y position ascending order
-            nodes = api.get_nodes(0)
-            nodes.sort(key=lambda x: x.position.y, reverse=False)
+            nodes = sorted(sel_nodes, key=lambda x: x.position.y)
 
             # find the average distance beteeen the selected nodes
             averageDistance = 0.0
             for count in range(1, len(nodes)):
-                node2 = api.get_node_by_index(0, nodes[count-1].index)
-                node1 = api.get_node_by_index(0, nodes[count].index)
+                node2 = nodes[count - 1]
+                node1 = nodes[count]
                 averageDistance += (node1.position.y + node1.size.y) - node2.position.y
             averageDistance = averageDistance / len(nodes)
 
-            with api.group_action():
+            with self.controller.group_action():
                 # y = Position of top most node
                 y = nodes[0].position.y
                 # Arrange nodes with equal distance between them
                 for count in range(len(nodes)):
                     newPos = Vec2(nodes[count].position.x, y)
-                    api.move_node(0, nodes[count].index, newPos)
+                    self.controller.move_node(0, nodes[count].index, newPos)
                     y = y + averageDistance
-                self.setDefaultHandles()
+            self.setDefaultHandles()
 
     # TODO improve this. we might want a special mouseLeftWindow event
-
     def _EndDrag(self, evt: wx.MouseEvent):
         """Send the updated node positions and sizes to the controller.
 
@@ -1501,7 +1462,7 @@ class Canvas(wx.ScrolledWindow):
 
         if self._static_bitmap is None:
             # draw the whole thing
-            self._PrepareDynamicDrawing()
+            self._RedrawDynamicToBuffer()
 
         wpos = Vec2(self.CalcUnscrolledPosition(0, 0))
         wsize = Vec2(self.GetSize())
@@ -1623,7 +1584,7 @@ class Canvas(wx.ScrolledWindow):
 
         return set(elts)
 
-    def _PrepareDynamicDrawing(self):
+    def _RedrawDynamicToBuffer(self):
         self._dynamic_elements = self._GetDynamicElements()
         # No dynamic elements; simply redraw everything by not populating _static_bitmap
 

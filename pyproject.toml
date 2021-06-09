@@ -1,12 +1,30 @@
 [tool.poetry]
 name = "coyote-gui"
-version = "0.0.1"
+version = "0.1b0"
 description = "Extensible visualization and editing tool for reaction networks."
 authors = ["Gary Geng <xiaog3@uw.edu>", "Jin Xu <jxu2019@uw.edu>",
 "Carmen Perena-Cortes <cperena@outlook.com>", "Evan Yip <evan@yipsite.net>",
 "Nhan D. Nguyen <nnguyen19@ole.augie.edu>", "Herbert M. Sauro <hsauro@uw.edu>"]
 packages = [
     { include = "rkviewer" },
+]
+classifiers=[
+    'Development Status :: 4 - Beta',
+
+    'Intended Audience :: Developers',
+    'Intended Audience :: Science/Research',
+    'Topic :: Software Development :: Build Tools',
+
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: MacOS',
+    'Operating System :: POSIX :: Linux',
+
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+
+    'Topic :: Scientific/Engineering :: Visualization',
 ]
 
 [tool.poetry.dependencies]

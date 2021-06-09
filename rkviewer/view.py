@@ -45,10 +45,10 @@ class EditPanel(fnb.FlatNotebook):
     reaction_form: ReactionForm
     comp_form: CompartmentForm
     null_message: wx.Panel
-    FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | fnb.FNB_NODRAG |  fnb.FNB_DROPDOWN_TABS_LIST | fnb.FNB_RIBBON_TABS
 
     def __init__(self, parent, canvas: Canvas, controller: IController, **kw):
-        super().__init__(parent, agwStyle=EditPanel.FNB_STYLE, **kw)
+        FNB_STYLE = fnb.FNB_NO_X_BUTTON | fnb.FNB_NO_NAV_BUTTONS | fnb.FNB_NODRAG |  fnb.FNB_DROPDOWN_TABS_LIST | fnb.FNB_RIBBON_TABS
+        super().__init__(parent, agwStyle=FNB_STYLE, **kw)
         self.SetTabAreaColour(get_theme('toolbar_bg'))
         self.SetNonActiveTabTextColour(get_theme('toolbar_fg'))
         self.SetActiveTabTextColour(get_theme('active_tab_fg'))

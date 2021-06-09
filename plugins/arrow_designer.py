@@ -235,7 +235,8 @@ class DesignerWindow(wx.Window):
             point: Point to be drawn.
             radius: Radius of the point.
         """
-        gc.DrawEllipse(*(point - Vec2.repeat(radius / 2)), radius, radius)
+        center = point - Vec2.repeat(radius / 2)
+        gc.DrawEllipse(center.x, center.y, radius, radius)
 
 
 class ArrowDesigner(WindowedPlugin):
@@ -277,6 +278,7 @@ class ArrowDesigner(WindowedPlugin):
         Handler for the "save" button. Save the new arrow tip.
         """
         api.set_arrow_tip(self.arrow_tip)
+        api.refresh_canvas()
 
     def OnRestore(self, evt):
         """

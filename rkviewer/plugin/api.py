@@ -52,6 +52,7 @@ def get_controller() -> Optional[IController]:
     return _controller
 
 
+
 # @require_kwargs_on_init
 @dataclass(frozen=True, eq=True)
 class NodeData:
@@ -191,6 +192,16 @@ def uninit_api():
     global _canvas, _controller
     _canvas = None
     _controller = None
+
+
+def refresh_canvas():
+    '''Tell the canvas to redraw itself.
+    
+    This does not need to be called manually when there are changes to the model, since the model
+    automatically updates the canvas. But if changes are made only to CanvasElements, then this is
+    required to reflect the changes.
+    '''
+    _canvas.LazyRefresh()
 
 
 def clear_network(net_index: int):

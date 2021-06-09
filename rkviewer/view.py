@@ -349,12 +349,12 @@ class BottomBar(wx.Panel):
 
 class MainPanel(wx.Panel):
     """The main panel, which is the only chlid of the root Frame."""
-    controller: IController
-    canvas: Canvas
-    mode_panel: ModePanel
-    toolbar: TabbedToolbar
-    edit_panel: EditPanel
-    last_save_path: Optional[str]
+    # controller: IController
+    # canvas: Canvas
+    # mode_panel: ModePanel
+    # toolbar: TabbedToolbar
+    # edit_panel: EditPanel
+    # last_save_path: Optional[str]
 
     def __init__(self, parent, controller: IController, manager: PluginManager):
         # ensure the parent's __init__ is called
@@ -461,7 +461,7 @@ class NetworkPrintout(wx.Printout):
 
 class MainFrame(wx.Frame):
     """The main frame."""
-    save_item: wx.MenuItem
+    # save_item: wx.MenuItem
 
     def __init__(self, controller: IController, **kw):
         super().__init__(None, style=wx.DEFAULT_FRAME_STYLE |

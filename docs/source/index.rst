@@ -2,9 +2,10 @@
    sphinx-quickstart on Wed Sep 30 08:11:52 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
+
 ================================================
 RK VIEWER PLATFORM DOCUMENTATION
-================================================
+================================================j
 A visualization tool for reaction networks
 
 Gary Geng, Carmen Perena-Cortes, Dr. Herbert M. Sauro, Jin Xu
@@ -25,8 +26,8 @@ PyRKViewer is a visualization tool for drawing the reaction networks written by 
    
    QuickStart
    Tutorial
-   CodeDocumentation
-   ForDevelopers
-   api
-   plugins
+   PluginDevelopment
+   PluginReference
+   CoreDevelopment
+   Reference
    Acknowledgements

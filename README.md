@@ -1,4 +1,4 @@
-# PyRKViewer: A visualization tool for the reaction networks.
+# Coyote: A visualization tool for reaction networks.
 
 ## Introduction
 
@@ -10,7 +10,21 @@ PyRKViewer is a cross-platform visualization tool for drawing reaction networks 
 * It has plugin support, with some plugin examples: ArrowDesigner, RandomNetwork, Antolayout and etc. 
 For the next version, we are going to add simulations of reaction networks.
 
-## Quick Start and Building
+
+## Getting Started
+
+### Installing
+* `pip install coyote-gui` for the base application
+* `pip install coyote-gui[sbml]` to install the additional SBML dependencies used by certain plugins
+as well. Note that this is a large set of dependencies.
+* Note that on MacOS, if you wish to use Coyote in a virtual environment, use `venv` instead of
+`virtualenv`, due to the latter's issues with wxPython.
+
+### Running
+* Simply run `coyote` or `python -m coyote` to start the application.
+* Then, check out the [documentation](#documentation).
+
+## Development Setup
 
 ### Dependencies
 We are using [poetry](https://python-poetry.org/) for dependency management. If you are just looking
@@ -82,6 +96,8 @@ use that Python installation for building.
 * To visualize the profile result, run `tuna rkviewer.stat`.
 
 ### Building Local Docs
+* Run `sphinx-apidoc -f -o docs/source/rkviewer rkviewer rkviewer/plugin rkviewer/resources ` to regenerate the full reference doc source
+code, if new files were added to the package rkviewer.
 * Run `sphinx-build -b html docs\source docs\build`.
 
 ### Note on Style

@@ -1,5 +1,5 @@
 ==================
-Code Documentation
+Full Reference
 ==================
 
 *Add information and intro to this section*
@@ -9,5 +9,4 @@ Code Documentation
    :maxdepth: 2
    :caption: Contents: 
    
-   config
-   rkviewer
+   rkviewer/rkviewer

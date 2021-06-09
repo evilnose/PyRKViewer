@@ -453,6 +453,7 @@ class ReactionElement(CanvasElement):
         self._selected = val
         for bz in self.bhandles:
             bz.enabled = val
+        self.center_el.enabled = val
 
     def nodes_moved(self, evt: CanvasEvent):
         """Handler for after a node has moved."""
@@ -484,13 +485,16 @@ class ReactionElement(CanvasElement):
         if self._moving_all and isinstance(offset, Vec2):
             # Only move src_handle_tip if moving all nodes and they are moved by the same amount.
             self.reaction.src_c_handle.tip += offset
+            # move center pos as well if it is not auto-set as the centroid
+            if self.reaction.center_pos:
+                self.reaction.center_pos += offset
             self.bezier.src_handle_moved()
             post_event(DidMoveBezierHandleEvent(neti, self.reaction.index, -1, by_user=True,
                                                 direct=False))
 
     def commit_node_pos(self):
         """Handler for after the controller is told to move a node."""
-        ctrl = self.canvas.controller
+        ctrl: IController = self.canvas.controller
         neti = self.canvas.net_index
         reai = self.reaction.index
         for bz in self.bezier.src_beziers:
@@ -503,6 +507,8 @@ class ReactionElement(CanvasElement):
 
         if self._moving_all:
             ctrl.set_center_handle(neti, reai, self.reaction.src_c_handle.tip)
+            if self.reaction.center_pos:
+                ctrl.set_reaction_center(neti, reai, self.reaction.center_pos)
         self._dirty_indices = set()
 
     def destroy(self):
@@ -873,14 +879,15 @@ class SelectBox(CanvasElement):
         elif len(self.compartments) != 0:
             # make sure that user can select items inside compartment, even if the compartment is
             # itself selected.
-            for elt in self.related_elts:
-                if elt.pos_inside(logical_pos):
-                    if isinstance(elt, ReactionElement):
-                        return False
-                    elif isinstance(elt, NodeElement) and elt.node.comp_idx != -1:
-                        return False
-                    else:
-                        break
+            # for elt in self.related_elts:
+            #     if elt.pos_inside(logical_pos):
+            #         if isinstance(elt, ReactionElement):
+            #             return False
+            #         elif isinstance(elt, NodeElement) and elt.node.comp_idx != -1:
+            #             return False
+            #         else:
+            #             break
+            pass
 
         handle = self._hovered_part
         # assert self._mode == SelectBox.Mode.IDLE

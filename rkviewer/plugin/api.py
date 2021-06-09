@@ -40,6 +40,11 @@ class CustomNone:
 
 
 def get_canvas() -> Optional[Canvas]:
+    '''Obtain the Canvas instance.
+    
+    This is for advanced use cases that require direct access to the Canvas, for operations that
+    have not been implmented in the API.
+    '''
     return _canvas
 
 

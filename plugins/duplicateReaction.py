@@ -1,5 +1,6 @@
 """
 Duplicates all selected reactions as well as their reactant and product nodes.
+If no reactions are selected, duplicates all reactions
 
 Version 0.01: Author: Claire Samuels (2021)
 
@@ -21,7 +22,7 @@ class DuplicateReaction(CommandPlugin):
       author='Claire Samuels',
       version='0.0.1',
       short_desc='Duplicate a reaction.',
-      long_desc='Creates an exact copy of the selected reaction',
+      long_desc='Creates an exact copy of the selected reactions and all connected nodes.',
       category=PluginCategory.UTILITIES,
    )
   def __init__(self):
@@ -36,23 +37,30 @@ class DuplicateReaction(CommandPlugin):
 
   def run(self):
 
-    selected_reacts = api.selected_reaction_indices()
-
     net_index = 0
 
-    # create a copy of passed node
-    # accepts a node index
-    # returns index of new node
+    selected_reacts = api.selected_reaction_indices()
+    if len(selected_reacts) < 1:
+      selected_reacts = api.get_reaction_indices(net_index)
+
     def copy_node(node_index, net_index):
+      '''
+      Creates a new node, translated 300 px down and to the right.
+      Parameters: node index
+      Returns: index of new node
+      '''
       node = api.get_node_by_index(net_index,node_index)
-      inx = api.add_node(net_index, 'copy_node_{}'.format(node_index),
-                    position=Vec2(node.position[0]+200, node.position[1]+200), size=Vec2(100,30))
+      temp_id = str(node.index)+"copy"
+      inx = api.add_node(net_index, id=temp_id)
+      api.update_node(net_index, inx, id='{}_copy_{}'.format(inx,node.id),
+                      shape_index=node.shape_index, size=Vec2(node.size[0]+60, node.size[1]),
+                      position=Vec2(node.position[0]+300, node.position[1]+300))
+
       return inx
 
     orig_node_set = set()
     reaction_info = {}
 
-    selected_reacts = api.selected_reaction_indices()
     for r_index in selected_reacts:
       r = api.get_reaction_by_index(net_index, r_index)
       r_info = {
@@ -75,8 +83,7 @@ class DuplicateReaction(CommandPlugin):
       new_targets = []
       for trg in reaction_info[reaction]["targets"]:
         new_targets.append(node_indices[trg])
-      api.add_reaction(net_index, 'copy_reac_{}'.format(reaction), reactants=new_sources,
+      n_index = api.add_reaction(net_index, id="copy"+str(reaction), reactants=new_sources,
                        products=new_targets)
-
-
+      api.update_reaction(net_index, n_index, id='{}_copy_{}'.format(n_index,reaction))
 

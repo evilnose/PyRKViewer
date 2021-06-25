@@ -7,6 +7,7 @@ Version 0.02: Author: Jin Xu (2021)
 # pylint: disable=maybe-no-member
 
 from inspect import Parameter
+from re import S
 #from libsbml import KineticLaw
 import wx
 from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
@@ -73,6 +74,25 @@ class IMPORTSBML(WindowedPlugin):
         Visualize the SBML string to a network shown on the canvas.
         """
 
+        # def get_bounding_rect(rects: Sequence[Rect], padding: float = 0) -> Rect:
+        #     """Compute the bounding rectangle of a given list of rects.
+        #     This computes the smallest possible rectangle needed to cover each of the rects (inclusive), as
+        #     well as its position. Additionally a padding may be specified to provide some space.
+        #     Args:
+        #         rets: The list of rectangles.
+        #         padding: The padding of the bounding rectangle. If positive, there will be x pixels of 
+        #             padding for each side of the rectangle.
+        #     Returns:
+        #         The bounding rectangle.
+        #     """
+        #     min_x = min(r.position.x for r in rects)
+        #     min_y = min(r.position.y for r in rects)
+        #     max_x = max(r.position.x + r.size.x for r in rects)
+        #     max_y = max(r.position.y + r.size.y for r in rects)
+        #     size_x = max_x - min_x + padding * 2
+        #     size_y = max_y - min_y + padding * 2
+        #     return Rect(Vec2(min_x - padding, min_y - padding), Vec2(size_x, size_y))
+
         def hex_to_rgb(value):
             value = value.lstrip('#')
             return tuple(int(value[i:i+2], 16) for i in (0, 2, 4))      
@@ -86,10 +106,12 @@ class IMPORTSBML(WindowedPlugin):
             comp_id_list = []
             comp_dimension_list = []
             comp_position_list = []
-            spec_id_list =[]
-            spec_dimension_list =[]
+            spec_id_list = []
+            specGlyph_id_list = []
+            spec_specGlyph_id_list = []
+            spec_dimension_list = []
             spec_position_list = []
-
+            
 
             #set the default values without render info:
             comp_fill_color = (158, 169, 255)
@@ -119,11 +141,13 @@ class IMPORTSBML(WindowedPlugin):
                 else:
                     numCompGlyphs = layout.getNumCompartmentGlyphs()
                     numSpecGlyphs = layout.getNumSpeciesGlyphs()
+                    numReactionGlyphs = layout.getNumReactionGlyphs()
 
+                    #print("numCompGlyphs:", numCompGlyphs)
                     for i in range(numCompGlyphs):
                         compGlyph = layout.getCompartmentGlyph(i)
                         temp_id = compGlyph.getCompartmentId()
-                        comp_id_list.append(temp_id)	
+                        comp_id_list.append(temp_id)
                         boundingbox = compGlyph.getBoundingBox()
                         height = boundingbox.getHeight()
                         width = boundingbox.getWidth()
@@ -132,17 +156,71 @@ class IMPORTSBML(WindowedPlugin):
                         comp_dimension_list.append([width,height])
                         comp_position_list.append([pos_x,pos_y])
 
-                    for i in range(numSpecGlyphs):
-                        specGlyph = layout.getSpeciesGlyph(i)
-                        spec_id = specGlyph.getSpeciesId()
-                        spec_id_list.append(spec_id)
-                        boundingbox = specGlyph.getBoundingBox()
-                        height = boundingbox.getHeight()
-                        width = boundingbox.getWidth()
-                        pos_x = boundingbox.getX()
-                        pos_y = boundingbox.getY()
-                        spec_dimension_list.append([width,height])
-                        spec_position_list.append([pos_x,pos_y])
+                    # for i in range(numSpecGlyphs):
+                    #     specGlyph = layout.getSpeciesGlyph(i)
+                    #     spec_id = specGlyph.getSpeciesId()
+                    #     spec_id_list.append(spec_id)
+                    #     boundingbox = specGlyph.getBoundingBox()
+                    #     height = boundingbox.getHeight()
+                    #     width = boundingbox.getWidth()
+                    #     pos_x = boundingbox.getX()
+                    #     pos_y = boundingbox.getY()
+                    #     spec_dimension_list.append([width,height])
+                    #     spec_position_list.append([pos_x,pos_y])
+
+                    reaction_id_list = []
+                    kinetics_list = []
+                    rct_specGlyph_list = []
+                    prd_specGlyph_list = []
+
+                    for i in range(numReactionGlyphs):
+                        reactionGlyph = layout.getReactionGlyph(i)
+                        reaction_id = reactionGlyph.getReactionId()
+                        reaction_id_list.append(reaction_id)
+                        reaction = model_layout.getReaction(reaction_id)
+                        kinetics = reaction.getKineticLaw().getFormula()
+                        kinetics_list.append(kinetics)
+                        numSpecRefGlyphs = reactionGlyph.getNumSpeciesReferenceGlyphs()
+
+                        rct_specGlyph_temp_list = []
+                        prd_specGlyph_temp_list = []
+
+                        for j in range(numSpecRefGlyphs):
+                            specRefGlyph = reactionGlyph.getSpeciesReferenceGlyph(j)
+                            #specRefGlyph_id = specRefGlyph.getSpeciesReferenceGlyphId()
+                            role = specRefGlyph.getRoleString()
+                            specGlyph_id = specRefGlyph.getSpeciesGlyphId() 
+                            specGlyph = layout.getSpeciesGlyph(specGlyph_id)
+                            spec_id = specGlyph.getSpeciesId()
+                            boundingbox = specGlyph.getBoundingBox()
+                            height = boundingbox.getHeight()
+                            width = boundingbox.getWidth()
+                            pos_x = boundingbox.getX()
+                            pos_y = boundingbox.getY()
+
+                            if specGlyph_id not in specGlyph_id_list:
+                                spec_id_list.append(spec_id)
+                                specGlyph_id_list.append(specGlyph_id)
+                                spec_specGlyph_id_list.append([spec_id,specGlyph_id])
+                                spec_dimension_list.append([width,height])
+                                spec_position_list.append([pos_x,pos_y])
+
+                            if role == "substrate": #it is a rct
+                                rct_specGlyph_temp_list.append(specGlyph_id)
+                            elif role == "product": #it is a prd
+                                prd_specGlyph_temp_list.append(specGlyph_id)
+                            
+                        rct_specGlyph_list.append(rct_specGlyph_temp_list)
+                        prd_specGlyph_list.append(prd_specGlyph_temp_list)
+                    
+                                
+                    # print(reaction_id_list)
+                    # print(kinetics_list)
+                    # print(rct_specGlyph_list)
+                    # print(prd_specGlyph_list)
+
+                    #print(spec_id_list)
+                    #print(spec_specGlyph_id_list)
 
                     rPlugin = layout.getPlugin("render")
                     if (rPlugin != None and rPlugin.getNumLocalRenderInformationObjects() > 0):
@@ -188,25 +266,42 @@ class IMPORTSBML(WindowedPlugin):
             Comps_ids = model.getListOfCompartmentIds()
             numNodes = numFloatingNodes + numBoundaryNodes
 
+            #print(Comps_ids)
             for i in range(numComps):
                 temp_id = Comps_ids[i]
+                #print(temp_id)
                 vol= model.getCompartmentVolume(i)
-                if len(comp_id_list) != 0:
-                #if mplugin is not None:
-                    for j in range(numComps):
-                        if comp_id_list[j] == temp_id:
-                            dimension = comp_dimension_list[j]
-                            position = comp_position_list[j]
-                else:# no layout info about compartment,
-                     # then the whole size of the canvas is the compartment size
-                    dimension = [4000,2500]
-                    position = [0,0] 
+                if temp_id == "_compartment_default_":
+                    api.add_compartment(net_index, id=temp_id, volume = vol,
+                    size=Vec2(3900,2400), position=Vec2(10,10),
+                    fill_color = api.Color(255,255,255),
+                    border_color = api.Color(255,255,255),
+                    border_width = comp_border_width)              
+                else:
+                    if len(comp_id_list) != 0:
+                    #if mplugin is not None:
+                        for j in range(numComps):
+                            if comp_id_list[j] == temp_id: 
+                                dimension = comp_dimension_list[j]
+                                position = comp_position_list[j]
+                            
+                    else:# no layout info about compartment,
+                        # then the whole size of the canvas is the compartment size
+                        # modify the compartment size using the max_rec function above
+                        # random assigned network:
+                        # dimension = [800,800]
+                        # position = [40,40]
+                        # the whole size of the compartment: 4000*2500
+                        dimension = [3900,2400] 
+                        position = [10,10]
+                        comp_fill_color = (255, 255, 255)
+                        comp_border_color = (255, 255, 255)
 
-                api.add_compartment(net_index, id=temp_id, volume = vol,
-                size=Vec2(dimension[0],dimension[1]),position=Vec2(position[0],position[1]),
-                fill_color = api.Color(comp_fill_color[0],comp_fill_color[1],comp_fill_color[2]),
-                border_color = api.Color(comp_border_color[0],comp_border_color[1],comp_border_color[2]),
-                border_width = comp_border_width)
+                    api.add_compartment(net_index, id=temp_id, volume = vol,
+                    size=Vec2(dimension[0],dimension[1]),position=Vec2(position[0],position[1]),
+                    fill_color = api.Color(comp_fill_color[0],comp_fill_color[1],comp_fill_color[2]),
+                    border_color = api.Color(comp_border_color[0],comp_border_color[1],comp_border_color[2]),
+                    border_width = comp_border_width)
 
 
             comp_node_list = [0]*numComps
@@ -214,39 +309,128 @@ class IMPORTSBML(WindowedPlugin):
             for i in range(numComps):
                 comp_node_list[i] = []
 
-            if len(comp_id_list) != 0:
-            #if mplugin is not None:
-                for i in range (numFloatingNodes):
-                    temp_id = FloatingNodes_ids[i]
+            #if there is layout info:
+            if len(spec_id_list) != 0:
+                id_list = []
+                nodeIdx_list = [] #get_nodes idx do not follow the same order of add_node
+                nodeIdx_specGlyph_list = []
+                nodeIdx_specGlyph_alias_list = []
+                numSpec_in_reaction = len(spec_specGlyph_id_list)
+                #numSpecGlyphs is larger than numSpec_in_reaction if there orphan nodes
+                if numSpecGlyphs > numSpec_in_reaction:
+                    wx.MessageBox("Orphan nodes are removed.", "Message", wx.OK | wx.ICON_INFORMATION)                   
+                for i in range (numSpec_in_reaction):
+                    temp_id = spec_specGlyph_id_list[i][0]
+                    tempGlyph_id = spec_specGlyph_id_list[i][1]
+                    dimension = spec_dimension_list[i]
+                    position = spec_position_list[i] 
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
-                    for j in range(numNodes):
-                        if temp_id == spec_id_list[j]:
-                            dimension = spec_dimension_list[j]
-                            position = spec_position_list[j] 
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = True, 
-                    size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]), 
-                    fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
-                    border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                    border_width=spec_border_width)
-                    for j in range(numComps):
-                        if comp_id == comp_id_list[j]:
-                            comp_node_list[j].append(nodeIdx_temp)
+                    for j in range(numFloatingNodes):
+                        if temp_id == FloatingNodes_ids[j]:
+                            if temp_id not in id_list: 
+                                nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = True,
+                                size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
+                                fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
+                                border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
+                                border_width=spec_border_width) 
+                                id_list.append(temp_id)
+                                nodeIdx_list.append(nodeIdx_temp)
+                                nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
+                            else:
+                                index = id_list.index(temp_id)
+                                nodeIdx_temp = api.add_alias(net_index, original_index=index,
+                                size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]) )
+                                id_list.append(temp_id)
+                                nodeIdx_list.append(nodeIdx_temp)
+                                nodeIdx_specGlyph_alias_list.append([nodeIdx_temp,tempGlyph_id])
+                            for k in range(numComps):
+                                if len(comp_id_list) !=0 and comp_id == comp_id_list[k]:
+                                    comp_node_list[k].append(nodeIdx_temp)                           
+                    for j in range(numBoundaryNodes):
+                        if temp_id == BoundaryNodes_ids[j]: 
+                            if temp_id not in id_list: 
+                                nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = False,
+                                size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
+                                fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
+                                border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
+                                border_width=spec_border_width) 
+                                id_list.append(temp_id)
+                                nodeIdx_list.append(nodeIdx_temp)
+                                nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
+                            else:
+                                index = id_list.index(temp_id)
+                                nodeIdx_temp = api.add_alias(net_index, original_index=index,
+                                size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]))
+                                id_list.append(temp_id)
+                                nodeIdx_list.append(nodeIdx_temp)
+                                nodeIdx_specGlyph_alias_list.append([nodeIdx_temp,tempGlyph_id])
+                            for k in range(numComps):
+                                if len(comp_id) != 0 and comp_id == comp_id_list[k]:
+                                    comp_node_list[k].append(nodeIdx_temp)   
 
-                for i in range (numBoundaryNodes):
-                    temp_id = BoundaryNodes_ids[i]
-                    comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
-                    for j in range(numNodes):
-                        if temp_id == spec_id_list[j]:
-                            dimension = spec_dimension_list[j]
-                            position = spec_position_list[j] 
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = False, 
-                    size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]), 
-                    fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
-                    border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                    border_width=spec_border_width)
-                    for j in range(numComps):
-                        if comp_id == comp_id_list[j]:
-                            comp_node_list[j].append(nodeIdx_temp)
+                if len(comp_id_list) != 0:
+                    for i in range(numComps):
+                        temp_id = Comps_ids[i]                        
+                        for j in range(numComps):
+                            if comp_id_list[j] == temp_id:
+                                node_list_temp = comp_node_list[j]
+                        for j in range(len(node_list_temp)):
+                            api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[j], comp_index=i)
+                else:
+                    for i in range(len(nodeIdx_list)):
+                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=0)
+                
+                #handle_positions, center_pos was set as the default: 
+                #can not find a way from libsml to do this so far
+
+                #print(reaction_id_list)
+                #print(kinetics_list)
+                # print(rct_specGlyph_list)
+                # print(prd_specGlyph_list)
+
+                #print(spec_id_list)
+                # print(nodeIdx_list)
+                #print(spec_specGlyph_id_list)
+                #print(nodeIdx_specGlyph_list)
+                #print(nodeIdx_specGlyph_alias_list)
+
+                #allNodes = api.get_nodes(net_index)
+                #print(allNodes)
+
+                nodeIdx_specGlyph_whole_list = nodeIdx_specGlyph_list + nodeIdx_specGlyph_alias_list
+                #print(nodeIdx_specGlyph_whole_list)
+
+                for i in range (numReactionGlyphs):
+                    src = []
+                    dst = []
+                    temp_id = reaction_id_list[i]
+                    kinetics = kinetics_list[i]
+                    rct_num = len(rct_specGlyph_list[i])
+                    prd_num = len(prd_specGlyph_list[i])
+
+                    for j in range(rct_num):
+                        temp_specGlyph_id = rct_specGlyph_list[i][j]
+                        for k in range(numSpec_in_reaction):
+                            if temp_specGlyph_id == nodeIdx_specGlyph_whole_list[k][1]:
+                                rct_idx = nodeIdx_specGlyph_whole_list[k][0]
+                        src.append(rct_idx)
+
+                    for j in range(prd_num):
+                        temp_specGlyph_id = prd_specGlyph_list[i][j]
+                        for k in range(numSpec_in_reaction):
+                            if temp_specGlyph_id == nodeIdx_specGlyph_whole_list[k][1]:
+                                prd_idx = nodeIdx_specGlyph_whole_list[k][0]
+                        dst.append(prd_idx)
+
+                    # print(temp_id)
+                    # print(src)
+                    # print(dst)
+                    # print(kinetics)
+
+                    api.add_reaction(net_index, id=temp_id, reactants=src, products=dst, rate_law = kinetics,
+                    fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]), 
+                    line_thickness=reaction_line_width)
+
 
             else: # there is no layout information, assign position randomly and size as default
                 comp_id_list = Comps_ids
@@ -270,49 +454,53 @@ class IMPORTSBML(WindowedPlugin):
                     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                    border_width=spec_border_width)
+                    border_width=spec_border_width )
                     for j in range(numComps):
                         if comp_id == comp_id_list[j]:
                             comp_node_list[j].append(nodeIdx_temp)
 
 
-            for i in range(numComps):
-                temp_id = Comps_ids[i]
-                for j in range(numComps):
-                    if comp_id_list[j] == temp_id:
-                        node_list_temp = comp_node_list[j]
-                for j in range(len(node_list_temp)):
-                    api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[j], comp_index=i)
+                for i in range(numComps):
+                    temp_id = Comps_ids[i]
+                    for j in range(numComps):
+                        if comp_id_list[j] == temp_id:
+                            node_list_temp = comp_node_list[j]
+                    for j in range(len(node_list_temp)):
+                        api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[j], comp_index=i)
 
-            #handle_positions, center_pos was set as the default
+                #handle_positions, center_pos was set as the default
 
-            numNodes = api.node_count(net_index)
-            allNodes = api.get_nodes(net_index)
+                numNodes = api.node_count(net_index)
+                allNodes = api.get_nodes(net_index)
 
-            for i in range (numRxns):
-                src = []
-                dst = []
-                temp_id = Rxns_ids[i]
-                kinetics = model.getRateLaw(i)
-                rct_num = model.getNumReactants(i)
-                prd_num = model.getNumProducts(i)
-
-                for j in range(rct_num):
-                    rct_id = model.getReactant(temp_id,j)
-                    for k in range(numNodes):
-                        if allNodes[k].id == rct_id:
-                            src.append(allNodes[k].index)
+                for i in range (numRxns):
+                    src = []
+                    dst = []
+                    temp_id = Rxns_ids[i]
+                    kinetics = model.getRateLaw(i)
+                    rct_num = model.getNumReactants(i)
+                    prd_num = model.getNumProducts(i)
 
 
-                for j in range(prd_num):
-                    prd_id = model.getProduct(temp_id,j)
-                    for k in range(numNodes):
-                        if allNodes[k].id == prd_id:
-                            dst.append(allNodes[k].index)
+                    for j in range(rct_num):
+                        rct_id = model.getReactant(temp_id,j)
+                        for k in range(numNodes):
+                            if allNodes[k].id == rct_id:
+                                src.append(allNodes[k].index)
 
-                api.add_reaction(net_index, id=temp_id, reactants=src, products=dst, rate_law = kinetics,
-                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]), 
-                line_thickness=reaction_line_width)
+
+                    for j in range(prd_num):
+                        prd_id = model.getProduct(temp_id,j)
+                        for k in range(numNodes):
+                            if allNodes[k].id == prd_id:
+                                dst.append(allNodes[k].index)
+
+                    api.add_reaction(net_index, id=temp_id, reactants=src, products=dst, rate_law = kinetics,
+                    fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]), 
+                    line_thickness=reaction_line_width)
+
+                    #set the information for handle positions, center positions and use bezier as default
+                    
             
 
                 

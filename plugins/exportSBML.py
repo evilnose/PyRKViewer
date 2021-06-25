@@ -12,7 +12,7 @@ from inspect import Parameter
 import wx
 from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin import api
-from rkviewer.plugin.api import Node, Vec2, Reaction, Color
+from rkviewer.plugin.api import Node, Vec2, Reaction, Color, get_node_by_index
 import os
 from libsbml import * # does not have to import in the main.py too
 
@@ -59,13 +59,16 @@ class ExportSBML(WindowedPlugin):
         numNodes = api.node_count(netIn)
         numReactions = api.reaction_count(netIn)
         
-        if numNodes == 0: #or numReactions == 0 :
-            wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
+        if numNodes == 0 or numReactions == 0 :
+            wx.MessageBox("Please import a network with at least one reaction on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
             allReactions = api.get_reactions(netIn)
             allcompartments = api.get_compartments(netIn)
-            numCompartments = len(allcompartments)          
+            #print("allNodes:",allNodes)
+            #print("allReactions:",allReactions)
+            #print("allcompartments:",allcompartments)
+            numCompartments = len(allcompartments)      
 #######################################
 
             # Creates an SBMLNamespaces object with the given SBML level, version
@@ -84,20 +87,57 @@ class ExportSBML(WindowedPlugin):
             document.setPkgRequired("layout", False)  
 
             # create the Model
-
             model = document.createModel()
             model.setId("Model_layout")
             document.setModel(model)
 
             # create the Compartment and species
+
+            comp_id_list = []
+            for i in range(numCompartments):
+                comp_id_list.append(allcompartments[i].id) 
+
             if numCompartments != 0:
+                if "_compartment_default_" not in comp_id_list:
+                    compartment = model.createCompartment()
+                    comp_id="_compartment_default_"
+                    compartment.setId(comp_id)
+                    compartment.setConstant(True)
+                
                 for i in range(numCompartments):   
                     compartment = model.createCompartment()
                     comp_id=allcompartments[i].id
+                    #print(comp_id)
                     compartment.setId(comp_id)
                     compartment.setConstant(True)
-                    for j in range(len(allcompartments[i].nodes)):
-                        spec_id = allNodes[allcompartments[i].nodes[j]].id
+                for i in range(numNodes):
+                    original_index = allNodes[i].original_index
+                    if original_index == -1:
+                        spec_id = allNodes[i].id
+                        species = model.createSpecies()
+                        species.setId(spec_id)
+                        comp_idx = allNodes[i].comp_idx
+                        if comp_idx != -1:
+                            comp_id = allcompartments[comp_idx].id 
+                            species.setCompartment(comp_id)  
+                        else:
+                            species.setCompartment("_compartment_default_") 
+                        species.setInitialConcentration(1.0)	
+                        species.setHasOnlySubstanceUnits(False)
+                        species.setBoundaryCondition(False)
+                        species.setConstant(False)             
+                        if allNodes[i].floating_node == False:
+                            species.setBoundaryCondition(True)
+                            species.setConstant(True)   
+            else: #set default compartment
+                compartment = model.createCompartment()
+                comp_id="_compartment_default_"
+                compartment.setId(comp_id)
+                compartment.setConstant(True)
+                for i in range(numNodes):
+                    original_index = allNodes[i].original_index
+                    if original_index == -1:
+                        spec_id = allNodes[i].id
                         species = model.createSpecies()
                         species.setId(spec_id)
                         species.setCompartment(comp_id)
@@ -105,26 +145,9 @@ class ExportSBML(WindowedPlugin):
                         species.setHasOnlySubstanceUnits(False)
                         species.setBoundaryCondition(False)
                         species.setConstant(False)             
-                        if allNodes[allcompartments[i].nodes[j]].floating_node == False:
+                        if allNodes[i].floating_node == False:
                             species.setBoundaryCondition(True)
-            else: #set default compartment
-                compartment = model.createCompartment()
-                comp_id="c_0"
-                compartment.setId(comp_id)
-                compartment.setConstant(True)
-                for i in range(numNodes):
-                    spec_id = allNodes[i].id
-                    species = model.createSpecies()
-                    species.setId(spec_id)
-                    species.setCompartment(comp_id)
-                    species.setInitialConcentration(1.0)	
-                    species.setHasOnlySubstanceUnits(False)
-                    species.setBoundaryCondition(False)
-                    species.setConstant(False)             
-                    if allNodes[i].floating_node == False:
-                        species.setBoundaryCondition(True)
-                        species.setConstant(True)
-
+                            species.setConstant(True)
             # create reactions:
             for i in range(numReactions):
                 reaction_id = allReactions[i].id
@@ -133,9 +156,9 @@ class ExportSBML(WindowedPlugin):
                 rct_num = len(allReactions[i].sources)
                 prd_num = len(allReactions[i].targets)
                 for j in range(rct_num):
-                    rct.append(allNodes[allReactions[i].sources[j]].id)
+                    rct.append(get_node_by_index(netIn, allReactions[i].sources[j]).id)
                 for j in range(prd_num):
-                    prd.append(allNodes[allReactions[i].targets[j]].id)
+                    prd.append(get_node_by_index(netIn, allReactions[i].targets[j]).id)
 
                 kinetic_law = ''
                 parameter_list = []
@@ -223,11 +246,22 @@ class ExportSBML(WindowedPlugin):
             # random network (40+800x, 40+800y)
 
             #create the CompartmentGlyph and SpeciesGlyphs
-
             if numCompartments != 0:
+                if "_compartment_default_" not in comp_id_list:
+                    comp_id= "_compartment_default_"
+                    compartmentGlyph = layout.createCompartmentGlyph()
+                    compG_id = "CompG_" + comp_id
+                    compartmentGlyph.setId(compG_id)
+                    compartmentGlyph.setCompartmentId(comp_id)
+                    bb_id  = "bb_" + comp_id
+                    pos_x  = 10
+                    pos_y  = 10
+                    width  = 3900
+                    height = 2400
+                    compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
+                
                 for i in range(numCompartments):   
                     comp_id=allcompartments[i].id
-
                     compartmentGlyph = layout.createCompartmentGlyph()
                     compG_id = "CompG_" + comp_id
                     compartmentGlyph.setId(compG_id)
@@ -238,34 +272,14 @@ class ExportSBML(WindowedPlugin):
                     width  = allcompartments[i].size.x
                     height = allcompartments[i].size.y
                     compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
-                    for j in range(len(allcompartments[i].nodes)):
-                        spec_id = allNodes[allcompartments[i].nodes[j]].id
-                        speciesGlyph = layout.createSpeciesGlyph()
-                        specG_id = "SpecG_" + spec_id
-                        speciesGlyph.setId(specG_id)
-                        speciesGlyph.setSpeciesId(spec_id)
-                        bb_id  = "bb_" + spec_id
-                        pos_x  = allNodes[allcompartments[i].nodes[j]].position.x
-                        pos_y  = allNodes[allcompartments[i].nodes[j]].position.y
-                        width  = allNodes[allcompartments[i].nodes[j]].size.x
-                        height = allNodes[allcompartments[i].nodes[j]].size.y
-                        speciesGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
-
-                        textGlyph = layout.createTextGlyph()
-                        textG_id = "TextG_" + spec_id
-                        textGlyph.setId(textG_id)
-                        bb_id = "bb_spec_text_" + spec_id
-                        textGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
-                        textGlyph.setOriginOfTextId(specG_id)
-                        textGlyph.setGraphicalObjectId(specG_id)
-            else:#there is no compartment   
-                for i in range(numNodes):
+                for i in range(numNodes):   
                     spec_id = allNodes[i].id
+                    spec_index = allNodes[i].index
                     speciesGlyph = layout.createSpeciesGlyph()
-                    specG_id = "SpecG_" + spec_id
+                    specG_id = "SpecG_"  + spec_id + '_idx_' + str(spec_index)
                     speciesGlyph.setId(specG_id)
                     speciesGlyph.setSpeciesId(spec_id)
-                    bb_id  = "bb_" + spec_id
+                    bb_id  = "bb_" + spec_id + '_idx_' + str(spec_index)
                     pos_x  = allNodes[i].position.x
                     pos_y  = allNodes[i].position.y
                     width  = allNodes[i].size.x
@@ -273,9 +287,43 @@ class ExportSBML(WindowedPlugin):
                     speciesGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
 
                     textGlyph = layout.createTextGlyph()
-                    textG_id = "TextG_" + spec_id
+                    textG_id = "TextG_" + spec_id + '_idx_' + str(spec_index)
                     textGlyph.setId(textG_id)
-                    bb_id = "bb_spec_text_" + spec_id
+                    bb_id  = "bb_spec_text_" + spec_id + '_idx_' + str(spec_index)
+                    textGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
+                    textGlyph.setOriginOfTextId(specG_id)
+                    textGlyph.setGraphicalObjectId(specG_id)
+            else:#there is no compartment  
+                comp_id= "_compartment_default_"
+                compartmentGlyph = layout.createCompartmentGlyph()
+                compG_id = "CompG_" + comp_id
+                compartmentGlyph.setId(compG_id)
+                compartmentGlyph.setCompartmentId(comp_id)
+                bb_id  = "bb_" + comp_id
+                pos_x  = 10
+                pos_y  = 10
+                width  = 3900
+                height = 2400
+                compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
+            
+                for i in range(numNodes):
+                    spec_id = allNodes[i].id
+                    spec_index = allNodes[i].index
+                    speciesGlyph = layout.createSpeciesGlyph()
+                    specG_id = "SpecG_"  + spec_id + '_idx_' + str(spec_index)
+                    speciesGlyph.setId(specG_id)
+                    speciesGlyph.setSpeciesId(spec_id)
+                    bb_id  = "bb_" + spec_id + '_idx_' + str(spec_index)
+                    pos_x  = allNodes[i].position.x
+                    pos_y  = allNodes[i].position.y
+                    width  = allNodes[i].size.x
+                    height = allNodes[i].size.y
+                    speciesGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
+
+                    textGlyph = layout.createTextGlyph()
+                    textG_id = "TextG_" + spec_id + '_idx_' + str(spec_index)
+                    textGlyph.setId(textG_id)
+                    bb_id  = "bb_spec_text_" + spec_id + '_idx_' + str(spec_index)
                     textGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
                     textGlyph.setOriginOfTextId(specG_id)
                     textGlyph.setGraphicalObjectId(specG_id)
@@ -296,23 +344,28 @@ class ExportSBML(WindowedPlugin):
 
                 rct = [] # id list of the rcts
                 prd = []
+                rct_index = []
+                prd_index = []
                 rct_num = len(allReactions[i].sources)
                 prd_num = len(allReactions[i].targets)
-                for j in range(rct_num):
-                    rct.append(allNodes[allReactions[i].sources[j]].id)
-                for j in range(prd_num):
-                    prd.append(allNodes[allReactions[i].targets[j]].id)
 
+
+                for j in range(rct_num):
+                    rct.append(get_node_by_index(netIn, allReactions[i].sources[j]).id)
+                    rct_index.append(get_node_by_index(netIn, allReactions[i].sources[j]).index)
+                for j in range(prd_num):
+                    prd.append(get_node_by_index(netIn, allReactions[i].targets[j]).id)
+                    prd_index.append(get_node_by_index(netIn, allReactions[i].targets[j]).index)
                 for j in range(rct_num):
                     ref_id = "SpecRef_" + reaction_id + "_rct" + str(j)
 
                     speciesReferenceGlyph = reactionGlyph.createSpeciesReferenceGlyph()
                     specsRefG_id = "SpecRefG_" + reaction_id + "_rct" + str(j)
-                    specG_id = "SpecG_" + rct[j]
+                    specG_id = "SpecG_" + rct[j] + '_idx_' + str(rct_index[j])
                     speciesReferenceGlyph.setId(specsRefG_id)
                     speciesReferenceGlyph.setSpeciesGlyphId(specG_id)
                     speciesReferenceGlyph.setSpeciesReferenceId(ref_id)
-                    speciesReferenceGlyph.setRole(SPECIES_ROLE_UNDEFINED)
+                    speciesReferenceGlyph.setRole(SPECIES_ROLE_SUBSTRATE)
 
                     speciesReferenceCurve = speciesReferenceGlyph.getCurve()
                     cb = speciesReferenceCurve.createCubicBezier()
@@ -326,21 +379,22 @@ class ExportSBML(WindowedPlugin):
                     cb.setBasePoint1(Point(layoutns, pos_x, pos_y))
                     cb.setBasePoint2(Point(layoutns, pos_x, pos_y))
 
-                    pos_x = allNodes[allReactions[i].sources[j]].position.x
-                    pos_y = allNodes[allReactions[i].sources[j]].position.y
-                    width = allNodes[allReactions[i].sources[j]].size.x
-                    height = allNodes[allReactions[i].sources[j]].size.y
+
+                    pos_x = get_node_by_index(netIn,allReactions[i].sources[j]).position.x
+                    pos_y = get_node_by_index(netIn,allReactions[i].sources[j]).position.y
+                    width = get_node_by_index(netIn,allReactions[i].sources[j]).size.x
+                    height = get_node_by_index(netIn,allReactions[i].sources[j]).size.y
                     cb.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y - 0.5*height))
 
                 for j in range(prd_num):
                     ref_id = "SpecRef_" + reaction_id + "_prd" + str(j)
                     speciesReferenceGlyph = reactionGlyph.createSpeciesReferenceGlyph()
                     specsRefG_id = "SpecRefG_" + reaction_id + "_prd" + str(j)
-                    specG_id = "SpecG_" + prd[j]
+                    specG_id = "SpecG_" + prd[j]  + '_idx_' + str(prd_index[j])
                     speciesReferenceGlyph.setId(specsRefG_id)
                     speciesReferenceGlyph.setSpeciesGlyphId(specG_id)
                     speciesReferenceGlyph.setSpeciesReferenceId(ref_id)
-                    speciesReferenceGlyph.setRole(SPECIES_ROLE_UNDEFINED)
+                    speciesReferenceGlyph.setRole(SPECIES_ROLE_PRODUCT)
 
                     speciesReferenceCurve = speciesReferenceGlyph.getCurve()
                     cb = speciesReferenceCurve.createCubicBezier()
@@ -353,10 +407,10 @@ class ExportSBML(WindowedPlugin):
                     cb.setBasePoint1(Point(layoutns, pos_x, pos_y))
                     cb.setBasePoint2(Point(layoutns, pos_x, pos_y))
 
-                    pos_x = allNodes[allReactions[i].targets[j]].position.x
-                    pos_y = allNodes[allReactions[i].targets[j]].position.y
-                    width = allNodes[allReactions[i].targets[j]].size.x
-                    height = allNodes[allReactions[i].targets[j]].size.y
+                    pos_x = get_node_by_index(netIn, allReactions[i].targets[j]).position.x
+                    pos_y = get_node_by_index(netIn, allReactions[i].targets[j]).position.y
+                    width = get_node_by_index(netIn, allReactions[i].targets[j]).size.x
+                    height = get_node_by_index(netIn, allReactions[i].targets[j]).size.y
                     cb.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y - 0.5*height))
 
             sbmlStr_layout = writeSBMLToString(document) #sbmlStr is w/o layout info
@@ -398,17 +452,18 @@ class ExportSBML(WindowedPlugin):
                 fill_color_str    = '#9ea9ff'
                 border_color_str  = '#001dff'
 
-            #nodeData does not have fill_color,border_color,border_width
             node =  allNodes[0]
-            # spec_fill_color   = node.fill_color
-            # spec_border_color = node.border_color
-            # spec_border_width = node.border_width
-            # spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
-            # spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
-
-            spec_fill_color_str = '#ffcc99'
-            spec_border_color_str = '#ff6c09'
-            spec_border_width = 2.
+            try: 
+                primitive, transform = node.shape.items[0]
+                spec_fill_color   = primitive.fill_color
+                spec_border_color = primitive.border_color
+                spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
+                spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
+                spec_border_width = primitive.border_width
+            except:
+                spec_fill_color_str = '#ffcc99'
+                spec_border_color_str = '#ff6c09'
+                spec_border_width = 2.
 
             if numReactions != 0:
                 reaction_fill_color     = allReactions[0].fill_color

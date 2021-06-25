@@ -193,8 +193,13 @@ class StructuralAnalysis(WindowedPlugin):
         else:
             allNodes = api.get_nodes(netIn)
             id = allNodes[0].id[0:-2]
-            self.default_color = allNodes[0].fill_color
-            
+            node =  allNodes[0]
+            try:
+                primitive, transform = node.shape.items[0]
+                self.default_color = primitive.fill_color
+            except:
+                self.default_color = api.Color(255, 204, 153) #random network node color
+
             largest_node_index = 0
             for i in range(numNodes):
                 if allNodes[i].index > largest_node_index:
@@ -314,7 +319,8 @@ class StructuralAnalysis(WindowedPlugin):
                 wx.MessageBox("Please select a row and pick a color again", "Message", wx.OK | wx.ICON_INFORMATION)
             try:
                 for index in self.index_list:
-                    api.update_node(api.cur_net_index(), index, fill_color=color, border_color=color)
+                    #api.update_node(api.cur_net_index(), index, fill_color=color, forder_color=color)
+                    api.update_node(api.cur_net_index(), index, fill_color=color)
             except:
                 wx.MessageBox("Please select a row and pick a color again", "Message", wx.OK | wx.ICON_INFORMATION)
 
@@ -331,9 +337,8 @@ class StructuralAnalysis(WindowedPlugin):
             #for index in api.selected_node_indices():
             try:
                 for index in self.index_list:
-                    api.update_node(api.cur_net_index(), index, fill_color=self.default_color, border_color=self.default_color)
+                    api.update_node(api.cur_net_index(), index, fill_color=self.default_color)
             except:
                 wx.MessageBox("There is no highlighted nodes", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
-  

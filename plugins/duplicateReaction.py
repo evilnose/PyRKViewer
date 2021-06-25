@@ -10,11 +10,11 @@ import wx
 from rkviewer.plugin.classes import PluginMetadata, CommandPlugin, PluginCategory
 from rkviewer.plugin import api
 from rkviewer.plugin.api import Node, Vec2, Reaction
+from rkviewer.mvc import IDRepeatError
 import math
 import random as _random
 import numpy as _np
 import copy as _copy
-from dataclasses import dataclass
 
 class DuplicateReaction(CommandPlugin):
   metadata = PluginMetadata(
@@ -50,12 +50,24 @@ class DuplicateReaction(CommandPlugin):
       Returns: index of new node
       '''
       node = api.get_node_by_index(net_index,node_index)
-      temp_id = str(node.index)+"copy"
-      inx = api.add_node(net_index, id=temp_id)
-      api.update_node(net_index, inx, id='{}_copy_{}'.format(inx,node.id),
-                      shape_index=node.shape_index, size=Vec2(node.size[0]+60, node.size[1]),
-                      position=Vec2(node.position[0]+300, node.position[1]+300))
-
+      try:
+        inx = api.add_node(net_index, id='copy_{}'.format(node.id),
+                        shape_index=node.shape_index, size=Vec2(node.size[0]+60, node.size[1]),
+                        position=Vec2(node.position[0]+300, node.position[1]+300))
+      except IDRepeatError:
+        # find a unique id
+        all_ids = []
+        ns = api.get_nodes(net_index)
+        for n in ns:
+          all_ids.append(n.id)
+        c = 1
+        new_id = 'copy_{}({})'.format(node.id,c)
+        while new_id in all_ids:
+          c += 1
+          new_id = 'copy_{}({})'.format(node.id,c)
+        inx = api.add_node(net_index, id=new_id,
+                        shape_index=node.shape_index, size=Vec2(node.size[0]+60, node.size[1]),
+                        position=Vec2(node.position[0]+300, node.position[1]+300))
       return inx
 
     orig_node_set = set()
@@ -86,4 +98,5 @@ class DuplicateReaction(CommandPlugin):
       n_index = api.add_reaction(net_index, id="copy"+str(reaction), reactants=new_sources,
                        products=new_targets)
       api.update_reaction(net_index, n_index, id='{}_copy_{}'.format(n_index,reaction))
+
 

@@ -283,6 +283,7 @@ urllib3==1.26.5; python_version >= "3.5" and python_full_version < "3.0.0" or py
     --hash=sha256:a7acd0977125325f516bda9735fa7142b909a8d01e8b2e4c8108d0984e6e0098
 wrapt==1.12.1; python_version >= "3.6" and python_version < "4.0" \
     --hash=sha256:b62ffa81fb85f4332a4f609cab4ac40709470da05643a082ec1eb88e6d9b97d7
+-f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-18.04/
 wxpython==4.1.1 \
     --hash=sha256:f03d00c25db206d294ba99f15714368e02416b67be12bd8714b8268870e3b155 \
     --hash=sha256:e8170353bc1004574552a5b121251cc859b68d9cf6f09118dd9be48422448304 \

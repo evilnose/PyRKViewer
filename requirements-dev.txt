@@ -281,7 +281,7 @@ typing-extensions==3.10.0.0; python_version < "3.8" and python_version >= "3.6" 
 urllib3==1.26.5; python_version >= "3.5" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" and python_version < "4" and python_version >= "3.5" \
     --hash=sha256:753a0374df26658f99d826cfe40394a686d05985786d946fbe4165b5148f5a7c \
     --hash=sha256:a7acd0977125325f516bda9735fa7142b909a8d01e8b2e4c8108d0984e6e0098
--f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-20.04/
+-f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-18.04/
 wxpython==4.1.1 \
     --hash=sha256:f03d00c25db206d294ba99f15714368e02416b67be12bd8714b8268870e3b155 \
     --hash=sha256:e8170353bc1004574552a5b121251cc859b68d9cf6f09118dd9be48422448304 \

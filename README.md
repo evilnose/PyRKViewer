@@ -83,7 +83,7 @@ use that Python installation for building.
 
 ### Linux Notes
 * To install wxPython on linux, see https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html. `requirements-dev.txt` and `requirements.txt` assume the user is on Ubuntu 18.04 for readthedocs. If you have a different distro and have trouble using `requirements.txt`, just install wxPython manually using the previous link.
-* Related to the last note, if readthedocs start having trouble building wxPython, understand that it might be because readthedocs updated its distro from Ubuntu 18.04. Go to `reqs-dev.txt` and change the line above `wxPython` to look in the appropriate link.
+* Related to the last note, if readthedocs start having trouble building wxPython, understand that it might be because readthedocs updated its distro from Ubuntu 18.04. Go to `requirements-dev.txt` and change the line above `wxPython` to look in the appropriate link.
 * i.e. `-f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-18.04/ \n wxPython==4.1.1`
 
 ## Future Development

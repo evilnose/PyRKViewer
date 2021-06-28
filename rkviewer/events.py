@@ -112,7 +112,14 @@ class DidResizeNodesEvent(CanvasEvent):
 
 @dataclass
 class DidResizeCompartmentsEvent(CanvasEvent):
-    """TODO document (same as DidResizeNodesEvent)
+    """Called after the list of selected compartments has been resized.
+
+    Attributes:
+        compartment_indices: The indices of the list of resized compartments.
+        ratio: The resize ratio.
+        dragged: Whether the resize operation was done by the user dragging, and not, for exmaple,
+                 through the form.
+        by_user: Whether the event was performed by the user or through a plugin.
     """
     compartment_indices: List[int]
     ratio: Union[Vec2, List[Vec2]]
@@ -165,7 +172,7 @@ class DidMoveReactionCenterEvent(CanvasEvent):
         reaction_index: The reaction index.
         offset: The amount moved.
         dragged: Whether the center is moved by the user dragging (it could have been through the
-                 form).
+                  form).
     """
     net_index: int
     reaction_index: int

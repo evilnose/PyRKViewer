@@ -14,3 +14,7 @@ python:
    version: 3.7
    install:
    - requirements: docs/source/requirements.txt
+
+submodules:
+   exclude:
+    - rkviewer/view.py

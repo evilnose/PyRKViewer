@@ -89,7 +89,7 @@ sortedcontainers==2.4.0 \
 sphinx-autodoc-typehints==1.12.0; python_version >= "3.6" \
     --hash=sha256:193617d9dbe0847281b1399d369e74e34cd959c82e02c7efde077fca908a9f52 \
     --hash=sha256:5e81776ec422dd168d688ab60f034fccfafbcd94329e9537712c93003bddc04a
-sphinx-rtd-theme==0.5.2 \
+sphinx-rtd-theme==0.5.2; python_version >= "3.4" \
     --hash=sha256:4a05bdbe8b1446d77a01e20a23ebc6777c74f43237035e76be89699308987d6f \
     --hash=sha256:32bd3b5d13dc8186d7a42fc816a23d32e83a4827d7d9882948e7b837c232da5a
 sphinx==3.5.4; python_version >= "3.5" \

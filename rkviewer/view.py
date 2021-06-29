@@ -15,11 +15,13 @@ from commentjson.commentjson import JSONLibraryException
 from rkviewer.plugin.api import init_api
 import wx.adv
 
+from wx import SizerFlags
+
 import rkviewer
 from rkviewer.canvas.geometry import get_bounding_rect
 from rkviewer.plugin_manage import PluginManager
 
-from .canvas.canvas import Canvas
+from .canvas.canvas import Alignment, Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import InputMode, cstate
 from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, get_default_raw_settings, get_setting, get_theme,
@@ -192,14 +194,16 @@ class ToolbarItem(wx.Panel):
         label_text.SetFont(wx.Font(fontinfo))
         label_text.SetForegroundColour(get_theme('toolbar_fg'))
 
-        sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_HORIZONTAL)
+        #sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_HORIZONTAL)
+        sizerflags = SizerFlags.Align(wx.ALIGN_CENTER_HORIZONTAL)
         self.sizer.Add(button, sizerflags.Border(wx.TOP, 5))
         self.sizer.Add(label_text, sizerflags)
         self.SetSizer(self.sizer)
 
 
 class Toolbar(wx.Panel):
-    SIZER_FLAGS = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
+    #SIZER_FLAGS = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
+    SIZER_FLAGS = SizerFlags.Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -260,7 +264,7 @@ class TabbedToolbar(fnb.FlatNotebook):
                     bitmap = wx.ArtProvider.GetBitmap(wx.ART_MISSING_IMAGE, wx.ART_MENU)
                 tb.AppendTool(name, callback, bitmap)
             tb.SetForegroundColour (wx.RED)
-            tb.SetBackgroundColour (get_theme ('toolbar_bg'))         
+            tb.SetBackgroundColour (get_theme ('toolbar_bg'))
             self.AddPage(tb, text=CATEGORY_NAMES[cat])
 
 
@@ -301,31 +305,33 @@ class ModePanel(wx.Panel):
 
         def exit_func(evt):
             btn.SetBackgroundColour(get_theme('btn_bg'))
-            btn.SetForegroundColour(get_theme('btn_fg')) 
+            btn.SetForegroundColour(get_theme('btn_fg'))
 
         btn.Bind(wx.EVT_ENTER_WINDOW, enter_func)
         btn.Bind(wx.EVT_LEAVE_WINDOW, exit_func)
 
-        btn.SetBackgroundColour(get_theme('btn_bg')) 
+        btn.SetBackgroundColour(get_theme('btn_bg'))
         #font = wx.Font(11, wx.FONTFAMILY_MODERN, 0, 90, underline = False,  faceName ="") # <- if we want to change font style
-        btn.SetForegroundColour(get_theme('btn_fg')) 
+        btn.SetForegroundColour(get_theme('btn_fg'))
         #btn.SetFont (font)
 
-        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        #sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        sizer.Add(btn, SizerFlags.Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
         self.btn_group.AddButton(btn, mode)
 
     def AppendNormalButton(self, label: str, callback, sizer: wx.Sizer, tooltip: str = None):
-        if get_theme ('btn_border'):        
+        if get_theme ('btn_border'):
            btn = wx.Button(self, label=label)
         else:
            btn = wx.Button(self, label=label, style=wx.BORDER_NONE)
 
-        btn.SetBackgroundColour(get_theme ('btn_bg')) 
-        btn.SetForegroundColour(get_theme ('btn_fg')) 
+        btn.SetBackgroundColour(get_theme ('btn_bg'))
+        btn.SetForegroundColour(get_theme ('btn_fg'))
         if tooltip is not None:
             btn.SetToolTip(tooltip)
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
-        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        #sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        sizer.Add(btn, SizerFlags.Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
     def AppendSeparator(self, sizer: wx.Sizer):
         sizer.Add((0, 10))
@@ -342,7 +348,8 @@ class BottomBar(wx.Panel):
     def CreateSlider(self):
         self.sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
         zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM | wx.SL_AUTOTICKS, size=(225, 25))
-        self.sizer.Add(zoom_slider, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        #self.sizer.Add(zoom_slider, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
+        self.sizer.Add(zoom_slider, SizerFlags.Align(wx.ALIGN_CENTER_VERTICAL))
         self.sizer.Layout()
         return zoom_slider
 
@@ -446,7 +453,7 @@ class NetworkPrintout(wx.Printout):
     def __init__(self, img: wx.Image):
         super().__init__()
         self.image = img
-    
+
     def OnPrintPage(self, pageNum: int):
         if pageNum > 1:
             return False
@@ -626,7 +633,7 @@ class MainFrame(wx.Frame):
 
         # Record the initial position of the window
         self.controller.set_application_position(self.GetPosition())
-    
+
     def OnShow(self, evt):
         if runtime_vars().enable_plugins:
             self.manager.load_from('plugins')

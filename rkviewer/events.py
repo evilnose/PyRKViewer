@@ -19,7 +19,7 @@ from typing import (
     Type, Union,
 )
 
-from wx import GraphicsContext
+import wx
 
 from rkviewer.canvas.geometry import Vec2
 
@@ -307,7 +307,7 @@ class DidPaintCanvasEvent(CanvasEvent):
     Attributes:
         gc: The graphics context of the canvas.
     """
-    gc: GraphicsContext
+    gc: wx.GraphicsContext
 
 
 EventCallback = Callable[[CanvasEvent], None]

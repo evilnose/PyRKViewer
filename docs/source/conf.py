@@ -27,7 +27,7 @@ release = '0.0.1'
 import sphinx_rtd_theme
 
 # readthedocs can't deal with wx, so we tell it to pretend it can
-autodoc_mock_imports = ['sortedcontainers', 'numpy', 'wx', 'wxpython', 'gtk', 'gtk+', 'glib',
+autodoc_mock_imports = ['sortedcontainers', 'numpy', 'wxpython', 'gtk', 'gtk+', 'glib',
                         'pillow', 'commentjson']
 
 # -- General configuration ---------------------------------------------------

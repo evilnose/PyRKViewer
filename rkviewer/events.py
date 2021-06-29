@@ -19,7 +19,7 @@ from typing import (
     Type, Union,
 )
 
-import wx
+from wx import GraphicsContext
 
 from rkviewer.canvas.geometry import Vec2
 
@@ -83,7 +83,7 @@ class DidMoveCompartmentsEvent(CanvasEvent):
         offset: The position offset. If all compartments were moved by the same offset,
                 then a single Vec2 is given; otherwise, a list of offsets are given,
                 with each offset matching a node.
-        dragged: Whether the resize operation was done by the user dragging, and not, for exmaple,
+        dragged: Whether the resize operation was done by the user dragging, and not, for example,
                  through the form.
         by_user: Whether the event was performed by the user or through a plugin.
     """
@@ -307,7 +307,7 @@ class DidPaintCanvasEvent(CanvasEvent):
     Attributes:
         gc: The graphics context of the canvas.
     """
-    gc: wx.GraphicsContext
+    gc: GraphicsContext
 
 
 EventCallback = Callable[[CanvasEvent], None]

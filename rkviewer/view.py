@@ -195,7 +195,7 @@ class ToolbarItem(wx.Panel):
         label_text.SetForegroundColour(get_theme('toolbar_fg'))
 
         #sizerflags = wx.SizerFlags().Align(wx.ALIGN_CENTER_HORIZONTAL)
-        sizerflags = SizerFlags.Align(wx.ALIGN_CENTER_HORIZONTAL)
+        sizerflags = SizerFlags().Align(wx.ALIGN_CENTER_HORIZONTAL)
         self.sizer.Add(button, sizerflags.Border(wx.TOP, 5))
         self.sizer.Add(label_text, sizerflags)
         self.SetSizer(self.sizer)
@@ -203,7 +203,7 @@ class ToolbarItem(wx.Panel):
 
 class Toolbar(wx.Panel):
     #SIZER_FLAGS = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
-    SIZER_FLAGS = SizerFlags.Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
+    SIZER_FLAGS = SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -316,7 +316,7 @@ class ModePanel(wx.Panel):
         #btn.SetFont (font)
 
         #sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
-        sizer.Add(btn, SizerFlags.Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        sizer.Add(btn, SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
         self.btn_group.AddButton(btn, mode)
 
     def AppendNormalButton(self, label: str, callback, sizer: wx.Sizer, tooltip: str = None):
@@ -331,7 +331,7 @@ class ModePanel(wx.Panel):
             btn.SetToolTip(tooltip)
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
         #sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
-        sizer.Add(btn, SizerFlags.Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+        sizer.Add(btn, SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
     def AppendSeparator(self, sizer: wx.Sizer):
         sizer.Add((0, 10))
@@ -349,7 +349,7 @@ class BottomBar(wx.Panel):
         self.sizer.Add((0, 0), proportion=1, flag=wx.EXPAND)
         zoom_slider = wx.Slider(self, style=wx.SL_BOTTOM | wx.SL_AUTOTICKS, size=(225, 25))
         #self.sizer.Add(zoom_slider, wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
-        self.sizer.Add(zoom_slider, SizerFlags.Align(wx.ALIGN_CENTER_VERTICAL))
+        self.sizer.Add(zoom_slider, SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL))
         self.sizer.Layout()
         return zoom_slider
 

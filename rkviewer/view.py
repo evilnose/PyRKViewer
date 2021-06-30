@@ -199,8 +199,7 @@ class ToolbarItem(wx.Panel):
 
 
 class Toolbar(wx.Panel):
-    SIZER_FLAGS = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL)
-    SIZER_FLAGS.Border(wx.LEFT, 10)
+    SIZER_FLAGS = wx.SizerFlags().Align(wx.ALIGN_CENTER_VERTICAL).Border(wx.LEFT, 10)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -326,9 +325,7 @@ class ModePanel(wx.Panel):
         if tooltip is not None:
             btn.SetToolTip(tooltip)
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
-        sizer_flags = wx.SizerFlags().Align(wx.ALIGN_CENTER)
-        sizer_flags.Border(wx.TOP, 10)
-        sizer.Add(btn, sizer_flags)
+        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
     def AppendSeparator(self, sizer: wx.Sizer):
         sizer.Add((0, 10))
@@ -351,7 +348,7 @@ class BottomBar(wx.Panel):
 
 
 class MainPanel(wx.Panel):
-    """The main panel, which is the only chlid of the root Frame."""
+    """The main panel, which is the only child of the root Frame."""
     # controller: IController
     # canvas: Canvas
     # mode_panel: ModePanel

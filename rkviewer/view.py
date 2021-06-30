@@ -19,7 +19,7 @@ import rkviewer
 from rkviewer.canvas.geometry import get_bounding_rect
 from rkviewer.plugin_manage import PluginManager
 
-from .canvas.canvas import Canvas
+from .canvas.canvas import Alignment, Canvas
 from .canvas.data import Compartment, Node, Reaction
 from .canvas.state import InputMode, cstate
 from .config import (DEFAULT_SETTING_FMT, INIT_SETTING_TEXT, get_default_raw_settings, get_setting, get_theme,
@@ -260,7 +260,7 @@ class TabbedToolbar(fnb.FlatNotebook):
                     bitmap = wx.ArtProvider.GetBitmap(wx.ART_MISSING_IMAGE, wx.ART_MENU)
                 tb.AppendTool(name, callback, bitmap)
             tb.SetForegroundColour (wx.RED)
-            tb.SetBackgroundColour (get_theme ('toolbar_bg'))         
+            tb.SetBackgroundColour (get_theme ('toolbar_bg'))
             self.AddPage(tb, text=CATEGORY_NAMES[cat])
 
 
@@ -301,27 +301,27 @@ class ModePanel(wx.Panel):
 
         def exit_func(evt):
             btn.SetBackgroundColour(get_theme('btn_bg'))
-            btn.SetForegroundColour(get_theme('btn_fg')) 
+            btn.SetForegroundColour(get_theme('btn_fg'))
 
         btn.Bind(wx.EVT_ENTER_WINDOW, enter_func)
         btn.Bind(wx.EVT_LEAVE_WINDOW, exit_func)
 
-        btn.SetBackgroundColour(get_theme('btn_bg')) 
+        btn.SetBackgroundColour(get_theme('btn_bg'))
         #font = wx.Font(11, wx.FONTFAMILY_MODERN, 0, 90, underline = False,  faceName ="") # <- if we want to change font style
-        btn.SetForegroundColour(get_theme('btn_fg')) 
+        btn.SetForegroundColour(get_theme('btn_fg'))
         #btn.SetFont (font)
 
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
         self.btn_group.AddButton(btn, mode)
 
     def AppendNormalButton(self, label: str, callback, sizer: wx.Sizer, tooltip: str = None):
-        if get_theme ('btn_border'):        
+        if get_theme ('btn_border'):
            btn = wx.Button(self, label=label)
         else:
            btn = wx.Button(self, label=label, style=wx.BORDER_NONE)
 
-        btn.SetBackgroundColour(get_theme ('btn_bg')) 
-        btn.SetForegroundColour(get_theme ('btn_fg')) 
+        btn.SetBackgroundColour(get_theme ('btn_bg'))
+        btn.SetForegroundColour(get_theme ('btn_fg'))
         if tooltip is not None:
             btn.SetToolTip(tooltip)
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
@@ -348,7 +348,7 @@ class BottomBar(wx.Panel):
 
 
 class MainPanel(wx.Panel):
-    """The main panel, which is the only chlid of the root Frame."""
+    """The main panel, which is the only child of the root Frame."""
     # controller: IController
     # canvas: Canvas
     # mode_panel: ModePanel
@@ -446,7 +446,7 @@ class NetworkPrintout(wx.Printout):
     def __init__(self, img: wx.Image):
         super().__init__()
         self.image = img
-    
+
     def OnPrintPage(self, pageNum: int):
         if pageNum > 1:
             return False
@@ -626,7 +626,7 @@ class MainFrame(wx.Frame):
 
         # Record the initial position of the window
         self.controller.set_application_position(self.GetPosition())
-    
+
     def OnShow(self, evt):
         if runtime_vars().enable_plugins:
             self.manager.load_from('plugins')

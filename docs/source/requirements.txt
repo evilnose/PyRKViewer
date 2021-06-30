@@ -95,9 +95,9 @@ sphinx-autodoc-typehints==1.12.0; python_version >= "3.6" \
 sphinx-rtd-theme==0.5.2; \
     --hash=sha256:4a05bdbe8b1446d77a01e20a23ebc6777c74f43237035e76be89699308987d6f \
     --hash=sha256:32bd3b5d13dc8186d7a42fc816a23d32e83a4827d7d9882948e7b837c232da5a
-sphinx==3.5.4; python_version >= "3.5" \
-    --hash=sha256:2320d4e994a191f4b4be27da514e46b3d6b420f2ff895d064f52415d342461e8 \
-    --hash=sha256:19010b7b9fa0dc7756a6e105b2aacd3a80f798af3c25c273be64d7beeb482cb1
+sphinx==4.0.2; python_version >= "3.6" \
+    --hash=sha256:d1cb10bee9c4231f1700ec2e24a91be3f3a3aba066ea4ca9f3bbe47e59d5a1d4 \
+    --hash=sha256:8d4d8a80613d0ceefca5a84e2e30b29da7719d429b4adcdb793d86079fad3790
 sphinxcontrib-applehelp==1.0.2; python_version >= "3.5" \
     --hash=sha256:a072735ec80e7675e3f432fcae8610ecf509c5f1869d17e2eecff44389cdbc58 \
     --hash=sha256:806111e5e962be97c29ec4c1e7fe277bfd19e9652fb1a4392105b43e01af885a

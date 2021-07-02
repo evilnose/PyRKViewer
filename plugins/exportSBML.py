@@ -7,8 +7,6 @@ Version 0.02: Author: Jin Xu (2021)
 # pylint: disable=maybe-no-member
 
 from inspect import Parameter
-#from libsbml import KineticLaw
-#from tesbml.libsbml import BoundaryCondition
 import wx
 from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin import api
@@ -65,9 +63,6 @@ class ExportSBML(WindowedPlugin):
             allNodes = api.get_nodes(netIn)
             allReactions = api.get_reactions(netIn)
             allcompartments = api.get_compartments(netIn)
-            #print("allNodes:",allNodes)
-            #print("allReactions:",allReactions)
-            #print("allcompartments:",allcompartments)
             numCompartments = len(allcompartments)      
 #######################################
 
@@ -97,6 +92,7 @@ class ExportSBML(WindowedPlugin):
             for i in range(numCompartments):
                 comp_id_list.append(allcompartments[i].id) 
 
+
             if numCompartments != 0:
                 if "_compartment_default_" not in comp_id_list:
                     compartment = model.createCompartment()
@@ -107,7 +103,6 @@ class ExportSBML(WindowedPlugin):
                 for i in range(numCompartments):   
                     compartment = model.createCompartment()
                     comp_id=allcompartments[i].id
-                    #print(comp_id)
                     compartment.setId(comp_id)
                     compartment.setConstant(True)
                 for i in range(numNodes):
@@ -275,6 +270,7 @@ class ExportSBML(WindowedPlugin):
                 for i in range(numNodes):   
                     spec_id = allNodes[i].id
                     spec_index = allNodes[i].index
+                    spec_shapeIdx = allNodes[i].shape_index
                     speciesGlyph = layout.createSpeciesGlyph()
                     specG_id = "SpecG_"  + spec_id + '_idx_' + str(spec_index)
                     speciesGlyph.setId(specG_id)
@@ -290,7 +286,13 @@ class ExportSBML(WindowedPlugin):
                     textG_id = "TextG_" + spec_id + '_idx_' + str(spec_index)
                     textGlyph.setId(textG_id)
                     bb_id  = "bb_spec_text_" + spec_id + '_idx_' + str(spec_index)
-                    textGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
+                    if spec_shapeIdx == 6: #rough by eyes
+                        pos_x_text = pos_x + 50
+                        pos_y_text = pos_y + 30
+                    else:
+                        pos_x_text = pos_x
+                        pos_y_text = pos_y
+                    textGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x_text, pos_y_text, width, height))
                     textGlyph.setOriginOfTextId(specG_id)
                     textGlyph.setGraphicalObjectId(specG_id)
             else:#there is no compartment  
@@ -309,6 +311,7 @@ class ExportSBML(WindowedPlugin):
                 for i in range(numNodes):
                     spec_id = allNodes[i].id
                     spec_index = allNodes[i].index
+                    spec_shapeIdx = allNodes[i].shape_index
                     speciesGlyph = layout.createSpeciesGlyph()
                     specG_id = "SpecG_"  + spec_id + '_idx_' + str(spec_index)
                     speciesGlyph.setId(specG_id)
@@ -323,8 +326,14 @@ class ExportSBML(WindowedPlugin):
                     textGlyph = layout.createTextGlyph()
                     textG_id = "TextG_" + spec_id + '_idx_' + str(spec_index)
                     textGlyph.setId(textG_id)
+                    if spec_shapeIdx == 6: #rough by eyes
+                        pos_x_text = pos_x + 50
+                        pos_y_text = pos_y + 30
+                    else:
+                        pos_x_text = pos_x
+                        pos_y_text = pos_y
                     bb_id  = "bb_spec_text_" + spec_id + '_idx_' + str(spec_index)
-                    textGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
+                    textGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x_text, pos_y_text, width, height))
                     textGlyph.setOriginOfTextId(specG_id)
                     textGlyph.setGraphicalObjectId(specG_id)
 
@@ -440,90 +449,151 @@ class ExportSBML(WindowedPlugin):
             rInfo.setProgramVersion("1.0")
 
             # add some colors
-            if numCompartments != 0:  
-                fill_color        = allcompartments[0].fill_color
-                border_color      = allcompartments[0].border_color
-                comp_border_width = allcompartments[0].border_width
-                fill_color_str    = '#%02x%02x%02x' % (fill_color.r,fill_color.g,fill_color.b)
-                border_color_str  = '#%02x%02x%02x' % (border_color.r,border_color.g,border_color.b)
-            
-            else:
-                comp_border_width = 2.
-                fill_color_str    = '#9ea9ff'
-                border_color_str  = '#001dff'
-
-            node =  allNodes[0]
-            try: 
-                primitive, transform = node.shape.items[0]
-                spec_fill_color   = primitive.fill_color
-                spec_border_color = primitive.border_color
-                spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
-                spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
-                spec_border_width = primitive.border_width
-            except:
-                spec_fill_color_str = '#ffcc99'
-                spec_border_color_str = '#ff6c09'
-                spec_border_width = 2.
-
-            if numReactions != 0:
-                reaction_fill_color     = allReactions[0].fill_color
-                reaction_fill_color_str = '#%02x%02x%02x' % (reaction_fill_color.r,reaction_fill_color.g,reaction_fill_color.b)           
-                reaction_line_thickness = allReactions[i].line_thickness
-
-            #add some colors
             color = rInfo.createColorDefinition()
             color.setId("black")
             color.setColorValue("#000000")
 
-            color = rInfo.createColorDefinition()
-            color.setId("comp_fill_color")
-            color.setColorValue(fill_color_str)
 
-            color = rInfo.createColorDefinition()
-            color.setId("comp_border_color")
-            color.setColorValue(border_color_str)
+            if numCompartments != 0:  
+                for i in range(len(allcompartments)):
+                    fill_color        = allcompartments[i].fill_color
+                    border_color      = allcompartments[i].border_color
+                    comp_border_width = allcompartments[i].border_width
+                    fill_color_str    = '#%02x%02x%02x' % (fill_color.r,fill_color.g,fill_color.b)
+                    border_color_str  = '#%02x%02x%02x' % (border_color.r,border_color.g,border_color.b)
+                
+                    color = rInfo.createColorDefinition()
+                    color.setId("comp_fill_color" + str(i))
+                    color.setColorValue(fill_color_str)
 
-            color = rInfo.createColorDefinition()
-            color.setId("spec_fill_color")
-            color.setColorValue(spec_fill_color_str)
+                    color = rInfo.createColorDefinition()
+                    color.setId("comp_border_color" + str(i))
+                    color.setColorValue(border_color_str)
 
-            color = rInfo.createColorDefinition()
-            color.setId("spec_border_color")
-            color.setColorValue(spec_border_color_str)
+                    # add a list of styles 
+                    style = rInfo.createStyle("compStyle" + str(i))
+                    style.getGroup().setFillColor("comp_fill_color" + str(i))
+                    style.getGroup().setStroke("comp_border_color" + str (i))
+                    style.getGroup().setStrokeWidth(comp_border_width)
+                    style.addType("COMPARTMENTGLYPH")
+                    rectangle = style.getGroup().createRectangle()
+                    rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
 
-            if numReactions != 0:
+            else:
+                comp_border_width = 2.
+                #fill_color_str    = '#9ea9ff'
+                #border_color_str  = '#001dff'
+                #set default compartment with white color
+                fill_color_str = '#ffffff'
+                border_color_str = '#ffffff'
+
                 color = rInfo.createColorDefinition()
-                color.setId("reaction_fill_color")
-                color.setColorValue(reaction_fill_color_str)
+                color.setId("comp_fill_color")
+                color.setColorValue(fill_color_str)
 
-            # add a list of styles 
-            style = rInfo.createStyle("compStyle")
-            style.getGroup().setFillColor("comp_fill_color")
-            style.getGroup().setStroke("comp_border_color")
-            style.getGroup().setStrokeWidth(comp_border_width)
-            style.addType("COMPARTMENTGLYPH")
-            rectangle = style.getGroup().createRectangle()
-            rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+                color = rInfo.createColorDefinition()
+                color.setId("comp_border_color")
+                color.setColorValue(border_color_str)
 
-            style = rInfo.createStyle("specStyle")
-            style.getGroup().setFillColor("spec_fill_color")
-            style.getGroup().setStroke("spec_border_color")
-            style.getGroup().setStrokeWidth(spec_border_width)
-            style.addType("SPECIESGLYPH")
-            rectangle = style.getGroup().createRectangle()
-            rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+                # add a list of styles 
+                style = rInfo.createStyle("compStyle")
+                style.getGroup().setFillColor("comp_fill_color")
+                style.getGroup().setStroke("comp_border_color")
+                style.getGroup().setStrokeWidth(comp_border_width)
+                style.addType("COMPARTMENTGLYPH")
+                rectangle = style.getGroup().createRectangle()
+                rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+    
+            for i in range(len(allNodes)):
+                node =  allNodes[i]
+                #print(node.shape)
+                try: 
+                    primitive, transform = node.shape.items[0]
+                    spec_fill_color   = primitive.fill_color
+                    spec_border_color = primitive.border_color
+                    spec_fill_color_str   = '#%02x%02x%02x' % (spec_fill_color.r,spec_fill_color.g,spec_fill_color.b)
+                    spec_border_color_str = '#%02x%02x%02x' % (spec_border_color.r,spec_border_color.g,spec_border_color.b)
+                    spec_border_width = primitive.border_width
+                except:#text-only
+                    #spec_fill_color_str = '#ffcc99'
+                    #spec_border_color_str = '#ff6c09'
+                    #set default species/node with white color
+                    spec_fill_color_str = '#ffffff'
+                    spec_border_color_str = '#ffffff'
+                    #transparent color does not work
+                    #spec_fill_color_str = '#000000'
+                    #spec_border_color_str = '#000000'
+                    spec_border_width = 2.
 
-            style = rInfo.createStyle("textStyle")
-            style.getGroup().setStroke("black")
-            style.getGroup().setStrokeWidth(1.)
-            style.addType("TEXTGLYPH")
+                color = rInfo.createColorDefinition()
+                color.setId("spec_fill_color" + str(i))
+                color.setColorValue(spec_fill_color_str)
+
+                color = rInfo.createColorDefinition()
+                color.setId("spec_border_color" + str(i))
+                color.setColorValue(spec_border_color_str)
+
+                style = rInfo.createStyle("specStyle" + str(i))
+                style.getGroup().setFillColor("spec_fill_color" + str(i))
+                style.getGroup().setStroke("spec_border_color" + str(i))
+                style.getGroup().setStrokeWidth(spec_border_width)
+                style.addType("SPECIESGLYPH")
+                if node.shape_index == 1 or node.shape_index == 6: #ellipse/text-outside
+                    ellipse = style.getGroup().createEllipse()
+                    ellipse.setCenter2D(RelAbsVector(0, 50), RelAbsVector(0, 50))
+                    ellipse.setRadii(RelAbsVector(0, 50), RelAbsVector(0, 50))
+                
+                elif node.shape_index == 2: #hexagon(6)
+                    polygon = style.getGroup().createPolygon()
+                    renderPoint1 = polygon.createPoint()
+                    renderPoint1.setCoordinates(RelAbsVector(0,100), RelAbsVector(0,50))
+                    renderPoint2 = polygon.createPoint()
+                    renderPoint2.setCoordinates(RelAbsVector(0,75), RelAbsVector(0,7))
+                    renderPoint3 = polygon.createPoint()
+                    renderPoint3.setCoordinates(RelAbsVector(0,25), RelAbsVector(0,7))
+                    renderPoint4 = polygon.createPoint()
+                    renderPoint4.setCoordinates(RelAbsVector(0,0), RelAbsVector(0,50))
+                    renderPoint5 = polygon.createPoint()
+                    renderPoint5.setCoordinates(RelAbsVector(0,25), RelAbsVector(0,86))
+                    renderPoint6 = polygon.createPoint()
+                    renderPoint6.setCoordinates(RelAbsVector(0,75), RelAbsVector(0,86))
+                elif node.shape_index == 3: #line(2)
+                    polygon = style.getGroup().createPolygon()
+                    renderPoint1 = polygon.createPoint()
+                    renderPoint1.setCoordinates(RelAbsVector(0,0), RelAbsVector(0,50))
+                    renderPoint2 = polygon.createPoint()
+                    renderPoint2.setCoordinates(RelAbsVector(0,100), RelAbsVector(0,50))
+                elif node.shape_index == 4: #triangle(3)
+                    polygon = style.getGroup().createPolygon()
+                    renderPoint1 = polygon.createPoint()
+                    renderPoint1.setCoordinates(RelAbsVector(0,100), RelAbsVector(0,50))
+                    renderPoint2 = polygon.createPoint()
+                    renderPoint2.setCoordinates(RelAbsVector(0,25), RelAbsVector(0,7))
+                    renderPoint3 = polygon.createPoint()
+                    renderPoint3.setCoordinates(RelAbsVector(0,25), RelAbsVector(0,86))
+                else: #rectangle shape_index = 0/text-only 5/demo-combo 7/others as default (rectangle)
+                    rectangle = style.getGroup().createRectangle()
+                    rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+               
+                style = rInfo.createStyle("textStyle")
+                style.getGroup().setStroke("black")
+                style.getGroup().setStrokeWidth(1.)
+                style.addType("TEXTGLYPH")
 
             if numReactions != 0:
-                style = rInfo.createStyle("reactionStyle")
-                style.getGroup().setStroke("reaction_fill_color")
-                style.getGroup().setStrokeWidth(reaction_line_thickness)
-                style.addType("REACTIONGLYPH SPECIESREFERENCEGLYPH")
-            
+                for i in range(len(allReactions)):
+                    reaction_fill_color     = allReactions[i].fill_color
+                    reaction_fill_color_str = '#%02x%02x%02x' % (reaction_fill_color.r,reaction_fill_color.g,reaction_fill_color.b)           
+                    reaction_line_thickness = allReactions[i].line_thickness
+
+                    color = rInfo.createColorDefinition()
+                    color.setId("reaction_fill_color" + str(i))
+                    color.setColorValue(reaction_fill_color_str)
+
+                    style = rInfo.createStyle("reactionStyle" + str(i))
+                    style.getGroup().setStroke("reaction_fill_color" + str(i))
+                    style.getGroup().setStrokeWidth(reaction_line_thickness)
+                    style.addType("REACTIONGLYPH SPECIESREFERENCEGLYPH")
             
             sbmlStr_layout_render = writeSBMLToString(doc)
             self.SBMLText.SetValue(sbmlStr_layout_render) 

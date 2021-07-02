@@ -6,9 +6,9 @@ Version 0.02: Author: Jin Xu (2021)
 
 # pylint: disable=maybe-no-member
 
+from ast import Num
 from inspect import Parameter
 from re import S
-#from libsbml import KineticLaw
 import wx
 from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin import api
@@ -74,25 +74,6 @@ class IMPORTSBML(WindowedPlugin):
         Visualize the SBML string to a network shown on the canvas.
         """
 
-        # def get_bounding_rect(rects: Sequence[Rect], padding: float = 0) -> Rect:
-        #     """Compute the bounding rectangle of a given list of rects.
-        #     This computes the smallest possible rectangle needed to cover each of the rects (inclusive), as
-        #     well as its position. Additionally a padding may be specified to provide some space.
-        #     Args:
-        #         rets: The list of rectangles.
-        #         padding: The padding of the bounding rectangle. If positive, there will be x pixels of 
-        #             padding for each side of the rectangle.
-        #     Returns:
-        #         The bounding rectangle.
-        #     """
-        #     min_x = min(r.position.x for r in rects)
-        #     min_y = min(r.position.y for r in rects)
-        #     max_x = max(r.position.x + r.size.x for r in rects)
-        #     max_y = max(r.position.y + r.size.y for r in rects)
-        #     size_x = max_x - min_x + padding * 2
-        #     size_y = max_y - min_y + padding * 2
-        #     return Rect(Vec2(min_x - padding, min_y - padding), Vec2(size_x, size_y))
-
         def hex_to_rgb(value):
             value = value.lstrip('#')
             return tuple(int(value[i:i+2], 16) for i in (0, 2, 4))      
@@ -142,8 +123,8 @@ class IMPORTSBML(WindowedPlugin):
                     numCompGlyphs = layout.getNumCompartmentGlyphs()
                     numSpecGlyphs = layout.getNumSpeciesGlyphs()
                     numReactionGlyphs = layout.getNumReactionGlyphs()
+                    flag_text_out = 0
 
-                    #print("numCompGlyphs:", numCompGlyphs)
                     for i in range(numCompGlyphs):
                         compGlyph = layout.getCompartmentGlyph(i)
                         temp_id = compGlyph.getCompartmentId()
@@ -191,12 +172,18 @@ class IMPORTSBML(WindowedPlugin):
                             role = specRefGlyph.getRoleString()
                             specGlyph_id = specRefGlyph.getSpeciesGlyphId() 
                             specGlyph = layout.getSpeciesGlyph(specGlyph_id)
+                            #textGlyph = layout.getTextGlyph(textGlyph_id)
                             spec_id = specGlyph.getSpeciesId()
-                            boundingbox = specGlyph.getBoundingBox()
-                            height = boundingbox.getHeight()
-                            width = boundingbox.getWidth()
-                            pos_x = boundingbox.getX()
-                            pos_y = boundingbox.getY()
+                            spec_boundingbox = specGlyph.getBoundingBox()
+                            #text_boundingbox = textGlyph.getBoundingBox()
+                            height = spec_boundingbox.getHeight()
+                            width = spec_boundingbox.getWidth()
+                            pos_x = spec_boundingbox.getX()
+                            pos_y = spec_boundingbox.getY()
+                            #text_pos_x = text_boundingbox.getX()
+                            #text_pos_y = text_boundingbox.getY()
+                            #if (pos_x,pos_y) !=(text_pos_x,text_pos_y):
+                            #    flag_text_out = 1
 
                             if specGlyph_id not in specGlyph_id_list:
                                 spec_id_list.append(spec_id)
@@ -213,22 +200,16 @@ class IMPORTSBML(WindowedPlugin):
                         rct_specGlyph_list.append(rct_specGlyph_temp_list)
                         prd_specGlyph_list.append(prd_specGlyph_temp_list)
                     
-                                
-                    # print(reaction_id_list)
-                    # print(kinetics_list)
-                    # print(rct_specGlyph_list)
-                    # print(prd_specGlyph_list)
-
-                    #print(spec_id_list)
-                    #print(spec_specGlyph_id_list)
 
                     rPlugin = layout.getPlugin("render")
                     if (rPlugin != None and rPlugin.getNumLocalRenderInformationObjects() > 0):
+                        #wx.MessageBox("The diversity of each graphical object is not shown.", "Message", wx.OK | wx.ICON_INFORMATION)
                         info = rPlugin.getRenderInformation(0)
                         color_list = []
                         for  j in range ( 0, info.getNumColorDefinitions()):
                             color = info.getColorDefinition(j)			  
                             color_list.append([color.getId(),color.createValueString()])
+                        
                         for j in range (0, info.getNumStyles()):
                             style = info.getStyle(j)
                             group = style.getGroup()
@@ -247,6 +228,29 @@ class IMPORTSBML(WindowedPlugin):
                                     if color_list[k][0] == group.getStroke():
                                         spec_border_color = hex_to_rgb(color_list[k][1])
                                 spec_border_width = group.getStrokeWidth()
+                                name_list = []
+                                for element in group.getListOfElements():
+                                    name = element.getElementName()
+                                    name_list.append(name)
+                                    try: 
+                                        NumRenderpoints = element.getListOfElements().getNumRenderPoints()
+                                    except:
+                                        NumRenderpoints = 0
+                                if name == "ellipse": #circel and text-outside
+                                    shapeIdx = 1
+                                elif name == "polygon" and NumRenderpoints == 6:
+                                    shapeIdx = 2
+                                elif name == "polygon" and NumRenderpoints == 2:
+                                    shapeIdx = 3
+                                elif name == "polygon" and NumRenderpoints == 3:
+                                    shapeIdx = 4
+                                elif name == "rectangle" and spec_fill_color == '#ffffff' and spec_border_color == '#ffffff':
+                                    shapeIdx = 5
+                                #elif name == "ellipse" and flag_text_out == 1:
+                                #    shapeIdx = 6
+                                else: # name == "rectangle"/demo combo/others as default (rectangle)
+                                    shapeIdx = 0
+                                
                             elif 'REACTIONGLYPH' in typeList:
                                 for k in range(len(color_list)):
                                     if color_list[k][0] == group.getStroke():
@@ -266,10 +270,9 @@ class IMPORTSBML(WindowedPlugin):
             Comps_ids = model.getListOfCompartmentIds()
             numNodes = numFloatingNodes + numBoundaryNodes
 
-            #print(Comps_ids)
+            
             for i in range(numComps):
                 temp_id = Comps_ids[i]
-                #print(temp_id)
                 vol= model.getCompartmentVolume(i)
                 if temp_id == "_compartment_default_":
                     api.add_compartment(net_index, id=temp_id, volume = vol,
@@ -332,7 +335,7 @@ class IMPORTSBML(WindowedPlugin):
                                 size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                                border_width=spec_border_width) 
+                                border_width=spec_border_width, shape_index=shapeIdx) 
                                 id_list.append(temp_id)
                                 nodeIdx_list.append(nodeIdx_temp)
                                 nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
@@ -353,7 +356,7 @@ class IMPORTSBML(WindowedPlugin):
                                 size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                                border_width=spec_border_width) 
+                                border_width=spec_border_width, shape_index=shapeIdx) 
                                 id_list.append(temp_id)
                                 nodeIdx_list.append(nodeIdx_temp)
                                 nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
@@ -383,22 +386,7 @@ class IMPORTSBML(WindowedPlugin):
                 #handle_positions, center_pos was set as the default: 
                 #can not find a way from libsml to do this so far
 
-                #print(reaction_id_list)
-                #print(kinetics_list)
-                # print(rct_specGlyph_list)
-                # print(prd_specGlyph_list)
-
-                #print(spec_id_list)
-                # print(nodeIdx_list)
-                #print(spec_specGlyph_id_list)
-                #print(nodeIdx_specGlyph_list)
-                #print(nodeIdx_specGlyph_alias_list)
-
-                #allNodes = api.get_nodes(net_index)
-                #print(allNodes)
-
                 nodeIdx_specGlyph_whole_list = nodeIdx_specGlyph_list + nodeIdx_specGlyph_alias_list
-                #print(nodeIdx_specGlyph_whole_list)
 
                 for i in range (numReactionGlyphs):
                     src = []
@@ -422,11 +410,6 @@ class IMPORTSBML(WindowedPlugin):
                                 prd_idx = nodeIdx_specGlyph_whole_list[k][0]
                         dst.append(prd_idx)
 
-                    # print(temp_id)
-                    # print(src)
-                    # print(dst)
-                    # print(kinetics)
-
                     api.add_reaction(net_index, id=temp_id, reactants=src, products=dst, rate_law = kinetics,
                     fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]), 
                     line_thickness=reaction_line_width)
@@ -442,7 +425,7 @@ class IMPORTSBML(WindowedPlugin):
                     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                    border_width=spec_border_width)
+                    border_width=spec_border_width, shape_index=shapeIdx)
                     for j in range(numComps):
                         if comp_id == comp_id_list[j]:
                             comp_node_list[j].append(nodeIdx_temp)
@@ -454,7 +437,7 @@ class IMPORTSBML(WindowedPlugin):
                     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                    border_width=spec_border_width )
+                    border_width=spec_border_width, shape_index=shapeIdx )
                     for j in range(numComps):
                         if comp_id == comp_id_list[j]:
                             comp_node_list[j].append(nodeIdx_temp)

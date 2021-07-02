@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 0.02: Author: Jin Xu (2021)
+Version 0.03: Author: Jin Xu (2021)
 """
 
 
@@ -23,7 +23,7 @@ class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='0.0.2',
+        version='0.0.3',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.ANALYSIS
@@ -73,14 +73,30 @@ class IMPORTSBML(WindowedPlugin):
         Handler for the "Visualize" button.
         Visualize the SBML string to a network shown on the canvas.
         """
+        self.DisplayModel(self.sbmlStr, True, False)
+
+    def DisplayModel(self, sbmlStr, showDialogues, useSeed):
+        """
+        Visualize an SBML string as a network shown on the canvas.
+        Args:
+          self
+          document: SBMLDocument object created from the sbml string
+          sbmlStr: sbml string to display
+          showDialogues: if false, hides pop-up windows
+          useSeed: if true, constant seed for random number generation used,
+                   ensuring that different visualizations created from the same
+                   file will always have the same layout
+        """
+        if useSeed:
+          _random.seed(13)
 
         def hex_to_rgb(value):
             value = value.lstrip('#')
-            return tuple(int(value[i:i+2], 16) for i in (0, 2, 4))      
+            return tuple(int(value[i:i+2], 16) for i in (0, 2, 4))
 
-        if len(self.sbmlStr) == 0:
+        if len(sbmlStr) == 0:
+          if showDialogues:
             wx.MessageBox("Please import an SBML file.", "Message", wx.OK | wx.ICON_INFORMATION)
-
         else:
             net_index = 0
             api.clear_network(net_index)
@@ -92,7 +108,8 @@ class IMPORTSBML(WindowedPlugin):
             spec_specGlyph_id_list = []
             spec_dimension_list = []
             spec_position_list = []
-            
+
+            shapeIdx = 0
 
             #set the default values without render info:
             comp_fill_color = (158, 169, 255)
@@ -105,11 +122,12 @@ class IMPORTSBML(WindowedPlugin):
             reaction_line_width = 3.0
 
             ### from here for layout ###
-            document = readSBMLFromString(self.sbmlStr)
+            document = readSBMLFromString(sbmlStr)
             model_layout = document.getModel()
             mplugin = (model_layout.getPlugin("layout"))
 
             if mplugin is None:
+              if showDialogues:
                 wx.MessageBox("There is no layout information, so positions are randomly assigned.", "Message", wx.OK | wx.ICON_INFORMATION)
 
             #
@@ -118,7 +136,8 @@ class IMPORTSBML(WindowedPlugin):
             else:
                 layout = mplugin.getLayout(0)
                 if layout is None:
-                    wx.MessageBox("There is no layout information, so positions are randomly assigned.", "Message", wx.OK | wx.ICON_INFORMATION)
+                    if showDialogues:
+                        wx.MessageBox("There is no layout information, so positions are randomly assigned.", "Message", wx.OK | wx.ICON_INFORMATION)
                 else:
                     numCompGlyphs = layout.getNumCompartmentGlyphs()
                     numSpecGlyphs = layout.getNumSpeciesGlyphs()
@@ -170,7 +189,7 @@ class IMPORTSBML(WindowedPlugin):
                             specRefGlyph = reactionGlyph.getSpeciesReferenceGlyph(j)
                             #specRefGlyph_id = specRefGlyph.getSpeciesReferenceGlyphId()
                             role = specRefGlyph.getRoleString()
-                            specGlyph_id = specRefGlyph.getSpeciesGlyphId() 
+                            specGlyph_id = specRefGlyph.getSpeciesGlyphId()
                             specGlyph = layout.getSpeciesGlyph(specGlyph_id)
                             #textGlyph = layout.getTextGlyph(textGlyph_id)
                             spec_id = specGlyph.getSpeciesId()
@@ -196,10 +215,10 @@ class IMPORTSBML(WindowedPlugin):
                                 rct_specGlyph_temp_list.append(specGlyph_id)
                             elif role == "product": #it is a prd
                                 prd_specGlyph_temp_list.append(specGlyph_id)
-                            
+
                         rct_specGlyph_list.append(rct_specGlyph_temp_list)
                         prd_specGlyph_list.append(prd_specGlyph_temp_list)
-                    
+
 
                     rPlugin = layout.getPlugin("render")
                     if (rPlugin != None and rPlugin.getNumLocalRenderInformationObjects() > 0):
@@ -207,9 +226,9 @@ class IMPORTSBML(WindowedPlugin):
                         info = rPlugin.getRenderInformation(0)
                         color_list = []
                         for  j in range ( 0, info.getNumColorDefinitions()):
-                            color = info.getColorDefinition(j)			  
+                            color = info.getColorDefinition(j)
                             color_list.append([color.getId(),color.createValueString()])
-                        
+
                         for j in range (0, info.getNumStyles()):
                             style = info.getStyle(j)
                             group = style.getGroup()
@@ -232,7 +251,7 @@ class IMPORTSBML(WindowedPlugin):
                                 for element in group.getListOfElements():
                                     name = element.getElementName()
                                     name_list.append(name)
-                                    try: 
+                                    try:
                                         NumRenderpoints = element.getListOfElements().getNumRenderPoints()
                                     except:
                                         NumRenderpoints = 0
@@ -250,7 +269,7 @@ class IMPORTSBML(WindowedPlugin):
                                 #    shapeIdx = 6
                                 else: # name == "rectangle"/demo combo/others as default (rectangle)
                                     shapeIdx = 0
-                                
+
                             elif 'REACTIONGLYPH' in typeList:
                                 for k in range(len(color_list)):
                                     if color_list[k][0] == group.getStroke():
@@ -258,19 +277,19 @@ class IMPORTSBML(WindowedPlugin):
                                 reaction_line_width = group.getStrokeWidth()
 
 
-            model = simplesbml.loadSBMLStr(self.sbmlStr)
-            
+            model = simplesbml.loadSBMLStr(sbmlStr)
+
             numFloatingNodes  = model.getNumFloatingSpecies()
             FloatingNodes_ids = model.getListOfFloatingSpecies()
             numBoundaryNodes  = model.getNumBoundarySpecies()
-            BoundaryNodes_ids = model.getListOfBoundarySpecies() 
+            BoundaryNodes_ids = model.getListOfBoundarySpecies()
             numRxns   = model.getNumReactions()
             Rxns_ids  = model.getListOfReactionIds()
             numComps  = model.getNumCompartments()
             Comps_ids = model.getListOfCompartmentIds()
             numNodes = numFloatingNodes + numBoundaryNodes
 
-            
+
             for i in range(numComps):
                 temp_id = Comps_ids[i]
                 vol= model.getCompartmentVolume(i)
@@ -279,15 +298,15 @@ class IMPORTSBML(WindowedPlugin):
                     size=Vec2(3900,2400), position=Vec2(10,10),
                     fill_color = api.Color(255,255,255),
                     border_color = api.Color(255,255,255),
-                    border_width = comp_border_width)              
+                    border_width = comp_border_width)
                 else:
                     if len(comp_id_list) != 0:
                     #if mplugin is not None:
                         for j in range(numComps):
-                            if comp_id_list[j] == temp_id: 
+                            if comp_id_list[j] == temp_id:
                                 dimension = comp_dimension_list[j]
                                 position = comp_position_list[j]
-                            
+
                     else:# no layout info about compartment,
                         # then the whole size of the canvas is the compartment size
                         # modify the compartment size using the max_rec function above
@@ -295,7 +314,7 @@ class IMPORTSBML(WindowedPlugin):
                         # dimension = [800,800]
                         # position = [40,40]
                         # the whole size of the compartment: 4000*2500
-                        dimension = [3900,2400] 
+                        dimension = [3900,2400]
                         position = [10,10]
                         comp_fill_color = (255, 255, 255)
                         comp_border_color = (255, 255, 255)
@@ -321,21 +340,22 @@ class IMPORTSBML(WindowedPlugin):
                 numSpec_in_reaction = len(spec_specGlyph_id_list)
                 #numSpecGlyphs is larger than numSpec_in_reaction if there orphan nodes
                 if numSpecGlyphs > numSpec_in_reaction:
-                    wx.MessageBox("Orphan nodes are removed.", "Message", wx.OK | wx.ICON_INFORMATION)                   
+                  if showDialogues:
+                    wx.MessageBox("Orphan nodes are removed.", "Message", wx.OK | wx.ICON_INFORMATION)
                 for i in range (numSpec_in_reaction):
                     temp_id = spec_specGlyph_id_list[i][0]
                     tempGlyph_id = spec_specGlyph_id_list[i][1]
                     dimension = spec_dimension_list[i]
-                    position = spec_position_list[i] 
+                    position = spec_position_list[i]
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                     for j in range(numFloatingNodes):
                         if temp_id == FloatingNodes_ids[j]:
-                            if temp_id not in id_list: 
+                            if temp_id not in id_list:
                                 nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = True,
                                 size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                                border_width=spec_border_width, shape_index=shapeIdx) 
+                                border_width=spec_border_width, shape_index=shapeIdx)
                                 id_list.append(temp_id)
                                 nodeIdx_list.append(nodeIdx_temp)
                                 nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
@@ -348,15 +368,15 @@ class IMPORTSBML(WindowedPlugin):
                                 nodeIdx_specGlyph_alias_list.append([nodeIdx_temp,tempGlyph_id])
                             for k in range(numComps):
                                 if len(comp_id_list) !=0 and comp_id == comp_id_list[k]:
-                                    comp_node_list[k].append(nodeIdx_temp)                           
+                                    comp_node_list[k].append(nodeIdx_temp)
                     for j in range(numBoundaryNodes):
-                        if temp_id == BoundaryNodes_ids[j]: 
-                            if temp_id not in id_list: 
+                        if temp_id == BoundaryNodes_ids[j]:
+                            if temp_id not in id_list:
                                 nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = False,
                                 size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
-                                border_width=spec_border_width, shape_index=shapeIdx) 
+                                border_width=spec_border_width, shape_index=shapeIdx)
                                 id_list.append(temp_id)
                                 nodeIdx_list.append(nodeIdx_temp)
                                 nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
@@ -369,11 +389,11 @@ class IMPORTSBML(WindowedPlugin):
                                 nodeIdx_specGlyph_alias_list.append([nodeIdx_temp,tempGlyph_id])
                             for k in range(numComps):
                                 if len(comp_id) != 0 and comp_id == comp_id_list[k]:
-                                    comp_node_list[k].append(nodeIdx_temp)   
+                                    comp_node_list[k].append(nodeIdx_temp)
 
                 if len(comp_id_list) != 0:
                     for i in range(numComps):
-                        temp_id = Comps_ids[i]                        
+                        temp_id = Comps_ids[i]
                         for j in range(numComps):
                             if comp_id_list[j] == temp_id:
                                 node_list_temp = comp_node_list[j]
@@ -382,8 +402,8 @@ class IMPORTSBML(WindowedPlugin):
                 else:
                     for i in range(len(nodeIdx_list)):
                         api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=0)
-                
-                #handle_positions, center_pos was set as the default: 
+
+                #handle_positions, center_pos was set as the default:
                 #can not find a way from libsml to do this so far
 
                 nodeIdx_specGlyph_whole_list = nodeIdx_specGlyph_list + nodeIdx_specGlyph_alias_list
@@ -411,7 +431,7 @@ class IMPORTSBML(WindowedPlugin):
                         dst.append(prd_idx)
 
                     api.add_reaction(net_index, id=temp_id, reactants=src, products=dst, rate_law = kinetics,
-                    fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]), 
+                    fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]),
                     line_thickness=reaction_line_width)
 
 
@@ -421,7 +441,7 @@ class IMPORTSBML(WindowedPlugin):
                 for i in range (numFloatingNodes):
                     temp_id = FloatingNodes_ids[i]
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = True, 
+                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = True,
                     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
@@ -433,7 +453,7 @@ class IMPORTSBML(WindowedPlugin):
                 for i in range (numBoundaryNodes):
                     temp_id = BoundaryNodes_ids[i]
                     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
-                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = False, 
+                    nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = False,
                     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2]),
                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2]),
@@ -479,11 +499,10 @@ class IMPORTSBML(WindowedPlugin):
                                 dst.append(allNodes[k].index)
 
                     api.add_reaction(net_index, id=temp_id, reactants=src, products=dst, rate_law = kinetics,
-                    fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]), 
+                    fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2]),
                     line_thickness=reaction_line_width)
 
                     #set the information for handle positions, center positions and use bezier as default
-                    
-            
 
-                
+
+

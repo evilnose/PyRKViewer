@@ -2,26 +2,46 @@
 
 ## Introduction
 
-PyRKViewer is a cross-platform visualization tool for drawing reaction networks written with the
-[wxPython](https://www.wxpython.org/) framework.
-* It can draw reactants, products, reactions and compartments. Its features are listed below but not limited to:
-* It supports floating and boundary species.
+PyRKViewer, or Coyote, is a cross-platform visualization tool for drawing reaction networks written with the
+[wxPython](https://www.wxpython.org/) framework. It can draw reactants, products, reactions and compartments, and its features include but are not limited to:
+* Support for floating and boundary species.
 * Reactions can be displayed using Bezier curves and straight lines.
-* It has plugin support, with some plugin examples: ArrowDesigner, RandomNetwork, Antolayout and etc.
+* Plugin support, with some plugin examples: ArrowDesigner, RandomNetwork, Autolayout, etc.
 For the next version, we are going to add simulations of reaction networks.
 
 
 ## Getting Started
 
 ### Installing
-* `pip install coyote-gui` for the base application
+<!-- * `pip install coyote-gui` for the base application
 * `pip install coyote-gui[sbml]` to install the additional SBML dependencies used by certain plugins
 as well. Note that this is a large set of dependencies.
 * Note that on MacOS, if you wish to use Coyote in a virtual environment, use `venv` instead of
-`virtualenv`, due to the latter's issues with wxPython.
+`virtualenv`, due to the latter's issues with wxPython.-->
+We strongly recommend using [poetry](https://python-poetry.org/) to install the dependencies and run Coyote. To understand what dependencies you will need, please refer to the [Dependencies](#Dependencies) section below.
+
+### Installing with Poetry
+1. If you do not have poetry installed on your computer, follow the quick steps shown [here](https://python-poetry.org/docs/).
+2. Once you have poetry installed, you will download Coyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
+3. Next, open your terminal and navigate to the directory containing Coyote.
+4. Once inside the main folder of the application you can install the dependencies. To install the base dependencies simply run `poetry install`. To install the optional ones as well, run `poetry install -E sbml`. Note that this step may take a while. To learn more about which set of dependencies is right for you, refer to the [Dependencies](#Dependencies) section below.
+5. Finally, you will run the application with the command `poetry run coyote`.
+
+After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your Coyote application, and run the command `poetry run coyote`.
+
+### Installing without Poetry
+
+Again, we strongly advise following the steps above, as it makes the set-up process much faster and simpler. However, to install Coyote without Poetry, here is the process you will follow:
+
+1. First, download Coyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
+2. Next, open your terminal and navigate to the directory containing Coyote.
+3. To install the base set of dependencies, you will run `pip install -r requirements.txt`. Then if you want to install the optional dependencies as well, run `pip install -r requirements-sbml.txt`. To learn more about which set of dependencies is right for you, refer to the [Dependencies](#Dependencies) section below.
+4. Finally, you will run the application with the command `python -m rkviewer.main`.
+After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your Coyote application, and run the command `python -m rkviewer.main`.
 
 ### Running
-* Simply run `coyote` or `python -m coyote` to start the application.
+* If you have poetry, simply run `poetry run coyote`.
+* Otherwise, in your virtual environment, run `python -m rkviewer.main`.
 * Then, check out the [documentation](#documentation).
 
 ## Development Setup
@@ -37,11 +57,11 @@ and testing.
 * "sbml" includes a large set of dependencies required for running most SBML-related plugins,
 such as import/exportSBML and load Antimony. (This is in addition to the base requirements).
 
-If you are looking for work with SBML or Antimony code, you're almost certainly going to need the
+If you plan to work with SBML or Antimony code, you are almost certainly going to need the
 "sbml" dependency group. Note that "sbml" includes quite a large set of dependencies (mostly
 SBML-related, so if you usually work with SBML, you'll probably have most of it installed already).
 
-The dependency groups are specified in pyproject.toml for `poetry`. There are additionally
+The dependency groups are specified in `pyproject.toml` for `poetry`. There are additionally
 `requirement.txt` files generated by `poetry`, including `requirements.txt`, `requirements-dev.txt`,
 and `requirements-sbml.txt`. If you do not have poetry, you can opt for those as well. If you are
 using linux, extra work would need to be done on installing wxPython. Please refer to the

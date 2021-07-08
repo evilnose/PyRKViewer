@@ -8,7 +8,7 @@ RK VIEWER PLATFORM DOCUMENTATION
 ================================================j
 A visualization tool for reaction networks
 
-Gary Geng, Carmen Perena-Cortes, Dr. Herbert M. Sauro, Jin Xu
+Gary Geng, Carmen Perena-Cortes, Dr. Herbert M. Sauro, Jin Xu, Claire Samuels
 
 University of Washington - Sauro Lab
 
@@ -22,8 +22,8 @@ PyRKViewer is a visualization tool for drawing the reaction networks written by 
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents: 
-   
+   :caption: Contents:
+
    QuickStart
    Tutorial
    PluginDevelopment

@@ -32,19 +32,22 @@ class ExportAntimony(WindowedPlugin):
         """
         self.window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
 
-        export_btn = wx.Button(self.window, -1, 'Export', (5, 5))
-        export_btn.Bind(wx.EVT_BUTTON, self.Export)
+        show_btn = wx.Button(self.window, -1, 'Show', (5, 5))
+        show_btn.Bind(wx.EVT_BUTTON, self.Show)
 
-        save_btn = wx.Button(self.window, -1, 'Save', (100, 5))
+        copy_btn = wx.Button(self.window, -1, 'Copy', (100, 5))
+        copy_btn.Bind(wx.EVT_BUTTON, self.Copy)
+
+        save_btn = wx.Button(self.window, -1, 'Save', (195, 5))
         save_btn.Bind(wx.EVT_BUTTON, self.Save)
 
         wx.StaticText(self.window, -1, 'Antimony string:', (5,30))
-        self.antimonyText = wx.TextCtrl(self.window, -1, "", (10, 50), size=(260, 220), style=wx.TE_MULTILINE)
+        self.antimonyText = wx.TextCtrl(self.window, -1, "", (10, 50), size=(260, 220), style=wx.TE_MULTILINE|wx.HSCROLL)
         self.antimonyText.SetInsertionPoint(0)
 
         return self.window
 
-    def Export(self, evt):
+    def Show(self, evt):
         """
         Handler for the "Export" button.
         Get the network on canvas and change it to an Antimony string.
@@ -57,7 +60,7 @@ class ExportAntimony(WindowedPlugin):
             wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
-            id = allNodes[0].id[0:-2]
+            #id = allNodes[0].id[0:-2]
             numReactions = api.reaction_count(netIn)
             antStr = ''
             allReactions = api.get_reactions(netIn)
@@ -66,24 +69,44 @@ class ExportAntimony(WindowedPlugin):
                 rct_num = len(allReactions[i].sources)
                 prd_num = len(allReactions[i].targets)
                 for j in range(rct_num-1):
-                    antStr = antStr + id + '_' + str (allReactions[i].sources[j])
+                    #antStr = antStr + id + '_' + str (allReactions[i].sources[j])
+                    antStr = antStr + allNodes[allReactions[i].sources[j]].id
                     antStr = antStr + ' + '
-                antStr = antStr + id + '_' + str (allReactions[i].sources[rct_num-1])
+                #antStr = antStr + id + '_' + str (allReactions[i].sources[rct_num-1])
+                antStr = antStr + allNodes[allReactions[i].sources[rct_num-1]].id
                 antStr = antStr + ' -> '
                 for j in range(prd_num-1):
-                    antStr = antStr + id + '_' + str (allReactions[i].targets[j])
+                    #antStr = antStr + id + '_' + str (allReactions[i].targets[j])
+                    antStr = antStr + allNodes[allReactions[i].targets[j]].id
                     antStr = antStr + ' + '
-                antStr = antStr + id + '_' + str (allReactions[i].targets[prd_num-1])
+                #antStr = antStr + id + '_' + str (allReactions[i].targets[prd_num-1])
+                antStr = antStr + allNodes[allReactions[i].targets[prd_num-1]].id
                 antStr = antStr + '; E' + str (i) + '*(k' + str (i) 
                 for j in range(rct_num):
-                    antStr = antStr + '*' + id + '_' + str (allReactions[i].sources[j])
+                    #antStr = antStr + '*' + id + '_' + str (allReactions[i].sources[j])
+                    antStr = antStr + '*' + allNodes[allReactions[i].sources[j]].id
                 if isReversible:
                     antStr = antStr + ' - k' + str (i) + 'r'
                     for j in range(prd_num):
-                        antStr = antStr + '*' + id + '_' + str (allReactions[i].targets[j])
+                        #antStr = antStr + '*' + id + '_' + str (allReactions[i].targets[j])
+                        antStr = antStr + '*' + allNodes[allReactions[i].targets[j]].id
                 antStr = antStr + ')'
                 antStr = antStr + ';\n'
             self.antimonyText.SetValue(antStr)
+
+    
+    def Copy(self, evt):
+        """
+        Handler for the "Copy" button.
+        Copy the Antimony string to a clipboard.
+        """
+        self.dataObj = wx.TextDataObject()
+        self.dataObj.SetText(self.antimonyText.GetValue())
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(self.dataObj)
+            wx.TheClipboard.Close()
+        else:
+            wx.MessageBox("Unable to open the clipboard", "Error")
 
     def Save(self, evt):
         """

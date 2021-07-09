@@ -34,19 +34,36 @@ class ExportSBML(WindowedPlugin):
         """
         self.window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
 
-        export_btn = wx.Button(self.window, -1, 'Export', (5, 5))
-        export_btn.Bind(wx.EVT_BUTTON, self.Export)
+        show_btn = wx.Button(self.window, -1, 'Show', (5, 5))
+        show_btn.Bind(wx.EVT_BUTTON, self.Show)
 
-        save_btn = wx.Button(self.window, -1, 'Save', (100, 5))
+        copy_btn = wx.Button(self.window, -1, 'Copy', (100, 5))
+        copy_btn.Bind(wx.EVT_BUTTON, self.Copy)
+
+        save_btn = wx.Button(self.window, -1, 'Save', (195, 5))
         save_btn.Bind(wx.EVT_BUTTON, self.Save)
 
         wx.StaticText(self.window, -1, 'SBML string:', (5,30))
-        self.SBMLText = wx.TextCtrl(self.window, -1, "", (10, 50), size=(260, 220), style=wx.TE_MULTILINE)
+        self.SBMLText = wx.TextCtrl(self.window, -1, "", (10, 50), size=(260, 220), style=wx.TE_MULTILINE|wx.HSCROLL)
         self.SBMLText.SetInsertionPoint(0)
 
         return self.window
 
-    def Export(self, evt):
+    def Copy(self, evt):
+        """
+        Handler for the "Copy" button.
+        Copy the SBML string to a clipboard.
+        """
+        self.dataObj = wx.TextDataObject()
+        self.dataObj.SetText(self.SBMLText.GetValue())
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(self.dataObj)
+            wx.TheClipboard.Close()
+        else:
+            wx.MessageBox("Unable to open the clipboard", "Error")
+
+
+    def Show(self, evt):
         """
         Handler for the "Export" button.
         Get the network on canvas and change it to an SBML string.
@@ -242,31 +259,32 @@ class ExportSBML(WindowedPlugin):
 
             #create the CompartmentGlyph and SpeciesGlyphs
             if numCompartments != 0:
-                if "_compartment_default_" not in comp_id_list:
-                    comp_id= "_compartment_default_"
-                    compartmentGlyph = layout.createCompartmentGlyph()
-                    compG_id = "CompG_" + comp_id
-                    compartmentGlyph.setId(compG_id)
-                    compartmentGlyph.setCompartmentId(comp_id)
-                    bb_id  = "bb_" + comp_id
-                    pos_x  = 10
-                    pos_y  = 10
-                    width  = 3900
-                    height = 2400
-                    compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
+                # if "_compartment_default_" not in comp_id_list:
+                #     comp_id= "_compartment_default_"
+                #     compartmentGlyph = layout.createCompartmentGlyph()
+                #     compG_id = "CompG_" + comp_id
+                #     compartmentGlyph.setId(compG_id)
+                #     compartmentGlyph.setCompartmentId(comp_id)
+                #     bb_id  = "bb_" + comp_id
+                #     pos_x  = 10
+                #     pos_y  = 10
+                #     width  = 3900
+                #     height = 2400
+                #     compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
                 
                 for i in range(numCompartments):   
                     comp_id=allcompartments[i].id
-                    compartmentGlyph = layout.createCompartmentGlyph()
-                    compG_id = "CompG_" + comp_id
-                    compartmentGlyph.setId(compG_id)
-                    compartmentGlyph.setCompartmentId(comp_id)
-                    bb_id  = "bb_" + comp_id
-                    pos_x  = allcompartments[i].position.x
-                    pos_y  = allcompartments[i].position.y
-                    width  = allcompartments[i].size.x
-                    height = allcompartments[i].size.y
-                    compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
+                    if comp_id != "_compartment_default_":
+                        compartmentGlyph = layout.createCompartmentGlyph()
+                        compG_id = "CompG_" + comp_id
+                        compartmentGlyph.setId(compG_id)
+                        compartmentGlyph.setCompartmentId(comp_id)
+                        bb_id  = "bb_" + comp_id
+                        pos_x  = allcompartments[i].position.x
+                        pos_y  = allcompartments[i].position.y
+                        width  = allcompartments[i].size.x
+                        height = allcompartments[i].size.y
+                        compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
                 for i in range(numNodes):   
                     spec_id = allNodes[i].id
                     spec_index = allNodes[i].index
@@ -456,28 +474,49 @@ class ExportSBML(WindowedPlugin):
 
             if numCompartments != 0:  
                 for i in range(len(allcompartments)):
-                    fill_color        = allcompartments[i].fill_color
-                    border_color      = allcompartments[i].border_color
-                    comp_border_width = allcompartments[i].border_width
-                    fill_color_str    = '#%02x%02x%02x' % (fill_color.r,fill_color.g,fill_color.b)
-                    border_color_str  = '#%02x%02x%02x' % (border_color.r,border_color.g,border_color.b)
-                
-                    color = rInfo.createColorDefinition()
-                    color.setId("comp_fill_color" + str(i))
-                    color.setColorValue(fill_color_str)
+                    temp_id = allcompartments[i].id
+                    if temp_id != '_compartment_default':
+                        fill_color        = allcompartments[i].fill_color
+                        border_color      = allcompartments[i].border_color
+                        comp_border_width = allcompartments[i].border_width
+                        fill_color_str    = '#%02x%02x%02x' % (fill_color.r,fill_color.g,fill_color.b)
+                        border_color_str  = '#%02x%02x%02x' % (border_color.r,border_color.g,border_color.b)
+                    
 
-                    color = rInfo.createColorDefinition()
-                    color.setId("comp_border_color" + str(i))
-                    color.setColorValue(border_color_str)
+                        # color = rInfo.createColorDefinition()
+                        # color.setId("comp_fill_color" + str(i))
+                        # color.setColorValue(fill_color_str)
 
-                    # add a list of styles 
-                    style = rInfo.createStyle("compStyle" + str(i))
-                    style.getGroup().setFillColor("comp_fill_color" + str(i))
-                    style.getGroup().setStroke("comp_border_color" + str (i))
-                    style.getGroup().setStrokeWidth(comp_border_width)
-                    style.addType("COMPARTMENTGLYPH")
-                    rectangle = style.getGroup().createRectangle()
-                    rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+                        # color = rInfo.createColorDefinition()
+                        # color.setId("comp_border_color" + str(i))
+                        # color.setColorValue(border_color_str)
+
+                        # # add a list of styles 
+                        # style = rInfo.createStyle("compStyle" + str(i))
+                        # style.getGroup().setFillColor("comp_fill_color" + str(i))
+                        # style.getGroup().setStroke("comp_border_color" + str (i))
+                        # style.getGroup().setStrokeWidth(comp_border_width)
+                        # style.addType("COMPARTMENTGLYPH")
+                        # rectangle = style.getGroup().createRectangle()
+                        # rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+
+                color = rInfo.createColorDefinition()
+                color.setId("comp_fill_color")
+                color.setColorValue(fill_color_str)
+
+                color = rInfo.createColorDefinition()
+                color.setId("comp_border_color")
+                color.setColorValue(border_color_str)
+
+                # add a list of styles 
+                style = rInfo.createStyle("compStyle")
+                style.getGroup().setFillColor("comp_fill_color")
+                style.getGroup().setStroke("comp_border_color")
+                style.getGroup().setStrokeWidth(comp_border_width)
+                style.addType("COMPARTMENTGLYPH")
+                rectangle = style.getGroup().createRectangle()
+                rectangle.setCoordinatesAndSize(RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,0),RelAbsVector(0,100),RelAbsVector(0,100))
+
 
             else:
                 comp_border_width = 2.

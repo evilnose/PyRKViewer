@@ -88,15 +88,15 @@ class StructuralAnalysis(WindowedPlugin):
         # Create the tabs
         self.tab1 = TabOne(nb)
         self.tab2 = TabTwo(nb)
-        nb.AddPage(self.tab1, "Stoichiometry")
-        nb.AddPage(self.tab2, "Moiety Conservation Laws")
+        nb.AddPage(self.tab1, "Stoichiometry Matrix")
+        nb.AddPage(self.tab2, "Conservation Matrix")
 
         # Make sure the second panel fills the right side. 
         sizer = wx.BoxSizer()
         sizer.Add(nb, 1, wx.EXPAND)
         panel2.SetSizer(sizer)
       
-        Compute_btn = wx.Button(panel1, -1, 'Compute Conservation Laws', (20,20))
+        Compute_btn = wx.Button(panel1, -1, 'Compute Matrix', (20,20))
         Compute_btn.Bind(wx.EVT_BUTTON, self.Compute)
 
         wx.StaticText(panel1, -1, 'Select a row from the table of', (20,100))
@@ -123,8 +123,6 @@ class StructuralAnalysis(WindowedPlugin):
         Get the network on canvas.
         Calculate the Stoichiometry Matrix and Conservation Matrix for the randon network.
         """
-        #self.index_list=[]
-
         def nullspace(A, atol=1e-13, rtol=0):  
             A = _np.atleast_2d(A)
             u, s, vh = _np.linalg.svd(A)
@@ -133,56 +131,56 @@ class StructuralAnalysis(WindowedPlugin):
             ns = vh[nnz:].conj().T
             return ns
 
-
+        #https://gist.github.com/sgsfak/77a1c08ac8a9b0af77393b24e44c9547
         def rref(B, tol=1e-8, debug=False):
-            A = B.copy()
-            rows, cols = A.shape
-            r = 0
-            pivots_pos = []
-            row_exchanges = _np.arange(rows)
-            for c in range(cols):
-                if debug: print ("Now at row", r, "and col", c, "with matrix:"); print (A)
-
-                ## Find the pivot row:
-                pivot = _np.argmax (_np.abs (A[r:rows,c])) + r
-                m = _np.abs(A[pivot, c])
-                if debug: print ("Found pivot", m, "in row", pivot)
-                if m <= tol:
-                    ## Skip column c, making sure the approximately zero terms are
-                    ## actually zero.
-                    A[r:rows, c] = _np.zeros(rows-r)
-                    if debug: print ("All elements at and below (", r, ",", c, ") are zero.. moving on..")
-                else:
-                    ## keep track of bound variables
-                    pivots_pos.append((r,c))
-
-                    if pivot != r:
-                        ## Swap current row and pivot row
-                        A[[pivot, r], c:cols] = A[[r, pivot], c:cols]
-                        row_exchanges[[pivot,r]] = row_exchanges[[r,pivot]]
-       
-                        if debug: print ("Swap row", r, "with row", pivot, "Now:"); print (A)
-
-                    ## Normalize pivot row
-                    A[r, c:cols] = A[r, c:cols] / A[r, c];
-
-                    ## Eliminate the current column
-                    v = A[r, c:cols]
-                    ## Above (before row r):
-                    if r > 0:
-                        ridx_above = _np.arange(r)
-                        A[ridx_above, c:cols] = A[ridx_above, c:cols] - _np.outer(v, A[ridx_above, c]).T
-                        if debug: print ("Elimination above performed:"); print (A)
-                    ## Below (after row r):
-                    if r < rows-1:
-                        ridx_below = _np.arange(r+1,rows)
-                        A[ridx_below, c:cols] = A[ridx_below, c:cols] - _np.outer(v, A[ridx_below, c]).T
-                        if debug: print ("Elimination below performed:"); print (A)
-                    r += 1
-                ## Check if done
-                if r == rows:
-                    break;
-            return (A, pivots_pos, row_exchanges)
+          A = B.copy()
+          rows, cols = A.shape
+          r = 0
+          pivots_pos = []
+          row_exchanges = _np.arange(rows)
+          for c in range(cols):
+            if debug: print ("Now at row", r, "and col", c, "with matrix:"); print (A)
+        
+            ## Find the pivot row:
+            pivot = _np.argmax (_np.abs (A[r:rows,c])) + r
+            m = _np.abs(A[pivot, c])
+            if debug: print ("Found pivot", m, "in row", pivot)
+            if m <= tol:
+              ## Skip column c, making sure the approximately zero terms are
+              ## actually zero.
+              A[r:rows, c] = _np.zeros(rows-r)
+              if debug: print ("All elements at and below (", r, ",", c, ") are zero.. moving on..")
+            else:
+              ## keep track of bound variables
+              pivots_pos.append((r,c))
+        
+              if pivot != r:
+                ## Swap current row and pivot row
+                A[[pivot, r], c:cols] = A[[r, pivot], c:cols]
+                row_exchanges[[pivot,r]] = row_exchanges[[r,pivot]]
+                
+                if debug: print ("Swap row", r, "with row", pivot, "Now:"); print (A)
+        
+              ## Normalize pivot row
+              A[r, c:cols] = A[r, c:cols] / A[r, c];
+        
+              ## Eliminate the current column
+              v = A[r, c:cols]
+              ## Above (before row r):
+              if r > 0:
+                ridx_above = _np.arange(r)
+                A[ridx_above, c:cols] = A[ridx_above, c:cols] - _np.outer(v, A[ridx_above, c]).T
+                if debug: print ("Elimination above performed:"); print (A)
+              ## Below (after row r):
+              if r < rows-1:
+                ridx_below = _np.arange(r+1,rows)
+                A[ridx_below, c:cols] = A[ridx_below, c:cols] - _np.outer(v, A[ridx_below, c]).T
+                if debug: print ("Elimination below performed:"); print (A)
+              r += 1
+            ## Check if done
+            if r == rows:
+              break;
+          return (A, pivots_pos, row_exchanges)
 
 
         netIn = 0
@@ -192,7 +190,7 @@ class StructuralAnalysis(WindowedPlugin):
             wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
-            id = allNodes[0].id[0:-2]
+            #id = allNodes[0].id[0:-2]
             node =  allNodes[0]
             try:
                 primitive, transform = node.shape.items[0]
@@ -225,7 +223,8 @@ class StructuralAnalysis(WindowedPlugin):
 
             stt = _np.transpose (self.st)
             m = _np.transpose (nullspace (stt))
-            moi_mat = rref (m)[0]
+            moi_mat = rref(m)[0]
+
             # set all the values of non-existing nodes to zero
             for i in range(moi_mat.shape[0]):
                 for j in range(moi_mat.shape[1]):
@@ -235,27 +234,32 @@ class StructuralAnalysis(WindowedPlugin):
             for i in range(self.st.shape[1]):
                 self.tab1.grid_st.SetColLabelValue(i, "J" + str(i))
             for i in range(self.st.shape[0]):
-                self.tab1.grid_st.SetRowLabelValue(i, id + "_" + str(i))
+                #self.tab1.grid_st.SetRowLabelValue(i, id + "_" + str(i))
+                id = allNodes[i].id
+                self.tab1.grid_st.SetRowLabelValue(i, id)
             
             for row in range(self.st.shape[0]):
                 for col in range(self.st.shape[1]):
                     self.tab1.grid_st.SetCellValue(row, col,"%d" % self.st.item(row,col))
 
             for i in range(moi_mat.shape[1]):
-                self.tab2.grid_moi.SetColLabelValue(i, id + "_" + str(i))
+                #self.tab2.grid_moi.SetColLabelValue(i, id + "_" + str(i))
+                id = allNodes[i].id
+                self.tab2.grid_moi.SetColLabelValue(i, id)
 
             CSUM_id = 0
+
             for i in range(moi_mat.shape[0]):
                 a = moi_mat[i,:]
-                a = [0 if a_ < 0.005 else a_ for a_ in a] # some elements are very small
+                a = [0. if abs(a_) < 0.005 else a_ for a_ in a] # some elements are very small
                 if _np.array_equal(a, _np.zeros(moi_mat.shape[1])): # delete the row if all the elements are zero
                     CSUM_id = CSUM_id
                 else:
                     self.tab2.grid_moi.SetRowLabelValue(CSUM_id, "CSUM" + str(CSUM_id))    
 
                     for j in range(moi_mat.shape[1]):
-                        self.tab2.grid_moi.SetCellValue(CSUM_id, j, format (moi_mat[i][j], ".2f"))#
-
+                        #self.tab2.grid_moi.SetCellValue(CSUM_id, j, format (moi_mat[i][j], ".2f"))
+                        self.tab2.grid_moi.SetCellValue(CSUM_id, j, format (a[j], ".2f")) 
                     CSUM_id += 1 
 
 
@@ -275,11 +279,10 @@ class StructuralAnalysis(WindowedPlugin):
             for row in rows
             for col in cols])
             
-        #self.index_list = []
+        self.index_list = []
         for cell in cells:
             row, col = cell
             value = self.tab2.grid_moi.GetCellValue(row,col)
-            #print(value)
             if value != "0.00" and value != "+0.00" and value != "-0.00" and value !="":
                 self.index_list.append(int(col))
             #print("selected nodes:", self.index_list)

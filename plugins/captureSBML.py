@@ -1,3 +1,10 @@
+'''
+Import a directory of SBML and Antimony files, visualize reactions, capture and save images.
+
+Version 0.0.2: Author: Claire Samuels (2021)
+'''
+
+
 from plugins.importSBML import IMPORTSBML
 import wx
 from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
@@ -5,14 +12,16 @@ from rkviewer.plugin import api
 from rkviewer.plugin.api import Node, Vec2, Reaction, Color
 import os
 from libsbml import *
+import simplesbml # do i need this?
+import tellurium
 
 class CaptureSBML(WindowedPlugin):
       metadata = PluginMetadata(
         name='CaptureSBML',
         author='Claire Samuels',
-        version='0.0.1',
-        short_desc='Lay out and capture SBML.',
-        long_desc='Import a directory of SBML files, lay out reactions, capture and save images.',
+        version='0.0.2',
+        short_desc='Visualize and capture SBML or Antimony.',
+        long_desc='Import a directory of SBML and Antimony files, visualize reactions, capture and save images.',
         category=PluginCategory.ANALYSIS
     )
       def create_window(self, dialog):
@@ -68,9 +77,9 @@ class CaptureSBML(WindowedPlugin):
         if dlg.ShowModal() == wx.ID_OK:
             self.dirname = dlg.GetPath()
             for file in os.listdir(self.dirname):
-              # only want .xml files
+              # only want .xml files and .ant
               filename = os.fsdecode(file)
-              if filename.endswith(".xml"):
+              if filename.endswith(".xml") | filename.endswith(".ant"):
                 self.file_list.append(filename)
         self.display_dir.SetLabel(str(self.dirname))
         self.selectedFiles.SetLabel(str(self.file_list))
@@ -98,16 +107,21 @@ class CaptureSBML(WindowedPlugin):
         self.blank_canvas = []
 
         for filename in self.file_list:
+
           f = open(os.path.join(self.dirname, filename), 'r')
           sbmlStr = f.read()
+
+          # convert .ant files to .xml
+          if filename.endswith(".ant"):
+            try:
+              sbmlStr = tellurium.tellurium.antimonyToSBML(sbmlStr)
+            except:
+              pass
+
           doc = reader.readSBMLFromString(sbmlStr)
           if doc.getNumErrors() > 0:
-            if doc.getError(0).getErrorId() == XMLFileUnreadable:
-              self.blank_canvas.append(filename)
-              print(doc.getError(0))
-            elif doc.getError(0).getErrorId() == XMLFileOperationError:
-              self.blank_canvas.append(filename)
-              print(doc.getError(0))
+            print(doc.getError(0).getErrorId())
+            self.blank_canvas.append(filename)
           else:
             try:
               IMPORTSBML.DisplayModel(self, sbmlStr, False, True)

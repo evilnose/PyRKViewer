@@ -39,19 +39,22 @@ class IMPORTSBML(WindowedPlugin):
         """
         self.window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
         self.sbmlStr = ''
-        import_btn = wx.Button(self.window, -1, 'Import', (5, 5))
-        import_btn.Bind(wx.EVT_BUTTON, self.Import)
+        show_btn = wx.Button(self.window, -1, 'Show', (5, 5))
+        show_btn.Bind(wx.EVT_BUTTON, self.Show)
 
-        visualize_btn = wx.Button(self.window, -1, 'Visualize', (100, 5))
+        copy_btn = wx.Button(self.window, -1, 'Copy', (100, 5))
+        copy_btn.Bind(wx.EVT_BUTTON, self.Copy)
+
+        visualize_btn = wx.Button(self.window, -1, 'Visualize', (195, 5))
         visualize_btn.Bind(wx.EVT_BUTTON, self.Visualize)
 
         wx.StaticText(self.window, -1, 'SBML string:', (5,30))
-        self.SBMLText = wx.TextCtrl(self.window, -1, "", (10, 50), size=(260, 220), style=wx.TE_MULTILINE)
+        self.SBMLText = wx.TextCtrl(self.window, -1, "", (10, 50), size=(260, 220), style=wx.TE_MULTILINE|wx.HSCROLL)
         self.SBMLText.SetInsertionPoint(0)
 
         return self.window
 
-    def Import(self, evt):
+    def Show(self, evt):
         """
         Handler for the "Import" button.
         Open the SBML file and show it in the TextCtrl box.
@@ -67,6 +70,19 @@ class IMPORTSBML(WindowedPlugin):
             self.SBMLText.WriteText(self.sbmlStr)
             f.close
         dlg.Destroy()
+
+    def Copy(self, evt):
+        """
+        Handler for the "Copy" button.
+        Copy the SBML string to a clipboard.
+        """
+        self.dataObj = wx.TextDataObject()
+        self.dataObj.SetText(self.SBMLText.GetValue())
+        if wx.TheClipboard.Open():
+            wx.TheClipboard.SetData(self.dataObj)
+            wx.TheClipboard.Close()
+        else:
+            wx.MessageBox("Unable to open the clipboard", "Error")
 
     def Visualize(self, evt):
         """
@@ -301,8 +317,9 @@ class IMPORTSBML(WindowedPlugin):
                     border_width = comp_border_width)
                 else:
                     if len(comp_id_list) != 0:
-                    #if mplugin is not None:
-                        for j in range(numComps):
+                    #if mplugin is not None:                    
+                        #for j in range(numComps):
+                        for j in range(numCompGlyphs):
                             if comp_id_list[j] == temp_id:
                                 dimension = comp_dimension_list[j]
                                 position = comp_position_list[j]
@@ -327,8 +344,9 @@ class IMPORTSBML(WindowedPlugin):
 
 
             comp_node_list = [0]*numComps
-
+            #comp_node_list = [0]*numCompGlyphs
             for i in range(numComps):
+            #for i in range(numCompGlyphs):
                 comp_node_list[i] = []
 
             #if there is layout info:
@@ -366,7 +384,8 @@ class IMPORTSBML(WindowedPlugin):
                                 id_list.append(temp_id)
                                 nodeIdx_list.append(nodeIdx_temp)
                                 nodeIdx_specGlyph_alias_list.append([nodeIdx_temp,tempGlyph_id])
-                            for k in range(numComps):
+                            #for k in range(numComps):
+                            for k in range(numCompGlyphs):
                                 if len(comp_id_list) !=0 and comp_id == comp_id_list[k]:
                                     comp_node_list[k].append(nodeIdx_temp)
                     for j in range(numBoundaryNodes):
@@ -387,18 +406,27 @@ class IMPORTSBML(WindowedPlugin):
                                 id_list.append(temp_id)
                                 nodeIdx_list.append(nodeIdx_temp)
                                 nodeIdx_specGlyph_alias_list.append([nodeIdx_temp,tempGlyph_id])
-                            for k in range(numComps):
+                            #for k in range(numComps):
+                            for k in range(numCompGlyphs):
                                 if len(comp_id) != 0 and comp_id == comp_id_list[k]:
                                     comp_node_list[k].append(nodeIdx_temp)
 
                 if len(comp_id_list) != 0:
                     for i in range(numComps):
                         temp_id = Comps_ids[i]
-                        for j in range(numComps):
+                        if temp_id == '_compartment_default_':
+                            node_list_default = [item for item in range(numNodes)]
+                            for j in range(len(node_list_default)):
+                                api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=i) 
+                        #for j in range(numComps):
+                        for j in range(numCompGlyphs):
                             if comp_id_list[j] == temp_id:
                                 node_list_temp = comp_node_list[j]
-                        for j in range(len(node_list_temp)):
-                            api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[j], comp_index=i)
+                            else:
+                                node_list_temp = []
+                            for k in range(len(node_list_temp)):
+                                #print(node_list_temp)
+                                api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[k], comp_index=i)
                 else:
                     for i in range(len(nodeIdx_list)):
                         api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=0)
@@ -468,8 +496,8 @@ class IMPORTSBML(WindowedPlugin):
                     for j in range(numComps):
                         if comp_id_list[j] == temp_id:
                             node_list_temp = comp_node_list[j]
-                    for j in range(len(node_list_temp)):
-                        api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[j], comp_index=i)
+                        for k in range(len(node_list_temp)):
+                            api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[k], comp_index=i)
 
                 #handle_positions, center_pos was set as the default
 

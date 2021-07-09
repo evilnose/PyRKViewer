@@ -61,10 +61,10 @@ class DuplicateReaction(CommandPlugin):
         for n in ns:
           all_ids.append(n.id)
         c = 1
-        new_id = 'copy_{}({})'.format(node.id,c)
+        new_id = 'copy_{}_{}'.format(node.id,c)
         while new_id in all_ids:
           c += 1
-          new_id = 'copy_{}({})'.format(node.id,c)
+          new_id = 'copy_{}_{}'.format(node.id,c)
         inx = api.add_node(net_index, id=new_id,
                         shape_index=node.shape_index, size=Vec2(node.size[0]+60, node.size[1]),
                         position=Vec2(node.position[0]+300, node.position[1]+300))
@@ -77,7 +77,8 @@ class DuplicateReaction(CommandPlugin):
       r = api.get_reaction_by_index(net_index, r_index)
       r_info = {
         "sources": r.sources,
-        "targets": r.targets
+        "targets": r.targets,
+        "id": r.id
       }
       reaction_info[r_index] = r_info
       orig_node_set = orig_node_set.union(set(r.sources))
@@ -95,8 +96,9 @@ class DuplicateReaction(CommandPlugin):
       new_targets = []
       for trg in reaction_info[reaction]["targets"]:
         new_targets.append(node_indices[trg])
+      reac_id = reaction_info[reaction]["id"]
       n_index = api.add_reaction(net_index, id="copy"+str(reaction), reactants=new_sources,
                        products=new_targets)
-      api.update_reaction(net_index, n_index, id='{}_copy_{}'.format(n_index,reaction))
+      api.update_reaction(net_index, n_index, id='{}_copy_{}'.format(reac_id,n_index))
 
 

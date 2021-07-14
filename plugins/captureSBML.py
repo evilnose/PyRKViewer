@@ -12,7 +12,6 @@ from rkviewer.plugin import api
 from rkviewer.plugin.api import Node, Vec2, Reaction, Color
 import os
 from libsbml import *
-import simplesbml # do i need this?
 import tellurium
 
 class CaptureSBML(WindowedPlugin):
@@ -120,7 +119,6 @@ class CaptureSBML(WindowedPlugin):
 
           doc = reader.readSBMLFromString(sbmlStr)
           if doc.getNumErrors() > 0:
-            print(doc.getError(0).getErrorId())
             self.blank_canvas.append(filename)
           else:
             try:

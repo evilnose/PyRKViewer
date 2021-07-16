@@ -60,7 +60,6 @@ class ExportAntimony(WindowedPlugin):
             wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
-            #id = allNodes[0].id[0:-2]
             numReactions = api.reaction_count(netIn)
             antStr = ''
             allReactions = api.get_reactions(netIn)
@@ -69,26 +68,20 @@ class ExportAntimony(WindowedPlugin):
                 rct_num = len(allReactions[i].sources)
                 prd_num = len(allReactions[i].targets)
                 for j in range(rct_num-1):
-                    #antStr = antStr + id + '_' + str (allReactions[i].sources[j])
                     antStr = antStr + allNodes[allReactions[i].sources[j]].id
                     antStr = antStr + ' + '
-                #antStr = antStr + id + '_' + str (allReactions[i].sources[rct_num-1])
                 antStr = antStr + allNodes[allReactions[i].sources[rct_num-1]].id
                 antStr = antStr + ' -> '
                 for j in range(prd_num-1):
-                    #antStr = antStr + id + '_' + str (allReactions[i].targets[j])
                     antStr = antStr + allNodes[allReactions[i].targets[j]].id
                     antStr = antStr + ' + '
-                #antStr = antStr + id + '_' + str (allReactions[i].targets[prd_num-1])
                 antStr = antStr + allNodes[allReactions[i].targets[prd_num-1]].id
                 antStr = antStr + '; E' + str (i) + '*(k' + str (i) 
                 for j in range(rct_num):
-                    #antStr = antStr + '*' + id + '_' + str (allReactions[i].sources[j])
                     antStr = antStr + '*' + allNodes[allReactions[i].sources[j]].id
                 if isReversible:
                     antStr = antStr + ' - k' + str (i) + 'r'
                     for j in range(prd_num):
-                        #antStr = antStr + '*' + id + '_' + str (allReactions[i].targets[j])
                         antStr = antStr + '*' + allNodes[allReactions[i].targets[j]].id
                 antStr = antStr + ')'
                 antStr = antStr + ';\n'

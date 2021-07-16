@@ -151,7 +151,7 @@ class Vec2:
 
     def reduce2(self, op: Callable[[TNum, TNum], Any], other: 'Vec2') -> 'Vec2':
         return Vec2(op(self.x, other.x), op(self.y, other.y))
-    
+
     def as_int(self) -> 'Vec2':
         """Convert each element to integers using `int()`"""
         return self.map(int)
@@ -311,7 +311,7 @@ def clamp_rect_size(rect: Rect, botright: 'Vec2', padding: int = 0) -> 'Vec2':
 
 
 def clamp_point(pos: 'Vec2', bounds: Rect, padding: int = 0) -> 'Vec2':
-    """Clamp the given point (pos) so that it is entirely within the bounds rectangle. 
+    """Clamp the given point (pos) so that it is entirely within the bounds rectangle.
 
     This is the same as calling clamp_rect_pos() with a clamped rectangle of size 1x1.
 
@@ -368,7 +368,7 @@ def get_bounding_rect(rects: Sequence[Rect], padding: float = 0) -> Rect:
 
     Args:
         rets: The list of rectangles.
-        padding: The padding of the bounding rectangle. If positive, there will be x pixels of 
+        padding: The padding of the bounding rectangle. If positive, there will be x pixels of
             padding for each side of the rectangle.
 
     Returns:
@@ -528,3 +528,11 @@ def rotate_unit(vec: 'Vec2', rad: float) -> 'Vec2':
     angle = math.atan2(vec.y, vec.x)
     angle += rad
     return Vec2(math.cos(angle), math.sin(angle))
+
+def calc_node_dimensions(x: int, y: int, ratio: float):
+    """Resize node so that area is unchanged and y/x=ratio. Returns vector in form (x,y).
+    """
+    area = x * y
+    height = round(math.sqrt(area * ratio))
+    width = round(math.sqrt(area/ratio))
+    return Vec2(width, height)

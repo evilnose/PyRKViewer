@@ -16,7 +16,7 @@ from .mvc import IController, ModifierTipStyle
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
 from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, Reaction, TEXT_ALIGNMENT_CHOICES, LinePrim, PolygonPrim, Primitive, compute_centroid
-from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect
+from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect, calc_node_dimensions
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import CirclePrim, RectanglePrim, CompositeShape
 
@@ -1038,32 +1038,27 @@ class NodeForm(EditPanelForm):
 
     def OnCompositeShapes(self, evt):
         selected = self.compositeShapesDropDown.GetStringSelection()
-
-        # this is a funny little function
-        def calc_node_dimensions(x, y, shape_index):
-          if shape_index == 1:
-            return Vec2(np.round((x+y)/2), np.round((x+y)/2))
-          else:
-            # change height to match width
-            # height/width = 30/50 TODO don't hard code this ratio. get it from the defaults
-            height_to_width = 30/50
-            height = np.round(height_to_width * x)
-            # TODO make this more sophisticated bc right now they shrink when they become rectanges
-            return Vec2(x, height)
-
         nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         self.self_changes = True
         with self.controller.group_action():
             shapei = self.compShapeNames.index(selected)
-            for node in nodes:
-                if node.shape_index == 1 or shapei == 1:
-                # if node was a circle previously, restore to default ratio
-                # if it will be a circle, make it small
-                    dim = calc_node_dimensions(node.size.x, node.size.y, shapei)
-                    self.controller.set_node_size(self.net_index, node.index, dim)
-                    self.size_ctrl.SetValue(str(dim))
-                self.controller.set_node_shape_index(self.net_index, node.index, shapei)
 
+            for node in nodes:
+                if shapei != 1 and node.shape_index != 1:
+                    self.controller.set_node_shape_index(self.net_index, node.index, shapei)
+                else:
+                    if shapei == 1: # changing node to circle
+                    # if shape is being changed to circle, make bounding box sides equal
+                        dim = calc_node_dimensions(node.size.x, node.size.y, 1)
+                    elif node.shape_index == 1:
+                        # if node was a circle previously, but not anymore, restore to default ratio
+                        default_ratio = get_theme('node_height')/get_theme('node_width')
+                        dim = calc_node_dimensions(node.size.x, node.size.y, default_ratio)
+                    if len(nodes) == 1:
+                        self.size_ctrl.SetValue(str(dim.x) + ", " + str(dim.y))
+                    else:
+                        self.controller.set_node_size(self.net_index, node.index, dim)
+                    self.controller.set_node_shape_index(self.net_index, node.index, shapei)
 
             post_event(DidModifyNodesEvent(list(self._selected_idx)))
 

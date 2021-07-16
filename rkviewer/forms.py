@@ -20,6 +20,8 @@ from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bo
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import CirclePrim, RectanglePrim, CompositeShape
 
+import numpy as np # DONT think this should go here at all
+
 
 ColorCallback = Callable[[wx.Colour], None]
 FloatCallback = Callable[[float], None]
@@ -452,7 +454,7 @@ class PrimitiveGrid(FieldGrid):
 
     def UpdateValues(self, nodes):
         '''Update the values in the primitive fields.
-        
+
         Requires:
             The FieldGrid contains the up-to-date field widgets for the given composite shape.
         '''
@@ -509,7 +511,7 @@ class PrimitiveGrid(FieldGrid):
                 alpha_ctrl.ChangeValue(AlphaToText(alpha_union, 2))
 
         self.update_callbacks.append(update_cb)
-                
+
 
     def FloatPrimitiveControl(self, label: str, prop_name: str, prim_index: int):
         '''Create a control for a floating point property.
@@ -1037,12 +1039,31 @@ class NodeForm(EditPanelForm):
     def OnCompositeShapes(self, evt):
         selected = self.compositeShapesDropDown.GetStringSelection()
 
+        # this is a funny little function
+        def calc_node_dimensions(x, y, shape_index):
+          if shape_index == 1:
+            return Vec2(np.round((x+y)/2), np.round((x+y)/2))
+          else:
+            # change height to match width
+            # height/width = 30/50 TODO don't hard code this ratio. get it from the defaults
+            height_to_width = 30/50
+            height = np.round(height_to_width * x)
+            # TODO make this more sophisticated bc right now they shrink when they become rectanges
+            return Vec2(x, height)
+
         nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         self.self_changes = True
         with self.controller.group_action():
             shapei = self.compShapeNames.index(selected)
             for node in nodes:
+                if node.shape_index == 1 or shapei == 1:
+                # if node was a circle previously, restore to default ratio
+                # if it will be a circle, make it small
+                    dim = calc_node_dimensions(node.size.x, node.size.y, shapei)
+                    self.controller.set_node_size(self.net_index, node.index, dim)
+                    self.size_ctrl.SetValue(str(dim))
                 self.controller.set_node_shape_index(self.net_index, node.index, shapei)
+
 
             post_event(DidModifyNodesEvent(list(self._selected_idx)))
 

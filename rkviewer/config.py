@@ -90,7 +90,7 @@ class AppSettings:
    def __init__(self):
        self.position = wx.Point (0,0)
        self.size = wx.Size (1366,737)
-       self.displaySize = wx.DisplaySize() 
+       self.displaySize = wx.DisplaySize()
        # Find the center poistion of the frame
        self.position.x = self.displaySize[0] // 2 - self.size.x // 2
        self.position.y = self.displaySize[1] // 2 - self.size.y // 2
@@ -102,15 +102,15 @@ class AppSettings:
             os.mkdir(os.path.join(configDir, 'rkViewer'))
        fileName = os.path.join(configDir, 'rkViewer', 'appSettings.ini')
        if not os.path.exists (fileName):
-          # leave with defaults intact.  
-          return 
-        
-       config = wx.FileConfig(localFilename=fileName) 
+          # leave with defaults intact.
+          return
+
+       config = wx.FileConfig(localFilename=fileName)
        config.SetPath ('PositionAndSize')
-       self.position.x = config.ReadInt ('frame_position_x', self.position.x)       
-       self.position.y = config.ReadInt ('frame_position_y', self.position.y)       
-       self.size.x = config.ReadInt ('frame_size_w', self.size.x)       
-       self.size.y = config.ReadInt ('frame_size_h', self.size.y)       
+       self.position.x = config.ReadInt ('frame_position_x', self.position.x)
+       self.position.y = config.ReadInt ('frame_position_y', self.position.y)
+       self.size.x = config.ReadInt ('frame_size_w', self.size.x)
+       self.size.y = config.ReadInt ('frame_size_h', self.size.y)
 
    def save_appSettings(self):
        sp = wx.StandardPaths.Get()
@@ -121,7 +121,7 @@ class AppSettings:
        if os.path.exists(fileName):
            os.remove (fileName)
 
-       config = wx.FileConfig(localFilename=fileName) 
+       config = wx.FileConfig(localFilename=fileName)
        config.SetPath ('PositionAndSize')
        config.WriteInt ('frame_position_x', self.position.x)
        config.WriteInt ('frame_position_y', self.position.y)
@@ -132,7 +132,7 @@ class AppSettings:
 # TODO merge these schema with those in iodine?
 class ColorField(fields.Field):
     """Field that represents an RGBA color.
-    
+
     To represent the color red, you would write:
     >>> { "some_color": [255, 0, 0] }
 
@@ -201,7 +201,7 @@ class FontField(fields.Field):
         return vars(value)
 
     def _validate(self, value):
-        print('hi')  # TODO 
+        print('hi')  # TODO
         pass
 
     def _deserialize(self, value, attr, data, **kwargs):
@@ -267,7 +267,7 @@ class ThemeSchema(Schema):
 
     TODO more documentation under attributes and link to this document in Help or settings.json
     """
-    # overall background of the application 
+    # overall background of the application
     overall_bg = ColorField(missing=Color(240, 240, 240))
     canvas_bg = ColorField(missing=Color(255, 255, 255))
     # Background color of the toolbars (i.e. panels around the canvas)
@@ -280,7 +280,7 @@ class ThemeSchema(Schema):
     btn_fg = ColorField(missing=Color(0, 0, 0))
     btn_hover_bg = ColorField(missing=Color(240,240,240))
     btn_hover_fg = ColorField(missing=Color(0, 0, 0))
-    btn_border = fields.Boolean(missing=True) 
+    btn_border = fields.Boolean(missing=True)
     # vertical gap between toolbars and canvas
     vgap = Pixel(missing=2)
     # horizontal gap between toolbars and canvas
@@ -327,7 +327,7 @@ class ThemeSchema(Schema):
     reaction_radius = Dim(missing=6)
     modifier_line_color = ColorField(missing=Color(202, 148, 255))
     modifier_line_width = Dim(missing=2)
-    active_tab_fg = ColorField(missing=Color(0, 0, 0))  
+    active_tab_fg = ColorField(missing=Color(0, 0, 0))
     text_field_bg = ColorField(missing=Color(255, 255, 255))
     text_field_fg = ColorField(missing=Color(0, 0, 0))
     text_field_border = fields.Boolean(missing=True)
@@ -338,7 +338,7 @@ class ThemeSchema(Schema):
 
 class RootSchema(Schema):
     """The overall root schema.
-    
+
     Attributes:
         theme: The theme settings (i.e. colors and dimensions) of the application.
     """
@@ -401,7 +401,7 @@ def validate_schema(schema):
 
 _settings = BUILTIN_SETTINGS
 _theme = None
-_settings_err = None  
+_settings_err = None
 
 
 
@@ -425,8 +425,8 @@ def reset_runtime_vars():
 
 def load_theme_settings():
     """Reload all settings from the default settings path.
-    
-    The exceptions are not immediately thrown since the first time the settings are loaded, the 
+
+    The exceptions are not immediately thrown since the first time the settings are loaded, the
     app has not been initialized. So we wait until it is, and then display an error dialog if there
     is a previously recorded error.
     """
@@ -486,6 +486,6 @@ def get_theme(theme_attr, convert_color=True) -> Any:
 
 
 def add_plugin_schema(name: str, schema: Schema):
-    # TODO 
+    # TODO
     pass
 

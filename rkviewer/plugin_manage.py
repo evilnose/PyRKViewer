@@ -67,16 +67,18 @@ class PluginManager:
 
     def bind_error_callback(self, callback):
         """Bind a dialog callback for when there is an error.
-        
+
         If an error occurs before such a callback is bound, it is only logged.
         """
         self.error_callback = callback
 
     # Also TODO might want a more sophisticated file system structure, including data storage and
     # temp folder
-    def load_from(self, dir_path: str) -> bool:
+    def load_from(self, load_dir: str) -> bool:
         """Load plugins from the given directory. Returns False if the dir does not exist.
         """
+        dirname = os.path.dirname(__file__)
+        dir_path = os.path.join(dirname, '..\\', load_dir)
         if not os.path.exists(dir_path):
             return False
 
@@ -121,7 +123,7 @@ class PluginManager:
                     logging.warning("Plugin in file '{}' does not have a `metadata` class attribute. "
                         "Did not load. See plugin documentation for more information.".format(f))
                     continue
-                
+
                 for method_name, method in inspect.getmembers(cls, inspect.isroutine):
                     setattr(cls, method_name, wrap_exception(cls.metadata.name, method))
 
@@ -129,7 +131,7 @@ class PluginManager:
 
         logging.getLogger('plugin').info("Found {} valid plugins in '{}'. Loading plugins...".format(
             len(plugin_classes), dir_path))
-        
+
         self.plugins = list()
         for cls in plugin_classes:
             try:
@@ -241,7 +243,7 @@ Plugin!".format(handler_name)
     def get_plugins_by_category(self) -> Dict[PluginCategory, List[Tuple[str, Callable[[], None], Optional[wx.Bitmap]]]]:
         """Returns a dictionary that maps each category to the list of plugins.
 
-        Each plugin in the lists is a tuple (short_name, bitmap, callback). The 
+        Each plugin in the lists is a tuple (short_name, bitmap, callback). The
         """
         ret = defaultdict(list)
         for plugin in self.plugins:

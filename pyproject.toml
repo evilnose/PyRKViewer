@@ -4,10 +4,11 @@ version = "0.1b1"
 description = "Extensible visualization and editing tool for reaction networks."
 authors = ["Gary Geng <xiaog3@uw.edu>", "Jin Xu <jxu2019@uw.edu>",
 "Carmen Perena-Cortes <cperena@outlook.com>", "Evan Yip <evan@yipsite.net>",
-"Nhan D. Nguyen <nnguyen19@ole.augie.edu>", "Herbert M. Sauro <hsauro@uw.edu>"]
+"Nhan D. Nguyen <nnguyen19@ole.augie.edu>", "Herbert M. Sauro <hsauro@uw.edu>",
+"CLaire Samuels <csamuels@uw.edu"]
 packages = [
     { include = "rkviewer" },
-    { include = "plugins" }
+    { include = "coyote-gui-plugins" }
 ]
 classifiers=[
     'Development Status :: 4 - Beta',

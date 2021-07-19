@@ -590,7 +590,7 @@ class CompartmentElt(CanvasElement):
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
         return True
-    
+
     def _paint(self, gc: wx.GraphicsContext, highlight: bool):
         rect = Rect(self.compartment.position,
                     self.compartment.size)
@@ -1309,11 +1309,11 @@ def _truncate_text(gc: wx.GraphicsContext, max_width: float, text: str):
     if tw > max_width:
         text_len = int((max_width / tw) * len(text))
         text = text[:text_len]
-        if len(text) > 2:
-            text = text[:-2] + '..'
+        if len(text) > 4:
+            text = text[:-3] + '....'
         else:
-            text = '..'
-    
+            text = '....'
+
     return text
 
 
@@ -1333,7 +1333,7 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
     width, height = bounding_rect.size
     text_string = _truncate_text(gc, bounding_rect.size.x, text_string)
     tw, th, _, _ = gc.GetFullTextExtent(text_string)
-    
+
     # remaining x and y
     rx = width - tw
     ry = height - th

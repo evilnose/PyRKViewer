@@ -15,12 +15,10 @@ from .events import (DidModifyCompartmentsEvent, DidModifyNodesEvent, DidModifyR
 from .mvc import IController, ModifierTipStyle
 from .utils import change_opacity, gchain, no_rzeros, on_msw, resource_path
 from .canvas.canvas import Canvas, Node
-from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, Reaction, TEXT_ALIGNMENT_CHOICES, LinePrim, PolygonPrim, Primitive, compute_centroid
+from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYLE_CHOICES, FONT_WEIGHT_CHOICES, Reaction, TEXT_ALIGNMENT_CHOICES, LinePrim, PolygonPrim, Primitive, TEXT_POSITION_CHOICES, compute_centroid
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect, calc_node_dimensions
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import CirclePrim, RectanglePrim, CompositeShape
-
-import numpy as np # DONT think this should go here at all
 
 
 ColorCallback = Callable[[wx.Colour], None]
@@ -681,6 +679,7 @@ class PrimitiveSection(wx.Window):
         subsection.ChoicePrimitiveControl('font style', 'font_style', -1, FONT_STYLE_CHOICES)
         subsection.ChoicePrimitiveControl('font weight', 'font_weight', -1, FONT_WEIGHT_CHOICES)
         subsection.ChoicePrimitiveControl('alignment', 'alignment', -1, TEXT_ALIGNMENT_CHOICES)
+        subsection.ChoicePrimitiveControl('text position', 'position', -1, TEXT_POSITION_CHOICES)
 
         for subsection in self.subsections:
             sizer.Add(subsection, sizerflags)
@@ -1062,7 +1061,6 @@ class NodeForm(EditPanelForm):
 
             post_event(DidModifyNodesEvent(list(self._selected_idx)))
 
-        nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         self._UpdatePrimitiveFields()
 
     def OnNodeLockCheckBox(self, evt):

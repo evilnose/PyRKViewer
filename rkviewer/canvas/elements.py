@@ -21,7 +21,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment, TextPosition
 from .geometry import (
     Rect,
     Vec2,
@@ -1317,7 +1317,7 @@ def _truncate_text(gc: wx.GraphicsContext, max_width: float, text: str):
     return text
 
 
-def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TextPrim, Transform]):
+def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, full_text_string, text_item: Tuple[TextPrim, Transform]):
     primitive, transform = text_item
 
     # Maybe cache this?
@@ -1331,13 +1331,20 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
     brush = gc.CreateBrush(wx.Brush(primitive.bg_color.to_wxcolour()))
 
     width, height = bounding_rect.size
-    text_string = _truncate_text(gc, bounding_rect.size.x, text_string)
+    text_string = _truncate_text(gc, bounding_rect.size.x, full_text_string)
     tw, th, _, _ = gc.GetFullTextExtent(text_string)
+    tw_full, th_full, _, _ = gc.GetFullTextExtent(full_text_string)
 
     # remaining x and y
     rx = width - tw
     ry = height - th
+    # upper left corner of node
     text_pos = bounding_rect.position + transform.translation.elem_mul(bounding_rect.size)
+    # do not truncate text if outside node
+    if not primitive.position == TextPosition.IN_NODE:
+        text_string = full_text_string
+        text_pos = text_pos - Vec2(tw_full + th/2, 0)
+        rx = th + tw_full + width
 
     if primitive.alignment == TextAlignment.LEFT:
         draw_pos = text_pos + Vec2(0, ry / 2)
@@ -1348,4 +1355,11 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
     else:
         assert False, "This should not happen"
 
+    if primitive.position == TextPosition.ABOVE:
+        draw_pos = draw_pos + Vec2(0, -2*th)
+    elif primitive.position == TextPosition.BELOW:
+        draw_pos = draw_pos + Vec2(0, 2*th)
+
     gc.DrawText(text_string, draw_pos.x, draw_pos.y, brush)
+
+

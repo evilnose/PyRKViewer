@@ -174,6 +174,18 @@ class NodeElement(CanvasElement):
             path.AddCircle(self.node.position.x, self.node.position.y, .1*height)
             gc.StrokePath(path)
 
+        if not self.node.floatingNode:
+            boundary_color = self.node.border_color or Color(255, 0, 0)
+            pen = gc.CreatePen(wx.GraphicsPenInfo(
+                boundary_color.to_wxcolour()).Width(2))
+            gc.SetPen(pen)
+            path = gc.CreatePath()
+            path.AddRectangle(self.node.position.x-round(self.node.border_width/2 + 2)-2,
+                              self.node.position.y-round(self.node.border_width/2 + 2)-2,
+                              2*round(self.node.border_width/2 + 2)+self.node.size.x+4,
+                              2*round(self.node.border_width/2 + 2)+self.node.size.y+4)
+            gc.StrokePath(path)
+
     def on_left_down(self, _: Vec2):
         return True
 

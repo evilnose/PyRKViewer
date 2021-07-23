@@ -828,3 +828,21 @@ class Compartment(RectData):
         """The same as s_rect, but the rectangle is unscaled.
         """
         return Rect(self.position, self.size)
+
+@dataclass
+class FreeText(RectData):
+    id: str
+    net_index: int
+    # volume: float # actual area of the box... compartment uses this, do i need to?
+    position: Vec2
+    size: Vec2
+    border: wx.Colour = wx.Colour(255,255,255)
+    border_width: float = 2
+    fill: wx.Colour = wx.Colour(0,0,0)
+    index: int = -1
+    text: str = "this is a free text box"
+
+    @property
+    def rect(self):
+        return Rect(self.positon, self.size)
+

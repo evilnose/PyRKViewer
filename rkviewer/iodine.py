@@ -67,7 +67,7 @@ shapeFactories = [
     CompositeShapeFactory([(lineFact, singletonTrans)], (textFact, singletonTrans), 'line'),
     CompositeShapeFactory([(triangleFact, singletonTrans)], (textFact, singletonTrans), 'triangle'),
     CompositeShapeFactory([], (textFact, singletonTrans), 'text-only'),
-    CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, Transform(translation=Vec2(1, 1))), 'text outside'),
+    #CompositeShapeFactory([(circleFact, singletonTrans)], (textFact, Transform(translation=Vec2(1, 1))), 'text outside'),
     CompositeShapeFactory([(circleFact, Transform(scale=Vec2.repeat(0.5))),
                            (circleFact, Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
                            (PrimitiveFactory(RectanglePrim, fill_color=Color(255, 0, 0, 255)),
@@ -127,6 +127,9 @@ class TNetwork:
     lastReactionIdx: int
     lastCompartmentIdx: int
 
+    freeTextBoxes: Dict[int, 'TFreeText']
+    lastFreeTextIdx: int
+
     def __init__(self, id: str, nodes: Dict[int, TAbstractNode] = None,
                  reactions: Dict[int, 'TReaction'] = None,
                  compartments: Dict[int, 'TCompartment'] = None,
@@ -179,6 +182,12 @@ class TNetwork:
         self.lastCompartmentIdx += 1
         return ind
 
+    def addFreeText(self, txtbox: 'TFreeText') -> int:
+        idx = self.lastFreeTextIdx
+        self.freeTextBoxes
+        self.lastFreeTextIdx += 1
+        return idx
+
 
 @dataclass
 class TReaction:
@@ -212,6 +221,16 @@ class TCompartment:
     outlineColor: Color = Color(0, 106, 255, 255)
     outlineThickness: float = 2
 
+@dataclass
+# TODO come back to this, which fields do i actually need?
+class TFreeText:
+    id: str
+    position: Vec2
+    rectSize: Vec2
+    fillColor: Color
+    fillColor: Color = Color(0, 247, 255, 255)
+    outlineColor: Color = Color(0, 106, 255, 255)
+    outlineThickness: float = 2
 
 class TStack:
     items: List['TNetworkDict']
@@ -539,7 +558,7 @@ def _getNodeOrAlias(neti: int, nodei: int) -> TAbstractNode:
     net = _getNetwork(neti)
     if nodei not in net.nodes:
         _raiseError(-7)
-    
+
     return net.nodes[nodei]
 
 
@@ -768,7 +787,7 @@ def deleteNode(neti: int, nodei: int) -> bool:
 
         # delete original node
         deleteHelper(net, node, neti, nodei, False)
-    
+
     return True
 
 
@@ -2287,12 +2306,22 @@ def getNodeShapeIndex(neti: int, nodei: int) -> int:
 
 def setNodeShapeIndex(neti: int, nodei: int, shapei: int, preserve_common_fields=True):
     '''If preserve_common_fields is True, then preserve common field values such as fill_color,
-    if applicable. (Not implemented)
+    if applicable.
     '''
     net = _getNetwork(neti)
     node = _getConcreteNode(neti, nodei)
     node.shapei = shapei
-    node.shape = shapeFactories[shapei].produce()
+    shp = shapeFactories[shapei].produce()
+    if preserve_common_fields:
+        fill = node.shape.items[0][0].fill_color
+        borderc = node.shape.items[0][0].border_color
+        borderw = node.shape.items[0][0].border_width
+        node.shape.items = shp.items
+        setNodePrimitiveProperty(neti, nodei, 0, "fill_color", fill)
+        setNodePrimitiveProperty(neti, nodei, 0, "border_color", borderc)
+        setNodePrimitiveProperty(neti, nodei, 0, "border_width", 1.0 * borderw)
+    else:
+        node.shape = shp
 
 
 def setNodePrimitiveProperty(neti: int, nodei: int, prim_index: int, prop_name: str, prop_value: Any):
@@ -2309,7 +2338,7 @@ def setNodePrimitiveProperty(neti: int, nodei: int, prim_index: int, prop_name: 
     node = _getConcreteNode(neti, nodei)
     if prim_index >= len(node.shape.items) or prim_index < -1:
         raise ValueError('Primitive index out of range for the shape of node {} in network {}'.format(nodei, neti))
-    
+
     if prim_index == -1:
         primitive, _transform = node.shape.text_item
     else:
@@ -2378,6 +2407,23 @@ def reset():
     redoStack = TStack()
     lastNetIndex = 0
 
+# TODO should this go somewhere else?
+def addFreeText(neti: int, txtID: str, x: float, y: float, w: float, h: float) -> int:
+    '''
+    create a text box, add it to the canvas'''
+    if x < 0 or y < 0 or w < 0 or h < 0:
+        _raiseError(-12)
+    net = _getNetwork(neti)
+    txtBox = TFreeText(txtID, Vec2(x,y), Vec2(w,h))
+    # check for repeated id?
+    if any((txtID == t.id for t in net.freeTextBoxes.values())):
+        _raiseError(-3)
+    _pushUndoStack()
+    return net.addFreeText(txtBox)
+
+# TODO implement
+def deleteFreeText(neti: int, txtIdx: int):
+    pass
 
 '''Code for serialization/deserialization.'''
 
@@ -2401,11 +2447,11 @@ class EnumField(fields.Field):
             if entry.value == value:
                 return entry
         assert False, "Not supposed to reach here"
-    
+
 class ChoiceField(fields.Field):
     def __init__(self, choice_list):
         super().__init__()
-        
+
         for choice in choice_list:
             if not isinstance(choice, ChoiceItem):
                 raise ValueError("not choice item")
@@ -2503,7 +2549,7 @@ def primitive_dump(base_obj, parent_obj):
         LinePrim.__name__: LineSchema,
         TrianglePrim.__name__: TriangleSchema,
         HexagonPrim.__name__: HexagonSchema
-        
+
     }[base_obj.__class__.__name__]()
     return ret
 
@@ -2552,7 +2598,7 @@ class AbstractNodeSchema(Schema):
     position = Dim2()
     rectSize = Dim2()
     nodeLocked = fields.Bool()
-    
+
     @post_dump
     def post_dump(self, data: Any, **kwargs):
         del data['index']
@@ -2678,7 +2724,7 @@ class NetworkSchema(Schema):
     @post_load
     def post_load(self, data: Any, **kwargs) -> TNetwork:
         return TNetwork(**data)
-    
+
     @post_dump
     def post_dump(self, data, **kwargs):
         data['serialVersion'] = SERIAL_VERSION
@@ -2697,7 +2743,7 @@ def dumpNetwork(neti: int):
 
 def loadNetwork(net_object) -> int:
     """Load the network object (laoded directly from JSON) and add it, returning the network index.
-    
+
     Note:
         For now this overwrites the network at index 0.
     """
@@ -2748,7 +2794,7 @@ def validateNodes(nodes: Dict[int, TAbstractNode]):
 
     for cnode in cnodes:
         assert isinstance(cnode.floating, bool)
-    
+
     for node in nodes.values():
         node: TAbstractNode
         assert isinstance(node.nodeLocked, bool)

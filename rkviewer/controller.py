@@ -12,7 +12,7 @@ import logging
 from rkviewer.iodine import Color, getReactionModifiers
 from .utils import gchain, rgba_to_wx_colour
 from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidRedoEvent, DidUndoEvent, post_event
-from .canvas.data import Compartment, Node, Reaction, CompositeShape
+from .canvas.data import Compartment, FreeText, Node, Reaction, CompositeShape
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
 from .mvc import IController, IView, ModelError, ModifierTipStyle
@@ -157,7 +157,7 @@ class Controller(IController):
     @iod_setter
     def set_node_shape_index(self, neti: int, nodei: int, shapei: int):
         iod.setNodeShapeIndex(neti, nodei, shapei)
-    
+
     @iod_setter
     def set_node_primitive_property(self, neti: int, nodei: int, primitive_index: int, prop_name: str, prop_value):
         iod.setNodePrimitiveProperty(neti, nodei, primitive_index, prop_name, prop_value)
@@ -180,11 +180,16 @@ class Controller(IController):
             iod.setCompartmentVolume(neti, compi, compartment.volume)
             post_event(DidAddCompartmentEvent(compi))
         return compi
-    
+
+    def add_freetext_g(self, neti: int, freetext: FreeText) -> int:
+        with self.group_action():
+            idx = iod.addFreeText(neti, freetext.id, freetext.positon.x, freetext.position.y, freetext.size.x, freetext.size.y)
+        return idx
+
     @iod_setter
     def add_alias_node(self, neti: int, original_idx: int, pos: Vec2, size: Vec2) -> int:
         return iod.addAliasNode(neti, original_idx, *pos, *size)
-    
+
     @iod_setter
     def alias_for_reaction(self, neti: int, reai: int, nodei: int, pos: Vec2, size: Vec2):
         iod.aliasForReaction(neti, reai, nodei, *pos, *size)
@@ -501,12 +506,12 @@ class Controller(IController):
                            border_width=iod.getCompartmentOutlineThickness(neti, compi),
                            index=compi,
                            net_index=neti,
-                           )    
+                           )
 
     def update_view(self):
         """Immediately update the view with using latest model."""
         return self._update_view()
-    
+
     def dump_network(self, neti: int):
         return iod.dumpNetwork(neti)
 

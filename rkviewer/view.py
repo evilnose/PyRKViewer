@@ -277,6 +277,7 @@ class ModePanel(wx.Panel):
         self.AppendModeButton('Select', InputMode.SELECT, sizer)
         self.AppendModeButton('+Nodes', InputMode.ADD_NODES, sizer)
         self.AppendModeButton('+Compts', InputMode.ADD_COMPARTMENTS, sizer)
+        self.AppendModeButton('+Text', InputMode.ADD_TEXT, sizer)
         self.AppendModeButton('Zoom', InputMode.ZOOM, sizer)
 
         self.AppendSeparator(sizer)

@@ -64,10 +64,11 @@ class PluginManager:
                      self.make_notify('on_did_change_compartment_of_nodes'))
         self.logger = logging.getLogger('plugin-manager')
         self.error_callback = lambda _: None  # By default don't do anything
+        self.plugin_dir = ""
 
     def bind_error_callback(self, callback):
         """Bind a dialog callback for when there is an error.
-        
+
         If an error occurs before such a callback is bound, it is only logged.
         """
         self.error_callback = callback
@@ -121,7 +122,7 @@ class PluginManager:
                     logging.warning("Plugin in file '{}' does not have a `metadata` class attribute. "
                         "Did not load. See plugin documentation for more information.".format(f))
                     continue
-                
+
                 for method_name, method in inspect.getmembers(cls, inspect.isroutine):
                     setattr(cls, method_name, wrap_exception(cls.metadata.name, method))
 
@@ -129,7 +130,9 @@ class PluginManager:
 
         logging.getLogger('plugin').info("Found {} valid plugins in '{}'. Loading plugins...".format(
             len(plugin_classes), dir_path))
-        
+
+        self.plugin_dir = dir_path
+
         self.plugins = list()
         for cls in plugin_classes:
             try:
@@ -191,6 +194,33 @@ Plugin!".format(handler_name)
             item = menu.Append(wx.ID_ANY, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, _get_callback(plugin), item)
 
+        menu.AppendSeparator()
+        add_plugin = menu.Append(wx.ID_ANY, "Add a Plugin")
+        menu.Bind(wx.EVT_MENU, self.add_plugin_from_file, add_plugin)
+
+    def add_plugin_from_file(self, evt):
+        # opens window to choose a file
+        # want to add support for zip files sometime
+        # saves to plugin_dir
+        with wx.FileDialog(self.parent_window, "Choose File", wildcard="*.py",
+                    style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return     # the user changed their mind
+            # Proceed loading the file chosen by the user
+            pathname = fileDialog.GetPath()
+            filename = fileDialog.GetFilename()
+            try:
+                with open(pathname, 'r') as file:
+                    txt = file.read()
+                    print(txt)
+                savepth = os.path.join(self.plugin_dir, filename)
+                print(savepth)
+                with open(savepth, 'w') as file_dest:
+                    file_dest.write(txt)
+                    file_dest.close()
+            except IOError:
+                wx.LogError("Cannot open file.")
+
     def make_command_callback(self, command: CommandPlugin) -> Callable[[], None]:
         def command_cb():
             with self.controller.group_action():
@@ -241,7 +271,7 @@ Plugin!".format(handler_name)
     def get_plugins_by_category(self) -> Dict[PluginCategory, List[Tuple[str, Callable[[], None], Optional[wx.Bitmap]]]]:
         """Returns a dictionary that maps each category to the list of plugins.
 
-        Each plugin in the lists is a tuple (short_name, bitmap, callback). The 
+        Each plugin in the lists is a tuple (short_name, bitmap, callback). The
         """
         ret = defaultdict(list)
         for plugin in self.plugins:
@@ -272,7 +302,7 @@ class PluginDialog(wx.Dialog):
 class PluginPage(HtmlWindow):
     def __init__(self, parent: wx.Window, plugin: Plugin):
         super().__init__(parent)
-
+        print(os.path.dirname(os.path.abspath(__file__)))
         html = '''
         <h3>{name}</h3>
         <div>{author}｜v{version}</div>

@@ -132,6 +132,8 @@ class PluginManager:
         logging.getLogger('plugin').info("Found {} valid plugins in '{}'. Loading plugins...".format(
             len(plugin_classes), dir_path))
 
+        self.plugin_dir = dir_path
+
         self.plugins = list()
         for cls in plugin_classes:
             try:
@@ -192,6 +194,28 @@ Plugin!".format(handler_name)
         for plugin in sorted_plugins:
             item = menu.Append(wx.ID_ANY, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, _get_callback(plugin), item)
+
+        menu.AppendSeparator()
+        add_plugin = menu.Append(wx.ID_ANY, "Add a Plugin")
+        menu.Bind(wx.EVT_MENU, self.add_plugin_from_file, add_plugin)
+
+    def add_plugin_from_file(self, evt):
+        with wx.FileDialog(self.parent_window, "Choose File", wildcard="*.py",
+                    style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return
+            # Proceed loading the file chosen by the user
+            pathname = fileDialog.GetPath()
+            filename = fileDialog.GetFilename()
+            try:
+                with open(pathname, 'r') as file:
+                    txt = file.read()
+                savepth = os.path.join(self.plugin_dir, filename)
+                with open(savepth, 'w') as file_dest:
+                    file_dest.write(txt)
+                    file_dest.close()
+            except IOError:
+                wx.LogError("Cannot open file.")
 
     def make_command_callback(self, command: CommandPlugin) -> Callable[[], None]:
         def command_cb():

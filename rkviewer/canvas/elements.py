@@ -596,8 +596,6 @@ class CompartmentElt(CanvasElement):
     def __init__(self, compartment: Compartment, major_layer: int, minor_layer: int):
         super().__init__((major_layer, minor_layer))
         self.compartment = compartment
-        #print("major layer: " + str(major_layer))
-        #print("minor layer: " + str(minor_layer))
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
         return pt_in_rect(logical_pos, self.compartment.rect)
@@ -1376,53 +1374,4 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, full_text_strin
 
     gc.DrawText(text_string, draw_pos.x, draw_pos.y, brush)
 
-class FreeTextElement(CanvasElement):
-    """Text box.
-
-    Attributes:
-        layers: The layer(s) number of this element.
-        enabled: Whether the element is enabled.
-        destroyed: Whether the object was destroyed (if this is True then you shouldn't use this)
-    """
-    layers: Layer
-    enabled: bool
-    destroyed: bool
-    position: Vec2
-    rect: Rect
-
-    def __init__(self, major_layer: int, minor_layer: int, position: Vec2):
-        super().__init__((major_layer, minor_layer))
-        self.rect = Rect(position, Vec2(50, 50))
-
-    # same as node
-    def pos_inside(self, logical_pos: Vec2) -> bool:
-        return pt_in_rect(logical_pos, self.rect)
-
-    def on_paint(self, gc: wx.GraphicsContext):
-        border = wx.Colour(255, 255, 0, 100)
-        fill = wx.Colour(255, 0, 255, 100)
-        draw_rect(gc, self.rect, border=border, border_width=2, fill=fill)
-
-    # move box around
-    # if editing text, highlight
-    def on_mouse_drag(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
-        """Handler for when the mouse drags inside the shape, with the left mouse button down."""
-        return False
-
-    def on_left_down(self, logical_pos: Vec2) -> bool:
-        """Handler for when the mouse left button is pressed down inside the shape."""
-        return False
-
-    def on_left_up(self, logical_pos: Vec2) -> bool:
-        """Handler for when the mouse left button is springs up inside the shape."""
-        return False
-
-    def bounding_rect(self) -> Rect:
-        """Return the bounding rectangle of the element."""
-        return self.rect
-
-    # edit text
-    def on_double_click(self, logical_pos: Vec2, rel_pos: Vec2) -> bool:
-        """ """
-        return False
 

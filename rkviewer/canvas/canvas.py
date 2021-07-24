@@ -32,7 +32,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import even_round, opacity_mul, resource_path
-from .data import Compartment, FreeText, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
+from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
 from .elements import BezierHandle, CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
     Rect, Vec2, circle_bounds,
@@ -181,7 +181,6 @@ class Canvas(wx.ScrolledWindow):
         self._nodes = list()
         self._reactions = list()
         self._compartments = list()
-        self._texts = list()
         self._node_elements = list()
         self._reaction_elements = list()
         self._compartment_elements = list()
@@ -361,7 +360,7 @@ class Canvas(wx.ScrolledWindow):
         """Connect all descendants of this widget to relevant events.
 
         wxPython does not propagate events like LEFT_UP and MOTION up to the
-        parent of the window that received it. Therefore normally there is
+        parent of the window that received it. Therefore normally there is 
         no way for DragDrop to detect a mouse event if it occurred on top
         of a child widget of window. This function solves this problem by
         recursively connecting all child widgets of window to trigger the DragDrop
@@ -394,7 +393,7 @@ class Canvas(wx.ScrolledWindow):
         return None
 
     def SetOverlayPositions(self):
-        """Set the positions of the overlaid widgets.
+        """Set the positions of the overlaid widgets. 
 
         This should be called in OnPaint so that the overlaid widgets stay in the same relative
         position.
@@ -790,10 +789,6 @@ class Canvas(wx.ScrolledWindow):
             elif cstate.input_mode == InputMode.ZOOM:
                 zooming_in = not wx.GetKeyState(wx.WXK_SHIFT)
                 self.IncrementZoom(zooming_in, Vec2(device_pos))
-            elif cstate.input_mode == InputMode.ADD_TEXT:
-                self._drag_selecting == True
-                self._drag_select_start = logical_pos
-                self._drag_rect = Rect(self._drag_select_start, Vec2())
 
         finally:
             if self.dragged_element is not None:
@@ -1266,22 +1261,6 @@ class Canvas(wx.ScrolledWindow):
                 # clip position
                 comp.position = clamp_rect_pos(comp.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
                 self.controller.add_compartment_g(self.net_index, comp)
-            elif cstate.input_mode == InputMode.ADD_TEXT:
-                id = self._GetUniqueName('t', [t.id for t in self._texts])
-                size = self._drag_rect.size
-                # TODO use appropriate minimum size
-                adj_size = Vec2(max(size.x, get_setting('min_comp_width')),
-                                max(size.y, get_setting('min_comp_height')))
-                # compute position
-                size_diff = adj_size - self._drag_rect.size
-                # center position if drag_rect size has been adjusted
-                pos = self._drag_rect.position - size_diff / 2
-                txtbox = FreeText(id, index=self.comp_index, net_index=self.net_index,
-                                  position=pos, size=adj_size)
-                # i dont know what this does
-                txtbox.position = clamp_rect_pos(txtbox.rect, Rect(Vec2(), self.realsize), BOUNDS_EPS)
-                self.controller.add_freetext_g(self.net_index, txtbox)
-
         elif cstate.input_mode == InputMode.SELECT:
             # perform left_up on dragged_element if it exists, or just find the node under the
             # cursor
@@ -1553,7 +1532,7 @@ class Canvas(wx.ScrolledWindow):
 
     def _GetReactionWidgets(self, rxn_elt: ReactionElement) -> Iterable[CanvasElement]:
         return chain(rxn_elt.bhandles, [rxn_elt.center_el])
-
+    
     def _GetDynamicElements(self) -> Set[CanvasElement]:
         '''Get the set of elements that will change, as self.dragged_element is dragged.
         '''
@@ -1635,7 +1614,7 @@ class Canvas(wx.ScrolledWindow):
             within_comp = self.RectInWhichCompartment(Rect(pos, size))
         elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
             within_comp = self.InWhichCompartment(self._select_box.nodes)
-
+        
         if within_comp is None or within_comp == -1:
             return
 
@@ -1644,7 +1623,7 @@ class Canvas(wx.ScrolledWindow):
                 elt.highlight_paint(gc)
                 return
         assert False, 'Should not reach here'
-
+        
 
     def _DrawDragSelectionRect(self, gc):
         if self._drag_selecting:
@@ -1657,12 +1636,6 @@ class Canvas(wx.ScrolledWindow):
                 bwidth = get_theme('drag_border_width')
                 corner_radius = 0
             elif cstate.input_mode == InputMode.ADD_COMPARTMENTS:
-                fill = opacity_mul(get_theme('comp_fill'), 0.3)
-                border = opacity_mul(get_theme('comp_border'), 0.3)
-                bwidth = get_theme('comp_border_width')
-                corner_radius = get_theme('comp_corner_radius')
-            elif cstate.input_mode == InputMode.ADD_TEXT:
-                # TODO choose a different color
                 fill = opacity_mul(get_theme('comp_fill'), 0.3)
                 border = opacity_mul(get_theme('comp_border'), 0.3)
                 bwidth = get_theme('comp_border_width')
@@ -1733,7 +1706,7 @@ class Canvas(wx.ScrolledWindow):
                                   pad + get_theme('react_node_padding'))
 
         # Draw drag-selection rect
-        self._DrawDragSelectionRect(gc)
+        self._DrawDragSelectionRect(gc) 
 
     def ResetLayer(self, elt: CanvasElement, layers: Layer):
         if elt in self._model_elements:

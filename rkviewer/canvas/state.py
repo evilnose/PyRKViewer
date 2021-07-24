@@ -14,7 +14,6 @@ class InputMode(Enum):
     ADD_NODES = 'Add Nodes'
     ADD_COMPARTMENTS = 'Add Compartments'
     ZOOM = 'Zoom'
-    ADD_TEXT = "Add Free Text"
 
     def __str__(self):
         return str(self.value)
@@ -55,7 +54,7 @@ class CanvasState:
     def input_mode(self, mode: InputMode):
         self._input_mode = mode
         self.input_mode_changed(mode)
-
+    
     @property
     def multi_select(self):
         return wx.GetKeyState(wx.WXK_CONTROL) or wx.GetKeyState(wx.WXK_SHIFT)

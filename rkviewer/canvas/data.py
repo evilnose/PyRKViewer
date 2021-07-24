@@ -94,6 +94,19 @@ TEXT_ALIGNMENT_CHOICES = [
     ChoiceItem(TextAlignment.RIGHT, 'right'),
 ]
 
+class TextPosition(Enum):
+    IN_NODE = auto()
+    ABOVE = auto()
+    BELOW = auto()
+    NEXT_TO = auto()
+
+TEXT_POSITION_CHOICES = [
+  ChoiceItem(TextPosition.IN_NODE, "Text Inside"),
+  ChoiceItem(TextPosition.ABOVE, "Above Node"),
+  ChoiceItem(TextPosition.BELOW, "Below Node"),
+  ChoiceItem(TextPosition.NEXT_TO, "Next to Node")
+]
+
 
 @dataclass()
 class TextPrim(Primitive):
@@ -105,11 +118,12 @@ class TextPrim(Primitive):
     font_style: int = wx.FONTSTYLE_NORMAL
     font_weight: int = wx.FONTWEIGHT_MEDIUM
     alignment: TextAlignment = TextAlignment.CENTER
+    position: TextPosition = TextPosition.IN_NODE
 
 
 def gen_polygon_pts(n, r=0.5, phase=0) -> Tuple[Vec2, ...]:
     """
-    This function is used to define the vertices in 2D space of n-polygons. Each equilateral 
+    This function is used to define the vertices in 2D space of n-polygons. Each equilateral
     polygon is drawn inside a circle with specified radius.
 
     n: the number of sides of the polygon
@@ -206,7 +220,7 @@ class CompositeShapeFactory:
         self.item_factories = item_factories
         self.text_factory = text_factory
         self.name = name
-    
+
     def produce(self):
         items = [(prim.produce(), tf) for prim, tf in self.item_factories]
         textitem = (self.text_factory[0].produce(), self.text_factory[1])
@@ -247,7 +261,7 @@ class Node(RectData):
     composite_shape: Optional[CompositeShape]
     # -1 if this is an original node, or if this is an alias node, then the index of the original copy
     original_index: int
-                        
+
 
     # force keyword-only arguments
     def __init__(self, id: str, net_index: int, *, pos: Vec2, size: Vec2, comp_idx: int = -1,

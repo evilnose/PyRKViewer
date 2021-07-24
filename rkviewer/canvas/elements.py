@@ -21,7 +21,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment, TextPosition
 from .geometry import (
     Rect,
     Vec2,
@@ -172,6 +172,18 @@ class NodeElement(CanvasElement):
             gc.SetPen(pen)
             path = gc.CreatePath()
             path.AddCircle(self.node.position.x, self.node.position.y, .1*height)
+            gc.StrokePath(path)
+
+        if not self.node.floatingNode:
+            boundary_color = self.node.border_color or Color(255, 0, 0)
+            pen = gc.CreatePen(wx.GraphicsPenInfo(
+                boundary_color.to_wxcolour()).Width(2))
+            gc.SetPen(pen)
+            path = gc.CreatePath()
+            path.AddRectangle(self.node.position.x-round(self.node.border_width/2 + 2)-2,
+                              self.node.position.y-round(self.node.border_width/2 + 2)-2,
+                              2*round(self.node.border_width/2 + 2)+self.node.size.x+4,
+                              2*round(self.node.border_width/2 + 2)+self.node.size.y+4)
             gc.StrokePath(path)
 
     def on_left_down(self, _: Vec2):
@@ -590,7 +602,7 @@ class CompartmentElt(CanvasElement):
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
         return True
-    
+
     def _paint(self, gc: wx.GraphicsContext, highlight: bool):
         rect = Rect(self.compartment.position,
                     self.compartment.size)
@@ -1309,15 +1321,15 @@ def _truncate_text(gc: wx.GraphicsContext, max_width: float, text: str):
     if tw > max_width:
         text_len = int((max_width / tw) * len(text))
         text = text[:text_len]
-        if len(text) > 2:
-            text = text[:-2] + '..'
+        if len(text) > 4:
+            text = text[:-3] + '....'
         else:
-            text = '..'
-    
+            text = '....'
+
     return text
 
 
-def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, text_item: Tuple[TextPrim, Transform]):
+def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, full_text_string, text_item: Tuple[TextPrim, Transform]):
     primitive, transform = text_item
 
     # Maybe cache this?
@@ -1331,13 +1343,20 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
     brush = gc.CreateBrush(wx.Brush(primitive.bg_color.to_wxcolour()))
 
     width, height = bounding_rect.size
-    text_string = _truncate_text(gc, bounding_rect.size.x, text_string)
+    text_string = _truncate_text(gc, bounding_rect.size.x, full_text_string)
     tw, th, _, _ = gc.GetFullTextExtent(text_string)
-    
+    tw_full, th_full, _, _ = gc.GetFullTextExtent(full_text_string)
+
     # remaining x and y
     rx = width - tw
     ry = height - th
+    # upper left corner of node
     text_pos = bounding_rect.position + transform.translation.elem_mul(bounding_rect.size)
+    # do not truncate text if outside node
+    if not primitive.position == TextPosition.IN_NODE:
+        text_string = full_text_string
+        text_pos = text_pos - Vec2(tw_full + th/2, 0)
+        rx = th + tw_full + width
 
     if primitive.alignment == TextAlignment.LEFT:
         draw_pos = text_pos + Vec2(0, ry / 2)
@@ -1348,4 +1367,11 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, text_string, te
     else:
         assert False, "This should not happen"
 
+    if primitive.position == TextPosition.ABOVE:
+        draw_pos = draw_pos + Vec2(0, -2*th)
+    elif primitive.position == TextPosition.BELOW:
+        draw_pos = draw_pos + Vec2(0, 2*th)
+
     gc.DrawText(text_string, draw_pos.x, draw_pos.y, brush)
+
+

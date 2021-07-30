@@ -15,12 +15,13 @@ from marshmallow.schema import Schema
 import logging
 import inspect
 import traceback
+import requests
 
 # pylint: disable=no-name-in-module
 import wx
 from rkviewer.plugin.classes import CommandPlugin, Plugin, PluginCategory, PluginType, WindowedPlugin
 # pylint: disable=no-name-in-module
-from wx.html import HtmlWindow
+from wx.html import HtmlCell, HtmlWidgetCell, HtmlWindow
 
 from rkviewer.config import add_plugin_schema
 from rkviewer.events import (CanvasEvent, DidAddCompartmentEvent,
@@ -34,6 +35,7 @@ from rkviewer.events import (CanvasEvent, DidAddCompartmentEvent,
                              SelectionDidUpdateEvent, bind_handler)
 from rkviewer.mvc import IController
 
+import json
 
 class PluginManager:
     plugins: List[Plugin]
@@ -127,6 +129,8 @@ class PluginManager:
 
                 plugin_classes.append(cls)
 
+        # ...
+
         logging.getLogger('plugin').info("Found {} valid plugins in '{}'. Loading plugins...".format(
             len(plugin_classes), dir_path))
 
@@ -193,28 +197,6 @@ Plugin!".format(handler_name)
             item = menu.Append(wx.ID_ANY, plugin.metadata.name)
             menu.Bind(wx.EVT_MENU, _get_callback(plugin), item)
 
-        menu.AppendSeparator()
-        add_plugin = menu.Append(wx.ID_ANY, "Add a Plugin")
-        menu.Bind(wx.EVT_MENU, self.add_plugin_from_file, add_plugin)
-
-    def add_plugin_from_file(self, evt):
-        with wx.FileDialog(self.parent_window, "Choose File", wildcard="*.py",
-                    style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
-            if fileDialog.ShowModal() == wx.ID_CANCEL:
-                return
-            # Proceed loading the file chosen by the user
-            pathname = fileDialog.GetPath()
-            filename = fileDialog.GetFilename()
-            try:
-                with open(pathname, 'r') as file:
-                    txt = file.read()
-                savepth = os.path.join(self.plugin_dir, filename)
-                with open(savepth, 'w') as file_dest:
-                    file_dest.write(txt)
-                    file_dest.close()
-            except IOError:
-                wx.LogError("Cannot open file.")
-
     def make_command_callback(self, command: CommandPlugin) -> Callable[[], None]:
         def command_cb():
             with self.controller.group_action():
@@ -262,6 +244,9 @@ Plugin!".format(handler_name)
     def create_dialog(self, parent):
         return PluginDialog(parent, self.plugins)
 
+    def create_install_dialog(self, parent):
+        return PluginInstallationDialog(parent, self.plugins, self.plugin_dir)
+
     def get_plugins_by_category(self) -> Dict[PluginCategory, List[Tuple[str, Callable[[], None], Optional[wx.Bitmap]]]]:
         """Returns a dictionary that maps each category to the list of plugins.
 
@@ -281,7 +266,7 @@ class PluginDialog(wx.Dialog):
         super().__init__(parent, title='Manage Plugins', size=(900, 550))
         notebook = wx.Listbook(self, style=wx.LB_LEFT)
         notebook.GetListView().SetFont(wx.Font(wx.FontInfo(10)))
-        notebook.GetListView().SetColumnWidth(0, 100)
+        notebook.GetListView().SetColumnWidth(0, 125)
 
         sizer = wx.BoxSizer()
         sizer.Add(notebook, proportion=1, flag=wx.EXPAND)
@@ -314,3 +299,118 @@ class PluginPage(HtmlWindow):
         self.SetPage(html)
         # inherit parent background color for better look
         self.SetBackgroundColour(parent.GetBackgroundColour())
+
+class PluginInstallationDialog(wx.Dialog):
+    def __init__(self, parent, plugins: List[Plugin], plugin_dir: str):
+        super().__init__(parent, title='Add Plugins', size=(900, 550))
+        notebook = wx.Listbook(self, style=wx.LB_LEFT)
+        notebook.GetListView().SetFont(wx.Font(wx.FontInfo(10)))
+        notebook.GetListView().SetColumnWidth(0, 125)
+
+        sizer = wx.BoxSizer()
+        sizer.Add(notebook, proportion=1, flag=wx.EXPAND)
+
+        downloadpage = DownloadPluginPage(notebook, installed=plugins, plugin_dir=plugin_dir)
+        notebook.AddPage(downloadpage, text="Find New Plugins")
+
+        add_from_local = AddLocalPage(notebook, plugin_dir=plugin_dir)
+        notebook.AddPage(add_from_local, text="Install From Local File")
+
+        self.SetSizer(sizer)
+
+class AddLocalPage(HtmlWindow):
+    def __init__(self, parent: wx.Window, plugin_dir: str):
+        super().__init__(parent)
+        self.plugin_dir = plugin_dir
+        self.parent = parent
+        self.selected = []
+        html = '<h2>Add A Plugin</h2><h4><u>Browse Files</u></h4>'
+        self.SetPage(html)
+
+    def OnCellClicked(self, cell, x, y, event):
+        with wx.FileDialog(self.parent, "Choose File", wildcard="*.py",
+                style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as fileDialog:
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return False
+            # Proceed loading the file chosen by the user
+            pathname = fileDialog.GetPath()
+            filename = fileDialog.GetFilename()
+            try:
+                with open(pathname, 'r') as file:
+                    txt = file.read()
+                savepth = os.path.join(self.plugin_dir, filename)
+                with open(savepth, 'w') as file_dest:
+                    file_dest.write(txt)
+                    file_dest.close()
+            except IOError:
+                wx.LogError("Cannot open file.")
+        self.selected.append(filename)
+        self.UpdateDisplay()
+        return True
+
+    def UpdateDisplay(self):
+        html = '<h2>Add A Plugin</h2><h4><u>Browse Files</u></h4><b>Selected:</b>'
+        for item in self.selected:
+            html += '<p>{}</p>'.format(item)
+        html += '<p><b>Close this window to import selected files</b></p>'
+        self.SetPage(html)
+
+class DownloadPluginPage(HtmlWindow):
+    def __init__(self, parent: wx.Window, installed: List[Plugin], plugin_dir: str):
+        super().__init__(parent)
+        self.plugin_dir = plugin_dir
+        html ='<h2>{title}</h2>'.format(title="Browse Plugins")
+        self.SetPage(html)
+        installed_names = dict()
+        for p in installed:
+            installed_names.update({p.metadata.name: p})
+        try:
+            # for just displaying info
+            r = requests.get('https://raw.githubusercontent.com/samuels342/PyRKViewer-Plugins/main/metadata.json')
+            metadata = r.json()
+            for m in metadata:
+                item = '''
+                        <div>
+                        <h3>{name}</h3>
+                        <br>{author}｜v{version}
+                        <p>{long_desc}</p>
+                        '''.format(name = metadata[m]['name'],
+                                            author = metadata[m]['author'],
+                                            version = metadata[m]['version'],
+                                            long_desc = metadata[m]['long_desc'])
+                if metadata[m]['name'] in installed_names:
+                    prev_install = installed_names[metadata[m]['name']]
+                    if not prev_install.metadata.version == metadata[m]['version']:
+                        item += '''
+                                <div align="right">v{v} Installed<br>
+                                <a href={file}>Update</a></div>
+                                '''.format(v = prev_install.metadata.version,
+                                            file = m)
+                    else:
+                        item += '''
+                                <div align="right">v{v} Installed</div>
+                                '''.format(v = prev_install.metadata.version)
+                else:
+                    item += '<div align="right"><a href={file}>Install</a></div>'.format(file = m)
+                item += '</div><hr>'
+                self.AppendToPage(item)
+        except: # TODO define error, checking if there is internet connection
+            html = '<h2>Browse Plugins</h2><p>Could not connect to server, please try again later!</p>'
+            self.SetPage(html)
+        self.SetBackgroundColour(parent.GetBackgroundColour())
+
+    def OnLinkClicked(self, link):
+        filename = link.GetHref()
+        try:
+            p = requests.get("https://raw.githubusercontent.com/samuels342/PyRKViewer-Plugins/main/all-plugins/{}".format(filename))
+        except:
+            wx.MessageBox("Could not connect to server. Please try again later.")
+        try:
+            # path = os.path.join(self.plugin_dir, filename)
+            path = os.path.join(self.plugin_dir, filename)
+            with open(path, "w") as f:
+                f.write(p.text)
+                f.close()
+            wx.MessageBox("Done. Successfully installed {}.".format(filename), "Complete", wx.OK | wx.ICON_INFORMATION)
+        except:
+            wx.MessageBox("The program encountered an error. Please try again later.")

@@ -263,6 +263,12 @@ class TabbedToolbar(fnb.FlatNotebook):
             tb.SetBackgroundColour (get_theme ('toolbar_bg'))
             self.AddPage(tb, text=CATEGORY_NAMES[cat])
 
+    def UpdatePluginPages(self):
+        page_count = self.GetPageCount()
+        for page in range(1,page_count):
+            self.DeletePage(1)
+        self.AddPluginPages()
+
 
 class ModePanel(wx.Panel):
     """ModePanel at the left of the app."""
@@ -589,6 +595,7 @@ class MainFrame(wx.Frame):
         self.plugins_menu = wx.Menu()
         self.AddMenuItem(self.plugins_menu, '&Plugins...', 'Manage plugins', self.ManagePlugins, entries,
                          key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('P')))
+        self.AddMenuItem(self.plugins_menu, 'Add Plugins', 'Add A Plugin', self.AddPlugins, entries)
         # load the plugin items in OnShow
         self.plugins_menu.AppendSeparator()
 
@@ -859,6 +866,22 @@ class MainFrame(wx.Frame):
                 pass  # exited normally
             else:
                 pass  # exited by clicking some button
+
+    def AddPlugins(self, evt):
+        with self.manager.create_install_dialog(self) as dlg:
+            dlg.Centre()
+            if not dlg.ShowModal() == wx.ID_OK:
+                sep_idx = -1
+                for idx, item in enumerate(self.plugins_menu.GetMenuItems()):
+                    if sep_idx < 0 and item.IsSeparator():
+                        sep_idx = idx
+                    if sep_idx >= 0 and idx > sep_idx:
+                        self.plugins_menu.Remove(item)
+                self.manager.plugins = list()
+                self.manager.load_from('plugins')
+  #              self.manager.load_from('coyote-gui-plugins')
+                self.manager.register_menu(self.plugins_menu)
+                self.main_panel.toolbar.UpdatePluginPages()
 
     def OverrideAccelTable(self, widget):
         """Set up functions to disable accelerator shortcuts for certain descendants of widgets.

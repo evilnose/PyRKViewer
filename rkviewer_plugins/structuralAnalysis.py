@@ -48,7 +48,7 @@ class StructuralAnalysis(WindowedPlugin):
     metadata = PluginMetadata(
         name='StructuralAnalysis',
         author='Jin Xu',
-        version='0.0.1',
+        version='0.0.2',
         short_desc='Structural Analysis.',
         long_desc='StructuralAnalysis Plugin is to calculate and visualize the stoichiometry matrix and conserved moieties for the network.',
         category=PluginCategory.ANALYSIS
@@ -190,7 +190,6 @@ class StructuralAnalysis(WindowedPlugin):
             wx.MessageBox("Please import a network on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
-            #id = allNodes[0].id[0:-2]
             node =  allNodes[0]
             try:
                 primitive, transform = node.shape.items[0]
@@ -204,18 +203,15 @@ class StructuralAnalysis(WindowedPlugin):
                     largest_node_index = allNodes[i].index
             row = largest_node_index + 1
             numReactions = api.reaction_count(netIn)
-            #print("numReactions:", numReactions)
             col = numReactions
             self.st = _np.zeros((row, col))
             allReactions = api.get_reactions(netIn)
             for i in range(numReactions):
                 for j in range(len(allReactions[i].sources)):
-                    #print(allReactions[i].sources[j])
                     for m in range(row):
                         if allReactions[i].sources[j] == m:
                             self.st.itemset((m, i), -1)
                 for j in range(len(allReactions[i].targets)):
-                    #print(allReactions[i].targets[j])
                     for m in range(row):
                         if allReactions[i].targets[j] == m:
                             self.st.itemset((m,i), 1)
@@ -234,7 +230,6 @@ class StructuralAnalysis(WindowedPlugin):
             for i in range(self.st.shape[1]):
                 self.tab1.grid_st.SetColLabelValue(i, "J" + str(i))
             for i in range(self.st.shape[0]):
-                #self.tab1.grid_st.SetRowLabelValue(i, id + "_" + str(i))
                 id = allNodes[i].id
                 self.tab1.grid_st.SetRowLabelValue(i, id)
             
@@ -243,7 +238,6 @@ class StructuralAnalysis(WindowedPlugin):
                     self.tab1.grid_st.SetCellValue(row, col,"%d" % self.st.item(row,col))
 
             for i in range(moi_mat.shape[1]):
-                #self.tab2.grid_moi.SetColLabelValue(i, id + "_" + str(i))
                 id = allNodes[i].id
                 self.tab2.grid_moi.SetColLabelValue(i, id)
 
@@ -258,7 +252,6 @@ class StructuralAnalysis(WindowedPlugin):
                     self.tab2.grid_moi.SetRowLabelValue(CSUM_id, "CSUM" + str(CSUM_id))    
 
                     for j in range(moi_mat.shape[1]):
-                        #self.tab2.grid_moi.SetCellValue(CSUM_id, j, format (moi_mat[i][j], ".2f"))
                         self.tab2.grid_moi.SetCellValue(CSUM_id, j, format (a[j], ".2f")) 
                     CSUM_id += 1 
 
@@ -285,7 +278,6 @@ class StructuralAnalysis(WindowedPlugin):
             value = self.tab2.grid_moi.GetCellValue(row,col)
             if value != "0.00" and value != "+0.00" and value != "-0.00" and value !="":
                 self.index_list.append(int(col))
-            #print("selected nodes:", self.index_list)
 
 
     def color_callback(self, evt):
@@ -322,7 +314,6 @@ class StructuralAnalysis(WindowedPlugin):
                 wx.MessageBox("Please select a row and pick a color again", "Message", wx.OK | wx.ICON_INFORMATION)
             try:
                 for index in self.index_list:
-                    #api.update_node(api.cur_net_index(), index, fill_color=color, forder_color=color)
                     api.update_node(api.cur_net_index(), index, fill_color=color)
             except:
                 wx.MessageBox("Please select a row and pick a color again", "Message", wx.OK | wx.ICON_INFORMATION)

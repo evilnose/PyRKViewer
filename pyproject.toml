@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "coyote-gui"
-version = "0.1b4"
+version = "0.1b5"
 description = "Extensible visualization and editing tool for reaction networks."
 authors = ["Gary Geng <xiaog3@uw.edu>", "Jin Xu <jxu2019@uw.edu>",
 "Carmen Perena-Cortes <cperena@outlook.com>", "Evan Yip <evan@yipsite.net>",

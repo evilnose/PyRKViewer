@@ -32,13 +32,13 @@ class ExportAntimony(WindowedPlugin):
         """
         self.window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
 
-        show_btn = wx.Button(self.window, -1, 'Show', (5, 5))
+        show_btn = wx.Button(self.window, -1, 'Export', (5, 5))
         show_btn.Bind(wx.EVT_BUTTON, self.Show)
 
-        copy_btn = wx.Button(self.window, -1, 'Copy', (100, 5))
+        copy_btn = wx.Button(self.window, -1, 'Copy To Clipboard', (83, 5))
         copy_btn.Bind(wx.EVT_BUTTON, self.Copy)
 
-        save_btn = wx.Button(self.window, -1, 'Save', (195, 5))
+        save_btn = wx.Button(self.window, -1, 'Save', (205, 5))
         save_btn.Bind(wx.EVT_BUTTON, self.Save)
 
         wx.StaticText(self.window, -1, 'Antimony string:', (5,30))

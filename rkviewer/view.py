@@ -636,7 +636,7 @@ class MainFrame(wx.Frame):
 
     def OnShow(self, evt):
         if runtime_vars().enable_plugins:
-            self.manager.load_from('coyote-gui-plugins')
+            self.manager.load_from('rkviewer_plugins')
             self.manager.register_menu(self.plugins_menu)
             self.main_panel.toolbar.AddPluginPages()
         evt.Skip()
@@ -878,8 +878,7 @@ class MainFrame(wx.Frame):
                     if sep_idx >= 0 and idx > sep_idx:
                         self.plugins_menu.Remove(item)
                 self.manager.plugins = list()
-  #              self.manager.load_from('plugins')
-                self.manager.load_from('coyote-gui-plugins')
+                self.manager.load_from('rkviewer_plugins')
                 self.manager.register_menu(self.plugins_menu)
                 self.main_panel.toolbar.UpdatePluginPages()
 

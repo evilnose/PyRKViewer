@@ -5,11 +5,13 @@ import enum
 from functools import partial
 from itertools import chain
 from math import pi, cos, sin
+import re
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
+from numpy.lib import type_check
 
 from numpy.lib.utils import source
-from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, Transform, TextPrim, HexagonPrim, LinePrim
+from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, Transform, TextPrim, HexagonPrim, LinePrim, CompositeShapeFactory
 
 import wx
 
@@ -21,7 +23,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment, TextPosition
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Primitive, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment, TextPosition
 from .geometry import (
     Rect,
     Vec2,
@@ -33,7 +35,6 @@ from .geometry import (
 )
 from .state import InputMode, cstate
 from .utils import draw_rect
-
 
 # SetCursorFn = Callable[[wx.Cursor], None]
 Layer = Union[int, Tuple[int, ...]]
@@ -1221,6 +1222,62 @@ class SelectBox(CanvasElement):
 
             post_event(DidCommitDragEvent(self))
 
+class CustomElement(CanvasElement):
+    ''' Class for custom canvas elements created by plugins.
+    '''
+    geometry: List
+    net_index: int
+    parent_node_idx: int
+    ctrl: IController
+
+    def __init__(self, net_index: int, parent_node_idx: int, canvas, layers: Layer, shapes: List):
+        super().__init__(layers)
+
+        self.shape_arr = [
+            RectanglePrim,
+            CirclePrim,
+            TrianglePrim,
+            HexagonPrim,
+            LinePrim
+        ]
+        self.geometry = shapes
+
+        self.parent_node_idx = parent_node_idx
+        self.net_index = net_index
+        self.ctrl = canvas.controller
+
+    def on_paint(self, gc: wx.GraphicsContext):
+        if self.destroyed:
+            return
+
+        if self.parent_node_idx == None:
+            node_pos = Vec2(0,0)
+        else:
+            try:
+                parent = self.ctrl.get_node_by_index(self.net_index, self.parent_node_idx)
+            except: # if node doesn't exist
+                self.parent_node_idx = None
+                self.destroy()
+                return
+            node_pos = parent.s_position
+
+        gc.PushState()
+        for p, fc, b, bc, bw in self.geometry:
+            primitive = self.shape_arr[p()]
+            fcolor = fc()
+            bounding_rect = b()
+            bcolor = bc()
+            bwidth = bw()
+            primitive.fill_color = fcolor
+            primitive.border_color = bcolor
+            primitive.border_width = bwidth
+            if not primitive == CirclePrim:
+                primitive.corner_radius = 0
+            rel_bounding_rect = Rect(node_pos + bounding_rect.position, bounding_rect.size)
+            # rel_bounding_rec is the position and size of the shape to draw. primitive is the shape
+            draw_fn_map[primitive](gc, rel_bounding_rect, primitive, False)
+        gc.PopState()
+
 
 def primitive_peninfo(color: Color, width: float, is_alias: bool):
     info = wx.GraphicsPenInfo(color.to_wxcolour(), width)
@@ -1373,5 +1430,4 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, full_text_strin
         draw_pos = draw_pos + Vec2(0, 2*th)
 
     gc.DrawText(text_string, draw_pos.x, draw_pos.y, brush)
-
 

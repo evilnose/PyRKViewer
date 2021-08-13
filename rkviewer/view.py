@@ -666,14 +666,14 @@ class MainFrame(wx.Frame):
 
     def onAboutDlg(self, event):
         info = wx.adv.AboutDialogInfo()
-        info.Name = "An Extensible Reaction Network Editor"
-        info.Version = "0.0.1 Beta"
-        info.Copyright = "(C) 2020"
-        info.Description = "Create reaction networks"
+        info.SetName("Coyote")
+        info.SetVersion("0.1b5")
+        info.SetCopyright("(C) 2020")
+        info.SetDescription("An Extensible Reaction Network Editor")
         info.SetWebSite("https://github.com/evilnose/PyRKViewer",
                         "Home Page")  # TODO update home page?
-        info.Developers = ["Gary Geng, Jin Xu, Carmen Pereña Cortés, Herbert Sauro"]  # TODO update authors
-        info.License = "MIT"
+        info.SetDevelopers(["Gary Geng", "Jin Xu", "Carmen Pereña Cortés","Claire Samuels", "Herbert Sauro"])# TODO update authors
+        info.SetLicense("MIT")
 
         # Show the wx.AboutBox
         wx.adv.AboutBox(info)

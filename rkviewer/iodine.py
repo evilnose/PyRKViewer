@@ -2293,14 +2293,15 @@ def setNodeShapeIndex(neti: int, nodei: int, shapei: int, preserve_common_fields
     node = _getConcreteNode(neti, nodei)
     node.shapei = shapei
     shp = shapeFactories[shapei].produce()
-    if preserve_common_fields:
-        fill = node.shape.items[0][0].fill_color
-        borderc = node.shape.items[0][0].border_color
-        borderw = node.shape.items[0][0].border_width
-        node.shape.items = shp.items
-        setNodePrimitiveProperty(neti, nodei, 0, "fill_color", fill)
-        setNodePrimitiveProperty(neti, nodei, 0, "border_color", borderc)
-        setNodePrimitiveProperty(neti, nodei, 0, "border_width", 1.0 * borderw)
+    if preserve_common_fields and len(node.shape.items) == len(shp.items):
+        for index, prim in enumerate(node.shape.items):
+            fill = node.shape.items[index][0].fill_color
+            borderc = node.shape.items[index][0].border_color
+            borderw = node.shape.items[index][0].border_width
+            node.shape.items[index] = shp.items[index]
+            setNodePrimitiveProperty(neti, nodei, index, "fill_color", fill)
+            setNodePrimitiveProperty(neti, nodei, index, "border_color", borderc)
+            setNodePrimitiveProperty(neti, nodei, index, "border_width", 1.0 * borderw)
     else:
         node.shape = shp
 

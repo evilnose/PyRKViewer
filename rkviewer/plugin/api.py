@@ -6,6 +6,7 @@ API for the RKViewer GUI and model. Allows viewing and modifying the network mod
 #from rkviewer.mvc import NetIndexError
 # from __future__ import annotations
 from dataclasses import field, dataclass
+from traitlets.traitlets import default
 
 from wx.core import EVT_LIST_END_LABEL_EDIT
 from rkviewer.canvas.elements import CanvasElement, CustomElement
@@ -1390,17 +1391,27 @@ class CustomShape:
             ValueError: input functions return incorrect types
     '''
 
-    def __init__(self, shape: int, fill_color: Color, bounding_rectangle: Rect,
+    def __init__(self, shape: int=None, fill_color: Color=None, bounding_rectangle: Rect=None,
                  border_color: Color=None, border_width: float=None) -> None:
         default_shape = 0
-        default_fill_color = Color(0, 50, 200) # TODO arbitrary, should use theme color instead
-        default_rect = Rect(Vec2(50, 50), Vec2(50, 50))
-        default_border_color = Color(0, 50, 200) # TODO this should not ever get used
+        default_fill_color = _to_color(get_theme('node_fill'))
+        default_rect = Rect(Vec2(-40, 0), Vec2(20, 50))
         default_border_width = 0.0
 
-        self._shape = self._verify(shape, default_shape, "shape")
-        self._fill_color = self._verify(fill_color, default_fill_color, "fill_color")
-        self._bounding_rect = self._verify(bounding_rectangle, default_rect, "bounding_rectangle")
+        if shape is not None:
+            self._shape = self._verify(shape, default_shape, "shape")
+        else:
+            self._shape = self._make_callable(default_shape)
+
+        if fill_color is not None:
+            self._fill_color = self._verify(fill_color, default_fill_color, "fill_color")
+        else:
+            self._fill_color = self._make_callable(default_fill_color)
+
+        if bounding_rectangle is not None:
+            self._bounding_rect = self._verify(bounding_rectangle, default_rect, "bounding_rectangle")
+        else:
+            self._bounding_rect = self._make_callable(default_rect)
 
         if border_color is not None:
             self._border_color = self._verify(border_color, self._fill_color(), "border_color")
@@ -1432,7 +1443,7 @@ class CustomShape:
             if variable == "shape":
                 if candidate > 4 or candidate < 0:
                     raise ValueError("Invalid shape index.")
-        except ValueError as err:
+        except TypeError as err:
             print("ValueError: "+ str(err))
             return self._make_callable(prev_val)
         return candidate_func
@@ -1452,7 +1463,7 @@ class CustomShape:
     def set_border_width(self, width):
         self._border_width = self._verify(width, self._border_width(), "border_width")
 
-    def show(self, net_index, parent_node_index=None, bounding_rect=None):
+    def show(self, net_index, parent_node_index, bounding_rect=None):
         node_layer = _canvas.NODE_LAYER
         rect = self._bounding_rect
         if bounding_rect is not None:

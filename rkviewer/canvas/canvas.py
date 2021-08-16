@@ -33,7 +33,7 @@ from ..events import (
 from ..mvc import IController
 from ..utils import even_round, opacity_mul, resource_path
 from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
-from .elements import BezierHandle, CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
+from .elements import BezierHandle, CanvasElement, CompartmentElt, CustomElement, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
     Rect, Vec2, circle_bounds,
     clamp_rect_pos, get_bounding_rect,
@@ -159,6 +159,7 @@ class Canvas(wx.ScrolledWindow):
     sel_reactions: List[Reaction]
     sel_comps: List[Compartment]  #: Current list of selected comps; cached for performance
     drawing_drag: bool  #: See self._UpdateSelectedLists() for more details
+
 
     def __init__(self, controller: IController, zoom_slider, *args, realsize: Tuple[int, int],  **kw):
         # ensure the parent's __init__ is called
@@ -360,7 +361,7 @@ class Canvas(wx.ScrolledWindow):
         """Connect all descendants of this widget to relevant events.
 
         wxPython does not propagate events like LEFT_UP and MOTION up to the
-        parent of the window that received it. Therefore normally there is 
+        parent of the window that received it. Therefore normally there is
         no way for DragDrop to detect a mouse event if it occurred on top
         of a child widget of window. This function solves this problem by
         recursively connecting all child widgets of window to trigger the DragDrop
@@ -393,7 +394,7 @@ class Canvas(wx.ScrolledWindow):
         return None
 
     def SetOverlayPositions(self):
-        """Set the positions of the overlaid widgets. 
+        """Set the positions of the overlaid widgets.
 
         This should be called in OnPaint so that the overlaid widgets stay in the same relative
         position.
@@ -498,6 +499,7 @@ class Canvas(wx.ScrolledWindow):
             rxn_el.selected = rxn_el.reaction.index in new_sel_reactions
 
         for plugin_el in self._plugin_elements:
+     #       print(plugin_el) # __________________________________________________________________________________________remove
             select_elements.append(plugin_el)
 
         self._model_elements = SortedKeyList(select_elements, lambda e: e.layers)
@@ -1532,7 +1534,7 @@ class Canvas(wx.ScrolledWindow):
 
     def _GetReactionWidgets(self, rxn_elt: ReactionElement) -> Iterable[CanvasElement]:
         return chain(rxn_elt.bhandles, [rxn_elt.center_el])
-    
+
     def _GetDynamicElements(self) -> Set[CanvasElement]:
         '''Get the set of elements that will change, as self.dragged_element is dragged.
         '''
@@ -1614,7 +1616,7 @@ class Canvas(wx.ScrolledWindow):
             within_comp = self.RectInWhichCompartment(Rect(pos, size))
         elif self._select_box.special_mode == SelectBox.SMode.NODES_IN_ONE and self.dragged_element is not None:
             within_comp = self.InWhichCompartment(self._select_box.nodes)
-        
+
         if within_comp is None or within_comp == -1:
             return
 
@@ -1623,7 +1625,7 @@ class Canvas(wx.ScrolledWindow):
                 elt.highlight_paint(gc)
                 return
         assert False, 'Should not reach here'
-        
+
 
     def _DrawDragSelectionRect(self, gc):
         if self._drag_selecting:
@@ -1706,7 +1708,7 @@ class Canvas(wx.ScrolledWindow):
                                   pad + get_theme('react_node_padding'))
 
         # Draw drag-selection rect
-        self._DrawDragSelectionRect(gc) 
+        self._DrawDragSelectionRect(gc)
 
     def ResetLayer(self, elt: CanvasElement, layers: Layer):
         if elt in self._model_elements:
@@ -1890,6 +1892,11 @@ class Canvas(wx.ScrolledWindow):
                     self.logger.warning("Tried and failed to delete bound node '{}' with index '{}'"
                                         .format(orig_node.id, node_idx))
                     return
+
+        # TODO testing
+        for elt in self._plugin_elements:
+            if elt.selected:
+                elt.destroy()
 
         with self.controller.group_action():
             sel_comp_idx = self.sel_compartments_idx.item_copy()

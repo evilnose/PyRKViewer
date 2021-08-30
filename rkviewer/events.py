@@ -23,6 +23,9 @@ import wx
 
 from rkviewer.canvas.geometry import Vec2
 
+# ------------------------------------------------------------
+from inspect import getframeinfo, stack
+# ------------------------------------------------------------
 
 class CanvasEvent:
     def to_tuple(self):
@@ -50,6 +53,11 @@ class CanvasDidUpdateEvent(CanvasEvent):
     """Called after the canvas has been updated by the controller."""
     pass
 
+@dataclass
+class DidNewNetworkEvent(CanvasEvent):
+    """ Called when the canvas is cleared by choosing "New".
+    """
+    pass
 
 @dataclass
 class DidMoveNodesEvent(CanvasEvent):
@@ -219,6 +227,8 @@ class DidAddReactionEvent(CanvasEvent):
         reaction: The Reaction that was added.
     """
     index: int
+    sources: List[int]
+    targets: List[int]
 
 
 @dataclass
@@ -392,5 +402,12 @@ def unbind_handler(handler_id: int):
 
 
 def post_event(evt: CanvasEvent):
+    '''
+    # debugging
+    if not str(evt)[:14]=="DidPaintCanvas":
+        caller = getframeinfo(stack()[1][0])
+        print("%s:%d - %s" % (caller.filename, caller.lineno, str(evt)))
+    '''
+
     for callback in iter(event_chains[type(evt)]):
         callback(evt)

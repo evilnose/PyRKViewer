@@ -11,7 +11,7 @@ import logging
 
 from rkviewer.iodine import Color, getReactionModifiers
 from .utils import gchain, rgba_to_wx_colour
-from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidRedoEvent, DidUndoEvent, post_event
+from .events import DidAddCompartmentEvent, DidAddNodeEvent, DidAddReactionEvent, DidChangeCompartmentOfNodesEvent, DidCommitDragEvent, DidRedoEvent, DidUndoEvent, DidNewNetworkEvent, post_event
 from .canvas.data import Compartment, Node, Reaction, CompositeShape
 from .canvas.geometry import Vec2
 from .canvas.utils import get_nodes_by_ident, get_nodes_by_idx
@@ -301,7 +301,7 @@ class Controller(IController):
 
             cpos = reaction.src_c_handle.tip
             iod.setReactionCenterHandlePosition(neti, reai, cpos.x, cpos.y)
-            post_event(DidAddReactionEvent(reai))
+            post_event(DidAddReactionEvent(reai, reaction.sources, reaction.targets))
         return reai
 
     @iod_setter
@@ -517,6 +517,7 @@ class Controller(IController):
 
     def new_network(self):
         iod.clearNetwork(0)
+        post_event(DidNewNetworkEvent())
         self._update_view()
 
     # get the updated list of nodes from model and update

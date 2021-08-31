@@ -97,6 +97,7 @@ class TNode(TAbstractNode):
     compi: int = -1
     shapei: int = 0
     shape: CompositeShape = field(default_factory=lambda: shapeFactories[0].produce())
+    concentration: float = 0.0
 
 
 @dataclass
@@ -845,6 +846,23 @@ def getNodeID(neti: int, nodei: int):
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
+def getNodeConcentration(neti: int, nodei: int):
+    """
+    GetNodeConcentration - get the concentration of the node
+    errcode:
+        -7: node index out of range
+        -5: net index out of range
+    """
+    global stackFlag, errCode, networkDict, undoStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        node = _getConcreteNode(neti, nodei)
+        return node.concentration
+
+    raise ExceptionDict[errCode](errorDict[errCode])
+
 
 def getOriginalIndex(neti: int, nodei: int) -> int:
     '''Return -1 if the node is an original, or if this is an alias, return the original index.'''
@@ -1046,6 +1064,28 @@ def setNodeID(neti: int, nodei: int, newID: str):
                 return
     raise ExceptionDict[errCode](errorDict[errCode])
 
+def setNodeConcentration(neti: int, nodei: int, newConc: float):
+    """
+    setNodeConcentration - sets the concentration of a node
+    errCode -5: net index out of range
+            -7: node index out of range
+            -12: variable out of range
+    """
+    global stackFlag, errCode, networkDict, undoStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        net = networkDict[neti]
+        if nodei not in net.nodes.keys():
+            errCode = -7
+        elif newConc < 0.0:
+            errCode = -12
+        else:
+            _pushUndoStack()
+            _getConcreteNode(neti, nodei).concentration = newConc
+            return
+    raise ExceptionDict[errCode](errorDict[errCode])
 
 def setNodeCoordinate(neti: int, nodei: int, x: float, y: float, allowNegativeCoordinates: bool = False):
     """

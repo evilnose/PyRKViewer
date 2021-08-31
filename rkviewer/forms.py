@@ -588,7 +588,6 @@ class PrimitiveGrid(FieldGrid):
                 for nodei in node_indices:
                     self.form.controller.set_node_primitive_property(self.form.net_index, nodei, prim_index,
                                                                     prop_name, value)
-
         texts = [item.text for item in choice_items]
         choice_ctrl = wx.Choice(self, choices=texts)
 
@@ -776,6 +775,7 @@ class NodeForm(EditPanelForm):
     """
     contiguous: bool
     id_ctrl: wx.TextCtrl
+    conc_ctrl: wx.TextCtrl
     pos_ctrl: wx.TextCtrl
     size_ctrl: wx.TextCtrl
     nodeStatusDropDown: wx.Choice
@@ -853,6 +853,9 @@ class NodeForm(EditPanelForm):
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
             self.main_section.labels[self.id_ctrl.GetId()].SetLabel(id_text)
 
+            concentration_text = 'concentration' if len(self._selected_idx) == 1 else 'concentrations'
+            self.main_section.labels[self.conc_ctrl.GetId()].SetLabel(concentration_text)
+
             size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
             self.main_section.labels[self.size_ctrl.GetId()].SetLabel(size_text)
         self.ExternalUpdate()
@@ -861,6 +864,10 @@ class NodeForm(EditPanelForm):
         self.id_ctrl = self.main_section.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self.main_section.AppendControl('identifier', self.id_ctrl)
+        
+        self.conc_ctrl = self.main_section.CreateTextCtrl()
+        self.conc_ctrl.Bind(wx.EVT_TEXT, self._OnConcText)
+        self.main_section.AppendControl('concentration', self.conc_ctrl)
 
         self.pos_ctrl = self.main_section.CreateTextCtrl()
         self.pos_ctrl.Bind(wx.EVT_TEXT, self._OnPosText)
@@ -906,6 +913,30 @@ class NodeForm(EditPanelForm):
                     self.controller.rename_node(self.net_index, nodei, new_id)
                     post_event(DidModifyNodesEvent([nodei]))
         self.main_section.SetValidationState(True, self.id_ctrl.GetId())
+
+    def _OnConcText(self, evt):
+        """ Callback for the concentration control. """
+        new_conc = evt.GetString()
+        assert len(self._selected_idx) == 1 # TODO should work for multiple nodes
+        [nodei] = self._selected_idx
+        ctrl_conc = self.conc_ctrl.GetId()
+        if len(new_conc) == 0:
+            self.main_section.SetValidationState(False, ctrl_conc, "Concentration cannot be empty")
+            return
+        try:
+            new_conc_float = float(new_conc)
+        except ValueError:
+            self.main_section.SetValidationState(False, ctrl_conc, "Concentration must be a numerical value") # TODO good message?
+            return
+        if new_conc_float < 0.0:
+            self.main_section.SetValidationState(False, ctrl_conc, "Concentration cannot be negative")
+            return
+        self.self_changes = True
+        with self.controller.group_action():
+            self.controller.set_node_concentration(self.net_index, nodei, new_conc_float)
+            post_event(DidModifyNodesEvent([nodei]))
+            # TODO should have an event for this
+        self.main_section.SetValidationState(True, self.conc_ctrl.GetId())
 
     def _OnPosText(self, evt):
         """Callback for the position control."""
@@ -1124,6 +1155,7 @@ class NodeForm(EditPanelForm):
         nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
         prec = get_setting('decimal_precision')
         id_text: str
+        conc_text: str
         floatingNode: bool
         lockNode: bool
         shape_name: str
@@ -1139,6 +1171,8 @@ class NodeForm(EditPanelForm):
             [node] = nodes
             self.id_ctrl.Enable(True)
             id_text = node.id
+            self.conc_ctrl.Enable(True)
+            conc_text = str(node.concentration)
             floatingNode = node.floatingNode
             lockNode = node.lockNode
             assert node.composite_shape is not None
@@ -1146,7 +1180,8 @@ class NodeForm(EditPanelForm):
         else:
             self.id_ctrl.Enable(False)
             id_text = '; '.join(sorted(list(n.id for n in nodes)))
-
+            self.conc_ctrl.Enable(False)
+            conc_text = '; '.join(sorted(list(str(n.concentration) for n in nodes)))
             floatingNode = all(n.floatingNode for n in nodes)
             lockNode = all(n.lockNode for n in nodes)
             shape_name_set = set(n.composite_shape.name for n in nodes)
@@ -1160,6 +1195,7 @@ class NodeForm(EditPanelForm):
         self.size_ctrl.Enable(self.contiguous)
 
         self.id_ctrl.ChangeValue(id_text)
+        self.conc_ctrl.ChangeValue(conc_text)
 
         if floatingNode:
             self.nodeStatusDropDown.SetSelection(0)

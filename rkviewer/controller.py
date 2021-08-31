@@ -203,6 +203,10 @@ class Controller(IController):
         iod.setNodeID(neti, nodei, new_id)
 
     @iod_setter
+    def set_node_concentration(self, neti: int, nodei: int, new_conc: float):
+        iod.setNodeConcentration(neti, nodei, new_conc)
+
+    @iod_setter
     def set_node_floating_status(self, neti: int, nodei: int, floatingStatus: bool):
         iod.setNodeFloatingStatus (neti, nodei, floatingStatus)
 
@@ -449,6 +453,7 @@ class Controller(IController):
             index=nodei,
             pos=Vec2(x, y),
             size=Vec2(w, h),
+            concentration=iod.getNodeConcentration(neti, nodei),
             # fill_color=fill_color,
             # border_color=border_color,
             # border_width=iod.getNodeBorderWidth(neti, nodei),

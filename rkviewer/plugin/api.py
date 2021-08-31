@@ -85,6 +85,7 @@ class NodeData:
                             as indicated by shape_index. This field is present for convenient access
                             of the shape's properties, including the primitives contained within and
                             the properties of the primitive.
+        concentration: The concentration of the node. Default to zero, must not be negative
     """
     net_index: int = field()
     id: str = field()
@@ -97,6 +98,7 @@ class NodeData:
     original_index: int = field(default=-1)
     shape_index: int = field(default=0)
     shape: CompositeShape = field(default_factory=DEFAULT_SHAPE_FACTORY.produce)
+    concentration: float = field(default=0.0)
 
     @property
     def bounding_rect(self) -> Rect:
@@ -306,6 +308,7 @@ def _translate_node(node: Node) -> NodeData:
         original_index=node.original_index,
         shape_index=node.shape_index,
         shape=copy.copy(node.composite_shape),
+        concentration=node.concentration
     )
 
 
@@ -618,7 +621,8 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
 
 def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
              border_width: float = None, position: Vec2 = None, size: Vec2 = None,
-             floating_node: bool = True, lock_node: bool = False, shape_index: int = 0) -> int:
+             floating_node: bool = True, lock_node: bool = False, shape_index: int = 0,
+             concentration: float = 0.0) -> int:
     """Adds a node to the given network.
 
     The node indices are assigned in increasing order, regardless of deletion.
@@ -632,6 +636,7 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         position: The position of the node, or leave as None to use default, (0, 0).
         size: The size of the node, or leave as None to use default, (0, 0).
         shape_index: The index of the CompositeShape of the node. 0 (rectangle) by default.
+        concentration: The concentration of the node, or leave as None to use default, 0.0.
 
     Returns:
         The index of the node that was added.
@@ -659,6 +664,7 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         floatingNode=floating_node,
         lockNode=lock_node,
         shape_index=shape_index,
+        concentration=concentration
     )
     with group_action():
         nodei = _controller.add_node_g(net_index, node)
@@ -667,6 +673,7 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         _controller.set_node_border_rgb(net_index, nodei, _to_wxcolour(border_color))
         _controller.set_node_border_alpha(net_index, nodei, border_color.a)
         _controller.set_node_border_width(net_index, nodei, border_width)
+        _controller.set_node_concentration(net_index, nodei, concentration)
     return nodei
 
 
@@ -715,7 +722,7 @@ def resize_node(net_index: int, node_index: int, size: Vec2):
 def update_node(net_index: int, node_index: int, id: str = None, fill_color: Color = None,
                 border_color: Color = None, border_width: float = None, position: Vec2 = None,
                 size: Vec2 = None, floating_node: bool = True, lock_node: bool = False,
-                shape_index: int = None):
+                shape_index: int = None, concentration: float = None):
     """
     Update one or multiple properties of a node.
 
@@ -731,6 +738,7 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
         floating_node: If specified, the floating status of the node.
         lock_node: If specified, whether the node is locked.
         shape_index: If specified, the new shape of the node.
+        concentration: If specified, the new concentration of the node.
 
     Note:
         This is *not* an atomic function, meaning if we failed to set one specific property, the
@@ -799,6 +807,12 @@ def update_node(net_index: int, node_index: int, id: str = None, fill_color: Col
             _controller.set_node_locked_status(net_index, node_index, lock_node)
         if shape_index is not None:
             _controller.set_node_shape_index(net_index, node_index, shape_index)
+
+        if concentration is not None:
+            if concentration < 0.0:
+                raise ValueError('Invalid concentration value. Concentration must not be negative.')
+            else:
+                _controller.set_node_concentration(net_index, node_index, concentration)
 
 
 def set_node_shape_property(net_index: int, node_index: int, primitive_index: int,

@@ -250,6 +250,7 @@ class Node(RectData):
     # fill_color: wx.Colour
     # border_color: wx.Colour
     # border_width: float
+    concentration: float
     position: Vec2
     size: Vec2
     comp_idx: int
@@ -270,7 +271,8 @@ class Node(RectData):
                  shape_index: int = 0,
                  composite_shape: Optional[CompositeShape] = None,
                  index: int = -1,
-                 original_index: int = -1):
+                 original_index: int = -1,
+                 concentration: float = 0.0):
         self.index = index
         self.net_index = net_index
         self.id = id
@@ -285,6 +287,7 @@ class Node(RectData):
         self.shape_index = shape_index
         self.composite_shape = composite_shape
         self.original_index = original_index
+        self.concentration = concentration
 
     def _get_prim_field(self, field):
         for prim, _ in self.composite_shape.items:

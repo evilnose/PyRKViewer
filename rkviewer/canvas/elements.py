@@ -5,14 +5,11 @@ import enum
 from functools import partial
 from itertools import chain
 from math import pi, cos, sin
-import re
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 from copy import copy
-from numpy.lib import type_check
-from numpy.lib.function_base import select
 
 from numpy.lib.utils import source
-from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, Transform, TextPrim, HexagonPrim, LinePrim, CompositeShapeFactory
+from rkviewer.canvas.data import CirclePrim, CompositeShape, RectanglePrim, TrianglePrim, Transform, TextPrim, HexagonPrim, LinePrim
 
 import wx
 
@@ -24,7 +21,7 @@ from ..events import (
 )
 from ..mvc import IController
 from ..utils import change_opacity, even_round, gchain, int_round
-from .data import Compartment, HandleData, ModifierTipStyle, Node, Primitive, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment, TextPosition
+from .data import Compartment, HandleData, ModifierTipStyle, Node, Reaction, ReactionBezier, RectData, SpeciesBezier, PolygonPrim, TextAlignment, TextPosition
 from .geometry import (
     Rect,
     Vec2,
@@ -694,9 +691,6 @@ class SelectBox(CanvasElement):
     _bounds: Rect  #: the bounds that the bounding rect may not exceed
     special_mode: 'SelectBox.SMode'
 
-    # testing
-    _custom_elts: List[CanvasElement]
-
     class Mode(enum.Enum):
         IDLE = 0
         MOVING = 1
@@ -1225,103 +1219,6 @@ class SelectBox(CanvasElement):
                     ))
 
             post_event(DidCommitDragEvent(self))
-
-class CustomElement(CanvasElement):
-    ''' Class for custom canvas elements created by plugins.
-    '''
-    geometry: List
-    net_index: int
-    parent_node_idx: int
-    ctrl: IController
-
-    def __init__(self, net_index: int, parent_node_idx: int, canvas, layers: Layer, shapes: List):
-        super().__init__(layers)
-
-        self.shape_arr = [
-            RectanglePrim,
-            CirclePrim,
-            TrianglePrim,
-            HexagonPrim,
-            LinePrim
-        ]
-        self.geometry = shapes
-
-        self.parent_node_idx = parent_node_idx
-        self.net_index = net_index
-        self.ctrl = canvas.controller
-        self.bounding_rectangle = Rect(Vec2(0,0), Vec2(0,0))
-        self._selected = False
-        self._canvas = canvas
-
-    def on_paint(self, gc: wx.GraphicsContext):
-        if self.destroyed:
-            return
-
- #       if self.parent_node_idx == None:
- #           node_pos = Vec2(0,0)
- #       else:
-        try:
-            parent = self.ctrl.get_node_by_index(self.net_index, self.parent_node_idx)
-        except: # if node doesn't exist
-            self.parent_node_idx = None
-            self.destroy()
-            return
-        node_pos = parent.s_position
-
-        # find bounding rect
-        [prim, fill, init_rect, border, border_width] = self.geometry[0]
-        max_x = node_pos.x + init_rect().position.x
-        max_y = node_pos.y + init_rect().position.y
-        min_x = max_x
-        min_y = max_y
-        gc.PushState()
-        for p, fc, b, bc, bw in self.geometry:
-            primitive = self.shape_arr[p()]
-            fcolor = fc()
-            bounding_rect = b()
-            bcolor = bc()
-            bwidth = bw()
-            primitive.fill_color = fcolor
-            primitive.border_color = bcolor
-            primitive.border_width = bwidth
-            if not primitive == CirclePrim:
-                primitive.corner_radius = 0
-            rel_bounding_rect = Rect(node_pos + bounding_rect.position, bounding_rect.size)
-            max_x = max(max_x, rel_bounding_rect.position.x + rel_bounding_rect.size.x)
-            max_y = max(max_y, rel_bounding_rect.position.y + rel_bounding_rect.size.y)
-            min_x = min(min_x, rel_bounding_rect.position.x)
-            min_y = min(min_y, rel_bounding_rect.position.y)
-            # rel_bounding_rec is the position and size of the shape to draw. primitive is the shape
-            draw_fn_map[primitive](gc, rel_bounding_rect, primitive, False)
-        self.bounding_rectangle = Rect(Vec2(min_x, min_y), Vec2(max_x - min_x, max_y - min_y))
-        if self.selected:
-            outline_width = max(even_round(get_theme('select_outline_width')), 2)
-            pos, size = self.bounding_rectangle.as_tuple()
-            # draw main outline
-            draw_rect(gc, Rect(pos, size), border=get_theme('handle_color'),
-                      border_width=outline_width, corner_radius=0)
-        gc.PopState()
-
-    def destroy(self):
-        self.destroyed = True
-        return super().destroy()
-
-    @property
-    def selected(self) -> bool:
-        return self._selected
-
-    def pos_inside(self, logical_pos: Vec2) -> bool:
-        return pt_in_rect(logical_pos, self.bounding_rectangle)
-
-    def on_left_down(self, logical_pos: Vec2) -> bool:
-        self._selected = not self.selected
-        return True
-
-    def bounding_rect(self) -> Rect:
-        return self.bounding_rectangle
-
-
-
 
 def primitive_peninfo(color: Color, width: float, is_alias: bool):
     info = wx.GraphicsPenInfo(color.to_wxcolour(), width)

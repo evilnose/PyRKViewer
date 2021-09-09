@@ -33,7 +33,7 @@ from ..events import (
 from ..mvc import IController
 from ..utils import even_round, opacity_mul, resource_path
 from .data import Compartment, Node, Reaction, ReactionBezier, compute_centroid, init_bezier
-from .elements import BezierHandle, CanvasElement, CompartmentElt, CustomElement, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
+from .elements import BezierHandle, CanvasElement, CompartmentElt, Layer, NodeElement, ReactionCenter, ReactionElement, SelectBox, layer_above
 from .geometry import (
     Rect, Vec2, circle_bounds,
     clamp_rect_pos, get_bounding_rect,
@@ -499,7 +499,6 @@ class Canvas(wx.ScrolledWindow):
             rxn_el.selected = rxn_el.reaction.index in new_sel_reactions
 
         for plugin_el in self._plugin_elements:
-     #       print(plugin_el) # __________________________________________________________________________________________remove
             select_elements.append(plugin_el)
 
         self._model_elements = SortedKeyList(select_elements, lambda e: e.layers)
@@ -1892,11 +1891,6 @@ class Canvas(wx.ScrolledWindow):
                     self.logger.warning("Tried and failed to delete bound node '{}' with index '{}'"
                                         .format(orig_node.id, node_idx))
                     return
-
-        # TODO testing
-        for elt in self._plugin_elements:
-            if elt.selected:
-                elt.destroy()
 
         with self.controller.group_action():
             sel_comp_idx = self.sel_compartments_idx.item_copy()

@@ -9,7 +9,6 @@ from dataclasses import field, dataclass
 from traitlets.traitlets import default
 
 from wx.core import EVT_LIST_END_LABEL_EDIT
-from rkviewer.canvas.elements import CanvasElement, CustomElement
 from rkviewer.iodine import DEFAULT_SHAPE_FACTORY
 from rkviewer.canvas.canvas import Canvas
 from rkviewer.events import DidChangeCompartmentOfNodesEvent, post_event
@@ -30,8 +29,6 @@ from rkviewer.canvas.data import CompositeShape, Node, Reaction, Compartment, Ve
 from rkviewer.canvas import data
 import logging
 from logging import Logger
-
-import types
 
 # TODO allow modification of theme and setting in the GUI
 
@@ -1378,138 +1375,3 @@ def translate_network(net_index: int, offset: Vec2, check_bounds: bool = True) -
 
     return True
 
-@dataclass
-class CustomShape:
-    '''
-    Class for drawing custom figures to the canvas. Shape features can be defined dynamically with
-    zero-argument functions or as set values.
-
-    Attributes:
-            shape:          Integer shape index. options are:
-                                0: rectangle
-                                1: circle
-                                2: triangle
-                                3: hexagon
-                                4: line
-                            OR a function that returns one of the above indexes.
-            fill_color:     Color (r, g, b, a=255) OR a function that returns a Color object
-            bounding_rect:  Rect object for the shape bounding box, which determines the position
-                            and size of the shape. Note that if the shape will have a parent node,
-                            its position is determined relative to that node.
-                            OR a function that returns a Rect object.
-            border_color:   Color (r, g, b, a=255) OR a function that returns a Color object.
-                            Default is value of fill_color.
-            border_width:   float >= 0 OR a function that returns a float. Default is 0.
-
-    Raises:
-            ValueError: input functions return incorrect types
-    '''
-
-    def __init__(self, shape: int=None, fill_color: Color=None, bounding_rectangle: Rect=None,
-                 border_color: Color=None, border_width: float=None) -> None:
-        default_shape = 0
-        default_fill_color = _to_color(get_theme('node_fill'))
-        default_rect = Rect(Vec2(-40, 0), Vec2(20, 50))
-        default_border_width = 0.0
-
-        if shape is not None:
-            self._shape = self._verify(shape, default_shape, "shape")
-        else:
-            self._shape = self._make_callable(default_shape)
-
-        if fill_color is not None:
-            self._fill_color = self._verify(fill_color, default_fill_color, "fill_color")
-        else:
-            self._fill_color = self._make_callable(default_fill_color)
-
-        if bounding_rectangle is not None:
-            self._bounding_rect = self._verify(bounding_rectangle, default_rect, "bounding_rectangle")
-        else:
-            self._bounding_rect = self._make_callable(default_rect)
-
-        if border_color is not None:
-            self._border_color = self._verify(border_color, self._fill_color(), "border_color")
-        else:
-            self._border_color = self._fill_color
-
-        if border_width is not None:
-            self._border_width = self._verify(border_width, default_border_width, "border_width")
-        else:
-            self._border_width = self._make_callable(default_border_width)
-
-        self._element = None
-
-    def _make_callable(self, input):
-        if isinstance(input, types.FunctionType):
-            return input
-        else:
-            return lambda: input
-
-    # TODO documentation
-    def _verify(self, input, prev_val, variable):
-        candidate_func = self._make_callable(input)
-        candidate = candidate_func()
-
-        try:
-            if not type(candidate) == type(prev_val):
-                raise ValueError("Expected {} as {}, recieved {} instead.".format(
-                    variable, type(prev_val), type(candidate)))
-            if variable == "shape":
-                if candidate > 4 or candidate < 0:
-                    raise ValueError("Invalid shape index.")
-        except TypeError as err:
-            print("ValueError: "+ str(err))
-            return self._make_callable(prev_val)
-        return candidate_func
-
-    def set_shape(self, shape_idx):
-        self._shape = self._verify(shape_idx, self._shape(), "shape")
-
-    def set_fill_color(self, fill):
-        self._fill_color = self._verify(fill, self._fill_color(), "fill_color")
-
-    def set_bounding_rectangle(self, rect):
-        self._bounding_rect = self._verify(rect, self._bounding_rect(), "bounding_rectangle")
-
-    def set_border_color(self, color):
-        self._border_color = self._verify(color, self._border_color(), "border_color")
-
-    def set_border_width(self, width):
-        self._border_width = self._verify(width, self._border_width(), "border_width")
-
-    def show(self, net_index, parent_node_index, bounding_rect=None):
-        node_layer = _canvas.NODE_LAYER
-        rect = self._bounding_rect
-        if bounding_rect is not None:
-            rect = self._verify(bounding_rect, self._bounding_rect(), "bounding_rectangle")
-        self._element = CustomElement(net_index, parent_node_index, _canvas, node_layer,
-                           [(self._shape, self._fill_color, rect, self._border_color, self._border_width)])
-        _canvas.AddPluginElement(net_index, self._element)
-
-    def delete(self, net_index):
-        if self._element is not None:
-            _canvas.RemovePluginElement(net_index, self._element)
-
-@ dataclass
-class CustomShapeGroup:
-    components: List[CustomShape] = field(default_factory=list)
-    _element: CustomElement = None # TODO should be hidden
-
-    def add(self, shape: CustomShape):
-        self.components += [shape]
-
-    def show(self, net_index, parent_node_index = None):
-        node_layer = _canvas.NODE_LAYER
-        self._element = CustomElement(net_index, parent_node_index, _canvas, node_layer, self._get())
-        _canvas.AddPluginElement(net_index, self._element)
-
-    def delete(self, net_index):
-        if self._element is not None:
-            self._element.destroy()
-            _canvas.RemovePluginElement(net_index, self._element)
-
-    def _get(self):
-        elems = []
-        for c in self.components:
-            elems.append(tuple([c._shape, c._fill_color, c._bounding_rect, c._border_color, c._border_width]))
-        return elems

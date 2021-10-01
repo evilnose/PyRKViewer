@@ -1366,9 +1366,9 @@ def draw_text_to_gc(gc: wx.GraphicsContext, bounding_rect: Rect, full_text_strin
         assert False, "This should not happen"
 
     if primitive.position == TextPosition.ABOVE:
-        draw_pos = draw_pos + Vec2(0, -2*th)
+        draw_pos = draw_pos + Vec2(0, -height/2 - 2*th)
     elif primitive.position == TextPosition.BELOW:
-        draw_pos = draw_pos + Vec2(0, 2*th)
+        draw_pos = draw_pos + Vec2(0, height/2 + 2*th)
 
     gc.DrawText(text_string, draw_pos.x, draw_pos.y, brush)
 

@@ -897,7 +897,8 @@ def _set_handle_positions(reaction: Reaction, handle_positions: List[Vec2]):
 def add_reaction(net_index: int, id: str, reactants: List[int], products: List[int],
                  fill_color: Color = None, line_thickness: float = None,
                  rate_law: str = '', handle_positions: List[Vec2] = None,
-                 center_pos: Vec2 = None, use_bezier: bool = True) -> int:
+                 center_pos: Vec2 = None, use_bezier: bool = True, 
+                 modifiers: Set[int] = None) -> int:
     """
     Adds a reaction.
 
@@ -918,6 +919,7 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
                     as nodes are moved.
         use_bezier: If specified, whether to use Bezier curves when drawing the reaction. If False,
                     simply use straight lines.
+        modifiers: The set of reaction of modifiers, defaulting to None. If None, no modifiers will be added.
     Returns:
         The index of the reaction that was added.
     """
@@ -959,6 +961,8 @@ def add_reaction(net_index: int, id: str, reactants: List[int], products: List[i
             handle_positions = default_handle_positions(net_index, reai)
             reaction.index = reai
             _set_handle_positions(reaction, handle_positions)
+        if modifiers is not None:
+            _controller.set_reaction_modifiers(net_index, reai, modifiers)
 
     return reai
 
@@ -967,7 +971,7 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
                     fill_color: Color = None, thickness: float = None, ratelaw: str = None,
                     handle_positions: List[Vec2] = None,
                     center_pos: Union[Optional[Vec2], CustomNone] = CustomNone(),
-                    use_bezier: bool = None,
+                    use_bezier: bool = None, modifiers: Set[int] = None, 
                     modifier_tip_style: ModifierTipStyle = ModifierTipStyle.CIRCLE):
     """
     Update one or multiple properties of a reaction.
@@ -986,6 +990,7 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
                     as nodes are moved.
         use_bezier: If specified, whether to use Bezier curves when drawing the reaction. If False,
                     simply use straight lines.
+        modifiers: If specified, the set of reaction modifiers
         modifier_tip_style The modifier tip style.
 
     Note:
@@ -1023,6 +1028,8 @@ def update_reaction(net_index: int, reaction_index: int, id: str = None,
             _controller.set_reaction_bezier_curves(net_index, reaction_index, use_bezier)
         if modifier_tip_style is not None:
             _controller.set_modifier_tip_style(net_index, reaction_index, modifier_tip_style)
+        if modifiers is not None:
+            _controller.set_reaction_modifiers(net_index, reaction_index, modifiers)
 
 
 def get_selected_node_indices(net_index: int) -> Set[int]:

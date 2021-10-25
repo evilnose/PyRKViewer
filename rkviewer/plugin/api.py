@@ -564,6 +564,24 @@ def delete_compartment(net_index: int, comp_index: int):
     """
     _controller.delete_compartment(net_index, comp_index)
 
+def set_parameter_value(net_index: int, param_id: str, param_value: float):
+    """
+    Adds a parameter to a model, or updates parameter value if model already contains parameter
+    """
+    _controller.set_network_parameter(net_index, param_id, param_value)
+
+def get_parameters(net_index: int):
+    return _controller.get_network_parameters(net_index).copy()
+
+def remove_parameter(net_index: int, param_id: str):
+    _controller.remove_network_parameter(net_index, param_id)
+
+def clear_parameters(net_index: int):
+    params = _controller.get_network_parameters(net_index)
+    for p in params.copy():
+        _controller.remove_network_parameter(net_index, p)
+
+
 
 def add_compartment(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
                     border_width: float = None, position: Vec2 = None, size: Vec2 = None,

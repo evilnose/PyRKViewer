@@ -269,6 +269,17 @@ class Controller(IController):
         return iod.getModifierTipStyle(neti, reai)
 
     @iod_setter
+    def set_network_parameter(self, neti: int, param_id: str, param_value: float):
+        iod.setParameter(neti, param_id, param_value)
+
+    @iod_setter
+    def remove_network_parameter(self, neti: int, param_id: str):
+        iod.removeParameter(neti, param_id)
+
+    def get_network_parameters(self, neti: int):
+        return iod.getParameters(neti)
+
+    @iod_setter
     def delete_node(self, neti: int, nodei: int) -> bool:
         return iod.deleteNode(neti, nodei)
 

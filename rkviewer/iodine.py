@@ -126,10 +126,12 @@ class TNetwork:
     lastNodeIdx: int
     lastReactionIdx: int
     lastCompartmentIdx: int
+    parameters: Dict[str, float]
 
     def __init__(self, id: str, nodes: Dict[int, TAbstractNode] = None,
                  reactions: Dict[int, 'TReaction'] = None,
                  compartments: Dict[int, 'TCompartment'] = None,
+                 parameters: Dict[str, float] = None,
                  ):
         if nodes is None:
             nodes = dict()
@@ -137,10 +139,13 @@ class TNetwork:
             reactions = dict()
         if compartments is None:
             compartments = dict()
+        if parameters is None:
+            parameters = dict()
         self.id = id
         self.nodes = nodes
         self.reactions = reactions
         self.compartments = compartments
+        self.parameters = parameters
         self.baseNodes = set(index for index, n in nodes.items() if n.compi == -1)
         self.srcMap = defaultdict(set)
         self.destMap = defaultdict(set)
@@ -2145,6 +2150,44 @@ def setReactionCenterHandlePosition(neti: int, reai: int, centerHandlePosX: floa
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
+def setParameter(netid: int, param_id: str, param_value: float):
+    """
+    Add or change network parameter
+    """
+    errCode = 0
+    if netid not in networkDict:
+        errCode = -5
+    else:
+        # TODO verify param values
+        n = _getNetwork(netid)
+        _pushUndoStack()
+        n.parameters[param_id] = param_value
+        return
+    
+    raise ExceptionDict[errCode](errorDict[errCode])
+
+def removeParameter(netid: int, param_id: str):
+    """
+    Remove a network parameter. No change if param_id is not a parameter.
+    """
+    errCode = 0
+    if netid not in networkDict:
+        errCode = -5
+    else:
+        n = _getNetwork(netid)
+        _pushUndoStack()
+        n.parameters.pop(param_id)
+        return
+
+    raise ExceptionDict[errCode](errDict[errCode])
+
+def getParameters(netid: int):
+    if netid not in networkDict:
+        raise ExceptionDict[-5](errDict[-5])
+    else:
+        n = _getNetwork(netid)
+        return n.parameters
+    
 
 def addCompartment(neti: int, compID: str, x: float, y: float, w: float, h: float) -> int:
     """

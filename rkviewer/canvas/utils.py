@@ -167,10 +167,10 @@ class SetSubject(Subject[Set[T]]):
 
 
 # the higher the value, the closer the src handle is to the centroid. 1/2 for halfway in-between
-CENTER_RATIO = 2/3
+# update also for prd handle
+CENTER_RATIO = 2/3 
 DUPLICATE_RATIO = 3/4
 DUPLICATE_ROT = -math.pi/3
-
 
 def default_handle_positions(centroid: Vec2, reactants: List[Node], products: List[Node]):
     src_handle_pos = reactants[0].rect.center_point * (1 - CENTER_RATIO) + centroid * CENTER_RATIO
@@ -185,6 +185,8 @@ def default_handle_positions(centroid: Vec2, reactants: List[Node], products: Li
             new_dir = rotate_unit(diff, DUPLICATE_ROT)
             handle_positions.append(p_rect.center_point + new_dir * length)
         else:
-            handle_positions.append((p_rect.center_point + centroid) / 2)
+            #handle_positions.append((p_rect.center_point + centroid) / 2)
+            prd_handle_pos = p_rect.center_point*(1-CENTER_RATIO) + centroid*CENTER_RATIO
+            handle_positions.append(prd_handle_pos)
 
     return [src_handle_pos] + handle_positions

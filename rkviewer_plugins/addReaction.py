@@ -1,6 +1,6 @@
 """
 Add different reactions.
-Version 0.01: Author: Jin Xu and Herbert Sauro (2020)
+Version 1.0.0: Author: Jin Xu and Herbert Sauro (2020)
 """
 
 
@@ -21,7 +21,7 @@ class AddReaction(WindowedPlugin):
    metadata = PluginMetadata(
       name='AddReaction',
       author='Jin Xu and Herbert Sauro',
-      version='0.0.1',
+      version='1.0.0',
       short_desc='Add Reactions.',
       long_desc='Add different reactions including UniUni, BiUni, UniBi and BiBi.',
       category=PluginCategory.UTILITIES,

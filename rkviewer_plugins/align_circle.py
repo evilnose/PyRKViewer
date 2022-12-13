@@ -16,7 +16,7 @@ class AlignCircle(WindowedPlugin):
     metadata = PluginMetadata(
         name='AlignCircle',
         author='Evan Yip (2021)',
-        version='0.0.1',
+        version='1.0.0',
         short_desc='Align Circle',
         long_desc='Aligns the nodes into a circle',
         category=PluginCategory.UTILITIES

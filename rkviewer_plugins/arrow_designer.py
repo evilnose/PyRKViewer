@@ -1,7 +1,7 @@
 """
 Arrow tip designer for reaction plugin.
 
-Version 0.01: Author: Gary Geng (2020)
+Version 1.0.0: Author: Gary Geng (2020)
 """
 
 # pylint: disable=maybe-no-member
@@ -246,7 +246,7 @@ class ArrowDesigner(WindowedPlugin):
     metadata = PluginMetadata(
         name='ArrowDesigner',
         author='Gary Geng',
-        version='0.0.1',
+        version='1.0.0',
         short_desc='Arrow tip designer for reactions.',
         long_desc='Arrow tip designer for reactions.',
         category=PluginCategory.APPEARANCE,

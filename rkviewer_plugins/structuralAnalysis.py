@@ -1,6 +1,6 @@
 """
 Do the structural analysis.
-Version 0.01: Author: Jin Xu (2020)
+Version 1.0.0: Author: Jin Xu (2020)
 """
 
 
@@ -48,7 +48,7 @@ class StructuralAnalysis(WindowedPlugin):
     metadata = PluginMetadata(
         name='StructuralAnalysis',
         author='Jin Xu',
-        version='0.0.2',
+        version='1.0.0',
         short_desc='Structural Analysis.',
         long_desc='StructuralAnalysis Plugin is to calculate and visualize the stoichiometry matrix and conserved moieties for the network.',
         category=PluginCategory.ANALYSIS

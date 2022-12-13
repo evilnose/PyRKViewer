@@ -1415,6 +1415,7 @@ class ReactionForm(EditPanelForm):
                 no_rzeros(centroid.x, prec), no_rzeros(centroid.y, prec)
             ))
             self.controller.set_reaction_center(self.net_index, reaction.index, centroid)
+        
 
     def _CenterPosCallback(self, evt):
         text = evt.GetString()
@@ -1577,6 +1578,7 @@ class ReactionForm(EditPanelForm):
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
             self.ratelaw_ctrl.Enable()
+
             self.auto_center_ctrl.Enable()
             auto_set = reaction.center_pos is None
             self.auto_center_ctrl.SetValue(auto_set)
@@ -1591,8 +1593,10 @@ class ReactionForm(EditPanelForm):
             fill, fill_alpha = GetMultiColor(list(r.fill_color for r in reactions))
             ratelaw_text = 'multiple'
             self.ratelaw_ctrl.Disable()
+
             self.auto_center_ctrl.Disable()
             self.center_pos_ctrl.Disable()
+
             self._UpdateStoichFields(0, [], [])
             self.modifiers_ctrl.Disable()
             self._modifiers = set()

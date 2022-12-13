@@ -1,8 +1,8 @@
 """
 Duplicates all selected reactions as well as their reactant and product nodes.
-If no reactions are selected, duplicates all reactions
+If no reactions are selected, duplicates all reactions.
 
-Version 0.01: Author: Claire Samuels (2021)
+Version 1.0.0: Author: Claire Samuels (2021)
 
 """
 
@@ -20,7 +20,7 @@ class DuplicateReaction(CommandPlugin):
   metadata = PluginMetadata(
       name='DuplicateReaction',
       author='Claire Samuels',
-      version='0.0.1',
+      version='1.0.0',
       short_desc='Duplicate a reaction.',
       long_desc='Creates an exact copy of the selected reactions and all connected nodes.',
       category=PluginCategory.UTILITIES,

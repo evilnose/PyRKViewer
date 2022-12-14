@@ -1972,9 +1972,11 @@ class Canvas(wx.ScrolledWindow):
             fill_color=get_theme('reaction_fill'),
             line_thickness=get_theme('reaction_line_thickness'),
             rate_law='',
+            center_pos=centroid,
             handle_positions=default_handle_positions(centroid, sources, targets)
         )
-        self.controller.add_reaction_g(self._net_index, reaction)
+        reai = self.controller.add_reaction_g(self._net_index, reaction)
+        self.controller.set_reaction_center(self._net_index, reai, centroid)
         self._reactant_idx.clear()
         self._product_idx.clear()
         with self._SelectGroupEvent():

@@ -1260,6 +1260,8 @@ class StoichSection(FieldGrid):
 
 
 class ReactionForm(EditPanelForm):
+    auto_center_ctrl: wx.CheckBox
+
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
 
@@ -1289,8 +1291,10 @@ class ReactionForm(EditPanelForm):
         self.main_section.AppendControl('line width', self.stroke_width_ctrl)
 
         # Whether the center position should be autoly set?
-        self.auto_center_ctrl = wx.CheckBox(self.main_section)
-        self.auto_center_ctrl.SetValue(True)
+        #self.auto_center_ctrl = wx.CheckBox(self.main_section)
+        #self.auto_center_ctrl.SetValue(True)
+        self.auto_center_ctrl = wx.CheckBox(self.main_section, label = '')
+        self.auto_center_ctrl.SetValue(False)
         self.auto_center_ctrl.Bind(wx.EVT_CHECKBOX, self._AutoCenterCallback)
         self.main_section.AppendControl('auto center pos', self.auto_center_ctrl)
 
@@ -1391,13 +1395,17 @@ class ReactionForm(EditPanelForm):
             post_event(DidModifyReactionEvent(list(self._selected_idx)))
 
     def _AutoCenterCallback(self, evt):
+
         checked = evt.GetInt()
+
         assert len(self._selected_idx) == 1
         prec = 2
         reaction = self.canvas.reaction_idx_map[next(iter(self._selected_idx))]
         centroid_map = self.canvas.GetReactionCentroids(self.net_index)
         centroid = centroid_map[reaction.index]
         if checked:
+            self.auto_center_ctrl.Enable()
+            self.auto_center_ctrl.SetValue(True)
             self.center_pos_ctrl.Disable()
             self.center_pos_ctrl.ChangeValue('')
             with self.controller.group_action():
@@ -1410,6 +1418,8 @@ class ReactionForm(EditPanelForm):
                             self.net_index, reaction.index, reaction.src_c_handle.tip + offset)
             self.center_pos_ctrl.Disable()
         else:
+            self.auto_center_ctrl.Enable()
+            self.auto_center_ctrl.SetValue(False)
             self.center_pos_ctrl.Enable()
             self.center_pos_ctrl.ChangeValue('{}, {}'.format(
                 no_rzeros(centroid.x, prec), no_rzeros(centroid.y, prec)
@@ -1578,11 +1588,16 @@ class ReactionForm(EditPanelForm):
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
             self.ratelaw_ctrl.Enable()
-
+            
             self.auto_center_ctrl.Enable()
             auto_set = reaction.center_pos is None
             self.auto_center_ctrl.SetValue(auto_set)
             self.center_pos_ctrl.Enable(not auto_set)
+            if reaction.center_pos is not None:
+                centroid = reaction.center_pos
+                self.center_pos_ctrl.ChangeValue('{}, {}'.format(
+                    no_rzeros(centroid.x, prec), no_rzeros(centroid.y, prec)
+                ))
 
             self._UpdateStoichFields(reai, self._GetSrcStoichs(reai), self._GetDestStoichs(reai))
             self.modifiers_ctrl.Enable()

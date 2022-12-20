@@ -1,6 +1,6 @@
 '''
 Given a random network, this plugin  will rearrange the network neatly on the screen.
-Version 1.0.0: Author: Carmen Perena Cortes, Herbert M Sauro 2020
+Version 1.0.0: Author: Carmen Perena Cortes, Herbert M Sauro, Jin Xu, 2022
 Based on THOMAS M. J. FRUCHTERMAN AND EDWARD M. REINGOLD's Graph Drawing by Force-directed Placement
 SOFTWARE - PRACTICE AND EXPERIENCE, VOL. 21(1 1), 1129-1164 (NOVEMBER 1991)
 Using python's networkx
@@ -9,7 +9,7 @@ Using python's networkx
 import wx
 from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin import api
-from rkviewer.plugin.api import Node, Vec2, Reaction
+from rkviewer.plugin.api import Node, Vec2, Reaction, get_reaction_by_index
 import math
 from dataclasses import field
 from typing import List
@@ -23,8 +23,8 @@ import rkviewer.canvas.utils as cu
 
 class LayoutNetworkX(WindowedPlugin):
     metadata = PluginMetadata(
-        name='Auto Layout',
-        author='Carmen and Herbert M Sauro',
+        name='AutoLayout',
+        author='Carmen Perena Cortes, Herbert M Sauro and Jin Xu',
         version='1.0.0',
         short_desc='Auto Layout using networkX.',
         long_desc='Rearrange a random network into a neat auto layout',
@@ -57,20 +57,17 @@ class LayoutNetworkX(WindowedPlugin):
         self.kText.SetInsertionPoint(0)
         self.kText.Bind(wx.EVT_TEXT, self.OnText_k)
         self.kValue = float(self.kText.GetValue())
-
         self.AddField('k (float > 0)', self.kText)
 
         self.scaleText = wx.TextCtrl(self.window, -1, "550", size=(100, -1))
         self.scaleText.SetInsertionPoint(0)
         self.scaleText.Bind(wx.EVT_TEXT, self.OnText_scale)
         self.scaleValue = float(self.scaleText.GetValue())
-
         self.AddField('Scale of Layout', self.scaleText)
 
         self.useCentroid = False
         self.centroidCheckBox = wx.CheckBox(self.window)
         self.centroidCheckBox.Bind(wx.EVT_CHECKBOX, self.OnCheckUseCentroid)
-
         self.AddField('Also Arrange Centroids', self.centroidCheckBox)
 
         # add spacer left of button
@@ -209,15 +206,44 @@ class LayoutNetworkX(WindowedPlugin):
                     for c in centroids:
                         newX = float(c[0])
                         newY = float(c[1])
-                        r = api.get_reaction_by_index(0, reactionsInd[count])
-                        handles = api.default_handle_positions(0, r.index)
-                        api.update_reaction(0, r.index, center_pos=Vec2(newX, newY), handle_positions=handles)
+                        # r = api.get_reaction_by_index(0, reactionsInd[count])
+                        # handles = api.default_handle_positions(0, r.index)
+                        # api.update_reaction(0, r.index, center_pos=Vec2(newX, newY), handle_positions=handles)
+                        index = reactionsInd[count]
+                        r = api.get_reaction_by_index(0, index)
+                        rcts = r.sources
+                        prds = r.targets
+                        centroid = Vec2(newX, newY)
+                        #update centroid before calculate the default handles
+                        # api.update_reaction(0, index, center_pos=Vec2(newX, newY))
+                        # handles = api.default_handle_positions(0, r.index)
+                        # api.update_reaction(0, index, handle_positions=handles)
+
+                        #set the handles as centroid to make all the bezier curves look like straight lines
+                        handles = [centroid]
+                        for x in range(len(rcts)):
+                            handles.append(centroid)
+                        for y in range(len(prds)):
+                            handles.append(centroid)
+                        api.update_reaction(0, index, center_pos=Vec2(newX, newY), handle_positions=handles)
+                        
                         count = count + 1
                 else:
                     for index in api.get_reaction_indices(0):
-                        api.update_reaction(0, index, center_pos=None)
-                        handles = api.default_handle_positions(0, index)
-                        api.update_reaction(0, index, handle_positions=handles)
+                        #api.update_reaction(0, index, center_pos=None)
+                        #handles = api.default_handle_positions(0, index)
+                        #api.update_reaction(0, index, handle_positions=handles)
+                        #the following centroid computed is the same as default centroid, or None
+                        rcts = get_reaction_by_index(0, index).sources
+                        prds = get_reaction_by_index(0, index).targets
+                        centroid = api.compute_centroid(0, rcts, prds)
+                        #set the handles as centroid to make all the bezier curves look like straight lines
+                        handles = [centroid]
+                        for x in range(len(rcts)):
+                            handles.append(centroid)
+                        for y in range(len(prds)):
+                            handles.append(centroid)
+                        api.update_reaction(0, index, center_pos = centroid, handle_positions = handles)
 
                 '''
 

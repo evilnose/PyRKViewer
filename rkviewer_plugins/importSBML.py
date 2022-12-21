@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.0.0: Author: Jin Xu (2021)
+Version 1.0.0: Author: Jin Xu (2022)
 """
 
 

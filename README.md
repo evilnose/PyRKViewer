@@ -7,8 +7,6 @@ PyRKViewer, or Coyote, is a cross-platform visualization tool for drawing reacti
 * Support for floating and boundary species.
 * Reactions can be displayed using Bezier curves and straight lines.
 * Plugin support, with some plugin examples: ArrowDesigner, RandomNetwork, Autolayout, etc.
-For the next version, we are going to add simulations of reaction networks.
-
 
 ## Getting Started
 

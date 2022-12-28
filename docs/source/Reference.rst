@@ -1,8 +1,8 @@
 ==================
-Full Reference
+Core Reference
 ==================
 
-*Add information and intro to this section*
+There is the core functionality of Coyote in this section.
 
 
 .. toctree::

@@ -18,12 +18,12 @@ sys.path.insert(0, os.path.abspath("../../plugins"))
 
 # -- Project information -----------------------------------------------------
 
-project = 'Plugin API for RKViewer'
-copyright = '2020, Gary Geng, Carmen Pereña, Herbert Sauro, Jin Xu'
-author = 'Gary Geng, Carmen Pereña, Herbert Sauro, Jin Xu'
+project = 'COYOTE or PyRKViewer'
+copyright = '2022, Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert M. Sauro'
+author = 'Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert M. Sauro'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = '1.0.0'
 import sphinx_rtd_theme
 
 # readthedocs can't deal with wx, so we tell it to pretend it can

@@ -26,7 +26,7 @@ Building an Executable with Pyinstaller:
 USING ON DIFFERENT PLATFORMS
 --------------------------------------------------
 
-The python version used is 3.7.7.
+The python version for development was 3.7.7.
 
 **Mac Notes:**
 

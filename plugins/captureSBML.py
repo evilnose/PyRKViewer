@@ -1,11 +1,14 @@
 '''
 Import a directory of SBML and Antimony files, visualize reactions, capture and save images.
 
-Version 0.0.2: Author: Claire Samuels (2021)
+Version 1.0.0: Author: Claire Samuels (2021)
 '''
 
+try:
+    from rkviewer_plugins import importSBML
+except:
+    import importSBML
 
-from plugins.importSBML import IMPORTSBML
 import wx
 from rkviewer.plugin.classes import PluginMetadata, WindowedPlugin, PluginCategory
 from rkviewer.plugin import api
@@ -18,7 +21,7 @@ class CaptureSBML(WindowedPlugin):
       metadata = PluginMetadata(
         name='CaptureSBML',
         author='Claire Samuels',
-        version='0.0.2',
+        version='1.0.0',
         short_desc='Visualize and capture SBML or Antimony.',
         long_desc='Import a directory of SBML and Antimony files, visualize reactions, capture and save images.',
         category=PluginCategory.ANALYSIS
@@ -31,15 +34,19 @@ class CaptureSBML(WindowedPlugin):
             dialog
         """
         # requires importSBML version 0.0.3
-        v = IMPORTSBML.metadata.version.split(".")
-        importSBMLvers = 0
+        def version_err_window():
+            self.window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
+            txt = wx.StaticText(self.window, -1, "CaptureSBML requires ImportSBML version 0.0.3 or later!", (10,10))
+            txt.Wrap(250)
+            return self.window
+
+        v = importSBML.IMPORTSBML.metadata.version.split(".")
+        min_version = [0,0,3]
         for i in range(3):
-          importSBMLvers += pow(10,i)*int(v[len(v)-1-i])
-        if importSBMLvers < 3:
-          self.window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
-          txt = wx.StaticText(self.window, -1, "CaptureSBML requires ImportSBML version 0.0.3 or later!", (10,10))
-          txt.Wrap(250)
-          return self.window
+            if int(v[i]) < min_version[i]:
+                return version_err_window()
+            elif int(v[i]) > min_version[i]:
+                break
 
         # import button
         self.window = wx.Panel(dialog, pos=(5,100), size=(300, 320))
@@ -122,7 +129,7 @@ class CaptureSBML(WindowedPlugin):
             self.blank_canvas.append(filename)
           else:
             try:
-              IMPORTSBML.DisplayModel(self, sbmlStr, False, True)
+              importSBML.IMPORTSBML.DisplayModel(self, sbmlStr, False, True)
             except ValueError:
               pass
             self.Capture(filename)

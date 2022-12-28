@@ -1,5 +1,5 @@
 Plugin API Reference
-==========
+=====================
 
 .. automodule:: rkviewer.plugin.api
    :members:

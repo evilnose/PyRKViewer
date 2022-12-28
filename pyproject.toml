@@ -2,10 +2,9 @@
 name = "coyote-gui"
 version = "0.1b8"
 description = "Extensible visualization and editing tool for reaction networks."
-authors = ["Gary Geng <xiaog3@uw.edu>", "Jin Xu <jxu2019@uw.edu>",
-"Carmen Perena-Cortes <cperena@outlook.com>", "Evan Yip <evan@yipsite.net>",
-"Nhan D. Nguyen <nnguyen19@ole.augie.edu>", "Herbert M. Sauro <hsauro@uw.edu>",
-"Claire Samuels <csamuels@uw.edu>"]
+authors = ["Gary Geng <xiaog3@uw.edu>", "Jin Xu <jxu2019@uw.edu>", 
+"Nhan D. Nguyen <nnguyen19@ole.augie.edu>", "Carmen Perena-Cortes <cperena@outlook.com>", "Claire Samuels <csamuels@uw.edu>", 
+"Herbert M. Sauro <hsauro@uw.edu>"]
 packages = [
     { include = "rkviewer" },
     { include = "rkviewer_plugins" }

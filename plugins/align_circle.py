@@ -1,7 +1,6 @@
 """
 Aligns nodes into circle
-
-Author: Evan Yip (2021)
+Version 1.0.0: Author: Evan Yip (2021)
 
 """
 import wx
@@ -15,8 +14,8 @@ import math
 class AlignCircle(WindowedPlugin):
     metadata = PluginMetadata(
         name='AlignCircle',
-        author='Evan Yip (2021)',
-        version='0.0.1',
+        author='Evan Yip',
+        version='1.0.0',
         short_desc='Align Circle',
         long_desc='Aligns the nodes into a circle',
         category=PluginCategory.UTILITIES

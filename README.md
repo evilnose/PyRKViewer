@@ -94,7 +94,7 @@ The full documentation can be found at: https://pyrkviewer.readthedocs.io/
 
 ## For Different Platforms
 
-The python version used is 3.7.7.
+The python version for development was 3.7.7.
 
 ### Mac Notes
 * pyinstaller and wxPython require a python built with `enable-framework` on. Therefore, one should do `env PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install 3.7.7` and

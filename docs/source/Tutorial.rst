@@ -6,6 +6,7 @@ A brief guide to help you use and understand version 1.
 Once you have completed all applicable steps in `Quick Start <QS>`_ run the application and wait for it to open. The main window will pop up and look like the following:
     
 .. image:: ../fotos/S1.png
+
 *(Figure 1)*
 
 --------------------
@@ -20,6 +21,7 @@ Here you will find all of the necessary utilities and information to use this ap
     3. Copy the setting(s) that you wish to change.
 
 .. image:: ../fotos/S2.png
+
 *(Figure 2)*
 
     4. Click File in the Navigation Bar
@@ -28,6 +30,7 @@ Here you will find all of the necessary utilities and information to use this ap
     7. Change the values accordingly.
 
 .. image:: ../fotos/S3.png
+
 *(Figure 3)*
 
     8. Close both NotePads and Select File again. (Click save if you haven’t already saved them).
@@ -36,6 +39,7 @@ Here you will find all of the necessary utilities and information to use this ap
     To restore default settings simple erase all changes made under File -> Edit Settings so that it looks  like the following:
 
 .. image:: ../fotos/S4.png
+
 *(Figure 4)*
 
 **- Edit**: you find basic commands like copy, paste, undo and redo, along with their keyboard shortcuts. 
@@ -44,11 +48,11 @@ Here you will find all of the necessary utilities and information to use this ap
 
 **- Reaction**: provides quick options to generate your reactions. These help us select multiple nodes and name them as reactants or products rather than go one by one using the creating panel (explained below). 
 
-**- Plugins**: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, but you’ll have: Add Reaction, Arrow Designer, Auto Layout, Random Network and Structural Analysis.
+**- Plugins**: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, for example, Add Reaction, Arrow Designer, Auto Layout, Random Network and Structural Analysis.
 
------------------
+----------------------
 2. Applicaions Menu
------------------
+----------------------
 
 A lot of the functionalities found here are also in the Navigation Bar. However, they are organized according to their different uses, allowing you to access them in a more structured way.
 
@@ -58,13 +62,14 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
 **- Appearance**: We have Arrow Designer. This allows you to personalize the arrows that appear in the reactions. A window will pop up where you will be able to move the circles to your desired visual. This will be implemented when you click Save. To restore the default arrow you may click arrow designer once again and click Restore Default.
 
-**- Utilities**: Here you will find Add Reaction, Random Network, and Autolayout. 
+**- Utilities**: Here you will find Add Reaction, Random Network, Autolayout, and etc. 
 
-- Add Reaction: This allows you to add reactions choosing the type in a quick way. First you want to select all the nodes that you want as reactants and then select them as reactant on the panel on the left, then select your desired products, and again, click products on the left. Finally, you want to click the Add Reaction utility and simply choose which type of reaction you want these sets of products and reactants to form.
+- Add Reaction: This allows you to add reactions choosing the type in a quick way. You want to click the Add Reaction utility and simply choose which type of reaction and click the nodes in the order of reactants and products.
 
 - Random Network: This utility lets you create a completely random network with personalized parameters. **NOTE: This will erase your current canvas, not add to it. If you want to save your work you can do so under File in the Navigation Bar.** After You create the random network you will be able to modify it at your own will, including adding and deleting nodes. To customize the parameters:
 
 .. image:: ../fotos/S5.png
+
 *(Figure 5)*
 
     + Number of species: The number of nodes that you want featured in your network.
@@ -79,6 +84,7 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 - Auto Layout: This utility automatically gives you a “nice” layout of your network. **NOTE**: This has not been implemented for multiple compartments, and doesn’t behave well for complex reactions. This is under work, and will be cleaned by version 2. The parameters:
   
 .. image:: ../fotos/S6.png
+
 *(Figure 6)*
 
     + Maximum number of iterations: This will help make the layout more neat. 100-120 is a good default value range. If you have a very high number of nodes then you’re going to want to increase this number. Computationally, it may take a bit longer when this number is increased by a lot.
@@ -88,9 +94,9 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
     + Scale of the layout: This will modify the extension that the layout will cover. Again, this will not affect the layout too much if it is very large or very small. 500-1000 is a reasonable range.
 
 
-------------
+-------------------
 3. Creation Panel
-------------
+-------------------
 
 This panel allows you to select and create nodes and reactions. This is the basic command center for building your networks.
 
@@ -119,6 +125,7 @@ This is your visual workspace. Here you will be able to see your created nodes, 
 You can right click on a node or on a selection of nodes to delete the selection. You also have an align option: This will let you align a set or nodes in the manners described.
 
 .. image:: ../fotos/S7.png
+
 *(Figure 7)*
 
 * Align Left will align all of your nodes vertically to be at the level of the left-most node in the selection.
@@ -140,13 +147,14 @@ You can right click on a node or on a selection of nodes to delete the selection
 * Arrange Vertically will arrange all nodes so that they are evenly spaced out vertically along the y position of the center of all the nodes.
 
 
------------
+-----------------------
 5. Information Panel
------------
+-----------------------
 
 This is key to personalizing your nodes and reactions. Through this panel you will be able to add information to and about your networks. **NOTE**: The information panel will only show when something is selected (nodes, reactions, or compartments).
 
 .. image:: ../fotos/S8.png
+
 *(Figure 8)*
 
 You will modify independently the reactions selected and the nodes selected.
@@ -154,6 +162,7 @@ You will modify independently the reactions selected and the nodes selected.
 **- Nodes:** Let’s go over the case where you select a single node. You can adjust settings for multiple nodes at once but some of the features are locked, like identifier, to avoid internal conflict.
 
 .. image:: ../fotos/S9.png
+
 *(Figure 9)*
 
     * Identifiers: This allows you to change the name of the node in question. E.g. say we want to name it H, we type H into the box.
@@ -171,11 +180,13 @@ You will modify independently the reactions selected and the nodes selected.
 Here is an example of some of the values being changed and the end result (in contrast to the default values).
     
 .. image:: ../fotos/S10.png
+
 *(Figure 10)*
 
 **- Reactions:** Each case will be very unique, let’s go over a simple scenario.
 
 .. image:: ../fotos/S11.png
+
 *(Figure 11)*
 
     * Identifier: the reaction’s name.
@@ -195,8 +206,8 @@ Here is an example of some of the values being changed and the end result (in co
     * Reactants and products lets you state how many of each you have. It is also a good overview of the reaction when it gets complicated.
 
 
------------
+-----------------
 6. Zoom Control
------------
+-----------------
 
 You can visualize the location of your nodes on the little square, and scroll through the bar to zoom in or out.

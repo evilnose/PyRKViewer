@@ -1,6 +1,6 @@
 Plugin Reference
 =====================
-The main files for the plugins (including api).
+The APIs and related classes for the plugins.
 
 .. toctree::
    :maxdepth: 4

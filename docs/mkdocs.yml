@@ -1,0 +1,11 @@
+site_name: COYOTE
+site_url: https://github.com/sys-bio/PyRKViewer
+site_description: Description...
+site_author:      Jin Xu
+ 
+docs_dir: 'build'
+
+theme: readthedocs
+
+nav:
+    - Home: html/index.html

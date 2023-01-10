@@ -6,7 +6,7 @@ Coyote, also called PyRKViewer, is a cross-platform visualization tool for drawi
 [wxPython](https://www.wxpython.org/) framework. It can draw reactants, products, reactions, and compartments, and its features include but are not limited to:
 * Support for floating and boundary species.
 * Reactions can be displayed using Bezier curves and straight lines.
-* Plugin support, with some plugin examples: Arrow Designer, Random Network,  Layout, etc.
+* Plugin support, with some plugin examples: Arrow Designer, Random Network, Auto Layout, etc.
 
 ## Getting Started
 

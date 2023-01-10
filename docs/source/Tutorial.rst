@@ -3,7 +3,7 @@ Tutorial
 ===============================
 A brief guide to help you use and understand version 1.
 
-Once you have completed all applicable steps in `Quick Start <QS>`_ run the application and wait for it to open. The main window will pop up and look like the following:
+Once you have completed all applicable steps in Quick Start run the application and wait for it to open. The main window will pop up and look like the following:
     
 .. image:: ../fotos/S1.png
 
@@ -62,7 +62,7 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
 **- Appearance**: We have Arrow Designer. This allows you to personalize the arrows that appear in the reactions. A window will pop up where you will be able to move the circles to your desired visual. This will be implemented when you click Save. To restore the default arrow you may click arrow designer once again and click Restore Default.
 
-**- Utilities**: Here you will find Add Reaction, Random Network, Autolayout, and etc. 
+**- Utilities**: Here you will find Add Reaction, Random Network, Auto Layout, and etc. 
 
 - Add Reaction: This allows you to add reactions choosing the type in a quick way. You want to click the Add Reaction utility and simply choose which type of reaction and click the nodes in the order of reactants and products.
 

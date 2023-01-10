@@ -14,11 +14,11 @@ Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert
 University of Washington - Sauro Lab
 
 COYOTE or PyRKViewer is a visualization tool for drawing the reaction networks written by wxPython (https://www.wxpython.org/) and applicable for different platforms.
-It can draw reactants, products, reactions and compartments. Its features are listed below but not limited to:
+It can draw reactants, products, reactions, and compartments. Its features are listed below but not limited to:
 
 * It supports floating and boundary species.
 * Reactions can be displayed using Bezier curves and straight lines.
-* It has plugin support, with some plugin examples: ArrowDesigner, RandomNetwork, Antolayout and etc. 
+* It has plugin support, with some plugin examples: Arrow Designer, Random Network, Auto Layout and etc. 
 
 .. toctree::
    :maxdepth: 2

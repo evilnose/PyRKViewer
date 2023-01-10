@@ -88,7 +88,8 @@ for more detail.
 
 ## Documentation
 
-The full documentation can be found at: https://pyrkviewer.readthedocs.io/
+The full documentation can be found at: https://sys-bio.github.io/PyRKViewer/
+
 
 ## For Different Platforms
 

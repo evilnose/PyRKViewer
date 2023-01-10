@@ -90,7 +90,6 @@ for more detail.
 
 The full documentation can be found at: https://sys-bio.github.io/PyRKViewer/
 
-
 ## For Different Platforms
 
 The python version for development was 3.7.7.

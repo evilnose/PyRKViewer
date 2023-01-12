@@ -10,9 +10,9 @@ INSTALLING
 
 **Installing with Pypi**
 
-* ``pip install coyote-gui`` for the base application.
+* ``pip install pyrkviewer`` for the base application.
 
-* ``pip install coyote-gui[sbml]`` to install the additional SBML dependencies used by certain plugins as well. Note that this is a large set of dependencies.
+* ``pip install pyrkviewer[sbml]`` to install the additional SBML dependencies used by certain plugins as well. Note that this is a large set of dependencies.
 
 * To run the application, simply run ``coyote`` or ``python -m coyote``
 

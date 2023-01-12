@@ -1,7 +1,8 @@
 [tool.poetry]
 name = "coyote-gui"
-version = "0.1b8"
-description = "Extensible visualization and editing tool for reaction networks."
+version = "1.0.0"
+description = "COYOTE: An Extensible Python Based Reaction Editor and Viewer."
+readme = "README.md"
 authors = ["Gary Geng <xiaog3@uw.edu>", "Jin Xu <jxu2019@uw.edu>", 
 "Nhan D. Nguyen <nnguyen19@ole.augie.edu>", "Carmen Perena-Cortes <cperena@outlook.com>", "Claire Samuels <csamuels@uw.edu>", 
 "Herbert M. Sauro <hsauro@uw.edu>"]
@@ -60,3 +61,6 @@ coyote = 'rkviewer.main:main'
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[project.urls]
+Homepage = "https://github.com/sys-bio/PyRKViewer"

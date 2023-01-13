@@ -120,7 +120,7 @@ class Vec2:
 
     def to_wx_point(self) -> wx.Point:
         """Convert this to wx.Point; return the result."""
-        return wx.Point(self.x, self.y)
+        return wx.Point(int(self.x), int(self.y))
 
     # element-wise multiplication
     def elem_mul(self, other: 'Vec2') -> 'Vec2':

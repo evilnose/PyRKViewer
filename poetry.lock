@@ -1147,7 +1147,7 @@ version = "4.1.1"
 description = "Cross platform GUI toolkit for Python, \"Phoenix\" version"
 category = "main"
 optional = false
-python-versions = ">=3.7.1, <3.10"
+python-versions = "*"
 
 [package.dependencies]
 numpy = {version = "*", markers = "python_version >= \"3.0\""}

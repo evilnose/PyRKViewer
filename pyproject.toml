@@ -36,6 +36,7 @@ dataclasses = { version = "^0.8", python = "~3.6" }
 marshmallow-polyfield = "^5.10"
 wheel = "*"
 requests = "*"
+traitlets = "*"
 networkx = { version = "^2.5.1" }
 simplesbml = { version = "^2.2.0"}
 python-libsbml = { version = "^5.18.0" }

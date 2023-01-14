@@ -12,8 +12,6 @@ INSTALLING
 
 * ``pip install pyrkviewer`` for the base application.
 
-* ``pip install pyrkviewer[sbml]`` to install the additional SBML dependencies used by certain plugins as well. Note that this is a large set of dependencies.
-
 * To run the application, simply run ``coyote`` or ``python -m coyote``
 
 * Note that on MacOS, if you wish to use Coyote in a virtual environment, use ``venv`` instead of ``virtualenv``, due to the latter's issues with wxPython.

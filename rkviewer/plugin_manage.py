@@ -83,6 +83,7 @@ class PluginManager:
         dir_path = os.path.join(dirname, '..\\', load_dir)
         if not os.path.exists(dir_path):
             return False
+        self.plugin_dir = dir_path
 
         plugin_classes = list()
         for f in os.listdir(dir_path):
@@ -136,7 +137,7 @@ class PluginManager:
         logging.getLogger('plugin').info("Found {} valid plugins in '{}'. Loading plugins...".format(
             len(plugin_classes), dir_path))
 
-        self.plugin_dir = dir_path
+        #self.plugin_dir = dir_path
 
         self.plugins = list()
         for cls in plugin_classes:
@@ -268,7 +269,10 @@ class PluginDialog(wx.Dialog):
         super().__init__(parent, title='Manage Plugins', size=(900, 550))
         notebook = wx.Listbook(self, style=wx.LB_LEFT)
         notebook.GetListView().SetFont(wx.Font(wx.FontInfo(10)))
-        notebook.GetListView().SetColumnWidth(0, 125)
+        try:
+            notebook.GetListView().SetColumnWidth(0, 125)
+        except:
+            pass
 
         sizer = wx.BoxSizer()
         sizer.Add(notebook, proportion=1, flag=wx.EXPAND)
@@ -307,7 +311,10 @@ class PluginInstallationDialog(wx.Dialog):
         super().__init__(parent, title='Add Plugins', size=(900, 550))
         notebook = wx.Listbook(self, style=wx.LB_LEFT)
         notebook.GetListView().SetFont(wx.Font(wx.FontInfo(10)))
-        notebook.GetListView().SetColumnWidth(0, 125)
+        try:
+            notebook.GetListView().SetColumnWidth(0, 125)
+        except:
+            pass
 
         sizer = wx.BoxSizer()
         sizer.Add(notebook, proportion=1, flag=wx.EXPAND)

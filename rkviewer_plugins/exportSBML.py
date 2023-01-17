@@ -20,7 +20,7 @@ class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportSBML',
         author='Jin Xu',
-        version='1.0.1',
+        version='1.0.2',
         short_desc='Export SBML.',
         long_desc='Export the SBML String from the network on canvas and save it to a file.',
         category=PluginCategory.ANALYSIS
@@ -78,7 +78,8 @@ class ExportSBML(WindowedPlugin):
             dlg = wx.FileDialog(self.window, "Save As", self.dirname, wildcard="SBML files (*.xml)|*.xml", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             if dlg.ShowModal() == wx.ID_OK:
                 # Grab the content to be saved
-                itcontains = self.SBMLText.GetValue()
+                #itcontains = self.SBMLText.GetValue()
+                itcontains = sbmlStr_layout_render
                 # Open the file for write, write, close
                 self.filename=dlg.GetFilename()
                 self.dirname=dlg.GetDirectory()

@@ -80,10 +80,14 @@ class PluginManager:
         """Load plugins from the given directory. Returns False if the dir does not exist.
         """
         dirname = os.path.dirname(__file__)
-        dir_path = os.path.join(dirname, '..\\', load_dir)
+        if os.name == 'nt': #windows
+            dir_path = os.path.join(dirname, '..\\', load_dir)
+        else:
+            dir_path = os.path.join(dirname, '../', load_dir)
+
+        self.plugin_dir = dir_path
         if not os.path.exists(dir_path):
             return False
-        self.plugin_dir = dir_path
 
         plugin_classes = list()
         for f in os.listdir(dir_path):

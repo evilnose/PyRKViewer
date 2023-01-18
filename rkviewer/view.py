@@ -257,7 +257,8 @@ class TabbedToolbar(fnb.FlatNotebook):
             tb = Toolbar(self)
             for name, callback, bitmap in categories[cat]:
                 if bitmap is None:
-                    bitmap = wx.ArtProvider.GetBitmap(wx.ART_MISSING_IMAGE, wx.ART_MENU)
+                    #bitmap = wx.ArtProvider.GetBitmap(wx.ART_MISSING_IMAGE, wx.ART_MENU)
+                    bitmap = wx.ArtProvider.GetBitmap(wx.ART_REPORT_VIEW, wx.ART_MENU)
                 tb.AppendTool(name, callback, bitmap)
             tb.SetForegroundColour (wx.RED)
             tb.SetBackgroundColour (get_theme ('toolbar_bg'))

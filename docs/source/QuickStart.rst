@@ -24,7 +24,7 @@ INSTALLING
 
 3. Next, open your terminal and navigate to the directory containing Coyote.
 
-4. Once inside the main folder of the application you can install the dependencies. To install the base dependencies simply run ``poetry install``. To install the optional ones as well, run ``poetry install -E sbml``. Note that this step may take a while. To learn more about which set of dependencies is right for you.
+4. Once inside the main folder of the application you can install the dependencies. To install the base dependencies simply run ``poetry install``. To install the optional ones as well, run ``poetry install -E simulation``. Note that this step may take a while. To learn more about which set of dependencies is right for you.
 
 5. Finally, you will run the application with the command ``poetry run coyote``.
 
@@ -38,7 +38,7 @@ Again, we strongly advise following the steps above, as it makes the set-up proc
 
 2. Next, open your terminal and navigate to the directory containing Coyote.
 
-3. To install the base set of dependencies, you will run ``pip install -r requirements.txt``. Then if you want to install the optional dependencies as well, run ``pip install -r requirements-sbml.txt``. To learn more about which set of dependencies is right for you.
+3. To install the base set of dependencies, you will run ``pip install -r requirements.txt``. Then if you want to install the optional dependencies as well, run ``pip install -r requirements-simualtion.txt``. To learn more about which set of dependencies is right for you.
 
 4. Finally, you will run the application with the command ``python -m rkviewer.main``. After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your Coyote application, and run the command ``python -m rkviewer.main``.
 

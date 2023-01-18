@@ -153,10 +153,10 @@ class TestSerialization(DummyAppTest):
             elif shapeDict["name"] == "text outside":
                 #self.assertEqual("circle", shape_items[0]["name"])
                 match_primitive(self, shape_items, "circle")
-            elif shapeDict["name"] == "demo combo":
-                match_primitive(self, shape_items[0], "circle")
-                match_primitive(self, shape_items[1], "circle")
-                match_primitive(self, shape_items, "rectangle")
+            #elif shapeDict["name"] == "demo combo":
+            #    match_primitive(self, shape_items[0], "circle")
+            #    match_primitive(self, shape_items[1], "circle")
+            #    match_primitive(self, shape_items, "rectangle")
 
     def testAlias(self):
         #since original node is at 0, alias is at 1

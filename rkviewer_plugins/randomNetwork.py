@@ -1,7 +1,7 @@
 """
 Display a random network.
 
-Version 1.0.0: Author: Jin Xu, Herbert M Sauro (2020)
+Version 1.0.1: Author: Jin Xu, Herbert M Sauro (2020)
 
 """
 
@@ -15,6 +15,7 @@ import random as _random
 import numpy as _np
 import copy as _copy
 from dataclasses import dataclass
+import decimal
 
 
 
@@ -360,8 +361,12 @@ class RandomNetwork(WindowedPlugin):
 
             return antStr_tot      
 
-        test_prob = self.probUniUniValue + self.probBiUniValue + self.probUniBiValue + self.probBiBiValue
-	
+        decimal.getcontext().prec = 6
+        test_prob = decimal.Decimal(self.probUniUniValue) \
+                  + decimal.Decimal(self.probBiUniValue) \
+                  + decimal.Decimal(self.probUniBiValue) \
+                  + decimal.Decimal(self.probBiBiValue)
+
         if test_prob != 1:
             wx.MessageBox("The sum of probabilities should be one!", "Message", wx.OK | wx.ICON_INFORMATION)
 

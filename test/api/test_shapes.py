@@ -27,7 +27,9 @@ class TestShapes(DummyAppTest):
         foo = api.get_node_by_index(0, 0)
         primitive = foo.shape.items[0]
         primitive, _transform = foo.shape.items[0]
-        self.assert_(isinstance(primitive, RectanglePrim))
-        self.assert_(hasattr(primitive, 'fill_color'))
+        #self.assert_(isinstance(primitive, RectanglePrim))
+        self.assertTrue(isinstance(primitive, RectanglePrim))
+        #self.assert_(hasattr(primitive, 'fill_color'))
+        self.assertTrue(hasattr(primitive, 'fill_color'))
         self.assertEqual(getattr(primitive, 'fill_color'), api.Color(66, 66, 66))
 

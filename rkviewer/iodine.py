@@ -2375,6 +2375,7 @@ def setNodeShapeIndex(neti: int, nodei: int, shapei: int, preserve_common_fields
     node = _getConcreteNode(neti, nodei)
     node.shapei = shapei
     shp = shapeFactories[shapei].produce()
+
     if preserve_common_fields and len(node.shape.items) == len(shp.items):
         for index, prim in enumerate(node.shape.items):
             fill = node.shape.items[index][0].fill_color

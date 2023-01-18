@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an SBML string as save it as a file.
-Version 1.0.1: Author: Jin Xu (2022)
+Version 1.0.2: Author: Jin Xu (2022)
 """
 
 

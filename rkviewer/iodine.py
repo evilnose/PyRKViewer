@@ -67,12 +67,12 @@ shapeFactories = [
     CompositeShapeFactory([(lineFact, singletonTrans)], (textFact, singletonTrans), 'line'),
     CompositeShapeFactory([(triangleFact, singletonTrans)], (textFact, singletonTrans), 'triangle'),
     CompositeShapeFactory([], (textFact, singletonTrans), 'text-only'),
-    CompositeShapeFactory([(circleFact, Transform(scale=Vec2.repeat(0.5))),
-                           (circleFact, Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
-                           (PrimitiveFactory(RectanglePrim, fill_color=Color(255, 0, 0, 255)),
-                                Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.25)))
-                           ],
-        (PrimitiveFactory(TextPrim, font_color=Color(255, 255, 255, 255)), singletonTrans), 'demo combo'),
+    #CompositeShapeFactory([(circleFact, Transform(scale=Vec2.repeat(0.5))),
+    #                       (circleFact, Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.5))),
+    #                       (PrimitiveFactory(RectanglePrim, fill_color=Color(255, 0, 0, 255)),
+    #                            Transform(scale=Vec2.repeat(0.5), translation=Vec2.repeat(0.25)))
+    #                       ],
+    #    (PrimitiveFactory(TextPrim, font_color=Color(255, 255, 255, 255)), singletonTrans), 'demo combo'),
 ]
 
 
@@ -2375,6 +2375,7 @@ def setNodeShapeIndex(neti: int, nodei: int, shapei: int, preserve_common_fields
     node = _getConcreteNode(neti, nodei)
     node.shapei = shapei
     shp = shapeFactories[shapei].produce()
+
     if preserve_common_fields and len(node.shape.items) == len(shp.items):
         for index, prim in enumerate(node.shape.items):
             fill = node.shape.items[index][0].fill_color

@@ -11,10 +11,9 @@ Coyote, also called PyRKViewer, is a cross-platform visualization tool for drawi
 ## Getting Started
 
 ### Installing with Pypi
-* `pip install pyrkviewer` for the base application
-* `pip install pyrkviewer[sbml]` to install the additional SBML dependencies used by certain plugins
-as well. Note that this is a large set of dependencies.
+* `pip install pyrkviewer` for the base application.
 * To run the application, simply run `coyote` or `python -m coyote`
+* If wxPython won't get installed automatically, please try to install wxPython 4.1.1 manually referring to https://wxpython.org/pages/downloads/index.html.
 * Note that on MacOS, if you wish to use Coyote in a virtual environment, use `venv` instead of
 `virtualenv`, due to the latter's issues with wxPython.
 
@@ -22,7 +21,7 @@ as well. Note that this is a large set of dependencies.
 1. If you do not have poetry installed on your computer, follow the quick steps shown [here](https://python-poetry.org/docs/).
 2. Once you have poetry installed, you will download Coyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
 3. Next, open your terminal and navigate to the directory containing Coyote.
-4. Once inside the main folder of the application you can install the dependencies. To install the base dependencies simply run `poetry install`. To install the optional ones as well, run `poetry install -E sbml`. Note that this step may take a while. To learn more about which set of dependencies is right for you, refer to the [Dependencies](#Dependencies) section below.
+4. Once inside the main folder of the application you can install the dependencies. To install the base dependencies simply run `poetry install`. To install the optional ones as well, run `poetry install -E simulation`. Note that this step may take a while. To learn more about which set of dependencies is right for you, refer to the [Dependencies](#Dependencies) section below.
 5. Finally, you will run the application with the command `poetry run coyote`.
 
 After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your Coyote application, and run the command `poetry run coyote`.
@@ -33,7 +32,7 @@ Again, we strongly advise following the steps above, as it makes the set-up proc
 
 1. First, download Coyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
 2. Next, open your terminal and navigate to the directory containing Coyote.
-3. To install the base set of dependencies, you will run `pip install -r requirements.txt`. Then if you want to install the optional dependencies as well, run `pip install -r requirements-sbml.txt`. To learn more about which set of dependencies is right for you, refer to the [Dependencies](#Dependencies) section below.
+3. To install the base set of dependencies, you will run `pip install -r requirements.txt`. Then if you want to install the optional dependencies as well, run `pip install -r requirements-simulation.txt`. To learn more about which set of dependencies is right for you, refer to the [Dependencies](#Dependencies) section below.
 4. Finally, you will run the application with the command `python -m rkviewer.main`.
 After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your Coyote application, and run the command `python -m rkviewer.main`.
 
@@ -48,26 +47,21 @@ After you have completed all of these steps, you will not have to repeat them ev
 We are using [poetry](https://python-poetry.org/) for dependency management. If you are just looking
 to build and run, though, you can work solely with `pip` as well.
 
-There are currently three dependency groups: "base", "development", and "sbml".
+There are currently three dependency groups: "base", "development", and "simulation".
 * "base" is the bare minimum requirements to run the application without any plugins.
 * "development" includes the additional requirements for development, such as for documentation
 and testing.
-* "sbml" includes a large set of dependencies required for running most SBML-related plugins,
-such as import/exportSBML and load Antimony. (This is in addition to the base requirements).
-
-If you plan to work with SBML or Antimony code, you are almost certainly going to need the
-"sbml" dependency group. Note that "sbml" includes quite a large set of dependencies (mostly
-SBML-related, so if you usually work with SBML, you'll probably have most of it installed already).
+* "simulation" includes a large set of dependencies required for running simulation related Plugins. (This is in addition to the base requirements).
 
 The dependency groups are specified in `pyproject.toml` for `poetry`. There are additionally
 `requirement.txt` files generated by `poetry`, including `requirements.txt`, `requirements-dev.txt`,
-and `requirements-sbml.txt`. If you do not have poetry, you can opt for those as well. If you are
+and `requirements-simulation.txt`. If you do not have poetry, you can opt for those as well. If you are
 using linux, extra work would need to be done on installing wxPython. Please refer to the
 "Linux Notes" section below.
 
 ### Installing Dependencies
 `poetry` is recommended for installing dependencies. Simply `poetry install` for the base
-dependencies and `poetry install -E sbml` to install the optional ones as well.
+dependencies and `poetry install -E simulation` to install the optional ones as well.
 
 If you don't have poetry, you can simply run `pip install -r <>` for any of the aforementioned
 `requirements.txt` files.

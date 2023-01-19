@@ -569,10 +569,10 @@ class Canvas(wx.ScrolledWindow):
         new_scroll = new_scroll.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
 
         vsize = self.realsize * cstate.scale
-        self.SetVirtualSize(vsize.x, vsize.y)
+        self.SetVirtualSize(int(vsize.x), int(vsize.y))
 
         # Important: set virtual size first, then scroll
-        self.Scroll(new_scroll.x, new_scroll.y)
+        self.Scroll(int(new_scroll.x), int(new_scroll.y))
 
         self.zoom_slider.SetValue(self._zoom_level)
         self.zoom_slider.SetPageSize(2)

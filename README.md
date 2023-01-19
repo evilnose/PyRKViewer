@@ -8,14 +8,18 @@ Coyote, also called PyRKViewer, is a cross-platform visualization tool for drawi
 * Reactions can be displayed using Bezier curves and straight lines.
 * Plugin support, with some plugin examples: Arrow Designer, Random Network, Auto Layout, etc.
 
-## Getting Started
+## Installment for Users
 
-### Installing with Pypi
-* `pip install pyrkviewer` for the base application.
-* To run the application, simply run `coyote` or `python -m coyote`
+* Install Python 3.7, 3.8 or 3.9 if not ready in the system.
+* Go to the command line and type `pip install pyrkviewer`.
 * If wxPython won't get installed automatically, please try to install wxPython 4.1.1 manually referring to https://wxpython.org/pages/downloads/index.html.
-* Note that on MacOS, if you wish to use Coyote in a virtual environment, use `venv` instead of
-`virtualenv`, due to the latter's issues with wxPython.
+* To run the application, simply type in the command line `coyote`.
+
+## Documentation
+
+The full documentation can be found at: https://sys-bio.github.io/PyRKViewer/
+
+## Installment options for Developers
 
 ### Installing with Poetry
 1. If you do not have poetry installed on your computer, follow the quick steps shown [here](https://python-poetry.org/docs/).
@@ -27,7 +31,6 @@ Coyote, also called PyRKViewer, is a cross-platform visualization tool for drawi
 After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your Coyote application, and run the command `poetry run coyote`.
 
 ### Installing without Poetry
-
 Again, we strongly advise following the steps above, as it makes the set-up process much faster and simpler. However, to install Coyote without Poetry, here is the process you will follow:
 
 1. First, download Coyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
@@ -70,7 +73,8 @@ If you don't have poetry, you can simply run `pip install -r <>` for any of the 
 * If you have poetry, simply `poetry run coyote`.
 * Otherwise, in your virtual environment, run `python -m rkviewer.main`.
 
-## Distributing
+## Development Distributing
+
 * Use `poetry build` and `poetry publish`. Refer to [poetry docs](https://python-poetry.org/docs/)
 for more detail.
 * To re-generate the `requirements*.txt`, run `scripts/gen_requirements.py`.
@@ -80,15 +84,13 @@ for more detail.
 * Always run `pyinstaller rkviewer.spec` when `rkviewer.spec` is present.
 * If somehow `rkviewer.spec` went missing or you want to regenerate the build specs, run `pyinstaller -F --windowed --add-data ext/Iodine.dll;. main.py` on Windows or `pyinstaller -F -- windowed --add-data ext/Iodine.dll:. main.py` on Linux/Mac to generate a file named `main.spec`. Note that if a `main.spec` file is already  present **it will be overwritten**.
 
-## Documentation
-
-The full documentation can be found at: https://sys-bio.github.io/PyRKViewer/
-
-## For Different Platforms
+## Development for Different Platforms
 
 The python version for development was 3.7.7.
 
 ### Mac Notes
+* Note that on MacOS, if you wish to use Coyote in a virtual environment, use `venv` instead of
+`virtualenv`, due to the latter's issues with wxPython.
 * pyinstaller and wxPython require a python built with `enable-framework` on. Therefore, one should do `env PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install 3.7.7` and
 use that Python installation for building.
 * If the text is blurry in the app bundled by `pyinstaller`, one needs to add an entry in the pyinstaller settings as described [here](https://stackoverflow.com/a/40676321).

@@ -14,7 +14,7 @@ INSTALLING
 
 * To run the application, simply run ``coyote`` or ``python -m coyote``
 
-* If wxPython won't get installed automatically, please try to install wxPython manually referring to https://wxpython.org/pages/downloads/index.html.
+* If wxPython won't get installed automatically, please try to install wxPython 4.1.1 manually referring to https://wxpython.org/pages/downloads/index.html.
 
 * Note that on MacOS, if you wish to use Coyote in a virtual environment, use ``venv`` instead of ``virtualenv``, due to the latter's issues with wxPython.
 

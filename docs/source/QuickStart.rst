@@ -5,18 +5,20 @@ Quick Start
 ====================
 
 --------------------------
-INSTALLING
+INSTALLMENT FOR USERS
 --------------------------
 
-**Installing with Pypi**
+* Install Python 3.7, 3.8 or 3.9 if not ready in the system.
 
-* ``pip install pyrkviewer`` for the base application.
-
-* To run the application, simply run ``coyote`` or ``python -m coyote``
+* Go to the command line and type ``pip install pyrkviewer``.
 
 * If wxPython won't get installed automatically, please try to install wxPython 4.1.1 manually referring to https://wxpython.org/pages/downloads/index.html.
 
-* Note that on MacOS, if you wish to use Coyote in a virtual environment, use ``venv`` instead of ``virtualenv``, due to the latter's issues with wxPython.
+* To run the application, simply type in the command line ``coyote``.
+
+-------------------------------------
+INSTALLMENT OPTIONS FOR DEVELOPERS
+-------------------------------------
 
 **Installing with Poetry**
 
@@ -51,7 +53,7 @@ Again, we strongly advise following the steps above, as it makes the set-up proc
 * Otherwise, in your virtual environment, run ``python -m rkviewer.main``.
 
 --------------------------------------------------
-RUNNING AND BUILDING
+RUNNING AND BUILDING FOR DEVELOPERS
 --------------------------------------------------
 
 **Running locally:**
@@ -60,21 +62,21 @@ RUNNING AND BUILDING
 
 * If not, you may use ``pip`` with ``requirements.txt`` and ``requirements-dev.txt``. They are generated from the Pipfile and may not be up-to-date though, so check the commit history to make sure.
 
---------------------------------------------------
-Building an Executable with Pyinstaller
---------------------------------------------------
+**Building an Executable with Pyinstaller:**
 
 * Always run ``pyinstaller rkviewer.spec`` when ``rkviewer.spec`` is present.
 
 * If somehow ``rkviewer.spec`` went missing or you want to regenerate the build specs, run ``pyinstaller -F --windowed --add-data ext/Iodine.dll;. main.py`` on Windows or ``pyinstaller -F -- windowed --add-data ext/Iodine.dll:. main.py`` on Linux/Mac to generate a file named ``main.spec``. Note that if a ``main.spec`` file is already present it will be overwritten.
 
 --------------------------------------------------
-USING ON DIFFERENT PLATFORMS
+DEVELOPMENT ON DIFFERENT PLATFORMS
 --------------------------------------------------
 
 The python version for development was 3.7.7.
 
 **Mac Notes:**
+
+* Note that on MacOS, if you wish to use Coyote in a virtual environment, use ``venv`` instead of ``virtualenv``, due to the latter's issues with wxPython.
 
 * pyinstaller and wxPython require a python built with ``enable-framework`` on. Therefore, one should do ``env PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install 3.7.7`` and use that Python installation for building.
 

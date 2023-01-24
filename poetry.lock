@@ -2210,5 +2210,5 @@ simulation = ["tellurium"]
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.7.1, <3.10"
-content-hash = "937d150939e36360ca350472d2d082943f2314c09c952246774ae1e462fe3bbd"
+python-versions = ">=3.7.1, <3.11"
+content-hash = "600c80881d3027ed431ee619b3dc502d21372de771c7130de87d06d59a67f28f"

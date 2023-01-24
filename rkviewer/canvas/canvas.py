@@ -536,7 +536,10 @@ class Canvas(wx.ScrolledWindow):
         pos = pos.elem_div(Vec2(self.GetScrollPixelsPerUnit()))
         # need to mult by scale here since self.VirtualPosition is artificially increased, per
         # scale * self.realsize
-        self.Scroll(*pos)
+        #self.Scroll(*pos)
+        pos_list = list(pos)
+        pos_list = [int(pos_item) for pos_item in pos_list]
+        self.Scroll(*pos_list)
         self.SetOverlayPositions()
 
     @property
@@ -1499,7 +1502,12 @@ class Canvas(wx.ScrolledWindow):
             return None
 
         bounding_rect = padded_rect(bounding_rect, padding=50)
-        bounding_rect = wx.Rect(*bounding_rect.position, *bounding_rect.size)
+        #bounding_rect = wx.Rect(*bounding_rect.position, *bounding_rect.size)
+        pos_list = list(bounding_rect.position)
+        pos_list = [int(pos_item) for pos_item in pos_list]
+        size_list = list(bounding_rect.size)
+        size_list = [int(size_item) for size_item in size_list]
+        bounding_rect = wx.Rect(*pos_list, *size_list)
         bounding_rect.Intersect(wx.Rect(0, 0, *self.realsize))
 
         bmp = wx.Bitmap(*self.realsize)

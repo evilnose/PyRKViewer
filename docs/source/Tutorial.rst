@@ -109,8 +109,6 @@ This panel allows you to select and create nodes and reactions. This is the basi
 
 * +Compt will allow you to create compartments in which you can add nodes and reactions.
 
-* Zoom lets you zoom in and out.
-
 * Reactants will denote the selected nodes as reactants. To create a reaction with multiple reactants, click Select and maintain Ctrl in your keyboard pressed to select multiple.
 
 * Products will denote the selected nodes as products. To create a reaction with multiple products, click Select and maintain Ctrl in your keyboard pressed to select multiple.

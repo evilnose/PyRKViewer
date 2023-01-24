@@ -1,6 +1,6 @@
 '''
 Given a random network, this plugin  will rearrange the network neatly on the screen.
-Version 1.0.1: Author: Carmen Perena Cortes, Herbert M Sauro, Jin Xu, 2022
+Version 1.0.2: Author: Carmen Perena Cortes, Herbert M Sauro, Jin Xu, 2022
 Based on THOMAS M. J. FRUCHTERMAN AND EDWARD M. REINGOLD's Graph Drawing by Force-directed Placement
 SOFTWARE - PRACTICE AND EXPERIENCE, VOL. 21(1 1), 1129-1164 (NOVEMBER 1991)
 Using python's networkx
@@ -25,7 +25,7 @@ class LayoutNetworkX(WindowedPlugin):
     metadata = PluginMetadata(
         name='AutoLayout',
         author='Carmen Perena Cortes, Herbert M Sauro and Jin Xu',
-        version='1.0.1',
+        version='1.0.2',
         short_desc='Auto Layout using networkX.',
         long_desc='Rearrange a random network into a neat auto layout',
         category=PluginCategory.UTILITIES,
@@ -41,8 +41,8 @@ class LayoutNetworkX(WindowedPlugin):
         # TODO: k, gravity, useMagnetism, useBoundary, useGrid
         self.window = wx.Panel(dialog, pos=(5,100), size=(350, 220))
         self.sizer = wx.FlexGridSizer(cols=2, vgap=10, hgap=0)
-        self.sizer.AddGrowableCol(0, 0.6)
-        self.sizer.AddGrowableCol(1, 0.4)
+        self.sizer.AddGrowableCol(0, int(0.6))
+        self.sizer.AddGrowableCol(1, int(0.4))
 
         self.sizer.Add((0, 10))
         self.sizer.Add((0, 10))

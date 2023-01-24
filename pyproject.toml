@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyrkviewer"
-version = "1.1.6"
+version = "1.2.0"
 description = "COYOTE: An Extensible Python Based Reaction Editor and Viewer."
 readme = "README.md"
 authors = ["Jin Xu and Gary Geng et al <jxu2019@uw.edu>"]

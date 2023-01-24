@@ -103,7 +103,7 @@ def rgba_to_wx_colour(rgb: int, alpha: float) -> wx.Colour:
 
 
 def opacity_mul(color: wx.Colour, fraction: float) -> wx.Colour:
-    return wx.Colour(color.Red(), color.Green(), color.Blue(), color.Alpha() * fraction)
+    return wx.Colour(color.Red(), color.Green(), color.Blue(), int(color.Alpha() * fraction))
 
 
 def change_opacity(color: wx.Colour, new_op: int):

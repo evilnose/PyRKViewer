@@ -379,7 +379,7 @@ class DownloadPluginPage(HtmlWindow):
             installed_names.update({p.metadata.name: p})
         try:
             # for just displaying info
-            r = requests.get('https://raw.githubusercontent.com/sys-bio/PyRKViewer-Plugins/main/metadata.json')
+            r = requests.get('https://raw.githubusercontent.com/sys-bio/SBcoyote-plugins/main/metadata.json')
             metadata = r.json()
             for m in metadata:
                 item = '''
@@ -415,7 +415,7 @@ class DownloadPluginPage(HtmlWindow):
     def OnLinkClicked(self, link):
         filename = link.GetHref()
         try:
-            p = requests.get("https://raw.githubusercontent.com/sys-bio/PyRKViewer-Plugins/main/all-plugins/{}".format(filename))
+            p = requests.get("https://raw.githubusercontent.com/sys-bio/SBcoyote-plugins/main/all-plugins/{}".format(filename))
         except:
             wx.MessageBox("Could not connect to server. Please try again later.")
         try:

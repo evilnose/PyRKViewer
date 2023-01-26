@@ -667,13 +667,13 @@ class MainFrame(wx.Frame):
 
     def onAboutDlg(self, event):
         info = wx.adv.AboutDialogInfo()
-        info.SetName("Coyote")
-        info.SetVersion("0.1b5")
-        info.SetCopyright("(C) 2020")
+        info.SetName("SBcoyote")
+        info.SetVersion("1.0.0")
+        info.SetCopyright("(c) 2023 UW Sauro Lab")
         info.SetDescription("An Extensible Reaction Network Editor")
-        info.SetWebSite("https://github.com/evilnose/PyRKViewer",
+        info.SetWebSite("https://github.com/sys-bio/SBcoyote",
                         "Home Page")  # TODO update home page?
-        info.SetDevelopers(["Gary Geng", "Jin Xu", "Carmen Pereña Cortés","Claire Samuels", "Herbert Sauro"])# TODO update authors
+        info.SetDevelopers(["Gary Geng", "Jin Xu", "Nhan D. Nguyen", "Carmen Pereña Cortés","Claire Samuels", "Herbert Sauro"])# TODO update authors
         info.SetLicense("MIT")
 
         # Show the wx.AboutBox
@@ -931,7 +931,7 @@ class RKView(IView):
     def init(self):
         assert self.controller is not None
         self.app = wx.App()
-        self.frame = MainFrame(self.controller, title='RK Network Viewer')
+        self.frame = MainFrame(self.controller, title='SBcoyote')
         init_api(self.frame.main_panel.canvas, self.controller)
         self.canvas_panel = self.frame.main_panel.canvas
 

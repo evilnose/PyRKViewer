@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an SBML string as save it as a file.
-Version 1.0.2: Author: Jin Xu (2022)
+Version 1.0.3: Author: Jin Xu (2023)
 """
 
 
@@ -20,7 +20,7 @@ class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportSBML',
         author='Jin Xu',
-        version='1.0.2',
+        version='1.0.3',
         short_desc='Export SBML.',
         long_desc='Export the SBML String from the network on canvas and save it to a file.',
         category=PluginCategory.ANALYSIS
@@ -211,7 +211,7 @@ class ExportSBML(WindowedPlugin):
 
             # create the Model
             model = document.createModel()
-            model.setId("COYOTE_model")
+            model.setId("SBcoyote_model")
             document.setModel(model)
 
             # create the Compartment and species

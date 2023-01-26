@@ -4,16 +4,16 @@
    contain the root `toctree` directive.
 
 ================================================
-COYOTE or PYRKVIEWER DOCUMENTATION
+SBcoyote DOCUMENTATION
 ================================================
-A visualization tool for reaction networks
+An Extensible Python Based Reaction Editor and Viewer
 
 Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert M. Sauro
 (JX and GG contributed equally)
 
 University of Washington - Sauro Lab
 
-COYOTE or PyRKViewer is a visualization tool for drawing the reaction networks written by wxPython (https://www.wxpython.org/) and applicable for different platforms.
+SBcoyote is a visualization tool for drawing the reaction networks written by wxPython (https://www.wxpython.org/) and applicable for different platforms.
 It can draw reactants, products, reactions, and compartments. Its features are listed below but not limited to:
 
 * It supports floating and boundary species.

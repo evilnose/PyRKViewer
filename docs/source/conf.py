@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath("../../plugins"))
 
 # -- Project information -----------------------------------------------------
 
-project = 'COYOTE or PyRKViewer'
-copyright = '2022, Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert M. Sauro'
+project = 'SBcoyote'
+copyright = '2023, Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert M. Sauro'
 author = 'Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert M. Sauro'
 
 # The full version, including alpha/beta/rc tags

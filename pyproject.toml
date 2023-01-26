@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "pyrkviewer"
-version = "1.2.4"
-description = "COYOTE: An Extensible Python Based Reaction Editor and Viewer."
+name = "SBcoyote"
+version = "1.2.9"
+description = "SBcoyote: An Extensible Python Based Reaction Editor and Viewer."
 readme = "README.md"
 authors = ["Jin Xu and Gary Geng et al <jxu2019@uw.edu>"]
 packages = [
@@ -56,11 +56,11 @@ tuna = "^0.5.5"
 simulation = ["tellurium"]
 
 [tool.poetry.scripts]
-coyote = 'rkviewer.main:main'
+SBcoyote = 'rkviewer.main:main'
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project.urls]
-Homepage = "https://github.com/sys-bio/PyRKViewer"
+Homepage = "https://github.com/sys-bio/SBcoyote"

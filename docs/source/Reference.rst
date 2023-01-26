@@ -2,7 +2,7 @@
 Core Reference
 ==================
 
-There is the core functionality of Coyote in this section.
+There is the core functionality of SBcoyote in this section.
 
 
 .. toctree::

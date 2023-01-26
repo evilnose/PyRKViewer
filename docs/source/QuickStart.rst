@@ -10,11 +10,11 @@ INSTALLMENT FOR USERS
 
 * Install Python 3.7, 3.8, 3.9 or 3.10 if not ready in the system.
 
-* Go to the command line and type ``pip install pyrkviewer``.
+* Go to the command line and type ``pip install SBcoyote``.
 
 * If wxPython won't get installed automatically, please try to install wxPython 4.1.1 or 4.2.0 manually referring to https://wxpython.org/pages/downloads/index.html. Note wxPython 4.1.1 does not apply to Python 3.10. 
 
-* To run the application, simply type in the command line ``coyote``.
+* To run the application, simply type in the command line ``SBcoyote``.
 
 -------------------------------------
 INSTALLMENT OPTIONS FOR DEVELOPERS
@@ -24,31 +24,31 @@ INSTALLMENT OPTIONS FOR DEVELOPERS
 
 1. If you do not have poetry installed on your computer, follow the quick steps shown here (https://python-poetry.org/docs/).
 
-2. Once you have poetry installed, you will download Coyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
+2. Once you have poetry installed, you will download SBcoyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
 
-3. Next, open your terminal and navigate to the directory containing Coyote.
+3. Next, open your terminal and navigate to the directory containing SBcoyote.
 
 4. Once inside the main folder of the application you can install the dependencies. To install the base dependencies simply run ``poetry install``. To install the optional ones as well, run ``poetry install -E simulation``. Note that this step may take a while. To learn more about which set of dependencies is right for you.
 
-5. Finally, you will run the application with the command ``poetry run coyote``.
+5. Finally, you will run the application with the command ``poetry run SBcoyote``.
 
-After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your Coyote application, and run the command ``poetry run coyote``.
+After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your SBcoyote application, and run the command ``poetry run SBcoyote``.
 
 **Installing without Poetry**
 
-Again, we strongly advise following the steps above, as it makes the set-up process much faster and simpler. However, to install Coyote without Poetry, here is the process you will follow:
+Again, we strongly advise following the steps above, as it makes the set-up process much faster and simpler. However, to install SBcoyote without Poetry, here is the process you will follow:
 
-1. First, download Coyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
+1. First, download SBcoyote. Click the green button at the top of this page that says “Code” and choose “Download ZIP”. You want to make sure you know where you have downloaded this. Unzip the folder to your desired directory.
 
-2. Next, open your terminal and navigate to the directory containing Coyote.
+2. Next, open your terminal and navigate to the directory containing SBcoyote.
 
 3. To install the base set of dependencies, you will run ``pip install -r requirements.txt``. Then if you want to install the optional dependencies as well, run ``pip install -r requirements-simualtion.txt``. To learn more about which set of dependencies is right for you.
 
-4. Finally, you will run the application with the command ``python -m rkviewer.main``. After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your Coyote application, and run the command ``python -m rkviewer.main``.
+4. Finally, you will run the application with the command ``python -m rkviewer.main``. After you have completed all of these steps, you will not have to repeat them every time you want to run the application. Once the setup is done you will only need to open the terminal, navigate into the folder that contains your SBcoyote application, and run the command ``python -m rkviewer.main``.
 
 **Running**
 
-* If you have poetry, simply run ``poetry run coyote``.
+* If you have poetry, simply run ``poetry run SBcoyote``.
 
 * Otherwise, in your virtual environment, run ``python -m rkviewer.main``.
 
@@ -76,7 +76,7 @@ The python version for development was 3.7.7.
 
 **Mac Notes:**
 
-* Note that on MacOS, if you wish to use Coyote in a virtual environment, use ``venv`` instead of ``virtualenv``, due to the latter's issues with wxPython.
+* Note that on MacOS, if you wish to use SBcoyote in a virtual environment, use ``venv`` instead of ``virtualenv``, due to the latter's issues with wxPython.
 
 * pyinstaller and wxPython require a python built with ``enable-framework`` on. Therefore, one should do ``env PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install 3.7.7`` and use that Python installation for building.
 

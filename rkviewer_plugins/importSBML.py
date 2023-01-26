@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.0.0: Author: Jin Xu (2022)
+Version 1.0.1: Author: Jin Xu (2023)
 """
 
 
@@ -27,7 +27,7 @@ class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='1.0.0',
+        version='1.0.1',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.ANALYSIS
@@ -1125,7 +1125,7 @@ class IMPORTSBML(WindowedPlugin):
                             position = [position[0]-TopLeft[0], position[1]-TopLeft[1]]
                             
                             if any(y < 0 for y in position):
-                                raise Exception("Coyote requires positive positions.")
+                                raise Exception("SBcoyote requires positive positions.")
 
 
                             if temp_id in comp_specs_in_list: #consider the compartments with species inside
@@ -1160,7 +1160,7 @@ class IMPORTSBML(WindowedPlugin):
                         # position = position_abs
                         position = [position[0]-TopLeft[0]-shift[0], position[1]-TopLeft[1]-shift[1]]
                         if any(y < 0 for y in position):
-                            raise Exception("Coyote requires positive positions.")
+                            raise Exception("SBcoyote requires positive positions.")
                         text_alignment = spec_text_alignment_list[i]
                         text_position = spec_text_position_list[i]
                         comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)

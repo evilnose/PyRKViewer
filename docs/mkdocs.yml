@@ -1,7 +1,7 @@
-site_name: COYOTE
-site_url: https://github.com/sys-bio/PyRKViewer
+site_name: SBcoyote
+site_url: https://github.com/sys-bio/SBcoyote
 site_description: Description...
-site_author:      Jin Xu
+site_author: Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert M. Sauro
  
 docs_dir: 'build'
 

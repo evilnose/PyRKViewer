@@ -22,7 +22,7 @@ Here you will find all of the necessary utilities and information to use this ap
 
 **- Reaction**: provides quick options to generate your reactions. These help us select multiple nodes and name them as reactants or products rather than go one by one using the creating panel (explained below). 
 
-**- Plugins**: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, for example, Add Reaction, Arrow Designer, Auto Layout, Random Network and Structural Analysis.
+**- Plugins**: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, for example, add reaction, arrow designer, auto layout, random network and structural analysis.
 
 **- Help**:
 
@@ -65,7 +65,7 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
 **- Appearance**: We have Arrow Designer. This allows you to personalize the arrows that appear in the reactions. A window will pop up where you will be able to move the circles to your desired visual. This will be implemented when you click Save. To restore the default arrow you may click arrow designer once again and click Restore Default.
 
-**- Utilities**: Here you will find Add Reaction, Random Network, Auto Layout, and etc. 
+**- Utilities**: Here you will find add reaction, random network, auto layout, and etc. 
 
 - Add Reaction: This allows you to add reactions choosing the type in a quick way. You want to click the Add Reaction utility and simply choose which type of reaction and click the nodes in the order of reactants and products.
 
@@ -129,19 +129,19 @@ You can right click on a node or on a selection of nodes to delete the selection
 
 *(Figure 7)*
 
-* Align Left will align all of your nodes vertically to be at the level of the left-most node in the selection.
+* Align Left will align nodes vertically to be at the level of the left-most node among all the selected nodes.
 
-* Align Right will align all of your nodes vertically to be at the level of the right-most node in the selection.
+* Align Right will align nodes vertically to be at the level of the right-most node among all the selected nodes.
 
-* Align center will align all of your nodes vertically to be at the level of the center (horizontally - x value) of all of the nodes in the selection.
+* Align Center will align nodes vertically to be at the level of the horizontal center node among all the selected nodes.
 
-* Align Top will align all of your nodes vertically to be at the level of the top node in the selection.
+* Align Top will align nodes horizontally to be at the level of the top node among all the selected nodes.
 
-* Align Bottom will align all of your nodes vertically to be at the level of the bottom node in the selection.
+* Align Bottom will align nodes horizontally to be at the level of the bottom node among all the selected nodes.
 
-* Align Middle will align all of your nodes vertically to be at the level of the center (vertically - y value) of all of the nodes in the selection.
+* Align Middle will align nodes horizontally to be at the level of the vertical center node among all the selected nodes.
 
-* Grid will create a grid view of all the nodes by rows.
+* Grid will create a grid view of all the nodes.
 
 * Arrange Horizontally will arrange all nodes so that they are evenly spaced out horizontally along the x position of the center of all the nodes.
 

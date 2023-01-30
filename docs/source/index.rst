@@ -18,7 +18,7 @@ It can draw reactants, products, reactions, and compartments. Its features are l
 
 * It supports floating and boundary species.
 * Reactions can be displayed using Bezier curves and straight lines.
-* It has plugin support, with some plugin examples: Arrow Designer, Random Network, Auto Layout and etc. 
+* It has plugin support, with some plugin examples: arrow designer, random network, auto layout and etc. 
 
 .. toctree::
    :maxdepth: 2

@@ -6,7 +6,7 @@
 ================================================
 SBcoyote DOCUMENTATION
 ================================================
-An Extensible Python Based Reaction Editor and Viewer
+An Extensible Python-Based Reaction Editor and Viewer
 
 Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert M. Sauro
 (JX and GG contributed equally)

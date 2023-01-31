@@ -1,5 +1,5 @@
 
-# SBcoyote: An Extensible Python Based Reaction Editor and Viewer.
+# SBcoyote: An Extensible Python-Based Reaction Editor and Viewer.
 
 ## Introduction
 

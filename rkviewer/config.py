@@ -33,7 +33,6 @@ def GetConfigDir ():
 def GetThemeSettingsPath ():
     sp = wx.StandardPaths.Get()
     config_dir = sp.GetUserConfigDir()
-    print(config_dir)
     return os.path.join(config_dir, 'rkViewer', 'settings.json')
 
 

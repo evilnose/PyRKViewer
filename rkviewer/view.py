@@ -854,8 +854,15 @@ class MainFrame(wx.Frame):
             pathname = fileDialog.GetPath()
             try:
                 with open(pathname, 'r') as file:
-                    net_json = json.load(file)
-                _net_index = self.controller.load_network(net_json)
+                    try:
+                        net_json = json.load(file)
+                    except:
+                        wx.LogError("Cannot load network from the file!")
+                        #wx.MessageBox("Unable to open the clipboard", "Error")
+                try:
+                    _net_index = self.controller.load_network(net_json)
+                except:
+                    wx.LogError("Cannot load network from the file!")
             except IOError:
                 wx.LogError("Cannot load network from file '{}'.".format(pathname))
 

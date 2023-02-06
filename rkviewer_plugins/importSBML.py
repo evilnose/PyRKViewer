@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.0.1: Author: Jin Xu (2023)
+Version 1.0.2: Author: Jin Xu (2023)
 """
 
 
@@ -27,7 +27,7 @@ class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='1.0.1',
+        version='1.0.2',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.ANALYSIS
@@ -195,12 +195,25 @@ class IMPORTSBML(WindowedPlugin):
                 #     if showDialogues:
                 #         wx.MessageBox("There is no layout information, so positions are randomly assigned.", "Message", wx.OK | wx.ICON_INFORMATION)
                 # else:
+
+                layout_width = 9900.
+                layout_height = 6100.
                 if mplugin is not None:
                     layout = mplugin.getLayout(0)
                     # if layout is None:
                     #     if showDialogues:
                     #         wx.MessageBox("There is no layout information, so positions are randomly assigned.", "Message", wx.OK | wx.ICON_INFORMATION)
                     # else:
+                    try:
+                        layout_width = layout.getDimensions().getWidth()
+                        layout_height = layout.getDimensions().getHeight()
+                    except:
+                        layout_width = 9900.
+                        layout_height = 6100.
+                    if layout_width >= 10000 or layout_height >= 6200:
+                        if showDialogues:
+                            wx.MessageBox("Network layout is beyond the canvas size!.", "Message", wx.OK | wx.ICON_INFORMATION)
+
                     if layout is not None:
                         numCompGlyphs = layout.getNumCompartmentGlyphs()
                         numSpecGlyphs = layout.getNumSpeciesGlyphs()
@@ -1078,9 +1091,11 @@ class IMPORTSBML(WindowedPlugin):
                         temp_id = Comps_ids[i]
                         
                         vol= model.getCompartmentVolume(i)
+                        if math.isnan(vol):
+                            vol = 1.
                         if temp_id == "_compartment_default_":
                             api.add_compartment(net_index, id=temp_id, volume = vol,
-                            size=Vec2(3900,2400), position=Vec2(10,10),
+                            size=Vec2(layout_width,layout_height), position=Vec2(10,10),
                             fill_color = api.Color(255, 255, 255, 255), #the last digit for transparent
                             border_color = api.Color(255, 255, 255, 255),
                             border_width = comp_border_width)
@@ -1109,7 +1124,7 @@ class IMPORTSBML(WindowedPlugin):
                                 # dimension = [800,800]
                                 # position = [40,40]
                                 # the whole size of the compartment: 4000*2500
-                                dimension = [3900,2400]
+                                dimension = [layout_width, layout_height]
                                 position = [10,10]
                                 comp_fill_color = (255, 255, 255, 255) #the last digit for transparent
                                 comp_border_color = (255, 255, 255, 255)
@@ -1130,7 +1145,7 @@ class IMPORTSBML(WindowedPlugin):
 
                             if temp_id in comp_specs_in_list: #consider the compartments with species inside
                             
-                                if position[0] > 3900 or position[1] > 2400: #beyond the canvas size
+                                if position[0] > layout_width or position[1] > layout_height: #beyond the canvas size
                                     shift = position
                                     position = [position[0]-shift[0], position[1]-shift[1]]
                                 if len(comp_fill_color) == 3:
@@ -1711,7 +1726,9 @@ class IMPORTSBML(WindowedPlugin):
                     for i in range(numComps):
                         temp_id = Comps_ids[i]
                         vol= model.getCompartmentVolume(i)
-                        dimension = [3900,2400]
+                        if math.isnan(vol):
+                            vol = 1.
+                        dimension = [layout_width,layout_height]
                         position = [10,10]
 
                         api.add_compartment(net_index, id=temp_id, volume = vol,

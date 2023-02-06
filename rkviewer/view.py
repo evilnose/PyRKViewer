@@ -375,8 +375,8 @@ class MainPanel(wx.Panel):
         self.canvas = Canvas(self.controller, zoom_slider, self,
                              size=(get_theme('canvas_width'),
                                    get_theme('canvas_height')),
-                             realsize=(4 * get_theme('canvas_width'),
-                                       4 * get_theme('canvas_height')),)
+                             realsize=(get_theme('real_canvas_width'),
+                                       get_theme('real_canvas_height')),)
         self.canvas.SetScrollRate(10, 10)
 
         # The bg of the available canvas will be drawn by canvas in OnPaint()

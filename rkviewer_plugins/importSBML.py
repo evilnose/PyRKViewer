@@ -1474,6 +1474,7 @@ class IMPORTSBML(WindowedPlugin):
                                 reaction_line_width = rxn_render[0][2]
 
                         try:
+                            
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
                             dst_corr = []
@@ -1504,18 +1505,26 @@ class IMPORTSBML(WindowedPlugin):
                                     if comp_id == allCompartments[m].id:
                                         comp_position = allCompartments[m].position
                                         comp_size = allCompartments[m].size
+                                        compColor = allCompartments[m].fill_color
+                                        comp_fill_color = [compColor.r, compColor.g, compColor.b, compColor.a]
+                                        spec_fill_color = comp_fill_color
+                                        spec_border_color = comp_fill_color
+                                        text_line_color = comp_fill_color
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
 
+
                                 node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0] - 60.)), 
                                                 comp_position[1] + math.trunc (_random.random()*(comp_size[1] - 40.))]
-                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(60,40), floating_node = True,
+                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(10,10), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
                                 border_width=spec_border_width, shape_index=shapeIdx)
-                                
+                                api.set_node_shape_property(net_index, nodeIdx_temp, -1, "font_color", 
+                                    api.Color(text_line_color[0], text_line_color[1], text_line_color[2], text_line_color[3]))
+
                                 src_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
 
@@ -1535,17 +1544,24 @@ class IMPORTSBML(WindowedPlugin):
                                     if comp_id == allCompartments[m].id:
                                         comp_position = allCompartments[m].position
                                         comp_size = allCompartments[m].size
+                                        compColor = allCompartments[m].fill_color
+                                        comp_fill_color = [compColor.r, compColor.g, compColor.b, compColor.a]
+                                        spec_fill_color = comp_fill_color
+                                        spec_border_color = comp_fill_color
+                                        text_line_color = comp_fill_color
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
                                 
                                 node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0]-60.)), 
                                                 comp_position[1] + math.trunc (_random.random()*(comp_size[1]-40.))]
-                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(60,40), floating_node = True,
+                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(10,10), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
                                 border_width=spec_border_width, shape_index=shapeIdx)
+                                api.set_node_shape_property(net_index, nodeIdx_temp, -1, "font_color", 
+                                    api.Color(text_line_color[0], text_line_color[1], text_line_color[2], text_line_color[3]))
                                 
                                 dst_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
@@ -1639,17 +1655,25 @@ class IMPORTSBML(WindowedPlugin):
                                     if comp_id == allCompartments[m].id:
                                         comp_position = allCompartments[m].position
                                         comp_size = allCompartments[m].size
+                                        compColor = allCompartments[m].fill_color
+                                        comp_fill_color = [compColor.r, compColor.g, compColor.b, compColor.a]
+                                        spec_fill_color = comp_fill_color
+                                        spec_border_color = comp_fill_color
+                                        text_line_color = comp_fill_color
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
 
                                 node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0] - 60.)), 
                                                 comp_position[1] + math.trunc (_random.random()*(comp_size[1] - 40.))]
-                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(60,40), floating_node = True,
+                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(10,10), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
                                 border_width=spec_border_width, shape_index=shapeIdx)
+                                api.set_node_shape_property(net_index, nodeIdx_temp, -1, "font_color", 
+                                    api.Color(text_line_color[0], text_line_color[1], text_line_color[2], text_line_color[3]))
+                             
                                 
                                 src_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
@@ -1670,17 +1694,25 @@ class IMPORTSBML(WindowedPlugin):
                                     if comp_id == allCompartments[m].id:
                                         comp_position = allCompartments[m].position
                                         comp_size = allCompartments[m].size
+                                        compColor = allCompartments[m].fill_color
+                                        comp_fill_color = [compColor.r, compColor.g, compColor.b, compColor.a]
+                                        spec_fill_color = comp_fill_color
+                                        spec_border_color = comp_fill_color
+                                        text_line_color = comp_fill_color
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
                                 
                                 node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0]-60.)), 
                                                 comp_position[1] + math.trunc (_random.random()*(comp_size[1]-40.))]
-                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(60,40), floating_node = True,
+                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(10,10), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
                                 border_width=spec_border_width, shape_index=shapeIdx)
+                                api.set_node_shape_property(net_index, nodeIdx_temp, -1, "font_color", 
+                                    api.Color(text_line_color[0], text_line_color[1], text_line_color[2], text_line_color[3]))
+                             
                                 
                                 dst_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1

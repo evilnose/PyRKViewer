@@ -340,7 +340,10 @@ class IMPORTSBML(WindowedPlugin):
                                 specRefGlyph = reactionGlyph.getSpeciesReferenceGlyph(j)
                                 specRefGlyph_id = specRefGlyph.getId()
                                 curve = specRefGlyph.getCurve() 
-                                spec_handle = []                             
+                                spec_handle = []  
+                                num_curve = curve.getNumCurveSegments()
+                                line_start_list = []
+                                line_end_list = []                            
                                 for segment in curve.getListOfCurveSegments():
                                     line_start_x = segment.getStart().getXOffset()
                                     line_start_y = segment.getStart().getYOffset()
@@ -348,31 +351,57 @@ class IMPORTSBML(WindowedPlugin):
                                     line_end_y = segment.getEnd().getYOffset()
                                     line_start_pt =  [line_start_x, line_start_y]
                                     line_end_pt = [line_end_x, line_end_y]
-                                    try:
-                                        if math.dist(line_start_pt, center_pt) <= math.dist(line_end_pt, center_pt):
-                                            #line starts from center
-                                            try:#bezier
-                                                center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
-                                                            segment.getBasePoint1().getYOffset()]                                
-                                                spec_handle = [segment.getBasePoint2().getXOffset(),
-                                                        segment.getBasePoint2().getYOffset()]
-                                            except:#straight
-                                                center_handle_candidate = center_pt
-                                                spec_handle = center_pt
-                                        else:
-                                            #line starts from species
-                                            try: #bezier
-                                                spec_handle = [segment.getBasePoint1().getXOffset(), 
-                                                            segment.getBasePoint1().getYOffset()]                                
-                                                center_handle_candidate = [segment.getBasePoint2().getXOffset(),
-                                                        segment.getBasePoint2().getYOffset()]
-                                            except: #straight
-                                                center_handle_candidate = center_pt
-                                                spec_handle = center_pt
+                                    line_start_list.append(line_start_pt)
+                                    line_end_list.append(line_end_pt)
+                                try:
+                                    line_start_pt =  [line_start_list[0][0], line_start_list[0][1]]
+                                    line_end_pt = [line_end_list[num_curve-1][0], line_end_list[num_curve-1][1]]
+                                except:
+                                    line_start_pt = []
+                                    line_end_pt = []
 
-                                    except:
-                                        center_handle_candidate = []
-                                        spec_handle = []
+                                
+                                modifier_lineend_pos = []
+                                spec_lineend_pos = []
+
+                                try:
+                                    dist_start_center = math.sqrt((line_start_pt[0]-center_pt[0])*(line_start_pt[0]-center_pt[0])+(line_start_pt[1]-center_pt[1])*(line_start_pt[1]-center_pt[1]))
+                                    dist_end_center = math.sqrt((line_end_pt[0]-center_pt[0])*(line_end_pt[0]-center_pt[0])+(line_end_pt[1]-center_pt[1])*(line_end_pt[1]-center_pt[1]))
+                                    #if math.sqrt(line_start_pt, center_pt) <= math.dist(line_end_pt, center_pt):
+                                    if dist_start_center <= dist_end_center:
+                                        #line starts from center
+                                        spec_lineend_pos = line_end_pt
+                                        modifier_lineend_pos = line_start_pt
+                                        try: #bezier 
+                                            center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
+                                                        segment.getBasePoint1().getYOffset()]                                
+                                            spec_handle = [segment.getBasePoint2().getXOffset(),
+                                                    segment.getBasePoint2().getYOffset()]
+                                        except: #straight
+                                            spec_handle = [.5*(center_pt[0]+line_end_pt[0]),
+                                            .5*(center_pt[1]+line_end_pt[1])]
+                                            center_handle_candidate = center_pt
+                                            #spec_handle = center_pt
+                                    else:
+                                        #line starts from species
+                                        spec_lineend_pos = line_start_pt
+                                        modifier_lineend_pos = line_end_pt
+                                        try: #bezier
+                                            spec_handle = [segment.getBasePoint1().getXOffset(), 
+                                                        segment.getBasePoint1().getYOffset()]                                
+                                            center_handle_candidate = [segment.getBasePoint2().getXOffset(),
+                                                    segment.getBasePoint2().getYOffset()]
+                                        except: #straight
+                                            spec_handle = [.5*(center_pt[0]+line_start_pt[0]),
+                                            .5*(center_pt[1]+line_start_pt[1])]
+                                            # center_handle_candidate = center_pt
+                                            center_handle_candidate = center_pt
+                                            #spec_handle = center_pt
+
+
+                                except:
+                                    center_handle_candidate = []
+                                    spec_handle = []
 
                                 role = specRefGlyph.getRoleString()
                                 specGlyph_id = specRefGlyph.getSpeciesGlyphId()
@@ -458,10 +487,10 @@ class IMPORTSBML(WindowedPlugin):
 
                                 if role == "substrate": #it is a rct
                                     #rct_specGlyph_temp_list.append(specGlyph_id)
-                                    rct_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle])
+                                    rct_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
                                 elif role == "product": #it is a prd
                                     #prd_specGlyph_temp_list.append(specGlyph_id)
-                                    prd_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle])
+                                    prd_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
                                 elif role == "modifier" or role == 'activator': #it is a modifier
                                     mod_specGlyph_temp_list.append(specGlyph_id)
                             #rct_specGlyph_list.append(rct_specGlyph_temp_list)
@@ -1370,6 +1399,8 @@ class IMPORTSBML(WindowedPlugin):
                         mod = []
                         src_handle = []
                         dst_handle = []
+                        src_lineend_pos = []
+                        dst_lineend_pos = []
                         temp_id = reaction_id_list[i]
                         kinetics = kinetics_list[i]
                         rct_num = len(rct_specGlyph_handle_list[i])
@@ -1400,7 +1431,8 @@ class IMPORTSBML(WindowedPlugin):
                                         rct_idx = nodeIdx_specGlyph_whole_list[k][0]
                                 src.append(rct_idx)
                                 src_handle.append(rct_specGlyph_handle_list[i][j][1])
-
+                                src_lineend_pos.append(rct_specGlyph_handle_list[i][j][3])
+                            
                             for j in range(prd_num):
                                 temp_specGlyph_id = prd_specGlyph_handle_list[i][j][0]
                                 for k in range(numSpec_in_reaction):
@@ -1408,6 +1440,7 @@ class IMPORTSBML(WindowedPlugin):
                                         prd_idx = nodeIdx_specGlyph_whole_list[k][0]
                                 dst.append(prd_idx)
                                 dst_handle.append(prd_specGlyph_handle_list[i][j][1])
+                                dst_lineend_pos.append(prd_specGlyph_handle_list[i][j][3])
 
                             for j in range(mod_num):
                                 if len(mod_specGlyph_list[i]) != 0:
@@ -1474,7 +1507,6 @@ class IMPORTSBML(WindowedPlugin):
                                 reaction_line_width = rxn_render[0][2]
 
                         try:
-                            
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
                             dst_corr = []
@@ -1499,6 +1531,7 @@ class IMPORTSBML(WindowedPlugin):
                             if len(src_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
                                 comp_node_id = allNodes[dst_corr[0]].id 
+                                dst_node_id = comp_node_id #pick a product node
                                 # assume the dummy node is in the same compartment as the first src/dst node
                                 comp_id = model.getCompartmentIdSpeciesIsIn(comp_node_id)
                                 for m in range(len(allCompartments)):
@@ -1510,14 +1543,21 @@ class IMPORTSBML(WindowedPlugin):
                                         spec_fill_color = comp_fill_color
                                         spec_border_color = comp_fill_color
                                         text_line_color = comp_fill_color
+                                for m in range(len(allNodes)):
+                                    if dst_node_id == allNodes[m].id:
+                                        dst_node_pos = allNodes[m].position
+                                        dst_node_size = allNodes[m].size
+                                        dst_node_c_pos = [dst_node_pos[0]+0.5*dst_node_size[0],
+                                                          dst_node_pos[1]+0.5*dst_node_size[1]]
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
 
 
-                                node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0] - 60.)), 
-                                                comp_position[1] + math.trunc (_random.random()*(comp_size[1] - 40.))]
-                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(10,10), floating_node = True,
+                                #node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0] - 60.)), 
+                                #                comp_position[1] + math.trunc (_random.random()*(comp_size[1] - 40.))]
+                                node_position = center_position
+                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(0.5*reaction_line_width,0.5*reaction_line_width), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
@@ -1528,8 +1568,12 @@ class IMPORTSBML(WindowedPlugin):
                                 src_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
 
-                                dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
-                                                            0.5*(node_position[1] + center_position[1])]
+                                #dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
+                                #                            0.5*(node_position[1] + center_position[1])]
+                                dummy_handle_position = [0.5*(dst_node_c_pos[0] + center_position[0]), 
+                                                            0.5*(dst_node_c_pos[1] + center_position[1])]
+                                #dummy_handle_position = center_position
+                                center_position = dummy_handle_position
                                 src_handle_shift.append(dummy_handle_position)
 
                                 for i in range(numComps):
@@ -1539,6 +1583,7 @@ class IMPORTSBML(WindowedPlugin):
                             if len(dst_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
                                 comp_node_id = allNodes[src_corr[0]].id
+                                src_node_id = comp_node_id #pick a rct node
                                 comp_id = model.getCompartmentIdSpeciesIsIn(comp_node_id)
                                 for m in range(len(allCompartments)):
                                     if comp_id == allCompartments[m].id:
@@ -1549,13 +1594,20 @@ class IMPORTSBML(WindowedPlugin):
                                         spec_fill_color = comp_fill_color
                                         spec_border_color = comp_fill_color
                                         text_line_color = comp_fill_color
+                                for m in range(len(allNodes)):
+                                    if src_node_id == allNodes[m].id:
+                                        src_node_pos = allNodes[m].position
+                                        src_node_size = allNodes[m].size
+                                        src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
+                                                          src_node_pos[1]+0.5*src_node_size[1]]
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
                                 
-                                node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0]-60.)), 
-                                                comp_position[1] + math.trunc (_random.random()*(comp_size[1]-40.))]
-                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(10,10), floating_node = True,
+                                #node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0]-60.)), 
+                                #                comp_position[1] + math.trunc (_random.random()*(comp_size[1]-40.))]
+                                node_position = center_position
+                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(0.5*reaction_line_width,0.5*reaction_line_width), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
@@ -1566,8 +1618,12 @@ class IMPORTSBML(WindowedPlugin):
                                 dst_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
 
-                                dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
-                                                            0.5*(node_position[1] + center_position[1])]
+                                #dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
+                                #                            0.5*(node_position[1] + center_position[1])]
+                                dummy_handle_position = [0.5*(src_node_c_pos[0] + center_position[0]), 
+                                                            0.5*(src_node_c_pos[1] + center_position[1])]
+                                #dummy_handle_position = center_position
+                                center_position = dummy_handle_position
                                 dst_handle_shift.append(dummy_handle_position)
 
                                 for i in range(numComps):
@@ -1649,6 +1705,8 @@ class IMPORTSBML(WindowedPlugin):
                             if len(src_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
                                 comp_node_id = allNodes[dst_corr[0]].id 
+
+                                dst_node_id = comp_node_id #pick a product node
                                 # assume the dummy node is in the same compartment as the first src/dst node
                                 comp_id = model.getCompartmentIdSpeciesIsIn(comp_node_id)
                                 for m in range(len(allCompartments)):
@@ -1660,35 +1718,49 @@ class IMPORTSBML(WindowedPlugin):
                                         spec_fill_color = comp_fill_color
                                         spec_border_color = comp_fill_color
                                         text_line_color = comp_fill_color
+                                for m in range(len(allNodes)):
+                                    if dst_node_id == allNodes[m].id:
+                                        dst_node_pos = allNodes[m].position
+                                        dst_node_size = allNodes[m].size
+                                        dst_node_c_pos = [dst_node_pos[0]+0.5*dst_node_size[0],
+                                                          dst_node_pos[1]+0.5*dst_node_size[1]]
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
 
-                                node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0] - 60.)), 
-                                                comp_position[1] + math.trunc (_random.random()*(comp_size[1] - 40.))]
-                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(10,10), floating_node = True,
+
+                                #node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0] - 60.)), 
+                                #                comp_position[1] + math.trunc (_random.random()*(comp_size[1] - 40.))]
+                                node_position = center_position
+                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(0.5*reaction_line_width,0.5*reaction_line_width), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
                                 border_width=spec_border_width, shape_index=shapeIdx)
                                 api.set_node_shape_property(net_index, nodeIdx_temp, -1, "font_color", 
                                     api.Color(text_line_color[0], text_line_color[1], text_line_color[2], text_line_color[3]))
-                             
-                                
+
                                 src_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
 
-                                dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
-                                                            0.5*(node_position[1] + center_position[1])]
+                                #dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
+                                #                            0.5*(node_position[1] + center_position[1])]
+                                dummy_handle_position = [0.5*(dst_node_c_pos[0] + center_position[0]), 
+                                                            0.5*(dst_node_c_pos[1] + center_position[1])]
+                                #dummy_handle_position = center_position
+                                center_position = dummy_handle_position
                                 src_handles.append(dummy_handle_position)
 
                                 for i in range(numComps):
                                     if comp_id == Comps_ids[i]:
                                         api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=i)
                             
+
                             if len(dst_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
                                 comp_node_id = allNodes[src_corr[0]].id
+
+                                src_node_id = comp_node_id #pick a rct node
                                 comp_id = model.getCompartmentIdSpeciesIsIn(comp_node_id)
                                 for m in range(len(allCompartments)):
                                     if comp_id == allCompartments[m].id:
@@ -1699,26 +1771,36 @@ class IMPORTSBML(WindowedPlugin):
                                         spec_fill_color = comp_fill_color
                                         spec_border_color = comp_fill_color
                                         text_line_color = comp_fill_color
+                                for m in range(len(allNodes)):
+                                    if src_node_id == allNodes[m].id:
+                                        src_node_pos = allNodes[m].position
+                                        src_node_size = allNodes[m].size
+                                        src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
+                                                          src_node_pos[1]+0.5*src_node_size[1]]
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
                                 
-                                node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0]-60.)), 
-                                                comp_position[1] + math.trunc (_random.random()*(comp_size[1]-40.))]
-                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(10,10), floating_node = True,
+                                #node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0]-60.)), 
+                                #                comp_position[1] + math.trunc (_random.random()*(comp_size[1]-40.))]
+                                node_position = center_position
+                                nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(0.5*reaction_line_width,0.5*reaction_line_width), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                 border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
                                 border_width=spec_border_width, shape_index=shapeIdx)
                                 api.set_node_shape_property(net_index, nodeIdx_temp, -1, "font_color", 
                                     api.Color(text_line_color[0], text_line_color[1], text_line_color[2], text_line_color[3]))
-                             
                                 
                                 dst_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
 
-                                dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
-                                                            0.5*(node_position[1] + center_position[1])]
+                                #dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
+                                #                            0.5*(node_position[1] + center_position[1])]
+                                dummy_handle_position = [0.5*(src_node_c_pos[0] + center_position[0]), 
+                                                            0.5*(src_node_c_pos[1] + center_position[1])]
+                                #dummy_handle_position = center_position
+                                center_position = dummy_handle_position
                                 dst_handles.append(dummy_handle_position)
 
                                 for i in range(numComps):
@@ -1965,12 +2047,12 @@ class IMPORTSBML(WindowedPlugin):
                         # if flag_add_rxn_err == 1:
                         #     wx.MessageBox("There are errors while loading this SBML file!", "Message", wx.OK | wx.ICON_INFORMATION)
                         
-            except:
-                if showDialogues:
-                    wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
+            # except:
+            #     if showDialogues:
+            #         wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
-            # except Exception as e:
-            #     raise Exception (e) 
+            except Exception as e:
+                raise Exception (e) 
 
 

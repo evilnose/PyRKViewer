@@ -334,6 +334,7 @@ class IMPORTSBML(WindowedPlugin):
                             mod_specGlyph_temp_list = []
 
                             center_handle = []
+
                             for j in range(numSpecRefGlyphs):
                                 alignment_name = TextAlignment.CENTER
                                 position_name = TextPosition.IN_NODE
@@ -343,65 +344,70 @@ class IMPORTSBML(WindowedPlugin):
                                 spec_handle = []  
                                 modifier_lineend_pos = []
                                 spec_lineend_pos = []
+                                center_handle_candidate = []
+                                spec_handle = []
                                 num_curve = curve.getNumCurveSegments()
-                                if num_curve == 1:
-                                    line_start_list = []
-                                    line_end_list = []                            
-                                    for segment in curve.getListOfCurveSegments():
-                                        line_start_x = segment.getStart().getXOffset()
-                                        line_start_y = segment.getStart().getYOffset()
-                                        line_end_x = segment.getEnd().getXOffset()
-                                        line_end_y = segment.getEnd().getYOffset()
-                                        line_start_pt =  [line_start_x, line_start_y]
-                                        line_end_pt = [line_end_x, line_end_y]
-                                        line_start_list.append(line_start_pt)
-                                        line_end_list.append(line_end_pt)
-                                    try:
-                                        line_start_pt =  [line_start_list[0][0], line_start_list[0][1]]
-                                        line_end_pt = [line_end_list[num_curve-1][0], line_end_list[num_curve-1][1]]
-                                    except:
-                                        line_start_pt = []
-                                        line_end_pt = []
+                                
+                                line_start_list = []
+                                line_end_list = []                            
+                                for segment in curve.getListOfCurveSegments():
+                                    line_start_x = segment.getStart().getXOffset()
+                                    line_start_y = segment.getStart().getYOffset()
+                                    line_end_x = segment.getEnd().getXOffset()
+                                    line_end_y = segment.getEnd().getYOffset()
+                                    line_start_pt =  [line_start_x, line_start_y]
+                                    line_end_pt = [line_end_x, line_end_y]
+                                    line_start_list.append(line_start_pt)
+                                    line_end_list.append(line_end_pt)
+                                try:
+                                    line_start_pt =  [line_start_list[0][0], line_start_list[0][1]]
+                                    line_end_pt = [line_end_list[num_curve-1][0], line_end_list[num_curve-1][1]]
+                                except:
+                                    line_start_pt = []
+                                    line_end_pt = []
 
 
-                                    try:
-                                        dist_start_center = math.sqrt((line_start_pt[0]-center_pt[0])*(line_start_pt[0]-center_pt[0])+(line_start_pt[1]-center_pt[1])*(line_start_pt[1]-center_pt[1]))
-                                        dist_end_center = math.sqrt((line_end_pt[0]-center_pt[0])*(line_end_pt[0]-center_pt[0])+(line_end_pt[1]-center_pt[1])*(line_end_pt[1]-center_pt[1]))
-                                        #if math.sqrt(line_start_pt, center_pt) <= math.dist(line_end_pt, center_pt):
-                                        if dist_start_center <= dist_end_center:
-                                            #line starts from center
-                                            spec_lineend_pos = line_end_pt
-                                            modifier_lineend_pos = line_start_pt
-                                            try: #bezier 
-                                                center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
-                                                            segment.getBasePoint1().getYOffset()]                                
-                                                spec_handle = [segment.getBasePoint2().getXOffset(),
-                                                        segment.getBasePoint2().getYOffset()]
-                                            except: #straight
-                                                spec_handle = [.5*(center_pt[0]+line_end_pt[0]),
-                                                .5*(center_pt[1]+line_end_pt[1])]
-                                                center_handle_candidate = center_pt
-                                                #spec_handle = center_pt
-                                        else:
-                                            #line starts from species
-                                            spec_lineend_pos = line_start_pt
-                                            modifier_lineend_pos = line_end_pt
-                                            try: #bezier
-                                                spec_handle = [segment.getBasePoint1().getXOffset(), 
-                                                            segment.getBasePoint1().getYOffset()]                                
-                                                center_handle_candidate = [segment.getBasePoint2().getXOffset(),
-                                                        segment.getBasePoint2().getYOffset()]
-                                            except: #straight
-                                                spec_handle = [.5*(center_pt[0]+line_start_pt[0]),
-                                                .5*(center_pt[1]+line_start_pt[1])]
-                                                # center_handle_candidate = center_pt
-                                                center_handle_candidate = center_pt
-                                                #spec_handle = center_pt
+                                try:
+                                    dist_start_center = math.sqrt((line_start_pt[0]-center_pt[0])*(line_start_pt[0]-center_pt[0])+(line_start_pt[1]-center_pt[1])*(line_start_pt[1]-center_pt[1]))
+                                    dist_end_center = math.sqrt((line_end_pt[0]-center_pt[0])*(line_end_pt[0]-center_pt[0])+(line_end_pt[1]-center_pt[1])*(line_end_pt[1]-center_pt[1]))
+                                    #if math.sqrt(line_start_pt, center_pt) <= math.dist(line_end_pt, center_pt):
+                                    if dist_start_center <= dist_end_center:
+                                        #line starts from center
+                                        spec_lineend_pos = line_end_pt
+                                        modifier_lineend_pos = line_start_pt
+                                        try: #bezier 
+                                            for segment in curve.getListOfCurveSegments():
+                                                if segment.getTypeCode() == 102: 
+                                                    #102 CubicBezier #107LineSegment
+                                                    center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
+                                                                segment.getBasePoint1().getYOffset()]                                
+                                                    spec_handle = [segment.getBasePoint2().getXOffset(),
+                                                            segment.getBasePoint2().getYOffset()]
+                                        except: #straight
+                                            spec_handle = [.5*(center_pt[0]+line_end_pt[0]),
+                                            .5*(center_pt[1]+line_end_pt[1])]
+                                            center_handle_candidate = center_pt
+                                            #spec_handle = center_pt
+                                    else:
+                                        #line starts from species
+                                        spec_lineend_pos = line_start_pt
+                                        modifier_lineend_pos = line_end_pt
+                                        try: #bezier
+                                            for segment in curve.getListOfCurveSegments():
+                                                if segment.getTypeCode() == 102: 
+                                                    #102 CubicBezier #107LineSegment
+                                                    spec_handle = [segment.getBasePoint1().getXOffset(), 
+                                                                segment.getBasePoint1().getYOffset()]                                
+                                                    center_handle_candidate = [segment.getBasePoint2().getXOffset(),
+                                                            segment.getBasePoint2().getYOffset()]
+                                        except: #straight
+                                            spec_handle = [.5*(center_pt[0]+line_start_pt[0]),
+                                            .5*(center_pt[1]+line_start_pt[1])]
+                                            # center_handle_candidate = center_pt
+                                            center_handle_candidate = center_pt
+                                            #spec_handle = center_pt
 
-                                    except:
-                                        center_handle_candidate = []
-                                        spec_handle = []
-                                else:
+                                except:
                                     center_handle_candidate = []
                                     spec_handle = []
 

@@ -341,65 +341,67 @@ class IMPORTSBML(WindowedPlugin):
                                 specRefGlyph_id = specRefGlyph.getId()
                                 curve = specRefGlyph.getCurve() 
                                 spec_handle = []  
-                                num_curve = curve.getNumCurveSegments()
-                                line_start_list = []
-                                line_end_list = []                            
-                                for segment in curve.getListOfCurveSegments():
-                                    line_start_x = segment.getStart().getXOffset()
-                                    line_start_y = segment.getStart().getYOffset()
-                                    line_end_x = segment.getEnd().getXOffset()
-                                    line_end_y = segment.getEnd().getYOffset()
-                                    line_start_pt =  [line_start_x, line_start_y]
-                                    line_end_pt = [line_end_x, line_end_y]
-                                    line_start_list.append(line_start_pt)
-                                    line_end_list.append(line_end_pt)
-                                try:
-                                    line_start_pt =  [line_start_list[0][0], line_start_list[0][1]]
-                                    line_end_pt = [line_end_list[num_curve-1][0], line_end_list[num_curve-1][1]]
-                                except:
-                                    line_start_pt = []
-                                    line_end_pt = []
-
-                                
                                 modifier_lineend_pos = []
                                 spec_lineend_pos = []
-
-                                try:
-                                    dist_start_center = math.sqrt((line_start_pt[0]-center_pt[0])*(line_start_pt[0]-center_pt[0])+(line_start_pt[1]-center_pt[1])*(line_start_pt[1]-center_pt[1]))
-                                    dist_end_center = math.sqrt((line_end_pt[0]-center_pt[0])*(line_end_pt[0]-center_pt[0])+(line_end_pt[1]-center_pt[1])*(line_end_pt[1]-center_pt[1]))
-                                    #if math.sqrt(line_start_pt, center_pt) <= math.dist(line_end_pt, center_pt):
-                                    if dist_start_center <= dist_end_center:
-                                        #line starts from center
-                                        spec_lineend_pos = line_end_pt
-                                        modifier_lineend_pos = line_start_pt
-                                        try: #bezier 
-                                            center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
-                                                        segment.getBasePoint1().getYOffset()]                                
-                                            spec_handle = [segment.getBasePoint2().getXOffset(),
-                                                    segment.getBasePoint2().getYOffset()]
-                                        except: #straight
-                                            spec_handle = [.5*(center_pt[0]+line_end_pt[0]),
-                                            .5*(center_pt[1]+line_end_pt[1])]
-                                            center_handle_candidate = center_pt
-                                            #spec_handle = center_pt
-                                    else:
-                                        #line starts from species
-                                        spec_lineend_pos = line_start_pt
-                                        modifier_lineend_pos = line_end_pt
-                                        try: #bezier
-                                            spec_handle = [segment.getBasePoint1().getXOffset(), 
-                                                        segment.getBasePoint1().getYOffset()]                                
-                                            center_handle_candidate = [segment.getBasePoint2().getXOffset(),
-                                                    segment.getBasePoint2().getYOffset()]
-                                        except: #straight
-                                            spec_handle = [.5*(center_pt[0]+line_start_pt[0]),
-                                            .5*(center_pt[1]+line_start_pt[1])]
-                                            # center_handle_candidate = center_pt
-                                            center_handle_candidate = center_pt
-                                            #spec_handle = center_pt
+                                num_curve = curve.getNumCurveSegments()
+                                if num_curve == 1:
+                                    line_start_list = []
+                                    line_end_list = []                            
+                                    for segment in curve.getListOfCurveSegments():
+                                        line_start_x = segment.getStart().getXOffset()
+                                        line_start_y = segment.getStart().getYOffset()
+                                        line_end_x = segment.getEnd().getXOffset()
+                                        line_end_y = segment.getEnd().getYOffset()
+                                        line_start_pt =  [line_start_x, line_start_y]
+                                        line_end_pt = [line_end_x, line_end_y]
+                                        line_start_list.append(line_start_pt)
+                                        line_end_list.append(line_end_pt)
+                                    try:
+                                        line_start_pt =  [line_start_list[0][0], line_start_list[0][1]]
+                                        line_end_pt = [line_end_list[num_curve-1][0], line_end_list[num_curve-1][1]]
+                                    except:
+                                        line_start_pt = []
+                                        line_end_pt = []
 
 
-                                except:
+                                    try:
+                                        dist_start_center = math.sqrt((line_start_pt[0]-center_pt[0])*(line_start_pt[0]-center_pt[0])+(line_start_pt[1]-center_pt[1])*(line_start_pt[1]-center_pt[1]))
+                                        dist_end_center = math.sqrt((line_end_pt[0]-center_pt[0])*(line_end_pt[0]-center_pt[0])+(line_end_pt[1]-center_pt[1])*(line_end_pt[1]-center_pt[1]))
+                                        #if math.sqrt(line_start_pt, center_pt) <= math.dist(line_end_pt, center_pt):
+                                        if dist_start_center <= dist_end_center:
+                                            #line starts from center
+                                            spec_lineend_pos = line_end_pt
+                                            modifier_lineend_pos = line_start_pt
+                                            try: #bezier 
+                                                center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
+                                                            segment.getBasePoint1().getYOffset()]                                
+                                                spec_handle = [segment.getBasePoint2().getXOffset(),
+                                                        segment.getBasePoint2().getYOffset()]
+                                            except: #straight
+                                                spec_handle = [.5*(center_pt[0]+line_end_pt[0]),
+                                                .5*(center_pt[1]+line_end_pt[1])]
+                                                center_handle_candidate = center_pt
+                                                #spec_handle = center_pt
+                                        else:
+                                            #line starts from species
+                                            spec_lineend_pos = line_start_pt
+                                            modifier_lineend_pos = line_end_pt
+                                            try: #bezier
+                                                spec_handle = [segment.getBasePoint1().getXOffset(), 
+                                                            segment.getBasePoint1().getYOffset()]                                
+                                                center_handle_candidate = [segment.getBasePoint2().getXOffset(),
+                                                        segment.getBasePoint2().getYOffset()]
+                                            except: #straight
+                                                spec_handle = [.5*(center_pt[0]+line_start_pt[0]),
+                                                .5*(center_pt[1]+line_start_pt[1])]
+                                                # center_handle_candidate = center_pt
+                                                center_handle_candidate = center_pt
+                                                #spec_handle = center_pt
+
+                                    except:
+                                        center_handle_candidate = []
+                                        spec_handle = []
+                                else:
                                     center_handle_candidate = []
                                     spec_handle = []
 
@@ -485,10 +487,10 @@ class IMPORTSBML(WindowedPlugin):
                                     center_handle.append(center_handle_candidate)
 
 
-                                if role == "substrate": #it is a rct
+                                if role == "substrate" or role == "sidesubstrate": #it is a rct
                                     #rct_specGlyph_temp_list.append(specGlyph_id)
                                     rct_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
-                                elif role == "product": #it is a prd
+                                elif role == "product" or role == "sideproduct": #it is a prd
                                     #prd_specGlyph_temp_list.append(specGlyph_id)
                                     prd_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
                                 elif role == "modifier" or role == 'activator': #it is a modifier
@@ -1422,7 +1424,6 @@ class IMPORTSBML(WindowedPlugin):
                         #         if temp_specGlyph_id == nodeIdx_specGlyph_whole_list[k][1]:
                         #             prd_idx = nodeIdx_specGlyph_whole_list[k][0]
                         #     dst.append(prd_idx)
-                        
                         if rct_num != 0 or prd_num != 0:
                             for j in range(rct_num):
                                 temp_specGlyph_id = rct_specGlyph_handle_list[i][j][0]
@@ -1641,7 +1642,7 @@ class IMPORTSBML(WindowedPlugin):
                             
                             if len(reaction_line_color) == 3:
                                 reaction_line_color.append(255)  
-                
+                            
                             idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
                             fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
                             line_thickness=reaction_line_width, modifiers = mod)
@@ -1656,6 +1657,7 @@ class IMPORTSBML(WindowedPlugin):
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
                             
                         except: #There is no info about the center/handle positions, so set as default 
+                            
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
                             dst_corr = []
@@ -1817,7 +1819,7 @@ class IMPORTSBML(WindowedPlugin):
                             if len(reaction_line_color)==3:
                                 reaction_line_color.append(255)
 
-                            try:
+                            try: 
                                 idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
                                 line_thickness=reaction_line_width, modifiers = mod)
@@ -1830,17 +1832,19 @@ class IMPORTSBML(WindowedPlugin):
                                 line_thickness=reaction_line_width, modifiers = mod)
                                 api.update_reaction(net_index, idx, ratelaw = kinetics,
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-                               
-                                
+                                                             
+                            api.update_reaction(net_index, idx, 
+                                 center_pos = Vec2(center_position[0],center_position[1]),  
+                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
 
-                            handles_Vec2 = []  
-                            if [] not in handles:      
-                                for i in range(len(handles)):
-                                    handles_Vec2.append(Vec2(handles[i][0],handles[i][1]))
-                                api.update_reaction(net_index, idx, 
-                                center_pos = Vec2(center_position[0],center_position[1]), 
-                                handle_positions=handles_Vec2, 
-                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
+                            # handles_Vec2 = []  
+                            # if [] not in handles:      
+                            #     for i in range(len(handles)):
+                            #         handles_Vec2.append(Vec2(handles[i][0],handles[i][1]))
+                            #     api.update_reaction(net_index, idx, 
+                            #     center_pos = Vec2(center_position[0],center_position[1]), 
+                            #     handle_positions=handles_Vec2, 
+                            #     fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
 
 
                 else: # there is no layout information, assign position randomly and size as default

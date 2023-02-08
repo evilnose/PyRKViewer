@@ -1654,7 +1654,7 @@ class IMPORTSBML(WindowedPlugin):
                                 center_pos = Vec2(center_position[0],center_position[1]), 
                                 handle_positions=handles_Vec2, 
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-
+                            
                         except: #There is no info about the center/handle positions, so set as default 
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
@@ -1817,12 +1817,21 @@ class IMPORTSBML(WindowedPlugin):
                             if len(reaction_line_color)==3:
                                 reaction_line_color.append(255)
 
-                            idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
-                            fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
-                            line_thickness=reaction_line_width, modifiers = mod)
-                            api.update_reaction(net_index, idx, ratelaw = kinetics,
-                            fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-                           
+                            try:
+                                idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
+                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
+                                line_thickness=reaction_line_width, modifiers = mod)
+                                api.update_reaction(net_index, idx, ratelaw = kinetics,
+                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
+                            except:
+                                #rxn_id_duplicated
+                                idx = api.add_reaction(net_index, id=temp_id + "_duplicate", reactants=src_corr, products=dst_corr,
+                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
+                                line_thickness=reaction_line_width, modifiers = mod)
+                                api.update_reaction(net_index, idx, ratelaw = kinetics,
+                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
+                               
+                                
 
                             handles_Vec2 = []  
                             if [] not in handles:      

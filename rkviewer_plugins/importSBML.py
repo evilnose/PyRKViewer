@@ -440,6 +440,8 @@ class IMPORTSBML(WindowedPlugin):
                                 
                                 try:
                                     concentration = spec.getInitialConcentration()
+                                    if math.nan(concentration):
+                                        concentration = 1
                                 except:
                                     concentration = 1.
                                 spec_boundingbox = specGlyph.getBoundingBox()
@@ -530,6 +532,8 @@ class IMPORTSBML(WindowedPlugin):
                                 spec_position_list.append([pos_x,pos_y])
                                 try:
                                     concentration = spec.getInitialConcentration()
+                                    if math.nan(concentration):
+                                        concentration = 1
                                 except:
                                     concentration = 1.
                                 spec_concentration_list.append(concentration)
@@ -1875,6 +1879,8 @@ class IMPORTSBML(WindowedPlugin):
                         comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                         try:
                             temp_concentration = model.getSpeciesInitialConcentration(temp_id)
+                            if math.nan(temp_concentration):
+                                temp_concentration = 1
                         except:
                             temp_concentration = 1.
                         if spec_border_width == 0.:
@@ -1894,6 +1900,8 @@ class IMPORTSBML(WindowedPlugin):
                         comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                         try:
                             temp_concentration = model.getSpeciesInitialConcentration(temp_id)
+                            if math.nan(temp_concentration):
+                                temp_concentration = 1
                         except:
                             temp_concentration = 1.0
                         if spec_border_width == 0.:

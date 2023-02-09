@@ -375,14 +375,19 @@ class IMPORTSBML(WindowedPlugin):
                                         #line starts from center
                                         spec_lineend_pos = line_end_pt
                                         modifier_lineend_pos = line_start_pt
-                                        try: #bezier 
-                                            for segment in curve.getListOfCurveSegments():
-                                                if segment.getTypeCode() == 102: 
-                                                    #102 CubicBezier #107LineSegment
-                                                    center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
+                                        try: #bezier
+                                            if num_curve == 1:
+                                                center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
                                                                 segment.getBasePoint1().getYOffset()]                                
-                                                    spec_handle = [segment.getBasePoint2().getXOffset(),
+                                                spec_handle = [segment.getBasePoint2().getXOffset(),
                                                             segment.getBasePoint2().getYOffset()]
+                                            else:        
+                                                for segment in curve.getListOfCurveSegments():
+                                                    if segment.getTypeCode() == 102: 
+                                                        #102 CubicBezier #107LineSegment
+                                                        center_handle_candidate = center_pt                              
+                                                        spec_handle = [segment.getBasePoint2().getXOffset(),
+                                                                segment.getBasePoint2().getYOffset()]
                                         except: #straight
                                             spec_handle = [.5*(center_pt[0]+line_end_pt[0]),
                                             .5*(center_pt[1]+line_end_pt[1])]
@@ -393,13 +398,18 @@ class IMPORTSBML(WindowedPlugin):
                                         spec_lineend_pos = line_start_pt
                                         modifier_lineend_pos = line_end_pt
                                         try: #bezier
-                                            for segment in curve.getListOfCurveSegments():
-                                                if segment.getTypeCode() == 102: 
-                                                    #102 CubicBezier #107LineSegment
-                                                    spec_handle = [segment.getBasePoint1().getXOffset(), 
-                                                                segment.getBasePoint1().getYOffset()]                                
-                                                    center_handle_candidate = [segment.getBasePoint2().getXOffset(),
-                                                            segment.getBasePoint2().getYOffset()]
+                                            if num_curve == 1:
+                                                spec_handle = [segment.getBasePoint1().getXOffset(), 
+                                                                    segment.getBasePoint1().getYOffset()]                                
+                                                center_handle_candidate = [segment.getBasePoint2().getXOffset(),
+                                                                segment.getBasePoint2().getYOffset()]
+                                            else:
+                                                for segment in curve.getListOfCurveSegments():
+                                                    if segment.getTypeCode() == 102: 
+                                                        #102 CubicBezier #107LineSegment
+                                                        spec_handle = [segment.getBasePoint1().getXOffset(), 
+                                                                    segment.getBasePoint1().getYOffset()]                                
+                                                        center_handle_candidate = center_pt
                                         except: #straight
                                             spec_handle = [.5*(center_pt[0]+line_start_pt[0]),
                                             .5*(center_pt[1]+line_start_pt[1])]
@@ -464,15 +474,16 @@ class IMPORTSBML(WindowedPlugin):
                                     #     position_name = TextPosition.BELOW
                                     # if text_pos_y == pos_y and text_pos_x != pos_x:
                                     #     position_name = TextPosition.NEXT_TO 
-                                    if text_pos_x < pos_x - reaction_line_width:
+                                    if text_pos_x < pos_x - 0.1*width:
                                         alignment_name = TextAlignment.LEFT
-                                    if text_pos_x > pos_x + reaction_line_width:
+                                    if text_pos_x > pos_x + 0.1*width:
                                         alignment_name = TextAlignment.RIGHT  
-                                    if text_pos_y < pos_y - 0.5*width:
+                                    if text_pos_y < pos_y - 0.1*height:
                                         position_name = TextPosition.ABOVE
-                                    if text_pos_y > pos_y + 0.5*height:
+                                    if text_pos_y > pos_y + 0.1*height:
                                         position_name = TextPosition.BELOW
-                                    if text_pos_y == pos_y and text_pos_x != pos_x:
+                                    if text_pos_x >= pos_x - 0.1*width and text_pos_x <= pos_x + 0.1*width and \
+                                        text_pos_y >= pos_y - 0.1*height and text_pos_y <= pos_y + 0.1*height:
                                         position_name = TextPosition.NEXT_TO 
                                 except:
                                     pass  
@@ -557,15 +568,16 @@ class IMPORTSBML(WindowedPlugin):
                                     text_boundingbox = textGlyph.getBoundingBox()
                                     text_pos_x = text_boundingbox.getX()
                                     text_pos_y = text_boundingbox.getY()
-                                    if text_pos_x < pos_x - reaction_line_width:
+                                    if text_pos_x < pos_x - 0.1*width:
                                         alignment_name = TextAlignment.LEFT
-                                    if text_pos_x > pos_x + reaction_line_width:
+                                    if text_pos_x > pos_x + 0.1*width:
                                         alignment_name = TextAlignment.RIGHT  
-                                    if text_pos_y < pos_y - 0.5*width:
+                                    if text_pos_y < pos_y - 0.1*height:
                                         position_name = TextPosition.ABOVE
-                                    if text_pos_y > pos_y + 0.5*height:
+                                    if text_pos_y > pos_y + 0.1*height:
                                         position_name = TextPosition.BELOW
-                                    if text_pos_y == pos_y and text_pos_x != pos_x:
+                                    if text_pos_x >= pos_x - 0.1*width and text_pos_x <= pos_x + 0.1*width and \
+                                        text_pos_y >= pos_y - 0.1*height and text_pos_y <= pos_y + 0.1*height:
                                         position_name = TextPosition.NEXT_TO 
                                 except:
                                     pass

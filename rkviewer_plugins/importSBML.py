@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.0.2: Author: Jin Xu (2023)
+Version 1.1.2: Author: Jin Xu (2023)
 """
 
 
@@ -27,7 +27,7 @@ class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='1.0.2',
+        version='1.1.2',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.ANALYSIS
@@ -448,7 +448,9 @@ class IMPORTSBML(WindowedPlugin):
 
 
                                 spec_id = specGlyph.getSpeciesId()
+                                
                                 spec = model_layout.getSpecies(spec_id)
+                                spec_name = spec.getName()
                                 
                                 try:
                                     concentration = spec.getInitialConcentration()
@@ -498,7 +500,10 @@ class IMPORTSBML(WindowedPlugin):
                                     spec_dimension_list.append([width,height])
                                     spec_position_list.append([pos_x,pos_y])
                                     if text_content == '':
-                                        text_content = spec_id
+                                        if spec_name != '':
+                                            text_content = spec_name
+                                        else:
+                                            text_content = spec_id
                                     spec_text_content_list.append(text_content)
                                     spec_text_alignment_list.append(alignment_name)
                                     spec_text_position_list.append(position_name)
@@ -1288,7 +1293,7 @@ class IMPORTSBML(WindowedPlugin):
                                         text_line_color.append(255) 
                                     #print(shapeIdx)
                                     
-                                    #print(text_content)
+                                    
                                     nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = True,
                                     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
@@ -1302,6 +1307,7 @@ class IMPORTSBML(WindowedPlugin):
                                     id_list.append(temp_id)
                                     nodeIdx_list.append(nodeIdx_temp)
                                     nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
+                                  
                                 else:
                                     index = id_list.index(temp_id)
                                     nodeIdx_temp = api.add_alias(net_index, original_index=index,
@@ -1364,6 +1370,7 @@ class IMPORTSBML(WindowedPlugin):
                                         spec_border_color.appen(255) 
                                     if len(text_line_color) == 3:
                                         text_line_color.append(255)
+                                    
                                     nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = False,
                                     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
@@ -1377,6 +1384,7 @@ class IMPORTSBML(WindowedPlugin):
                                     id_list.append(temp_id)
                                     nodeIdx_list.append(nodeIdx_temp)
                                     nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
+                                   
                                 else:
                                     index = id_list.index(temp_id)
                                     nodeIdx_temp = api.add_alias(net_index, original_index=index,
@@ -1643,7 +1651,29 @@ class IMPORTSBML(WindowedPlugin):
                                 #                           src_node_pos[1]+0.5*src_node_size[1]]
                                 # if temp_id == "EX_h_e":
                                 #     print(src_node_id)
-                                src_node_c_pos = src_lineend_pos[0]
+                                try:#in case the dummy node has an alias node as src node
+                                    src_node_c_pos = src_lineend_pos[0]
+                                except:#in case there is no lineending available
+                                    src_node_id = comp_node_id #pick a rct node
+                                    for m in range(len(allNodes)):
+                                        if src_node_id == allNodes[m].id:
+                                            src_node_pos = allNodes[m].position
+                                            src_node_size = allNodes[m].size
+                                            src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
+                                                              src_node_pos[1]+0.5*src_node_size[1]]
+                                    
+                                    # src_node_idx = src_corr[0]
+                                    # for m in range(len(nodeIdx_specGlyph_whole_list)):
+                                    #     if src_node_idx == nodeIdx_specGlyph_whole_list[m][0]:
+                                    #         src_node_Glyph_id = nodeIdx_specGlyph_whole_list[m][1]
+                                    # for m in range(len(spec_specGlyph_id_list)):
+                                    #     if src_node_Glyph_id == spec_specGlyph_id_list[m][1]:
+                                    #         src_node_pos = spec_dimension_list[m]
+                                    #         src_node_size = spec_position_list[m]
+                                    #         src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
+                                    #                           src_node_pos[1]+0.5*src_node_size[1]]
+                                    # if temp_id == "EX_h_e":
+                                    #     print(src_node_id)
                                 comp_id = model.getCompartmentIdSpeciesIsIn(comp_node_id)
                                 for m in range(len(allCompartments)):
                                     if comp_id == allCompartments[m].id:

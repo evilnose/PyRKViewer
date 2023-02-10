@@ -298,6 +298,8 @@ class IMPORTSBML(WindowedPlugin):
                             #reaction_size_list.append(center_sz)
                             
                             reaction_id = reactionGlyph.getReactionId()
+                            # if reaction_id == "EX_h_e":
+                            #     print(center_pt)
                             reaction_id_list.append(reaction_id)
                             reactionGlyph_id_list.append(reactionGlyph_id)
                             reaction = model_layout.getReaction(reaction_id)
@@ -505,7 +507,10 @@ class IMPORTSBML(WindowedPlugin):
                                 if center_handle == []:
                                     center_handle.append(center_handle_candidate)
 
-
+                                # if reaction_id == "EX_h_e":
+                                #     print(center_pt)
+                                #     print(center_handle_candidate)
+                                #     print(spec_handle)
                                 if role == "substrate" or role == "sidesubstrate": #it is a rct
                                     #rct_specGlyph_temp_list.append(specGlyph_id)
                                     rct_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
@@ -524,7 +529,7 @@ class IMPORTSBML(WindowedPlugin):
                             rct_specGlyph_handle_list.append(rct_specGlyph_handles_temp_list)
                             prd_specGlyph_handle_list.append(prd_specGlyph_handles_temp_list)    
                             mod_specGlyph_list.append(mod_specGlyph_temp_list)
-
+                         
                         #orphan nodes
                         for i in range(numSpecGlyphs):
                             specGlyph = layout.getSpeciesGlyph(i)
@@ -1282,6 +1287,8 @@ class IMPORTSBML(WindowedPlugin):
                                     if len(text_line_color) == 3:
                                         text_line_color.append(255) 
                                     #print(shapeIdx)
+                                    
+                                    #print(text_content)
                                     nodeIdx_temp = api.add_node(net_index, id=temp_id, floating_node = True,
                                     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
@@ -1455,6 +1462,12 @@ class IMPORTSBML(WindowedPlugin):
                                 src.append(rct_idx)
                                 src_handle.append(rct_specGlyph_handle_list[i][j][1])
                                 src_lineend_pos.append(rct_specGlyph_handle_list[i][j][3])
+                            # if temp_id == "EX_h_e":
+                            #     center_position = reaction_center_list[i]
+                            #     center_handle = reaction_center_handle_list[i]
+                                # print(center_position)
+                                # print(center_handle)
+                                # print(src_handle)
                             
                             for j in range(prd_num):
                                 temp_specGlyph_id = prd_specGlyph_handle_list[i][j][0]
@@ -1537,9 +1550,11 @@ class IMPORTSBML(WindowedPlugin):
 
                             
                             center_position = reaction_center_list[i] 
-                            center_position = [center_position[0]-TopLeft[0]-shift[0], center_position[1]-TopLeft[1]-shift[1]]
                             center_handle = reaction_center_handle_list[i]
+                         
+                            center_position = [center_position[0]-TopLeft[0]-shift[0], center_position[1]-TopLeft[1]-shift[1]]
                             center_handle = [center_handle[0]-TopLeft[0]-shift[0], center_handle[1]-TopLeft[1]-shift[1]]
+                      
                             if center_handle != []:
                                 handles = [center_handle]
                             else:
@@ -1550,7 +1565,10 @@ class IMPORTSBML(WindowedPlugin):
                                 src_handle_shift.append([src_handle[a][0]-TopLeft[0]-shift[0], src_handle[a][1]-TopLeft[1]-shift[1]])
                             for a in range(len(dst_handle)):
                                 dst_handle_shift.append([dst_handle[a][0]-TopLeft[0]-shift[0], dst_handle[a][1]-TopLeft[1]-shift[1]])
-
+                            # if temp_id == "EX_h_e":
+                            #     print(center_position)
+                            #     print(center_handle)
+                            #     print(src_handle_shift)
                             if len(src_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
                                 comp_node_id = allNodes[dst_corr[0]].id 
@@ -1606,7 +1624,26 @@ class IMPORTSBML(WindowedPlugin):
                             if len(dst_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
                                 comp_node_id = allNodes[src_corr[0]].id
-                                src_node_id = comp_node_id #pick a rct node
+                                # src_node_id = comp_node_id #pick a rct node
+                                # for m in range(len(allNodes)):
+                                #     if src_node_id == allNodes[m].id:
+                                #         src_node_pos = allNodes[m].position
+                                #         src_node_size = allNodes[m].size
+                                #         src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
+                                #                           src_node_pos[1]+0.5*src_node_size[1]]
+                                # src_node_idx = src_corr[0]
+                                # for m in range(len(nodeIdx_specGlyph_whole_list)):
+                                #     if src_node_idx == nodeIdx_specGlyph_whole_list[m][0]:
+                                #         src_node_Glyph_id = nodeIdx_specGlyph_whole_list[m][1]
+                                # for m in range(len(spec_specGlyph_id_list)):
+                                #     if src_node_Glyph_id == spec_specGlyph_id_list[m][1]:
+                                #         src_node_pos = spec_dimension_list[m]
+                                #         src_node_size = spec_position_list[m]
+                                #         src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
+                                #                           src_node_pos[1]+0.5*src_node_size[1]]
+                                # if temp_id == "EX_h_e":
+                                #     print(src_node_id)
+                                src_node_c_pos = src_lineend_pos[0]
                                 comp_id = model.getCompartmentIdSpeciesIsIn(comp_node_id)
                                 for m in range(len(allCompartments)):
                                     if comp_id == allCompartments[m].id:
@@ -1617,12 +1654,7 @@ class IMPORTSBML(WindowedPlugin):
                                         spec_fill_color = comp_fill_color
                                         spec_border_color = comp_fill_color
                                         text_line_color = comp_fill_color
-                                for m in range(len(allNodes)):
-                                    if src_node_id == allNodes[m].id:
-                                        src_node_pos = allNodes[m].position
-                                        src_node_size = allNodes[m].size
-                                        src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
-                                                          src_node_pos[1]+0.5*src_node_size[1]]
+                    
                                 if spec_border_width == 0.:
                                     spec_border_width = 0.001
                                     spec_border_color = spec_fill_color
@@ -1630,6 +1662,7 @@ class IMPORTSBML(WindowedPlugin):
                                 #node_position = [comp_position[0] + math.trunc (_random.random()*(comp_size[0]-60.)), 
                                 #                comp_position[1] + math.trunc (_random.random()*(comp_size[1]-40.))]
                                 node_position = center_position
+                                
                                 nodeIdx_temp = api.add_node(net_index, id=temp_node_id, size=Vec2(0.5*reaction_line_width,0.5*reaction_line_width), floating_node = True,
                                 position=Vec2(node_position[0], node_position[1]),
                                 fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
@@ -1643,6 +1676,8 @@ class IMPORTSBML(WindowedPlugin):
 
                                 #dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
                                 #                            0.5*(node_position[1] + center_position[1])]
+                                # if temp_id == "EX_h_e":
+                                #     print("src_node_c_pos:", src_node_c_pos)
                                 dummy_handle_position = [0.5*(src_node_c_pos[0] + center_position[0]), 
                                                             0.5*(src_node_c_pos[1] + center_position[1])]
                                 #dummy_handle_position = center_position
@@ -1659,12 +1694,15 @@ class IMPORTSBML(WindowedPlugin):
                             src_corr.sort()
                             dst_corr.sort()
 
+
                             handles.extend(src_handle_shift)
                             handles.extend(dst_handle_shift)
                             
                             if len(reaction_line_color) == 3:
                                 reaction_line_color.append(255)  
-                            
+                            #if temp_id == "EX_h_e":
+                            # print(center_position)
+                            # print(handles)
                             idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
                             fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
                             line_thickness=reaction_line_width, modifiers = mod)
@@ -1677,7 +1715,7 @@ class IMPORTSBML(WindowedPlugin):
                                 center_pos = Vec2(center_position[0],center_position[1]), 
                                 handle_positions=handles_Vec2, 
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-                            
+                                
                         except: #There is no info about the center/handle positions, so set as default 
                             
                             src_corr = []
@@ -1841,23 +1879,23 @@ class IMPORTSBML(WindowedPlugin):
                             if len(reaction_line_color)==3:
                                 reaction_line_color.append(255)
 
-                            try: 
-                                idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
-                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
-                                line_thickness=reaction_line_width, modifiers = mod)
-                                api.update_reaction(net_index, idx, ratelaw = kinetics,
-                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-                            except:
-                                #rxn_id_duplicated
-                                idx = api.add_reaction(net_index, id=temp_id + "_duplicate", reactants=src_corr, products=dst_corr,
-                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
-                                line_thickness=reaction_line_width, modifiers = mod)
-                                api.update_reaction(net_index, idx, ratelaw = kinetics,
-                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
+                            # try: 
+                            #     idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
+                            #     fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
+                            #     line_thickness=reaction_line_width, modifiers = mod)
+                            #     api.update_reaction(net_index, idx, ratelaw = kinetics,
+                            #     fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
+                            # except:
+                            #     #rxn_id_duplicated
+                            #     idx = api.add_reaction(net_index, id=temp_id + "_duplicate", reactants=src_corr, products=dst_corr,
+                            #     fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
+                            #     line_thickness=reaction_line_width, modifiers = mod)
+                            #     api.update_reaction(net_index, idx, ratelaw = kinetics,
+                            #     fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
                                                              
-                            api.update_reaction(net_index, idx, 
-                                 center_pos = Vec2(center_position[0],center_position[1]),  
-                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
+                            # api.update_reaction(net_index, idx, 
+                            #      center_pos = Vec2(center_position[0],center_position[1]),  
+                            #      fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
 
                             # handles_Vec2 = []  
                             # if [] not in handles:      

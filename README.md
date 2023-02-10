@@ -22,7 +22,7 @@ The full documentation can be found at: https://sys-bio.github.io/SBcoyote/
 
 ## Visualization Example
 
-Here is a visualization example by SBcoyote for the large-scale the Escherichia coli core 
+Here is a visualization example by SBcoyote for the large-scale Escherichia coli core 
 metabolism network (King et al., 2015; Orth et al., 2010).
 
 <img src="https://raw.githubusercontent.com/sys-bio/SBcoyote/main/examples/ecoli.png" width="500" height="400">

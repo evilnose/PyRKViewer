@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an SBML string as save it as a file.
-Version 1.0.3: Author: Jin Xu (2023)
+Version 1.0.4: Author: Jin Xu (2023)
 """
 
 
@@ -20,7 +20,7 @@ class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportSBML',
         author='Jin Xu',
-        version='1.0.3',
+        version='1.0.4',
         short_desc='Export SBML.',
         long_desc='Export the SBML String from the network on canvas and save it to a file.',
         category=PluginCategory.ANALYSIS
@@ -227,12 +227,14 @@ class ExportSBML(WindowedPlugin):
                     comp_id="_compartment_default_"
                     compartment.setId(comp_id)
                     compartment.setConstant(True)
+                    compartment.setVolume(1.)
                 
                 for i in range(numCompartments):   
                     compartment = model.createCompartment()
                     comp_id=allcompartments[i].id
                     compartment.setId(comp_id)
                     compartment.setConstant(True)
+                    compartment.setVolume(1.)
                 spec_id_list = []
                 for i in range(numNodes):
                     original_index = allNodes[i].original_index
@@ -262,6 +264,7 @@ class ExportSBML(WindowedPlugin):
                 comp_id="_compartment_default_"
                 compartment.setId(comp_id)
                 compartment.setConstant(True)
+                compartment.setVolume(1.)
                 spec_id_list = []
                 for i in range(numNodes):
                     original_index = allNodes[i].original_index
@@ -406,7 +409,9 @@ class ExportSBML(WindowedPlugin):
             #
             layout = mplugin.createLayout()
             layout.setId("COYOTO_layout")
-            layout.setDimensions(Dimensions(layoutns, 800.0, 800.0))
+            layout_width = 9900
+            layout_height = 6100
+            layout.setDimensions(Dimensions(layoutns, layout_width, layout_height))
             # random network (40+800x, 40+800y)
 
             #create the CompartmentGlyph and SpeciesGlyphs
@@ -477,8 +482,8 @@ class ExportSBML(WindowedPlugin):
                 bb_id  = "bb_" + comp_id
                 pos_x  = 10
                 pos_y  = 10
-                width  = 3900
-                height = 2400
+                width  = layout_width
+                height = layout_height
                 compartmentGlyph.setBoundingBox(BoundingBox(layoutns, bb_id, pos_x, pos_y, width, height))
             
                 for i in range(numNodes):

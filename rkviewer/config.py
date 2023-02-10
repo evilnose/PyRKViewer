@@ -223,8 +223,10 @@ class ThemeSchema(Schema):
                       hovering effects vanish, so this is needed as a replacement visual indicator.
         btn_hover_fg: FG color of a button when the mouse is hovering over it. See btn_hover_bg.
         btn_border: True for border, false for no border
-        canvas_width: Starting (and minimum) width of the canvas.
-        canvas_height: Starting (and minimum) height of the canvas.
+        canvas_width: Displayed (visible) width of the canvas.
+        real_canvas_width: Actual width of the canvas, some of which may be hidden
+        canvas_height: Displayed (visible) height of the canvas.
+        real_canvas_height: Actual height of the canvas, some of which may be hidden
         vgap: Vertical gap between toolbars and canvas.
         hgap: Horizontal gap between toolbars and canvas.
         canvas_outside_bg: Background color of the part outside of the bounds of canvas.
@@ -275,7 +277,9 @@ class ThemeSchema(Schema):
     # Text color of the toolbars (i.e. panels around the canvas)
     toolbar_fg = ColorField(missing=Color(0, 0, 0))
     canvas_width = Pixel(missing=1000)
+    real_canvas_width = Pixel(missing=10000)
     canvas_height = Pixel(missing=620)
+    real_canvas_height = Pixel(missing=6200)
     btn_bg = ColorField(missing=Color(240,240,240))
     btn_fg = ColorField(missing=Color(0, 0, 0))
     btn_hover_bg = ColorField(missing=Color(240,240,240))

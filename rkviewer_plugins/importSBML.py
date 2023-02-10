@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.1.2: Author: Jin Xu (2023)
+Version 1.1.3: Author: Jin Xu (2023)
 """
 
 
@@ -27,7 +27,7 @@ class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='1.1.2',
+        version='1.1.3',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.ANALYSIS
@@ -298,8 +298,7 @@ class IMPORTSBML(WindowedPlugin):
                             #reaction_size_list.append(center_sz)
                             
                             reaction_id = reactionGlyph.getReactionId()
-                            # if reaction_id == "EX_h_e":
-                            #     print(center_pt)
+                           
                             reaction_id_list.append(reaction_id)
                             reactionGlyph_id_list.append(reactionGlyph_id)
                             reaction = model_layout.getReaction(reaction_id)
@@ -478,16 +477,15 @@ class IMPORTSBML(WindowedPlugin):
                                     #     position_name = TextPosition.BELOW
                                     # if text_pos_y == pos_y and text_pos_x != pos_x:
                                     #     position_name = TextPosition.NEXT_TO 
-                                    if text_pos_x < pos_x - 0.1*width:
+                                    if text_pos_x < pos_x - 0.5*width:
                                         alignment_name = TextAlignment.LEFT
-                                    if text_pos_x > pos_x + 0.1*width:
+                                    if text_pos_x > pos_x + 0.5*width:
                                         alignment_name = TextAlignment.RIGHT  
-                                    if text_pos_y < pos_y - 0.1*height:
+                                    if text_pos_y < pos_y - 0.5*height:
                                         position_name = TextPosition.ABOVE
-                                    if text_pos_y > pos_y + 0.1*height:
+                                    if text_pos_y > pos_y + 0.5*height:
                                         position_name = TextPosition.BELOW
-                                    if text_pos_x >= pos_x - 0.1*width and text_pos_x <= pos_x + 0.1*width and \
-                                        text_pos_y >= pos_y - 0.1*height and text_pos_y <= pos_y + 0.1*height:
+                                    if text_pos_y >= pos_y - 0.5*height or text_pos_y <= pos_y + 0.5*height:
                                         position_name = TextPosition.NEXT_TO 
                                 except:
                                     pass  
@@ -578,16 +576,15 @@ class IMPORTSBML(WindowedPlugin):
                                     text_boundingbox = textGlyph.getBoundingBox()
                                     text_pos_x = text_boundingbox.getX()
                                     text_pos_y = text_boundingbox.getY()
-                                    if text_pos_x < pos_x - 0.1*width:
+                                    if text_pos_x < pos_x - 0.5*width:
                                         alignment_name = TextAlignment.LEFT
-                                    if text_pos_x > pos_x + 0.1*width:
+                                    if text_pos_x > pos_x + 0.5*width:
                                         alignment_name = TextAlignment.RIGHT  
-                                    if text_pos_y < pos_y - 0.1*height:
+                                    if text_pos_y < pos_y - 0.5*height:
                                         position_name = TextPosition.ABOVE
-                                    if text_pos_y > pos_y + 0.1*height:
+                                    if text_pos_y > pos_y + 0.5*height:
                                         position_name = TextPosition.BELOW
-                                    if text_pos_x >= pos_x - 0.1*width and text_pos_x <= pos_x + 0.1*width and \
-                                        text_pos_y >= pos_y - 0.1*height and text_pos_y <= pos_y + 0.1*height:
+                                    if text_pos_y >= pos_y - 0.5*height or text_pos_y <= pos_y + 0.5*height:
                                         position_name = TextPosition.NEXT_TO 
                                 except:
                                     pass
@@ -1632,48 +1629,38 @@ class IMPORTSBML(WindowedPlugin):
                             if len(dst_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
                                 comp_node_id = allNodes[src_corr[0]].id
-                                # src_node_id = comp_node_id #pick a rct node
-                                # for m in range(len(allNodes)):
-                                #     if src_node_id == allNodes[m].id:
-                                #         src_node_pos = allNodes[m].position
-                                #         src_node_size = allNodes[m].size
-                                #         src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
-                                #                           src_node_pos[1]+0.5*src_node_size[1]]
-                                # src_node_idx = src_corr[0]
-                                # for m in range(len(nodeIdx_specGlyph_whole_list)):
-                                #     if src_node_idx == nodeIdx_specGlyph_whole_list[m][0]:
-                                #         src_node_Glyph_id = nodeIdx_specGlyph_whole_list[m][1]
-                                # for m in range(len(spec_specGlyph_id_list)):
-                                #     if src_node_Glyph_id == spec_specGlyph_id_list[m][1]:
-                                #         src_node_pos = spec_dimension_list[m]
-                                #         src_node_size = spec_position_list[m]
-                                #         src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
-                                #                           src_node_pos[1]+0.5*src_node_size[1]]
-                                # if temp_id == "EX_h_e":
-                                #     print(src_node_id)
-                                try:#in case the dummy node has an alias node as src node
-                                    src_node_c_pos = src_lineend_pos[0]
-                                except:#in case there is no lineending available
-                                    src_node_id = comp_node_id #pick a rct node
+                                src_node_id = comp_node_id #pick a rct node
+                                if allNodes[src_corr[0]].original_index == -1:
                                     for m in range(len(allNodes)):
                                         if src_node_id == allNodes[m].id:
                                             src_node_pos = allNodes[m].position
                                             src_node_size = allNodes[m].size
                                             src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
+                                                            src_node_pos[1]+0.5*src_node_size[1]]
+                                else:
+                                    src_node_idx = src_corr[0]#alias node
+                                    for m in range(len(nodeIdx_specGlyph_whole_list)):
+                                        if src_node_idx == nodeIdx_specGlyph_whole_list[m][0]:
+                                            src_node_Glyph_id = nodeIdx_specGlyph_whole_list[m][1]
+                                    for m in range(len(spec_specGlyph_id_list)):
+                                        if src_node_Glyph_id == spec_specGlyph_id_list[m][1]:
+                                            #print(spec_specGlyph_id_list[m][0])
+                                            src_node_size = spec_dimension_list[m]
+                                            src_node_pos = spec_position_list[m]
+                                            src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
                                                               src_node_pos[1]+0.5*src_node_size[1]]
                                     
-                                    # src_node_idx = src_corr[0]
-                                    # for m in range(len(nodeIdx_specGlyph_whole_list)):
-                                    #     if src_node_idx == nodeIdx_specGlyph_whole_list[m][0]:
-                                    #         src_node_Glyph_id = nodeIdx_specGlyph_whole_list[m][1]
-                                    # for m in range(len(spec_specGlyph_id_list)):
-                                    #     if src_node_Glyph_id == spec_specGlyph_id_list[m][1]:
-                                    #         src_node_pos = spec_dimension_list[m]
-                                    #         src_node_size = spec_position_list[m]
-                                    #         src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
-                                    #                           src_node_pos[1]+0.5*src_node_size[1]]
-                                    # if temp_id == "EX_h_e":
-                                    #     print(src_node_id)
+                                # try:#in case the dummy node has an alias node as src node
+                                #     src_node_c_pos = src_lineend_pos[0]
+                                # except:#in case there is no lineending available
+                                #     src_node_id = comp_node_id #pick a rct node
+                                #     for m in range(len(allNodes)):
+                                #         if src_node_id == allNodes[m].id:
+                                #             src_node_pos = allNodes[m].position
+                                #             src_node_size = allNodes[m].size
+                                #             src_node_c_pos = [src_node_pos[0]+0.5*src_node_size[0],
+                                #                               src_node_pos[1]+0.5*src_node_size[1]]
+                           
                                 comp_id = model.getCompartmentIdSpeciesIsIn(comp_node_id)
                                 for m in range(len(allCompartments)):
                                     if comp_id == allCompartments[m].id:
@@ -1706,8 +1693,7 @@ class IMPORTSBML(WindowedPlugin):
 
                                 #dummy_handle_position = [0.5*(node_position[0] + center_position[0]), 
                                 #                            0.5*(node_position[1] + center_position[1])]
-                                # if temp_id == "EX_h_e":
-                                #     print("src_node_c_pos:", src_node_c_pos)
+                               
                                 dummy_handle_position = [0.5*(src_node_c_pos[0] + center_position[0]), 
                                                             0.5*(src_node_c_pos[1] + center_position[1])]
                                 #dummy_handle_position = center_position
@@ -1729,10 +1715,11 @@ class IMPORTSBML(WindowedPlugin):
                             handles.extend(dst_handle_shift)
                             
                             if len(reaction_line_color) == 3:
-                                reaction_line_color.append(255)  
-                            #if temp_id == "EX_h_e":
-                            # print(center_position)
-                            # print(handles)
+                                reaction_line_color.append(255)
+                            # if temp_id == "Diffusion_of_ammonia":
+                            #     print(temp_id)  
+                            #     print(center_position)  
+                            #     print(handles)                         
                             idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
                             fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
                             line_thickness=reaction_line_width, modifiers = mod)

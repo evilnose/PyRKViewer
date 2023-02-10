@@ -1481,7 +1481,7 @@ class Canvas(wx.ScrolledWindow):
         subpos = wpos / cstate.scale
         # sometimes the subbitmap might overflow. need to restrict its size to be within the canvas
         subsize = Vec2(min(self.realsize.x - subpos.x, wsize.x), min(self.realsize.y - subpos.y, wsize.y))
-        bitmap = self._static_bitmap.GetSubBitmap(wx.Rect(subpos.x, subpos.y, subsize.x, subsize.y))
+        bitmap = self._static_bitmap.GetSubBitmap(wx.Rect(int(subpos.x), int(subpos.y), int(subsize.x), int(subsize.y)))
         gc.DrawBitmap(bitmap, wpos.x, wpos.y, bitmap.GetWidth(), bitmap.GetHeight())
         # draw dynamic elements
         gc.PushState()

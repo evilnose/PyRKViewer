@@ -479,14 +479,17 @@ class IMPORTSBML(WindowedPlugin):
                                     #     position_name = TextPosition.NEXT_TO 
                                     if text_pos_x < pos_x - 0.5*width:
                                         alignment_name = TextAlignment.LEFT
+                                        if text_pos_y >= pos_y - 0.5*height or text_pos_y <= pos_y + 0.5*height:
+                                            position_name = TextPosition.NEXT_TO 
                                     if text_pos_x > pos_x + 0.5*width:
-                                        alignment_name = TextAlignment.RIGHT  
+                                        alignment_name = TextAlignment.RIGHT
+                                        if text_pos_y >= pos_y - 0.5*height or text_pos_y <= pos_y + 0.5*height:
+                                            position_name = TextPosition.NEXT_TO   
                                     if text_pos_y < pos_y - 0.5*height:
                                         position_name = TextPosition.ABOVE
                                     if text_pos_y > pos_y + 0.5*height:
                                         position_name = TextPosition.BELOW
-                                    if text_pos_y >= pos_y - 0.5*height or text_pos_y <= pos_y + 0.5*height:
-                                        position_name = TextPosition.NEXT_TO 
+                                   
                                 except:
                                     pass  
                     
@@ -578,14 +581,16 @@ class IMPORTSBML(WindowedPlugin):
                                     text_pos_y = text_boundingbox.getY()
                                     if text_pos_x < pos_x - 0.5*width:
                                         alignment_name = TextAlignment.LEFT
+                                        if text_pos_y >= pos_y - 0.5*height or text_pos_y <= pos_y + 0.5*height:
+                                            position_name = TextPosition.NEXT_TO 
                                     if text_pos_x > pos_x + 0.5*width:
-                                        alignment_name = TextAlignment.RIGHT  
+                                        alignment_name = TextAlignment.RIGHT
+                                        if text_pos_y >= pos_y - 0.5*height or text_pos_y <= pos_y + 0.5*height:
+                                            position_name = TextPosition.NEXT_TO   
                                     if text_pos_y < pos_y - 0.5*height:
                                         position_name = TextPosition.ABOVE
                                     if text_pos_y > pos_y + 0.5*height:
                                         position_name = TextPosition.BELOW
-                                    if text_pos_y >= pos_y - 0.5*height or text_pos_y <= pos_y + 0.5*height:
-                                        position_name = TextPosition.NEXT_TO 
                                 except:
                                     pass
                                 spec_text_alignment_list.append(alignment_name)

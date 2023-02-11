@@ -1477,8 +1477,7 @@ class Canvas(wx.ScrolledWindow):
             fill=get_theme('canvas_outside_bg'),
         )
 
-        # the position should be unscaled, since the bitmap is unscaled
-        subpos = wpos / cstate.scale
+        subpos = wpos
         # sometimes the subbitmap might overflow. need to restrict its size to be within the canvas
         subsize = Vec2(min(self.realsize.x - subpos.x, wsize.x), min(self.realsize.y - subpos.y, wsize.y))
         bitmap = self._static_bitmap.GetSubBitmap(wx.Rect(int(subpos.x), int(subpos.y), int(subsize.x), int(subsize.y)))

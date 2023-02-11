@@ -110,7 +110,7 @@ def main():
     # old_excepthook = sys.excepthook
     sys.excepthook = create_excepthook(sys.excepthook)
 
-    logging.info('Initializing RKViewer...')
+    logging.info('Initializing SBcoyote...')
     view = RKView()
     controller = Controller(view)
     view.bind_controller(controller)

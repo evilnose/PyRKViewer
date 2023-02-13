@@ -195,9 +195,10 @@ class IMPORTSBML(WindowedPlugin):
                 #     if showDialogues:
                 #         wx.MessageBox("There is no layout information, so positions are randomly assigned.", "Message", wx.OK | wx.ICON_INFORMATION)
                 # else:
-
-                layout_width = 9900.
-                layout_height = 6100.
+                def_canvas_width = 10000.
+                def_canvas_height = 6200.
+                def_comp_width = def_canvas_width
+                def_comp_height = def_canvas_height
                 if mplugin is not None:
                     layout = mplugin.getLayout(0)
                     # if layout is None:
@@ -208,9 +209,9 @@ class IMPORTSBML(WindowedPlugin):
                         layout_width = layout.getDimensions().getWidth()
                         layout_height = layout.getDimensions().getHeight()
                     except:
-                        layout_width = 9900.
-                        layout_height = 6100.
-                    if layout_width >= 10000 or layout_height >= 6200:
+                        layout_width = def_comp_width
+                        layout_height = def_comp_height
+                    if layout_width >= def_canvas_width or layout_height >= def_canvas_height:
                         if showDialogues:
                             wx.MessageBox("Network layout is beyond the canvas size!.", "Message", wx.OK | wx.ICON_INFORMATION)
 
@@ -1160,7 +1161,7 @@ class IMPORTSBML(WindowedPlugin):
                             vol = 1.
                         if temp_id == "_compartment_default_":
                             api.add_compartment(net_index, id=temp_id, volume = vol,
-                            size=Vec2(layout_width,layout_height), position=Vec2(10,10),
+                            size=Vec2(def_comp_width,def_comp_height), position=Vec2(10,10),
                             fill_color = api.Color(255, 255, 255, 255), #the last digit for transparent
                             border_color = api.Color(255, 255, 255, 255),
                             border_width = comp_border_width)
@@ -1189,7 +1190,7 @@ class IMPORTSBML(WindowedPlugin):
                                 # dimension = [800,800]
                                 # position = [40,40]
                                 # the whole size of the compartment: 4000*2500
-                                dimension = [layout_width, layout_height]
+                                dimension = [def_comp_width, def_comp_height]
                                 position = [10,10]
                                 comp_fill_color = (255, 255, 255, 255) #the last digit for transparent
                                 comp_border_color = (255, 255, 255, 255)
@@ -1210,7 +1211,7 @@ class IMPORTSBML(WindowedPlugin):
 
                             if temp_id in comp_specs_in_list: #consider the compartments with species inside
                             
-                                if position[0] > layout_width or position[1] > layout_height: #beyond the canvas size
+                                if position[0] > def_canvas_width or position[1] > def_canvas_height: #beyond the canvas size
                                     shift = position
                                     position = [position[0]-shift[0], position[1]-shift[1]]
                                 if len(comp_fill_color) == 3:
@@ -1937,7 +1938,7 @@ class IMPORTSBML(WindowedPlugin):
                         vol= model.getCompartmentVolume(i)
                         if math.isnan(vol):
                             vol = 1.
-                        dimension = [layout_width,layout_height]
+                        dimension = [def_comp_width,def_comp_height]
                         position = [10,10]
 
                         api.add_compartment(net_index, id=temp_id, volume = vol,

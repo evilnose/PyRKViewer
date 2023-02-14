@@ -92,8 +92,8 @@ class Canvas(wx.ScrolledWindow):
         zoom_slider: The zoom slider widget.
         reaction_map: Maps node index to the set of reaction (indices) that it is in.
     """
-    MIN_ZOOM_LEVEL: int = -7
-    MAX_ZOOM_LEVEL: int = 7
+    MIN_ZOOM_LEVEL: int = -11
+    MAX_ZOOM_LEVEL: int = 11
     NODE_LAYER = 1
     REACTION_LAYER = 2
     COMPARTMENT_LAYER = 3

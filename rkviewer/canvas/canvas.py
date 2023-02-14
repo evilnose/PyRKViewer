@@ -92,8 +92,8 @@ class Canvas(wx.ScrolledWindow):
         zoom_slider: The zoom slider widget.
         reaction_map: Maps node index to the set of reaction (indices) that it is in.
     """
-    MIN_ZOOM_LEVEL: int = -7
-    MAX_ZOOM_LEVEL: int = 7
+    MIN_ZOOM_LEVEL: int = -11
+    MAX_ZOOM_LEVEL: int = 11
     NODE_LAYER = 1
     REACTION_LAYER = 2
     COMPARTMENT_LAYER = 3
@@ -1477,8 +1477,7 @@ class Canvas(wx.ScrolledWindow):
             fill=get_theme('canvas_outside_bg'),
         )
 
-        # the position should be unscaled, since the bitmap is unscaled
-        subpos = wpos / cstate.scale
+        subpos = wpos
         # sometimes the subbitmap might overflow. need to restrict its size to be within the canvas
         subsize = Vec2(min(self.realsize.x - subpos.x, wsize.x), min(self.realsize.y - subpos.y, wsize.y))
         bitmap = self._static_bitmap.GetSubBitmap(wx.Rect(int(subpos.x), int(subpos.y), int(subsize.x), int(subsize.y)))

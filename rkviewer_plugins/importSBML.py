@@ -1302,6 +1302,7 @@ class IMPORTSBML(WindowedPlugin):
                                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
                                     border_width=spec_border_width, shape_index=shapeIdx, concentration = temp_concentration)
+                                    
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "alignment", text_alignment)
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "position", text_position)
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "font_color", 
@@ -1310,7 +1311,8 @@ class IMPORTSBML(WindowedPlugin):
                                     id_list.append(temp_id)
                                     nodeIdx_list.append(nodeIdx_temp)
                                     nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
-                                  
+                                                  
+                               
                                 else:
                                     index = id_list.index(temp_id)
                                     nodeIdx_temp = api.add_alias(net_index, original_index=index,
@@ -1323,6 +1325,12 @@ class IMPORTSBML(WindowedPlugin):
                                     id_list.append(temp_id)
                                     nodeIdx_list.append(nodeIdx_temp)
                                     nodeIdx_specGlyph_alias_list.append([nodeIdx_temp,tempGlyph_id])
+                                
+                                comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
+                                for xx in range(numComps):
+                                    if comp_id == Comps_ids[xx]:
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx) 
+                                
                                 for k in range(numCompGlyphs):
                                     if len(comp_id_list) !=0 and comp_id == comp_id_list[k]:
                                         comp_node_list[k].append(nodeIdx_temp)
@@ -1379,6 +1387,7 @@ class IMPORTSBML(WindowedPlugin):
                                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
                                     border_width=spec_border_width, shape_index=shapeIdx, concentration = temp_concentration)
+                                                                            
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "alignment", text_alignment)
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "position", text_position)
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "font_color", 
@@ -1387,7 +1396,7 @@ class IMPORTSBML(WindowedPlugin):
                                     id_list.append(temp_id)
                                     nodeIdx_list.append(nodeIdx_temp)
                                     nodeIdx_specGlyph_list.append([nodeIdx_temp,tempGlyph_id])
-                                   
+    
                                 else:
                                     index = id_list.index(temp_id)
                                     nodeIdx_temp = api.add_alias(net_index, original_index=index,
@@ -1400,11 +1409,17 @@ class IMPORTSBML(WindowedPlugin):
                                     id_list.append(temp_id)
                                     nodeIdx_list.append(nodeIdx_temp)
                                     nodeIdx_specGlyph_alias_list.append([nodeIdx_temp,tempGlyph_id])
+                                
+                                comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
+                                for xx in range(numComps):
+                                    if comp_id == Comps_ids[xx]:
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
+                                        
                                 for k in range(numCompGlyphs):
                                     if len(comp_id) != 0 and comp_id == comp_id_list[k]:
                                         comp_node_list[k].append(nodeIdx_temp)
 
-                    if len(comp_id_list) != 0:
+                    if len(comp_id_list) != 0 or numComps != 0:
                         for i in range(numComps):
                             temp_id = Comps_ids[i]
                             if temp_id == '_compartment_default_': 
@@ -1420,6 +1435,7 @@ class IMPORTSBML(WindowedPlugin):
                                     node_list_temp = comp_node_list[j]
                                 else:
                                     node_list_temp = []
+                        
                                 for k in range(len(node_list_temp)):
                                     try:
                                         api.set_compartment_of_node(net_index=net_index, node_index=node_list_temp[k], comp_index=i)
@@ -1628,9 +1644,9 @@ class IMPORTSBML(WindowedPlugin):
                                 center_position = dummy_handle_position
                                 src_handle_shift.append(dummy_handle_position)
 
-                                for i in range(numComps):
-                                    if comp_id == Comps_ids[i]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=i)
+                                for xx in range(numComps):
+                                    if comp_id == Comps_ids[xx]:
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
                             
                             if len(dst_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
@@ -1706,9 +1722,9 @@ class IMPORTSBML(WindowedPlugin):
                                 center_position = dummy_handle_position
                                 dst_handle_shift.append(dummy_handle_position)
 
-                                for i in range(numComps):
-                                    if comp_id == Comps_ids[i]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=i)
+                                for xx in range(numComps):
+                                    if comp_id == Comps_ids[xx]:
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
 
                             #add_reaction might automatically sort the index of reactants and products
                             src_handle_shift = [x for _,x in sorted(zip(src_corr, src_handle_shift))]
@@ -1836,9 +1852,9 @@ class IMPORTSBML(WindowedPlugin):
                                 center_position = dummy_handle_position
                                 src_handles.append(dummy_handle_position)
 
-                                for i in range(numComps):
-                                    if comp_id == Comps_ids[i]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=i)
+                                for xx in range(numComps):
+                                    if comp_id == Comps_ids[xx]:
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
                             
 
                             if len(dst_corr) == 0:
@@ -1888,9 +1904,9 @@ class IMPORTSBML(WindowedPlugin):
                                 center_position = dummy_handle_position
                                 dst_handles.append(dummy_handle_position)
 
-                                for i in range(numComps):
-                                    if comp_id == Comps_ids[i]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=i)
+                                for xx in range(numComps):
+                                    if comp_id == Comps_ids[xx]:
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
 
 
                             handles.extend(src_handles)
@@ -2061,9 +2077,9 @@ class IMPORTSBML(WindowedPlugin):
                                 src_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
 
-                                for i in range(numComps):
-                                    if comp_id == Comps_ids[i]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=i)
+                                for xx in range(numComps):
+                                    if comp_id == Comps_ids[xx]:
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
                             
                             if len(dst_corr) == 0:
                                 temp_node_id = "dummy" + str(dummy_node_id_index)                   
@@ -2081,9 +2097,9 @@ class IMPORTSBML(WindowedPlugin):
                                 dst_corr.append(nodeIdx_temp)
                                 dummy_node_id_index += 1
 
-                                for i in range(numComps):
-                                    if comp_id == Comps_ids[i]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=i)
+                                for xx in range(numComps):
+                                    if comp_id == Comps_ids[xx]:
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
 
                             #add_reaction function will automatically sort src_corr and dst_corr,
                             #otherwise sometimes the handles are wrong 

@@ -408,7 +408,10 @@ class Controller(IController):
 
     @iod_setter
     def move_compartment(self, neti: int, compi: int, pos: Vec2):
-        iod.setCompartmentPosition(neti, compi, *pos)
+        try:
+            iod.setCompartmentPosition(neti, compi, *pos)
+        except:
+            wx.MessageBox("Can not move the compartment.", "Message", wx.OK | wx.ICON_INFORMATION)
 
     @iod_setter
     def set_compartment_size(self, neti: int, compi: int, size: Vec2):

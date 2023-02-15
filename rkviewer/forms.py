@@ -1293,10 +1293,22 @@ class ReactionForm(EditPanelForm):
         # Whether the center position should be autoly set?
         #self.auto_center_ctrl = wx.CheckBox(self.main_section)
         #self.auto_center_ctrl.SetValue(True)
-        self.auto_center_ctrl = wx.CheckBox(self.main_section, label = '')
+        #self.auto_center_ctrl = wx.CheckBox(self.main_section, label = '')
+
+
+        # self.auto_center_ctrl = wx.CheckBox(self.main_section, label = '')
+        # self.auto_center_ctrl.SetValue(False)
+        # self.auto_center_ctrl.Bind(wx.EVT_CHECKBOX, self._AutoCenterCallback)
+        # self.main_section.AppendControl('auto center pos', self.auto_center_ctrl)
+
+
+        #self.auto_center_ctrl = wx.CheckBox(self.main_section, label = '')
+        self.auto_center_ctrl = wx.ToggleButton(self.main_section, -1, '')
         self.auto_center_ctrl.SetValue(False)
-        self.auto_center_ctrl.Bind(wx.EVT_CHECKBOX, self._AutoCenterCallback)
-        self.main_section.AppendControl('auto center pos', self.auto_center_ctrl)
+        self.auto_center_ctrl.SetLabel("Off")
+        self.auto_center_ctrl.Bind(wx.EVT_TOGGLEBUTTON, self._AutoCenterCallback)
+        self.main_section.AppendControl('auto center', self.auto_center_ctrl)
+
 
         self.center_pos_ctrl = self.main_section.CreateTextCtrl()
         self.center_pos_ctrl.Disable()
@@ -1406,6 +1418,7 @@ class ReactionForm(EditPanelForm):
         if checked:
             self.auto_center_ctrl.Enable()
             self.auto_center_ctrl.SetValue(True)
+            self.auto_center_ctrl.SetLabel("On")
             self.center_pos_ctrl.Disable()
             self.center_pos_ctrl.ChangeValue('')
             with self.controller.group_action():
@@ -1420,6 +1433,7 @@ class ReactionForm(EditPanelForm):
         else:
             self.auto_center_ctrl.Enable()
             self.auto_center_ctrl.SetValue(False)
+            self.auto_center_ctrl.SetLabel("Off")
             self.center_pos_ctrl.Enable()
             self.center_pos_ctrl.ChangeValue('{}, {}'.format(
                 no_rzeros(centroid.x, prec), no_rzeros(centroid.y, prec)
@@ -1592,6 +1606,10 @@ class ReactionForm(EditPanelForm):
             self.auto_center_ctrl.Enable()
             auto_set = reaction.center_pos is None
             self.auto_center_ctrl.SetValue(auto_set)
+            if auto_set:
+                self.auto_center_ctrl.SetLabel("On")
+            else:
+                self.auto_center_ctrl.SetLabel("Off")
             self.center_pos_ctrl.Enable(not auto_set)
             if reaction.center_pos is not None:
                 centroid = reaction.center_pos

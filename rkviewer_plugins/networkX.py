@@ -219,12 +219,41 @@ class LayoutNetworkX(WindowedPlugin):
                         # handles = api.default_handle_positions(0, r.index)
                         # api.update_reaction(0, index, handle_positions=handles)
 
-                        #set the handles as centroid to make all the bezier curves look like straight lines
-                        handles = [centroid]
+                        #set the handles as centroid, except the center_handle, to make all the bezier curves look like straight lines
+                      
+                        # handles = [centroid]
+                        # for x in range(len(rcts)):
+                        #     handles.append(centroid)
+                        # for y in range(len(prds)):
+                        #     handles.append(centroid)
+                                 #set the handles, to make all the bezier curves look like straight lines
+                        if len(rcts) != 0:
+                            spec_pos = api.get_node_by_index(0, rcts[0]).position
+                            spec_size = api.get_node_by_index(0, rcts[0]).size
+                        else:
+                            spec_pos = api.get_node_by_index(0, prds[0]).position
+                            spec_size = api.get_node_by_index(0, prds[0]).size
+                        center_handle = (0.9*centroid[0]+0.1*(spec_pos[0]+0.5*spec_size[0]), 
+                                        0.9*centroid[1]+0.1*(spec_pos[1]+0.5*spec_size[1]))
+                        center_handle_vec2 = Vec2(center_handle[0],center_handle[1])
+                        #handles = [centroid]
+                        handles = [center_handle_vec2]
                         for x in range(len(rcts)):
-                            handles.append(centroid)
+                            spec_pos = api.get_node_by_index(0, rcts[x]).position
+                            spec_size = api.get_node_by_index(0, rcts[x]).size
+                            spec_handle = (0.5*(centroid[0]+spec_pos[0]+0.5*spec_size[0]), 
+                                        0.5*(centroid[1]+spec_pos[1]+0.5*spec_size[1]))
+                            spec_handle_vec2 = Vec2(spec_handle[0],spec_handle[1])
+                            handles.append(spec_handle_vec2)
+                            #handles.append(centroid)
                         for y in range(len(prds)):
-                            handles.append(centroid)
+                            spec_pos = api.get_node_by_index(0, prds[y]).position
+                            spec_size = api.get_node_by_index(0, prds[y]).size
+                            spec_handle = (0.5*(centroid[0]+spec_pos[0]+0.5*spec_size[0]), 
+                                        0.5*(centroid[1]+spec_pos[1]+0.5*spec_size[1]))
+                            spec_handle_vec2 = Vec2(spec_handle[0],spec_handle[1])
+                            handles.append(spec_handle_vec2)
+                            #handles.append(centroid)
                         api.update_reaction(0, index, center_pos=Vec2(newX, newY), handle_positions=handles)
                         
                         count = count + 1
@@ -237,12 +266,34 @@ class LayoutNetworkX(WindowedPlugin):
                         rcts = get_reaction_by_index(0, index).sources
                         prds = get_reaction_by_index(0, index).targets
                         centroid = api.compute_centroid(0, rcts, prds)
-                        #set the handles as centroid to make all the bezier curves look like straight lines
-                        handles = [centroid]
+                        #set the handles, to make all the bezier curves look like straight lines
+                        if len(rcts) != 0:
+                            spec_pos = api.get_node_by_index(0, rcts[0]).position
+                            spec_size = api.get_node_by_index(0, rcts[0]).size
+                        else:
+                            spec_pos = api.get_node_by_index(0, prds[0]).position
+                            spec_size = api.get_node_by_index(0, prds[0]).size
+                        center_handle = (0.9*centroid[0]+0.1*(spec_pos[0]+0.5*spec_size[0]), 
+                                        0.9*centroid[1]+0.1*(spec_pos[1]+0.5*spec_size[1]))
+                        center_handle_vec2 = Vec2(center_handle[0],center_handle[1])
+                        #handles = [centroid]
+                        handles = [center_handle_vec2]
                         for x in range(len(rcts)):
-                            handles.append(centroid)
+                            spec_pos = api.get_node_by_index(0, rcts[x]).position
+                            spec_size = api.get_node_by_index(0, rcts[x]).size
+                            spec_handle = (0.5*(centroid[0]+spec_pos[0]+0.5*spec_size[0]), 
+                                        0.5*(centroid[1]+spec_pos[1]+0.5*spec_size[1]))
+                            spec_handle_vec2 = Vec2(spec_handle[0],spec_handle[1])
+                            handles.append(spec_handle_vec2)
+                            #handles.append(centroid)
                         for y in range(len(prds)):
-                            handles.append(centroid)
+                            spec_pos = api.get_node_by_index(0, prds[y]).position
+                            spec_size = api.get_node_by_index(0, prds[y]).size
+                            spec_handle = (0.5*(centroid[0]+spec_pos[0]+0.5*spec_size[0]), 
+                                        0.5*(centroid[1]+spec_pos[1]+0.5*spec_size[1]))
+                            spec_handle_vec2 = Vec2(spec_handle[0],spec_handle[1])
+                            handles.append(spec_handle_vec2)
+                            #handles.append(centroid)
                         api.update_reaction(0, index, center_pos = centroid, handle_positions = handles)
 
                 '''

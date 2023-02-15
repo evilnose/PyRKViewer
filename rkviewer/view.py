@@ -668,12 +668,12 @@ class MainFrame(wx.Frame):
     def onAboutDlg(self, event):
         info = wx.adv.AboutDialogInfo()
         info.SetName("SBcoyote")
-        info.SetVersion("1.0.0")
+        info.SetVersion("1.3.6")
         info.SetCopyright("(c) 2023 UW Sauro Lab")
         info.SetDescription("An Extensible Reaction Network Editor")
         info.SetWebSite("https://github.com/sys-bio/SBcoyote",
                         "Home Page")  # TODO update home page?
-        info.SetDevelopers(["Gary Geng", "Jin Xu", "Nhan D. Nguyen", "Carmen Pereña Cortés","Claire Samuels", "Herbert Sauro"])# TODO update authors
+        info.SetDevelopers(["Jin Xu", "Gary Geng", "Nhan D. Nguyen", "Carmen Pereña Cortés","Claire Samuels", "Herbert Sauro"])# TODO update authors
         info.SetLicense("MIT")
 
         # Show the wx.AboutBox

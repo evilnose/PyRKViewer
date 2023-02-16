@@ -19,6 +19,7 @@ from .canvas.data import ChoiceItem, Compartment, FONT_FAMILY_CHOICES, FONT_STYL
 from .canvas.geometry import Rect, Vec2, clamp_rect_pos, clamp_rect_size, get_bounding_rect, calc_node_dimensions
 from .canvas.utils import get_nodes_by_idx, get_rxns_by_idx
 from .canvas.data import CirclePrim, RectanglePrim, CompositeShape
+from rkviewer.plugin import api
 
 
 ColorCallback = Callable[[wx.Colour], None]
@@ -773,6 +774,7 @@ class NodeForm(EditPanelForm):
 
     Attributes:
     """
+    #_compartments: List[Compartment]
     contiguous: bool
     id_ctrl: wx.TextCtrl
     conc_ctrl: wx.TextCtrl
@@ -789,6 +791,7 @@ class NodeForm(EditPanelForm):
     def __init__(self, parent, canvas: Canvas, controller: IController):
         super().__init__(parent, canvas, controller)
         self.all_nodes = list()
+        #self.compartments = list()
         self.main_section = FieldGrid(self, self)
         self.sections = [self.main_section]
         self._bounding_rect = None  # No padding
@@ -830,6 +833,12 @@ class NodeForm(EditPanelForm):
         if len(rects) != 0:
             self._bounding_rect = get_bounding_rect(rects)
 
+    
+    # def UpdateCompartments(self, comps: List[Compartment]):
+    #     self.compartments = comps
+    #     self._UpdateBoundingRect()
+    #     self.ExternalUpdate()
+
     def UpdateSelection(self, selected_idx: Set[int], comps_selected: bool):
         """Function called after the list of selected nodes have been updated."""
         self._selected_idx = selected_idx
@@ -853,6 +862,9 @@ class NodeForm(EditPanelForm):
             id_text = 'identifier' if len(self._selected_idx) == 1 else 'identifiers'
             self.main_section.labels[self.id_ctrl.GetId()].SetLabel(id_text)
 
+            comp_text = 'compartment' if len(self._selected_idx) == 1 else 'compartment'
+            self.main_section.labels[self.comp_ctrl.GetId()].SetLabel(comp_text)
+
             concentration_text = 'concentration' if len(self._selected_idx) == 1 else 'concentrations'
             self.main_section.labels[self.conc_ctrl.GetId()].SetLabel(concentration_text)
 
@@ -864,6 +876,10 @@ class NodeForm(EditPanelForm):
         self.id_ctrl = self.main_section.CreateTextCtrl()
         self.id_ctrl.Bind(wx.EVT_TEXT, self._OnIdText)
         self.main_section.AppendControl('identifier', self.id_ctrl)
+
+        self.comp_ctrl = self.main_section.CreateTextCtrl()
+        #self.comp_ctrl.Bind(wx.EVT_TEXT, self._OnCompText)
+        self.main_section.AppendControl('compartment', self.comp_ctrl)
         
         self.conc_ctrl = self.main_section.CreateTextCtrl()
         self.conc_ctrl.Bind(wx.EVT_TEXT, self._OnConcText)
@@ -913,6 +929,29 @@ class NodeForm(EditPanelForm):
                     self.controller.rename_node(self.net_index, nodei, new_id)
                     post_event(DidModifyNodesEvent([nodei]))
         self.main_section.SetValidationState(True, self.id_ctrl.GetId())
+
+    # def _OnCompText(self, evt):
+    #     """Callback for the compartment control."""
+    #     #needs to double check especially comp_idx vs comp_id
+    #     new_comp = evt.GetString()
+    #     assert len(self._selected_idx) == 1
+    #     [nodei] = self._selected_idx
+    #     ctrl_comp = self.comp_ctrl.GetId()
+
+    #     flag_comp_exist = 0
+    #     allCompartments = api.get_compartments(self.net_index)
+    #     for comp in allCompartments:
+    #         if comp.index == new_comp:
+    #             flag_comp_exist = 1
+    #     if flag_comp_exist == 0:
+    #         self.main_section.SetValidationState(False, ctrl_comp, "Not saved: Compartment ID does not exist.")
+    #         return
+
+    #     self.self_changes = True
+    #     with self.controller.group_action():
+    #         self.controller.set_compartment_of_node(self.net_index, nodei, new_comp)
+    #         post_event(DidModifyNodesEvent([nodei]))
+    #     self.main_section.SetValidationState(True, self.comp_ctrl.GetId())
 
     def _OnConcText(self, evt):
         """ Callback for the concentration control. """
@@ -1171,6 +1210,14 @@ class NodeForm(EditPanelForm):
             [node] = nodes
             self.id_ctrl.Enable(True)
             id_text = node.id
+            self.comp_ctrl.Enable(False)
+            #comp_text = str(node.comp_idx)
+            allCompartments = api.get_compartments(self.net_index)
+            comp_id = ''
+            for comp in allCompartments:
+                if comp.index == node.comp_idx:
+                    comp_id = comp.id
+            comp_text = str(comp_id)
             self.conc_ctrl.Enable(True)
             conc_text = str(node.concentration)
             floatingNode = node.floatingNode
@@ -1180,6 +1227,16 @@ class NodeForm(EditPanelForm):
         else:
             self.id_ctrl.Enable(False)
             id_text = '; '.join(sorted(list(n.id for n in nodes)))
+            self.comp_ctrl.Enable(False)
+            allCompartments = api.get_compartments(self.net_index)
+            comp_list = []
+            for n in nodes:
+                comp_id = ''
+                for comp in allCompartments:
+                    if comp.index == n.comp_idx:
+                        comp_id = comp.id
+                comp_list.append(str(comp_id))
+            comp_text = '; '.join(sorted(comp_list))
             self.conc_ctrl.Enable(False)
             conc_text = '; '.join(sorted(list(str(n.concentration) for n in nodes)))
             floatingNode = all(n.floatingNode for n in nodes)
@@ -1195,6 +1252,7 @@ class NodeForm(EditPanelForm):
         self.size_ctrl.Enable(self.contiguous)
 
         self.id_ctrl.ChangeValue(id_text)
+        self.comp_ctrl.ChangeValue(comp_text)
         self.conc_ctrl.ChangeValue(conc_text)
 
         if floatingNode:

@@ -326,7 +326,7 @@ class ThemeSchema(Schema):
     selected_reaction_fill = ColorField(missing=Color(0, 140, 255))
     comp_fill = ColorField(missing=Color(158, 169, 255, 200))
     comp_border = ColorField(missing=Color(0, 29, 255))
-    comp_border_width = Dim(missing=2)
+    comp_border_width = Dim(missing=8)
     comp_corner_radius = Dim(missing=6)
     reaction_radius = Dim(missing=6)
     modifier_line_color = ColorField(missing=Color(202, 148, 255))

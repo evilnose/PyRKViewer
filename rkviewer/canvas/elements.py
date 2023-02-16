@@ -30,6 +30,7 @@ from .geometry import (
     padded_rect,
     pt_in_circle,
     pt_in_rect, rotate_unit, segment_rect_intersection,
+    pt_on_rect_sides,
 )
 from .state import InputMode, cstate
 from .utils import draw_rect
@@ -597,7 +598,8 @@ class CompartmentElt(CanvasElement):
         self.compartment = compartment
 
     def pos_inside(self, logical_pos: Vec2) -> bool:
-        return pt_in_rect(logical_pos, self.compartment.rect)
+        thickness =  max(int(self.compartment.border_width), 1)
+        return pt_on_rect_sides(logical_pos, self.compartment.rect, thickness)
 
     def on_left_down(self, logical_pos: Vec2) -> bool:
         return True
@@ -817,7 +819,7 @@ class SelectBox(CanvasElement):
 
         Returns:
             The handle index (0-3) if pos is within a handle, -1 if pos is not within a handle
-            but within the bounding rectangle, or -2 if pos is outside.
+            but within a node or on the compartment edge, or -2 if pos is outside.
         """
         if len(self.nodes) + len(self.compartments) == 0:
             return -2
@@ -827,9 +829,10 @@ class SelectBox(CanvasElement):
             if pt_in_rect(logical_pos, rect):
                 return i
 
-        rects = [n.rect for n in self.nodes] + \
-            [c.rect for c in self.compartments]
-        if any(pt_in_rect(logical_pos, r) for r in rects):
+        nrects = [n.rect for n in self.nodes]
+        crects = [c.rect for c in self.compartments]
+        if any(pt_in_rect(logical_pos, r) for r in nrects) \
+            or any(pt_on_rect_sides(logical_pos, r) for r in crects):
             return -1
         else:
             return -2

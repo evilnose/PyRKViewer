@@ -670,10 +670,10 @@ class MainFrame(wx.Frame):
         info.SetName("SBcoyote")
         info.SetVersion("1.3.6")
         info.SetCopyright("(c) 2023 UW Sauro Lab")
-        info.SetDescription("An Extensible Reaction Network Editor")
+        info.SetDescription("An Extensible Python-Based Reaction Editor and Viewer.")
         info.SetWebSite("https://github.com/sys-bio/SBcoyote",
                         "Home Page")  # TODO update home page?
-        info.SetDevelopers(["Jin Xu", "Gary Geng", "Nhan D. Nguyen", "Carmen Pereña Cortés","Claire Samuels", "Herbert Sauro"])# TODO update authors
+        info.SetDevelopers(["Jin Xu", "Gary Geng", "Nhan D. Nguyen", "Carmen Perena-Corte","Claire Samuels", "Herbert M. Sauro"])# TODO update authors
         info.SetLicense("MIT")
 
         # Show the wx.AboutBox

@@ -432,6 +432,8 @@ def pt_in_circle(center: 'Vec2', radius: float, point: 'Vec2') -> bool:
     """Returns whether point is inside the circle with the given center and radius."""
     return (point - center).norm_sq <= radius ** 2
 
+def pt_on_rect_sides(pos: 'Vec2', rect: Rect, thickness=5):
+    return any(pt_on_line(p, q, pos, thickness) for p, q in rect.sides())
 
 def pt_in_rect(pos: 'Vec2', rect: Rect) -> bool:
     """Returns whether the given position is within the rectangle, inclusive."""

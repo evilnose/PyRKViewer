@@ -437,7 +437,7 @@ class ReactionElement(CanvasElement):
         dest_bh.twin = src_bh
         self.bhandles.append(src_bh)
         self.bhandles.append(dest_bh)
-        center_layers = layer_above(handle_layer, count=2)
+        center_layers = layer_above(layers, count=2)
         self.center_el = ReactionCenter(self, center_layers)
 
     def make_drop_handle_func(self, ctrl: IController, neti: int, reai: int, nodei: int,

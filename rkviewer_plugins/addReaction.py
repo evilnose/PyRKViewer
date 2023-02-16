@@ -1,6 +1,6 @@
 """
 Add different reactions.
-Version 1.0.0: Author: Jin Xu and Herbert Sauro (2020)
+Version 1.0.0: Author: Jin Xu and Herbert M. Sauro (2020)
 """
 
 
@@ -20,7 +20,7 @@ from dataclasses import dataclass
 class AddReaction(WindowedPlugin):
    metadata = PluginMetadata(
       name='AddReaction',
-      author='Jin Xu and Herbert Sauro',
+      author='Jin Xu and Herbert M. Sauro',
       version='1.0.0',
       short_desc='Add Reactions.',
       long_desc='Add different reactions including UniUni, BiUni, UniBi and BiBi.',

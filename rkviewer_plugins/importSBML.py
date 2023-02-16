@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.1.4: Author: Jin Xu (2023)
+Version 1.1.5: Author: Jin Xu (2023)
 """
 
 
@@ -27,7 +27,7 @@ class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='1.1.4',
+        version='1.1.5',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.ANALYSIS
@@ -197,8 +197,8 @@ class IMPORTSBML(WindowedPlugin):
                 # else:
                 def_canvas_width = 10000.
                 def_canvas_height = 6200.
-                def_comp_width = def_canvas_width
-                def_comp_height = def_canvas_height
+                def_comp_width = def_canvas_width-20.
+                def_comp_height = def_canvas_height-20.
                 if mplugin is not None:
                     layout = mplugin.getLayout(0)
                     # if layout is None:
@@ -1130,7 +1130,7 @@ class IMPORTSBML(WindowedPlugin):
                     for i in range(numComps):
                         temp_id = Comps_ids[i]
                         if temp_id != "_compartment_default_" and comp_id_list != 0 and (temp_id in comp_specs_in_list):
-                            position = [0., 0.]
+                            position = [10., 10.]
                             for j in range(numCompGlyphs):
                                 if comp_id_list[j] == temp_id:
                                     position = comp_position_list[j]
@@ -1142,7 +1142,7 @@ class IMPORTSBML(WindowedPlugin):
                                 if comp_render[0][0] == '': #global render
                                     comp_fill_color = comp_render[0][1]
                                     comp_border_color = comp_render[0][2]
-                            if comp_fill_color != (255, 255, 255, 255) or comp_border_color != (255, 255, 255, 255):
+                            if comp_fill_color != (255, 255, 255, 0) or comp_border_color != (255, 255, 255, 0):
                                 if TopLeft[0] > position[0] or TopLeft[1] > position[1]:
                                     TopLeft = position
 
@@ -1162,8 +1162,8 @@ class IMPORTSBML(WindowedPlugin):
                         if temp_id == "_compartment_default_":
                             api.add_compartment(net_index, id=temp_id, volume = vol,
                             size=Vec2(def_comp_width,def_comp_height), position=Vec2(10,10),
-                            fill_color = api.Color(255, 255, 255, 255), #the last digit for transparent
-                            border_color = api.Color(255, 255, 255, 255),
+                            fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
+                            border_color = api.Color(255, 255, 255, 0),
                             border_width = comp_border_width)
                         else:
                             if len(comp_id_list) != 0:

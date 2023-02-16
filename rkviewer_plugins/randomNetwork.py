@@ -1,7 +1,7 @@
 """
 Display a random network.
 
-Version 1.0.1: Author: Jin Xu, Herbert M Sauro (2020)
+Version 1.0.1: Author: Jin Xu, Herbert M. Sauro (2020)
 
 """
 
@@ -33,7 +33,7 @@ class DefaultValues:
 class RandomNetwork(WindowedPlugin):
     metadata = PluginMetadata(
         name='RandomNetwork',
-        author='Jin Xu, Herbert M Sauro',
+        author='Jin Xu, Herbert M. Sauro',
         version='1.0.1',
         short_desc='Random network.',
         long_desc='Display a random network with certain number of species and reactions as input.',

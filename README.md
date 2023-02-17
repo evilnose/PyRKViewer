@@ -9,7 +9,7 @@ SBcoyote, initially called PyRKViewer or Coyote, is a cross-platform visualizati
 * Reactions can be displayed using Bezier curves and straight lines.
 * Plugin support, with some plugin examples: arrow designer, random network, auto layout, etc.
 
-## Installment for Users
+## Installing SBcoyote
 
 * Install Python 3.7, 3.8, 3.9 or 3.10 if not ready in the system.
 * Go to the command line and type `pip install SBcoyote`.

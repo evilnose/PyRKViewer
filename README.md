@@ -27,6 +27,9 @@ metabolism network (King et al., 2015; Orth et al., 2010).
 
 <img src="https://raw.githubusercontent.com/sys-bio/SBcoyote/main/examples/ecoli.png" width="500" height="400">
 
+## Citing
+
+If you are using any of the code, please cite the article (https://arxiv.org/abs/2302.09151). 
 
 ## Installment options for Developers
 

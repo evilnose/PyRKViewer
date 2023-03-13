@@ -1124,7 +1124,7 @@ class ExportSBML(WindowedPlugin):
                     for j in range(rct_num):
                         specsRefG_id = "SpecRefG_" + rxn_id + "_rct" + str(j)
                         style = rInfo.createStyle("specRefGlyphStyle" + rxn_id + "_rct" + str(j))
-                        style.getGroup().setEndHead('_line_ending_default_NONE_')
+                        style.getGroup().setEndHead('_line_ending_default_NONE_' + rxn_id)
                         style.getGroup().setStroke("lineEnding_border_color" + "_" + lineEnding_id)
                         style.getGroup().setFill("lineEnding_fill_color" + "_" + lineEnding_id)
                         style.getGroup().setStrokeWidth(reaction_line_thickness)

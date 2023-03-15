@@ -409,8 +409,8 @@ class ExportSBML(WindowedPlugin):
             #
             layout = mplugin.createLayout()
             layout.setId("COYOTO_layout")
-            layout_width = 9900
-            layout_height = 6100
+            layout_width = 10000 - 20
+            layout_height = 6200 - 20
             layout.setDimensions(Dimensions(layoutns, layout_width, layout_height))
             # random network (40+800x, 40+800y)
 

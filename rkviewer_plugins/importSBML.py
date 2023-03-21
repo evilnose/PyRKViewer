@@ -416,7 +416,6 @@ class IMPORTSBML(WindowedPlugin):
                                         except: #straight
                                             spec_handle = [.5*(center_pt[0]+line_start_pt[0]),
                                             .5*(center_pt[1]+line_start_pt[1])]
-                                            # center_handle_candidate = center_pt
                                             center_handle_candidate = center_pt
                                             #spec_handle = center_pt
 

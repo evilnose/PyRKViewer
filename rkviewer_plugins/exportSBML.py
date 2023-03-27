@@ -20,7 +20,7 @@ class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportSBML',
         author='Jin Xu',
-        version='1.0.5',
+        version='1.0.6',
         short_desc='Export SBML.',
         long_desc='Export the SBML String from the network on canvas and save it to a file.',
         category=PluginCategory.ANALYSIS
@@ -89,7 +89,7 @@ class ExportSBML(WindowedPlugin):
             # Get rid of the dialog to keep things tidy
             dlg.Destroy()
         except:
-            wx.MessageBox("No valid SBML string to save!", "Error")
+            wx.MessageBox("No valid SBML string to export or save!", "Error")
 
 
     def NetworkToSBML(self):
@@ -182,7 +182,8 @@ class ExportSBML(WindowedPlugin):
         numReactions = api.reaction_count(netIn)
         
         if numNodes == 0:
-           wx.MessageBox("Please import a network with at least one node on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
+            pass
+            #wx.MessageBox("There are no nodes on canvas to export.", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
             

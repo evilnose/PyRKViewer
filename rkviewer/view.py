@@ -706,6 +706,28 @@ class MainFrame(wx.Frame):
 
     def ExportSBML(self):
         """Export SBML files."""
+        sbmlStr_layout_render = exportSBML.ExportSBML.NetworkToSBML(self)
+        if sbmlStr_layout_render is None:
+            wx.MessageBox("No valid SBML string to export or save!", "Error")
+        else:
+            try:
+                #save to local
+                self.dirname=""  #set directory name to blank 
+                dlg = wx.FileDialog(self, "Save As", self.dirname, wildcard="SBML files (*.xml)|*.xml", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+                if dlg.ShowModal() == wx.ID_OK:
+                    # Grab the content to be saved
+                    #itcontains = self.SBMLText.GetValue()
+                    itcontains = sbmlStr_layout_render
+                    # Open the file for write, write, close
+                    self.filename=dlg.GetFilename()
+                    self.dirname=dlg.GetDirectory()
+                    filehandle=open(os.path.join(self.dirname, self.filename),'w')
+                    filehandle.write(itcontains)
+                    filehandle.close()
+                # Get rid of the dialog to keep things tidy
+                dlg.Destroy()
+            except:
+                wx.MessageBox("No valid SBML string to export or save!", "Error")
 
     def ReloadSettings(self):
         load_theme_settings()

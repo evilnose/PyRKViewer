@@ -33,6 +33,8 @@ from .mvc import IController, IView
 from .utils import ButtonGroup, on_msw, resource_path, start_file
 from rkviewer.config import AppSettings
 
+from rkviewer_plugins import importSBML
+from rkviewer_plugins import exportSBML
 
 class EditPanel(fnb.FlatNotebook):
     """Panel that displays and allows editing of the details of a node.
@@ -516,6 +518,13 @@ class MainFrame(wx.Frame):
         self.save_item.Enable(False)
         self.AddMenuItem(file_menu, '&Save As...', 'Save current network as a JSON file',
                          lambda _: self.SaveAsJson(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('N')))
+        #Import SBML
+        file_menu.AppendSeparator()
+        self.AddMenuItem(file_menu, '&Import SBML', 'Import SBML',
+                         lambda _: self.ImportSBML(),  entries, key=(wx.ACCEL_CTRL, ord('I')))
+        #Emport SBML
+        self.AddMenuItem(file_menu, '&Export SBML', 'Export SBML',
+                         lambda _: self.ExportSBML(),  entries, key=(wx.ACCEL_CTRL, ord('E')))
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Edit Settings', 'Edit settings',
                          lambda _: self.EditSettings(),  entries)
@@ -678,6 +687,25 @@ class MainFrame(wx.Frame):
 
         # Show the wx.AboutBox
         wx.adv.AboutBox(info)
+
+    def ImportSBML(self):
+        """Import SBML files."""
+        
+        self.dirname=""  #set directory name to blank
+        dlg = wx.FileDialog(self, "Choose a file to open", self.dirname, wildcard="SBML files (*.xml)|*.xml", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) #open the dialog boxto open file
+        if dlg.ShowModal() == wx.ID_OK:  #if positive button selected....
+            self.filename = dlg.GetFilename()  #get the filename of the file
+            self.dirname = dlg.GetDirectory()  #get the directory of where file is located
+            f = open(os.path.join(self.dirname, self.filename), 'r')  #traverse the file directory and find filename in the OS
+            self.sbmlStr = f.read()
+            with wx.BusyCursor():
+            #with wx.BusyInfo("Please wait, working..."):
+                importSBML.IMPORTSBML.DisplayModel(self, self.sbmlStr, True, False)
+                f.close
+        dlg.Destroy()
+
+    def ExportSBML(self):
+        """Export SBML files."""
 
     def ReloadSettings(self):
         load_theme_settings()

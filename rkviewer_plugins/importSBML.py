@@ -30,7 +30,7 @@ class IMPORTSBML(WindowedPlugin):
         version='1.1.6',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
-        category=PluginCategory.ANALYSIS
+        category=PluginCategory.MODELS
     )
 
     def create_window(self, dialog):

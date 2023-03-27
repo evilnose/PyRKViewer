@@ -20,7 +20,7 @@ class ExportAntimony(WindowedPlugin):
         version='1.0.0',
         short_desc='Export Antimony.',
         long_desc='Export the Antimony String from the network on canvas.',
-        category=PluginCategory.ANALYSIS
+        category=PluginCategory.MODELS
     )
 
     def create_window(self, dialog):

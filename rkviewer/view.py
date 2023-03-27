@@ -253,8 +253,9 @@ class TabbedToolbar(fnb.FlatNotebook):
     def AddPluginPages(self):
         categories = self.manager.get_plugins_by_category()
         for cat in PluginCategory:
-            if len(categories[cat]) == 0:
-                continue
+            # do not show the plugin categories if no valid plugin example available
+            # if len(categories[cat]) == 0:
+            #     continue
 
             tb = Toolbar(self)
             for name, callback, bitmap in categories[cat]:

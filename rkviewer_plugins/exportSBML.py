@@ -241,12 +241,14 @@ class ExportSBML(WindowedPlugin):
                     original_index = allNodes[i].original_index
                     if original_index == -1:
                         spec_id = allNodes[i].id
+                        spec_name = allNodes[i].node_name
                         if ' ' in spec_id:
                             spec_id = spec_id.replace(' ', '_')
                         if spec_id not in spec_id_list:
                             spec_id_list.append(spec_id)
                         species = model.createSpecies()
                         species.setId(spec_id)
+                        species.setName(spec_name)
                         comp_idx = allNodes[i].comp_idx
                         if comp_idx != -1:
                             comp_id = allcompartments[comp_idx].id 
@@ -271,12 +273,14 @@ class ExportSBML(WindowedPlugin):
                     original_index = allNodes[i].original_index
                     if original_index == -1:
                         spec_id = allNodes[i].id
+                        spec_name = allNodes[i].node_name
                         if ' ' in spec_id:
                             spec_id = spec_id.replace(' ', '_')
                         if spec_id not in spec_id_list:
                             spec_id_list.append(spec_id)
                         species = model.createSpecies()
                         species.setId(spec_id)
+                        species.setName(spec_name)
                         species.setCompartment(comp_id)
                         species.setInitialConcentration(allNodes[i].concentration)	
                         species.setHasOnlySubstanceUnits(False)

@@ -139,6 +139,7 @@ class IMPORTSBML(WindowedPlugin):
             comp_dimension_list = []
             comp_position_list = []
             spec_id_list = []
+            spec_name_list = []
             specGlyph_id_list = []
             spec_specGlyph_id_list = []
             spec_dimension_list = []
@@ -484,7 +485,6 @@ class IMPORTSBML(WindowedPlugin):
 
 
                                 spec_id = specGlyph.getSpeciesId()
-                                
                                 spec = model_layout.getSpecies(spec_id)
                                 spec_name = spec.getName()
                                 
@@ -533,6 +533,7 @@ class IMPORTSBML(WindowedPlugin):
 
                                 if specGlyph_id not in specGlyph_id_list:
                                     spec_id_list.append(spec_id)
+                                    spec_name_list.append(spec_name)
                                     specGlyph_id_list.append(specGlyph_id)
                                     spec_specGlyph_id_list.append([spec_id,specGlyph_id])
                                     spec_dimension_list.append([width,height])
@@ -577,7 +578,10 @@ class IMPORTSBML(WindowedPlugin):
                             if specGlyph_id not in specGlyph_id_list:
                                 specGlyph_id_list.append(specGlyph_id)
                                 spec_id = specGlyph.getSpeciesId()
+                                spec = model_layout.getSpecies(spec_id)
+                                spec_name = spec.getName()
                                 spec_id_list.append(spec_id)
+                                spec_name_list.append(spec_name)
                                 spec_specGlyph_id_list.append([spec_id,specGlyph_id])
                                 boundingbox = specGlyph.getBoundingBox()
                                 height = boundingbox.getHeight()
@@ -1265,6 +1269,7 @@ class IMPORTSBML(WindowedPlugin):
                     # orphan nodes have been considered, so numSpec_in_reaction should equals to numSpecGlyphs
                     for i in range (numSpec_in_reaction):
                         temp_id = spec_specGlyph_id_list[i][0]
+                        temp_name = spec_name_list[i]
                         temp_concentration = spec_concentration_list[i]
                         tempGlyph_id = spec_specGlyph_id_list[i][1]
                         dimension = spec_dimension_list[i]
@@ -1334,7 +1339,8 @@ class IMPORTSBML(WindowedPlugin):
                                     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
-                                    border_width=spec_border_width, shape_index=shapeIdx, concentration = temp_concentration)
+                                    border_width=spec_border_width, shape_index=shapeIdx, concentration = temp_concentration,
+                                    node_name = temp_name)
                                     
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "alignment", text_alignment)
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "position", text_position)
@@ -1419,7 +1425,8 @@ class IMPORTSBML(WindowedPlugin):
                                     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
                                     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                                     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
-                                    border_width=spec_border_width, shape_index=shapeIdx, concentration = temp_concentration)
+                                    border_width=spec_border_width, shape_index=shapeIdx, concentration = temp_concentration,
+                                    node_name = temp_name)
                                                                             
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "alignment", text_alignment)
                                     api.set_node_shape_property(net_index, nodeIdx_temp, -1, "position", text_position)

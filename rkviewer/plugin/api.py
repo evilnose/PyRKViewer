@@ -638,7 +638,7 @@ def add_compartment(net_index: int, id: str, fill_color: Color = None, border_co
 
 
 def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Color = None,
-             border_width: float = None, position: Vec2 = None, size: Vec2 = None,
+             border_width: float = None, position: Vec2 = None, size: Vec2 = None, comp_idx: int = -1,
              floating_node: bool = True, lock_node: bool = False, shape_index: int = 0,
              concentration: float = 0.0, node_name: str = '') -> int:
     """Adds a node to the given network.
@@ -653,6 +653,7 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         border_width: The border width of the node, or leave as None to use current theme.
         position: The position of the node, or leave as None to use default, (0, 0).
         size: The size of the node, or leave as None to use default, (0, 0).
+        comp_idx: The index of the compartment that the node is in, default as -1.
         shape_index: The index of the CompositeShape of the node. 0 (rectangle) by default.
         concentration: The concentration of the node, or leave as None to use default, 0.0.
         node_name: The name of the node.
@@ -684,7 +685,8 @@ def add_node(net_index: int, id: str, fill_color: Color = None, border_color: Co
         lockNode=lock_node,
         shape_index=shape_index,
         concentration=concentration,
-        node_name = node_name
+        node_name = node_name,
+        comp_idx = comp_idx
     )
     with group_action():
         nodei = _controller.add_node_g(net_index, node)

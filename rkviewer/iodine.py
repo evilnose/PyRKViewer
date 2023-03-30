@@ -98,6 +98,7 @@ class TNode(TAbstractNode):
     shape: CompositeShape = field(default_factory=lambda: shapeFactories[0].produce())
     concentration: float = 0.0
     node_name: str = ''
+    node_SBO: str = ''
 
 @dataclass
 class TAliasNode(TAbstractNode):
@@ -586,7 +587,9 @@ def _pushUndoStack():
         undoStack.push(networkDict)
 
 
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, nodeLocked: bool = False, nodeName: str = '') -> int:
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, 
+            floatingNode: bool = True, nodeLocked: bool = False, 
+            nodeName: str = '', nodeSBO: str = '') -> int:
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -604,7 +607,8 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
         _raiseError(-12)
 
     _pushUndoStack()
-    newNode = TNode(n.lastNodeIdx, nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked, nodeName)
+    newNode = TNode(n.lastNodeIdx, nodeID, Vec2(x, y), Vec2(w, h), 
+                    floatingNode, nodeLocked, nodeName, nodeSBO)
     return n.addNode(newNode)
 
 
@@ -867,6 +871,22 @@ def getNodeName(neti: int, nodei: int):
     raise ExceptionDict[errCode](errorDict[errCode])
 
 
+def getNodeSBO(neti: int, nodei: int):
+    """
+    GetNodeSBO: Get the SBO of the node
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkDict, undoStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        node = _getConcreteNode(neti, nodei)
+        return node.node_SBO
+
+    raise ExceptionDict[errCode](errorDict[errCode])
+
 def getNodeConcentration(neti: int, nodei: int):
     """
     GetNodeConcentration - get the concentration of the node
@@ -1102,6 +1122,26 @@ def setNodeName(neti: int, nodei: int, newName: str):
         else:
             _pushUndoStack()
             _getConcreteNode(neti, nodei).node_name = newName
+            return
+    raise ExceptionDict[errCode](errorDict[errCode])
+
+def setNodeSBO(neti: int, nodei: int, newSBO: str):
+    """
+    setNodeSBO set the name of a node
+    -5: net index out of range
+    -7: node index out of range
+    """
+    global stackFlag, errCode, networkDict, undoStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        net = networkDict[neti]
+        if nodei not in net.nodes.keys():
+            errCode = -7
+        else:
+            _pushUndoStack()
+            _getConcreteNode(neti, nodei).node_SBO = newSBO
             return
     raise ExceptionDict[errCode](errorDict[errCode])
 

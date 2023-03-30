@@ -868,6 +868,9 @@ class NodeForm(EditPanelForm):
             name_text = 'name' if len(self._selected_idx) == 1 else 'name'
             self.main_section.labels[self.name_ctrl.GetId()].SetLabel(name_text)
 
+            SBO_text = 'SBO' if len(self._selected_idx) == 1 else 'SBO'
+            self.main_section.labels[self.SBO_ctrl.GetId()].SetLabel(SBO_text)
+
             concentration_text = 'concentration' if len(self._selected_idx) == 1 else 'concentrations'
             self.main_section.labels[self.conc_ctrl.GetId()].SetLabel(concentration_text)
 
@@ -886,6 +889,9 @@ class NodeForm(EditPanelForm):
 
         self.name_ctrl = self.main_section.CreateTextCtrl()
         self.main_section.AppendControl('name', self.name_ctrl)
+
+        self.SBO_ctrl = self.main_section.CreateTextCtrl()
+        self.main_section.AppendControl('SBO', self.SBO_ctrl)
         
         self.conc_ctrl = self.main_section.CreateTextCtrl()
         self.conc_ctrl.Bind(wx.EVT_TEXT, self._OnConcText)
@@ -1226,6 +1232,8 @@ class NodeForm(EditPanelForm):
             comp_text = str(comp_id)
             self.name_ctrl.Enable(False)
             name_text = str(node.node_name)
+            self.SBO_ctrl.Enable(False)
+            SBO_text = str(node.node_SBO)
             self.conc_ctrl.Enable(True)
             conc_text = str(node.concentration)
             floatingNode = node.floatingNode
@@ -1247,6 +1255,8 @@ class NodeForm(EditPanelForm):
             comp_text = '; '.join(sorted(comp_list))
             self.name_ctrl.Enable(False)
             name_text = '; '.join(sorted(list(str(n.node_name) for n in nodes)))
+            self.SBO_ctrl.Enable(False)
+            SBO_text = '; '.join(sorted(list(str(n.node_SBO) for n in nodes)))
             self.conc_ctrl.Enable(False)
             conc_text = '; '.join(sorted(list(str(n.concentration) for n in nodes)))
             floatingNode = all(n.floatingNode for n in nodes)
@@ -1264,6 +1274,7 @@ class NodeForm(EditPanelForm):
         self.id_ctrl.ChangeValue(id_text)
         self.comp_ctrl.ChangeValue(comp_text)
         self.name_ctrl.ChangeValue(name_text)
+        self.SBO_ctrl.ChangeValue(SBO_text)
         self.conc_ctrl.ChangeValue(conc_text)
 
         if floatingNode:

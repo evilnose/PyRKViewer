@@ -203,8 +203,12 @@ class Controller(IController):
         iod.setNodeID(neti, nodei, new_id)
 
     @iod_setter
-    def rename2_node(self, neti: int, nodei: int, new_name: str):
+    def set_node_name(self, neti: int, nodei: int, new_name: str):
         iod.setNodeName(neti, nodei, new_name)
+
+    @iod_setter
+    def set_node_SBO(self, neti: int, nodei: int, new_SBO: str):
+        iod.setNodeSBO(neti, nodei, new_SBO)
 
     @iod_setter
     def set_node_concentration(self, neti: int, nodei: int, new_conc: float):
@@ -473,6 +477,7 @@ class Controller(IController):
             size=Vec2(w, h),
             concentration=iod.getNodeConcentration(neti, nodei),
             node_name = iod.getNodeName(neti, nodei),
+            node_SBO = iod.getNodeSBO(neti, nodei),
             # fill_color=fill_color,
             # border_color=border_color,
             # border_width=iod.getNodeBorderWidth(neti, nodei),

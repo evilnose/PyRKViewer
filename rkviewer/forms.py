@@ -888,9 +888,11 @@ class NodeForm(EditPanelForm):
         self.main_section.AppendControl('compartment', self.comp_ctrl)
 
         self.name_ctrl = self.main_section.CreateTextCtrl()
+        self.name_ctrl.Bind(wx.EVT_TEXT, self._OnNameText)
         self.main_section.AppendControl('name', self.name_ctrl)
 
         self.SBO_ctrl = self.main_section.CreateTextCtrl()
+        self.SBO_ctrl.Bind(wx.EVT_TEXT, self._OnSBOText)
         self.main_section.AppendControl('SBO', self.SBO_ctrl)
         
         self.conc_ctrl = self.main_section.CreateTextCtrl()
@@ -941,6 +943,39 @@ class NodeForm(EditPanelForm):
                     self.controller.rename_node(self.net_index, nodei, new_id)
                     post_event(DidModifyNodesEvent([nodei]))
         self.main_section.SetValidationState(True, self.id_ctrl.GetId())
+
+    def _OnNameText(self, evt):
+        """Callback for the name control."""
+        new_name = evt.GetString()
+        assert len(self._selected_idx) == 1
+        [nodei] = self._selected_idx
+        ctrl_name = self.name_ctrl.GetId()
+
+        if len(new_name) != 0:
+            self.self_changes = True
+            with self.controller.group_action():
+                self.controller.set_node_name(self.net_index, nodei, new_name)
+                post_event(DidModifyNodesEvent([nodei]))
+        self.main_section.SetValidationState(True, self.id_ctrl.GetId())
+
+    def _OnSBOText(self, evt):
+        """Callback for the SBO control."""
+        new_SBO = evt.GetString()
+        assert len(self._selected_idx) == 1
+        [nodei] = self._selected_idx
+        ctrl_SBO = self.SBO_ctrl.GetId()
+
+        if len(new_SBO) != 0:
+            if new_SBO[:8] == "SBO:0000" and new_SBO[8:11].isdigit():
+                self.self_changes = True
+                with self.controller.group_action():
+                    self.controller.set_node_SBO(self.net_index, nodei, new_SBO)
+                    post_event(DidModifyNodesEvent([nodei]))
+            else:
+                self.main_section.SetValidationState(False, ctrl_SBO, "Not saved: Invalid SBO Term ID (Example: SBO:0000247)")
+                return
+         
+        self.main_section.SetValidationState(True, self.SBO_ctrl.GetId())
 
     # def _OnCompText(self, evt):
     #     """Callback for the compartment control."""
@@ -1230,9 +1265,9 @@ class NodeForm(EditPanelForm):
                 if comp.index == node.comp_idx:
                     comp_id = comp.id
             comp_text = str(comp_id)
-            self.name_ctrl.Enable(False)
+            self.name_ctrl.Enable(True)
             name_text = str(node.node_name)
-            self.SBO_ctrl.Enable(False)
+            self.SBO_ctrl.Enable(True)
             SBO_text = str(node.node_SBO)
             self.conc_ctrl.Enable(True)
             conc_text = str(node.concentration)

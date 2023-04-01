@@ -874,7 +874,7 @@ class NodeForm(EditPanelForm):
             concentration_text = 'concentration' if len(self._selected_idx) == 1 else 'concentrations'
             self.main_section.labels[self.conc_ctrl.GetId()].SetLabel(concentration_text)
 
-            size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
+            size_text = 'size' if len(self._selected_idx) == 1 else 'size'
             self.main_section.labels[self.size_ctrl.GetId()].SetLabel(size_text)
         self.ExternalUpdate()
 

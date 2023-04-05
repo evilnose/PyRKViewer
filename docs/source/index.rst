@@ -28,5 +28,6 @@ It can draw reactants, products, reactions, and compartments. Its features are l
    Tutorial
    PluginDevelopment
    PluginReference
+   InternalJSONModelFormat
    CoreDevelopment
    Reference

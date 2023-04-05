@@ -32,7 +32,7 @@ class ModelMetrics(CommandPlugin):
         numNodes = api.node_count(netIn)
         numReactions = api.reaction_count(netIn)
 
-        wx.MessageBox('Number of compartments is %s, number of nodes is %s, and number of reactions is %s.' 
+        wx.MessageBox('Number of compartments is %s \nNumber of nodes is %s \nNumber of reactions is %s \n' 
         % (str(numCompartments), str(numNodes), str(numReactions)), "Message", wx.OK | wx.ICON_INFORMATION)
 
 

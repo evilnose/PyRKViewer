@@ -36,6 +36,8 @@ from rkviewer.config import AppSettings
 from rkviewer_plugins import importSBML
 from rkviewer_plugins import exportSBML
 
+from rkviewer_plugins import addReaction
+
 class EditPanel(fnb.FlatNotebook):
     """Panel that displays and allows editing of the details of a node.
 
@@ -297,6 +299,9 @@ class ModePanel(wx.Panel):
         self.AppendNormalButton('Create Rxn', canvas.CreateReactionFromMarked,
                                 sizer, tooltip='Create reaction from marked reactants and products')
 
+        # self.AppendSeparator(sizer)
+        # self.AppendToggleButtonUniUni('UniUni', sizer, tooltip='Add a UniUni reaction')
+
         self.SetSizer(sizer)
 
     def AppendModeButton(self, label: str, mode: InputMode, sizer: wx.Sizer):
@@ -337,8 +342,23 @@ class ModePanel(wx.Panel):
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
+    def AppendToggleButtonUniUni(self, label: str, sizer: wx.Sizer, tooltip: str = None):
+
+        if get_theme ('btn_border'):
+           btn = wx.ToggleButton(self, label=label)
+        else:
+           btn = wx.ToggleButton(self, label=label, style=wx.BORDER_NONE)
+
+        btn.SetBackgroundColour(get_theme ('btn_bg'))
+        btn.SetForegroundColour(get_theme ('btn_fg'))
+        if tooltip is not None:
+            btn.SetToolTip(tooltip)
+        btn.Bind(wx.EVT_TOGGLEBUTTON, addReaction.AddReaction._UniUni(self))
+        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+
     def AppendSeparator(self, sizer: wx.Sizer):
         sizer.Add((0, 10))
+    
 
 
 class BottomBar(wx.Panel):
@@ -571,6 +591,8 @@ class MainFrame(wx.Frame):
                          lambda _: canvas.SelectAllNodes(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('N')))
         self.AddMenuItem(select_menu, 'Select All &Reactions', 'Select all reactions',
                          lambda _: canvas.SelectAllReactions(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('R')))
+        self.AddMenuItem(select_menu, 'Select All &Compartments', 'Select all compartments',
+                         lambda _: canvas.SelectAllCompartments(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('C')))
         self.AddMenuItem(select_menu, 'Clear Selection', 'Clear the current selection',
                          lambda _: canvas.ClearCurrentSelection(), entries,
                          key=(wx.ACCEL_NORMAL, wx.WXK_ESCAPE))

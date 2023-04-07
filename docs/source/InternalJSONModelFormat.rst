@@ -22,7 +22,7 @@ Information
  c. Reaction basic information (i.e., ID, reactants, products) and layout information (i.e., handle positions).
 
 2. Optional information in the internal JSON model format.
- a. Comparmtnet redner information (i.e., fill color, border color, border width).
+ a. Compartment render information (i.e., fill color, border color, border width).
  b. Node render information (i.e., fill color, border color, border width).
  c. Reaction render information (i.e., fill color, line width).
 

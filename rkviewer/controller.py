@@ -120,7 +120,7 @@ class Controller(IController):
         The 'g' suffix indicates that this operation creates its own group
         '''
         with self.group_action():
-            iod.addNode(neti, node.id, node.position.x, node.position.y, node.size.x, node.size.y, True) # True = floating species
+            iod.addNode(neti, node.id, node.position.x, node.position.y, node.size.x, node.size.y, True) 
             nodei = iod.getNodeIndex(neti, node.id)
             # iod.setNodeFillColorAlpha(neti, nodei, node.fill_color.Alpha() / 255)
             # iod.setNodeFillColorRGB(neti, nodei, node.fill_color.Red(),
@@ -201,6 +201,14 @@ class Controller(IController):
     @iod_setter
     def rename_node(self, neti: int, nodei: int, new_id: str):
         iod.setNodeID(neti, nodei, new_id)
+
+    @iod_setter
+    def set_node_name(self, neti: int, nodei: int, new_name: str):
+        iod.setNodeName(neti, nodei, new_name)
+
+    @iod_setter
+    def set_node_SBO(self, neti: int, nodei: int, new_SBO: str):
+        iod.setNodeSBO(neti, nodei, new_SBO)
 
     @iod_setter
     def set_node_concentration(self, neti: int, nodei: int, new_conc: float):
@@ -468,6 +476,8 @@ class Controller(IController):
             pos=Vec2(x, y),
             size=Vec2(w, h),
             concentration=iod.getNodeConcentration(neti, nodei),
+            node_name = iod.getNodeName(neti, nodei),
+            node_SBO = iod.getNodeSBO(neti, nodei),
             # fill_color=fill_color,
             # border_color=border_color,
             # border_width=iod.getNodeBorderWidth(neti, nodei),

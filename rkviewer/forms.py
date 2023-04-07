@@ -865,11 +865,18 @@ class NodeForm(EditPanelForm):
             comp_text = 'compartment' if len(self._selected_idx) == 1 else 'compartment'
             self.main_section.labels[self.comp_ctrl.GetId()].SetLabel(comp_text)
 
+            name_text = 'name' if len(self._selected_idx) == 1 else 'name'
+            self.main_section.labels[self.name_ctrl.GetId()].SetLabel(name_text)
+
+            SBO_text = 'SBO' if len(self._selected_idx) == 1 else 'SBO'
+            self.main_section.labels[self.SBO_ctrl.GetId()].SetLabel(SBO_text)
+
             concentration_text = 'concentration' if len(self._selected_idx) == 1 else 'concentrations'
             self.main_section.labels[self.conc_ctrl.GetId()].SetLabel(concentration_text)
 
-            size_text = 'size' if len(self._selected_idx) == 1 else 'total span'
+            size_text = 'size' if len(self._selected_idx) == 1 else 'size'
             self.main_section.labels[self.size_ctrl.GetId()].SetLabel(size_text)
+
         self.ExternalUpdate()
 
     def CreateControls(self):
@@ -880,6 +887,14 @@ class NodeForm(EditPanelForm):
         self.comp_ctrl = self.main_section.CreateTextCtrl()
         #self.comp_ctrl.Bind(wx.EVT_TEXT, self._OnCompText)
         self.main_section.AppendControl('compartment', self.comp_ctrl)
+
+        self.name_ctrl = self.main_section.CreateTextCtrl()
+        self.name_ctrl.Bind(wx.EVT_TEXT, self._OnNameText)
+        self.main_section.AppendControl('name', self.name_ctrl)
+
+        self.SBO_ctrl = self.main_section.CreateTextCtrl()
+        self.SBO_ctrl.Bind(wx.EVT_TEXT, self._OnSBOText)
+        self.main_section.AppendControl('SBO', self.SBO_ctrl)
         
         self.conc_ctrl = self.main_section.CreateTextCtrl()
         self.conc_ctrl.Bind(wx.EVT_TEXT, self._OnConcText)
@@ -890,7 +905,8 @@ class NodeForm(EditPanelForm):
         self.main_section.AppendControl('position', self.pos_ctrl)
 
         self.size_ctrl = self.main_section.CreateTextCtrl()
-        self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
+        #self.size_ctrl.Bind(wx.EVT_TEXT, self._OnSizeText)
+        self.size_ctrl.Bind(wx.EVT_TEXT, self._OnNodeSizeText)
         self.main_section.AppendControl('size', self.size_ctrl)
 
         self.nodeStates = ['Floating Node', 'Boundary Node']
@@ -929,6 +945,39 @@ class NodeForm(EditPanelForm):
                     self.controller.rename_node(self.net_index, nodei, new_id)
                     post_event(DidModifyNodesEvent([nodei]))
         self.main_section.SetValidationState(True, self.id_ctrl.GetId())
+
+    def _OnNameText(self, evt):
+        """Callback for the name control."""
+        new_name = evt.GetString()
+        assert len(self._selected_idx) == 1
+        [nodei] = self._selected_idx
+        ctrl_name = self.name_ctrl.GetId()
+
+        if len(new_name) != 0:
+            self.self_changes = True
+            with self.controller.group_action():
+                self.controller.set_node_name(self.net_index, nodei, new_name)
+                post_event(DidModifyNodesEvent([nodei]))
+        self.main_section.SetValidationState(True, self.id_ctrl.GetId())
+
+    def _OnSBOText(self, evt):
+        """Callback for the SBO control."""
+        new_SBO = evt.GetString()
+        assert len(self._selected_idx) == 1
+        [nodei] = self._selected_idx
+        ctrl_SBO = self.SBO_ctrl.GetId()
+
+        if len(new_SBO) != 0:
+            if new_SBO[:8] == "SBO:0000" and new_SBO[8:11].isdigit():
+                self.self_changes = True
+                with self.controller.group_action():
+                    self.controller.set_node_SBO(self.net_index, nodei, new_SBO)
+                    post_event(DidModifyNodesEvent([nodei]))
+            else:
+                self.main_section.SetValidationState(False, ctrl_SBO, "Not saved: Invalid SBO Term ID (Example: SBO:0000247)")
+                return
+         
+        self.main_section.SetValidationState(True, self.SBO_ctrl.GetId())
 
     # def _OnCompText(self, evt):
     #     """Callback for the compartment control."""
@@ -1090,6 +1139,104 @@ class NodeForm(EditPanelForm):
                     self.controller.set_node_size(self.net_index, node.index, node.size)
         self.main_section.SetValidationState(True, self.size_ctrl.GetId())
 
+    def _OnNodeSizeText(self, evt):
+        """Callback for the node size control."""
+        # new_SBO = evt.GetString()
+        # assert len(self._selected_idx) == 1
+        # [nodei] = self._selected_idx
+        # ctrl_SBO = self.SBO_ctrl.GetId()
+
+        # if len(new_SBO) != 0:
+        #     if new_SBO[:8] == "SBO:0000" and new_SBO[8:11].isdigit():
+        #         self.self_changes = True
+        #         with self.controller.group_action():
+        #             self.controller.set_node_SBO(self.net_index, nodei, new_SBO)
+        #             post_event(DidModifyNodesEvent([nodei]))
+        #     else:
+        #         self.main_section.SetValidationState(False, ctrl_SBO, "Not saved: Invalid SBO Term ID (Example: SBO:0000247)")
+        #         return
+         
+        # self.main_section.SetValidationState(True, self.SBO_ctrl.GetId())
+
+        assert self.contiguous
+        ctrl_id = self.size_ctrl.GetId()
+        text = evt.GetString()
+        wh = parse_num_pair(text)
+
+        if wh is not None: #single node selected
+            nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
+            min_width = get_setting('min_node_width')
+            min_height = get_setting('min_node_height')
+            size = Vec2(wh)
+            # limit size to be smaller than the compartment
+            compi = nodes[0].comp_idx
+            bounds: Rect
+            if compi == -1:
+                bounds = Rect(Vec2(), self.canvas.realsize)
+            else:
+                comp = self.canvas.comp_idx_map[compi]
+                bounds = comp.rect
+
+            min_nw = min(n.size.x for n in nodes)
+            min_nh = min(n.size.y for n in nodes)
+            min_ratio = Vec2(min_width / min_nw, min_height / min_nh)
+            min_size = self._bounding_rect.size.elem_mul(min_ratio)
+
+            if size.x < min_size.x or size.y < min_size.y:
+                message = 'The size of {} needs to be at least ({}, {})'.format(
+                    'bounding box' if len(nodes) > 1 else 'node',
+                    no_rzeros(min_size.x, 2), no_rzeros(min_size.y, 2))
+                self.main_section.SetValidationState(False, ctrl_id, message)
+                return
+
+            # if size.x > max_size.x or size.y > max_size.y:
+            #     message = 'The size of bounding box cannot exceed ({}, {})'.format(
+            #         no_rzeros(max_size.x, 2), no_rzeros(max_size.y, 2))
+            #     self.main_section.SetValidationState(False, ctrl_id, message)
+            #     return
+
+            # NOTE clamp max size automatically rather than show error
+            clamped = size.reduce2(min, bounds.size)
+            if self._bounding_rect.size != clamped or size != clamped:
+                ratio = clamped.elem_div(self._bounding_rect.size)
+                self.self_changes = True
+                with self.controller.group_action():
+                    offsets = list()
+                    for node in nodes:
+                        rel_pos = node.position - self._bounding_rect.position
+                        new_pos = self._bounding_rect.position + rel_pos.elem_mul(ratio)
+                        offsets.append(new_pos - node.position)
+                        node.position = new_pos
+                        node.size = node.size.elem_mul(ratio)
+                        # clamp so that nodes are always within compartment/bounds
+                        node.position = clamp_rect_pos(node.rect, bounds)
+
+                    idx_list = list(self._selected_idx)
+                    post_event(DidMoveNodesEvent(idx_list, offsets, dragged=False))
+                    post_event(DidResizeNodesEvent(idx_list, ratio=ratio, dragged=False))
+                    for node in nodes:
+                        self.controller.move_node(self.net_index, node.index, node.position)
+                        self.controller.set_node_size(self.net_index, node.index, node.size)
+        else: #hw is none
+            nodes = get_nodes_by_idx(self.all_nodes, self._selected_idx)
+            self.self_changes = True
+            with self.controller.group_action():
+                hws = text.split("; ")
+                for i in range(len(hws)):
+                    hw = hws[i][1:-1].split(", ")
+                    if len(hw) != 2: #not in the format of "(w1, h1);(w2, h2)" either
+                        self.main_section.SetValidationState(
+                        False, ctrl_id, 'Should be in the form of "width, height" or "(w1, h1); (w2, h2)"')   
+                        return
+                    try:
+                        self.controller.set_node_size(self.net_index, i, Vec2(float(hw[0]), float(hw[1])))
+                    except:
+                        self.main_section.SetValidationState(
+                        False, ctrl_id, 'Should be in the form of "width, height" or "(w1, h1); (w2, h2)"')   
+                        return
+
+        self.main_section.SetValidationState(True, self.size_ctrl.GetId())
+
     def OnNodeStatusChoice(self, evt):
         """Callback for the change node status, floating or boundary."""
         selected = self.nodeStatusDropDown.GetSelection()
@@ -1134,7 +1281,7 @@ class NodeForm(EditPanelForm):
         self._UpdatePrimitiveFields()
 
     def OnNodeLockCheckBox(self, evt):
-        """Callback for the change node status, floating or boundary."""
+        """Callback for the change node lock or not."""
         cb = evt.GetEventObject()
         if cb.GetValue():
             nodeLocked = True
@@ -1201,10 +1348,13 @@ class NodeForm(EditPanelForm):
 
         if not self.contiguous:
             self.pos_ctrl.ChangeValue('?')
-            self.size_ctrl.ChangeValue('?')
+            #self.size_ctrl.ChangeValue('?')
         else:
             ChangePairValue(self.pos_ctrl, self._bounding_rect.position, prec)
-            ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
+            #ChangePairValue(self.size_ctrl, self._bounding_rect.size, prec)
+
+        if not self.contiguous:
+            self.size_ctrl.ChangeValue('?')
 
         if len(self._selected_idx) == 1:
             [node] = nodes
@@ -1218,8 +1368,14 @@ class NodeForm(EditPanelForm):
                 if comp.index == node.comp_idx:
                     comp_id = comp.id
             comp_text = str(comp_id)
+            self.name_ctrl.Enable(True)
+            name_text = str(node.node_name)
+            self.SBO_ctrl.Enable(True)
+            SBO_text = str(node.node_SBO)
             self.conc_ctrl.Enable(True)
             conc_text = str(node.concentration)
+            self.size_ctrl.Enable(True)
+            size_text = str(node.size[0]) + ", " + str(node.size[1])
             floatingNode = node.floatingNode
             lockNode = node.lockNode
             assert node.composite_shape is not None
@@ -1237,8 +1393,14 @@ class NodeForm(EditPanelForm):
                         comp_id = comp.id
                 comp_list.append(str(comp_id))
             comp_text = '; '.join(sorted(comp_list))
+            self.name_ctrl.Enable(False)
+            name_text = '; '.join(sorted(list(str(n.node_name) for n in nodes)))
+            self.SBO_ctrl.Enable(False)
+            SBO_text = '; '.join(sorted(list(str(n.node_SBO) for n in nodes)))
             self.conc_ctrl.Enable(False)
             conc_text = '; '.join(sorted(list(str(n.concentration) for n in nodes)))
+            self.size_ctrl.Enable(True)
+            size_text = '; '.join(sorted(list(str(n.size) for n in nodes)))
             floatingNode = all(n.floatingNode for n in nodes)
             lockNode = all(n.lockNode for n in nodes)
             shape_name_set = set(n.composite_shape.name for n in nodes)
@@ -1253,7 +1415,10 @@ class NodeForm(EditPanelForm):
 
         self.id_ctrl.ChangeValue(id_text)
         self.comp_ctrl.ChangeValue(comp_text)
+        self.name_ctrl.ChangeValue(name_text)
+        self.SBO_ctrl.ChangeValue(SBO_text)
         self.conc_ctrl.ChangeValue(conc_text)
+        self.size_ctrl.ChangeValue(size_text)
 
         if floatingNode:
             self.nodeStatusDropDown.SetSelection(0)

@@ -33,6 +33,10 @@ from .mvc import IController, IView
 from .utils import ButtonGroup, on_msw, resource_path, start_file
 from rkviewer.config import AppSettings
 
+from rkviewer_plugins import importSBML
+from rkviewer_plugins import exportSBML
+
+from rkviewer_plugins import addReaction
 
 class EditPanel(fnb.FlatNotebook):
     """Panel that displays and allows editing of the details of a node.
@@ -251,8 +255,9 @@ class TabbedToolbar(fnb.FlatNotebook):
     def AddPluginPages(self):
         categories = self.manager.get_plugins_by_category()
         for cat in PluginCategory:
-            if len(categories[cat]) == 0:
-                continue
+            # do not show the plugin categories if no valid plugin example available
+            # if len(categories[cat]) == 0:
+            #     continue
 
             tb = Toolbar(self)
             for name, callback, bitmap in categories[cat]:
@@ -294,6 +299,9 @@ class ModePanel(wx.Panel):
         self.AppendNormalButton('Create Rxn', canvas.CreateReactionFromMarked,
                                 sizer, tooltip='Create reaction from marked reactants and products')
 
+        # self.AppendSeparator(sizer)
+        # self.AppendToggleButtonUniUni('UniUni', sizer, tooltip='Add a UniUni reaction')
+
         self.SetSizer(sizer)
 
     def AppendModeButton(self, label: str, mode: InputMode, sizer: wx.Sizer):
@@ -334,8 +342,23 @@ class ModePanel(wx.Panel):
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
+    def AppendToggleButtonUniUni(self, label: str, sizer: wx.Sizer, tooltip: str = None):
+
+        if get_theme ('btn_border'):
+           btn = wx.ToggleButton(self, label=label)
+        else:
+           btn = wx.ToggleButton(self, label=label, style=wx.BORDER_NONE)
+
+        btn.SetBackgroundColour(get_theme ('btn_bg'))
+        btn.SetForegroundColour(get_theme ('btn_fg'))
+        if tooltip is not None:
+            btn.SetToolTip(tooltip)
+        btn.Bind(wx.EVT_TOGGLEBUTTON, addReaction.AddReaction._UniUni(self))
+        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
+
     def AppendSeparator(self, sizer: wx.Sizer):
         sizer.Add((0, 10))
+    
 
 
 class BottomBar(wx.Panel):
@@ -516,6 +539,13 @@ class MainFrame(wx.Frame):
         self.save_item.Enable(False)
         self.AddMenuItem(file_menu, '&Save As...', 'Save current network as a JSON file',
                          lambda _: self.SaveAsJson(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('N')))
+        #Import SBML
+        file_menu.AppendSeparator()
+        self.AddMenuItem(file_menu, '&Import SBML', 'Import SBML',
+                         lambda _: self.ImportSBML(),  entries, key=(wx.ACCEL_CTRL, ord('I')))
+        #Emport SBML
+        self.AddMenuItem(file_menu, '&Export SBML', 'Export SBML',
+                         lambda _: self.ExportSBML(),  entries, key=(wx.ACCEL_CTRL, ord('E')))
         file_menu.AppendSeparator()
         self.AddMenuItem(file_menu, '&Edit Settings', 'Edit settings',
                          lambda _: self.EditSettings(),  entries)
@@ -561,6 +591,8 @@ class MainFrame(wx.Frame):
                          lambda _: canvas.SelectAllNodes(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('N')))
         self.AddMenuItem(select_menu, 'Select All &Reactions', 'Select all reactions',
                          lambda _: canvas.SelectAllReactions(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('R')))
+        self.AddMenuItem(select_menu, 'Select All &Compartments', 'Select all compartments',
+                         lambda _: canvas.SelectAllCompartments(), entries, key=(wx.ACCEL_CTRL | wx.ACCEL_SHIFT, ord('C')))
         self.AddMenuItem(select_menu, 'Clear Selection', 'Clear the current selection',
                          lambda _: canvas.ClearCurrentSelection(), entries,
                          key=(wx.ACCEL_NORMAL, wx.WXK_ESCAPE))
@@ -668,7 +700,7 @@ class MainFrame(wx.Frame):
     def onAboutDlg(self, event):
         info = wx.adv.AboutDialogInfo()
         info.SetName("SBcoyote")
-        info.SetVersion("1.3.6")
+        info.SetVersion("1.3.7")
         info.SetCopyright("(c) 2023 UW Sauro Lab")
         info.SetDescription("An Extensible Python-Based Reaction Editor and Viewer.")
         info.SetWebSite("https://github.com/sys-bio/SBcoyote",
@@ -678,6 +710,47 @@ class MainFrame(wx.Frame):
 
         # Show the wx.AboutBox
         wx.adv.AboutBox(info)
+
+    def ImportSBML(self):
+        """Import SBML files."""
+        
+        self.dirname=""  #set directory name to blank
+        dlg = wx.FileDialog(self, "Choose a file to open", self.dirname, wildcard="SBML files (*.xml)|*.xml", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) #open the dialog boxto open file
+        if dlg.ShowModal() == wx.ID_OK:  #if positive button selected....
+            self.filename = dlg.GetFilename()  #get the filename of the file
+            self.dirname = dlg.GetDirectory()  #get the directory of where file is located
+            f = open(os.path.join(self.dirname, self.filename), 'r')  #traverse the file directory and find filename in the OS
+            self.sbmlStr = f.read()
+            with wx.BusyCursor():
+            #with wx.BusyInfo("Please wait, working..."):
+                importSBML.IMPORTSBML.DisplayModel(self, self.sbmlStr, True, False)
+                f.close
+        dlg.Destroy()
+
+    def ExportSBML(self):
+        """Export SBML files."""
+        sbmlStr_layout_render = exportSBML.ExportSBML.NetworkToSBML(self)
+        if sbmlStr_layout_render is None:
+            wx.MessageBox("No valid SBML string to export or save!", "Error")
+        else:
+            try:
+                #save to local
+                self.dirname=""  #set directory name to blank 
+                dlg = wx.FileDialog(self, "Save As", self.dirname, wildcard="SBML files (*.xml)|*.xml", style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
+                if dlg.ShowModal() == wx.ID_OK:
+                    # Grab the content to be saved
+                    #itcontains = self.SBMLText.GetValue()
+                    itcontains = sbmlStr_layout_render
+                    # Open the file for write, write, close
+                    self.filename=dlg.GetFilename()
+                    self.dirname=dlg.GetDirectory()
+                    filehandle=open(os.path.join(self.dirname, self.filename),'w')
+                    filehandle.write(itcontains)
+                    filehandle.close()
+                # Get rid of the dialog to keep things tidy
+                dlg.Destroy()
+            except:
+                wx.MessageBox("No valid SBML string to export or save!", "Error")
 
     def ReloadSettings(self):
         load_theme_settings()

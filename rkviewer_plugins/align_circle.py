@@ -18,7 +18,7 @@ class AlignCircle(WindowedPlugin):
         version='1.0.0',
         short_desc='Align Circle',
         long_desc='Aligns the nodes into a circle',
-        category=PluginCategory.UTILITIES
+        category=PluginCategory.VISUALIZATION
     )
 
     def __init__(self):

@@ -9,6 +9,10 @@ SBcoyote, initially called PyRKViewer or Coyote, is a cross-platform visualizati
 * Reactions can be displayed using Bezier curves and straight lines.
 * Plugin support, with some plugin examples: arrow designer, random network, auto layout, etc.
 
+## Citing
+
+If you are using any of the code, please cite the article (https://arxiv.org/abs/2302.09151). 
+
 ## Installing SBcoyote
 
 * Install Python 3.7, 3.8, 3.9 or 3.10 if not already in the system.
@@ -26,7 +30,6 @@ Here is a visualization example by SBcoyote for the large-scale Escherichia coli
 metabolism network (King et al., 2015; Orth et al., 2010).
 
 <img src="https://raw.githubusercontent.com/sys-bio/SBcoyote/main/examples/ecoli.png" width="500" height="400">
-
 
 ## Installment options for Developers
 

@@ -28,7 +28,7 @@ class LayoutNetworkX(WindowedPlugin):
         version='1.0.3',
         short_desc='Auto Layout using networkX.',
         long_desc='Rearrange a random network into a neat auto layout',
-        category=PluginCategory.UTILITIES,
+        category=PluginCategory.VISUALIZATION,
     )
 
     def create_window(self, dialog):

@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an SBML string as save it as a file.
-Version 1.0.4: Author: Jin Xu (2023)
+Version 1.0.6: Author: Jin Xu (2023)
 """
 
 
@@ -20,10 +20,10 @@ class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportSBML',
         author='Jin Xu',
-        version='1.0.4',
+        version='1.0.6',
         short_desc='Export SBML.',
         long_desc='Export the SBML String from the network on canvas and save it to a file.',
-        category=PluginCategory.ANALYSIS
+        category=PluginCategory.MODELS
     )
 
 
@@ -89,7 +89,7 @@ class ExportSBML(WindowedPlugin):
             # Get rid of the dialog to keep things tidy
             dlg.Destroy()
         except:
-            wx.MessageBox("No valid SBML string to save!", "Error")
+            wx.MessageBox("No valid SBML string to export or save!", "Error")
 
 
     def NetworkToSBML(self):
@@ -182,7 +182,8 @@ class ExportSBML(WindowedPlugin):
         numReactions = api.reaction_count(netIn)
         
         if numNodes == 0:
-           wx.MessageBox("Please import a network with at least one node on canvas", "Message", wx.OK | wx.ICON_INFORMATION)
+            pass
+            #wx.MessageBox("There are no nodes on canvas to export.", "Message", wx.OK | wx.ICON_INFORMATION)
         else:
             allNodes = api.get_nodes(netIn)
             
@@ -240,12 +241,16 @@ class ExportSBML(WindowedPlugin):
                     original_index = allNodes[i].original_index
                     if original_index == -1:
                         spec_id = allNodes[i].id
+                        spec_name = allNodes[i].node_name
+                        spec_SBO = allNodes[i].node_SBO
                         if ' ' in spec_id:
                             spec_id = spec_id.replace(' ', '_')
                         if spec_id not in spec_id_list:
                             spec_id_list.append(spec_id)
                         species = model.createSpecies()
                         species.setId(spec_id)
+                        species.setName(spec_name)
+                        species.setSBOTerm(spec_SBO)
                         comp_idx = allNodes[i].comp_idx
                         if comp_idx != -1:
                             comp_id = allcompartments[comp_idx].id 
@@ -270,12 +275,16 @@ class ExportSBML(WindowedPlugin):
                     original_index = allNodes[i].original_index
                     if original_index == -1:
                         spec_id = allNodes[i].id
+                        spec_name = allNodes[i].node_name
+                        spec_SBO = allNodes[i].node_SBO
                         if ' ' in spec_id:
                             spec_id = spec_id.replace(' ', '_')
                         if spec_id not in spec_id_list:
                             spec_id_list.append(spec_id)
                         species = model.createSpecies()
                         species.setId(spec_id)
+                        species.setName(spec_name)
+                        species.setSBOTerm(spec_SBO)
                         species.setCompartment(comp_id)
                         species.setInitialConcentration(allNodes[i].concentration)	
                         species.setHasOnlySubstanceUnits(False)
@@ -409,8 +418,8 @@ class ExportSBML(WindowedPlugin):
             #
             layout = mplugin.createLayout()
             layout.setId("COYOTO_layout")
-            layout_width = 9900
-            layout_height = 6100
+            layout_width = 10000 - 20
+            layout_height = 6200 - 20
             layout.setDimensions(Dimensions(layoutns, layout_width, layout_height))
             # random network (40+800x, 40+800y)
 
@@ -1124,7 +1133,7 @@ class ExportSBML(WindowedPlugin):
                     for j in range(rct_num):
                         specsRefG_id = "SpecRefG_" + rxn_id + "_rct" + str(j)
                         style = rInfo.createStyle("specRefGlyphStyle" + rxn_id + "_rct" + str(j))
-                        style.getGroup().setEndHead('_line_ending_default_NONE_')
+                        style.getGroup().setEndHead('_line_ending_default_NONE_' + rxn_id)
                         style.getGroup().setStroke("lineEnding_border_color" + "_" + lineEnding_id)
                         style.getGroup().setFill("lineEnding_fill_color" + "_" + lineEnding_id)
                         style.getGroup().setStrokeWidth(reaction_line_thickness)

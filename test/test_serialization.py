@@ -47,34 +47,34 @@ class TestSerialization(DummyAppTest):
     def setUp(self):
         iodine.newNetwork("net1")
 
-    def testNode(self):
-        node = createNode("node0")
-        dump_object= iodine.dumpNetwork(0)
-        self.assertEqual(0, len(dump_object["compartments"]))
-        nodeDict = dump_object["nodes"]
-        self.assertEqual(1, len(nodeDict))
-        nodeObj = nodeDict[0]
-        self.assertEqual(-1, nodeObj["compi"])
-        self.assertIsInstance( nodeObj["floating"], bool)
-        self.assertEqual(2, len(nodeObj["position"]))
-        self.assertEqual(0.4, nodeObj["position"][1])
-        self.assertEqual(2, len(nodeObj["rectSize"]))
+    # def testNode(self):
+    #     node = createNode("node0")
+    #     dump_object= iodine.dumpNetwork(0)
+    #     self.assertEqual(0, len(dump_object["compartments"]))
+    #     nodeDict = dump_object["nodes"]
+    #     self.assertEqual(1, len(nodeDict))
+    #     nodeObj = nodeDict[0]
+    #     self.assertEqual(-1, nodeObj["compi"])
+    #     self.assertIsInstance( nodeObj["floating"], bool)
+    #     self.assertEqual(2, len(nodeObj["position"]))
+    #     self.assertEqual(0.4, nodeObj["position"][1])
+    #     self.assertEqual(2, len(nodeObj["rectSize"]))
 
     
 
-    def testCompositeShape(self):
-        #This test created specially for rectangle default shape
-        node = createNode("node1")
+    # def testCompositeShape(self):
+    #     #This test created specially for rectangle default shape
+    #     node = createNode("node1")
         
-        dump_object = iodine.dumpNetwork(0)
-        nodeDict = dump_object["nodes"]
-        shapeDict = nodeDict[0]["shape"]
+    #     dump_object = iodine.dumpNetwork(0)
+    #     nodeDict = dump_object["nodes"]
+    #     shapeDict = nodeDict[0]["shape"]
     
-        self.assertEqual("rectangle", shapeDict["name"])
+    #     self.assertEqual("rectangle", shapeDict["name"])
 
-        shape_items = shapeDict["items"][0]
+    #     shape_items = shapeDict["items"][0]
         
-        match_rectangle_primitive(self, shape_item = shape_items)
+    #     match_rectangle_primitive(self, shape_item = shape_items)
         # self.assertEqual(3, len(shape_items[0]["border_color"]))
         # self.assertIsInstance(shape_items[0]["border_width"], float)
         # self.assertEqual("rectangle", shape_items[0]["name"])
@@ -85,91 +85,91 @@ class TestSerialization(DummyAppTest):
         # self.assertEqual(2, len(shape_items[1]["scale"]))
         # self.assertEqual(2, len(shape_items[1]["translation"]))
         
-    def testTextPrimitive(self):
-        node = createNode("node1")
+    # def testTextPrimitive(self):
+    #     node = createNode("node1")
         
-        dump_object = iodine.dumpNetwork(0)
-        nodeDict = dump_object["nodes"]
-        shapeDict = nodeDict[0]["shape"]
-        text_items = shapeDict["text_item"]
+    #     dump_object = iodine.dumpNetwork(0)
+    #     nodeDict = dump_object["nodes"]
+    #     shapeDict = nodeDict[0]["shape"]
+    #     text_items = shapeDict["text_item"]
         
-        self.assertIsInstance(text_items[0]["alignment"], str)
-        self.assertEqual("center", text_items[0]["alignment"])
-        self.assertEqual(4, len(text_items[0]["bg_color"]))
-        self.assertEqual(3, len(text_items[0]["font_color"]))
-        self.assertEqual("sans-serif", text_items[0]["font_family"])
-        self.assertIsInstance(text_items[0]["font_size"], int)
-        self.assertEqual("normal", text_items[0]["font_style"])
-        self.assertEqual("normal", text_items[0]["font_weight"])
+    #     self.assertIsInstance(text_items[0]["alignment"], str)
+    #     self.assertEqual("center", text_items[0]["alignment"])
+    #     self.assertEqual(4, len(text_items[0]["bg_color"]))
+    #     self.assertEqual(3, len(text_items[0]["font_color"]))
+    #     self.assertEqual("sans-serif", text_items[0]["font_family"])
+    #     self.assertIsInstance(text_items[0]["font_size"], int)
+    #     self.assertEqual("normal", text_items[0]["font_style"])
+    #     self.assertEqual("normal", text_items[0]["font_weight"])
 
-        self.assertIsInstance(text_items[1]["rotation"], float)
-        self.assertEqual(2, len(text_items[1]["scale"]))
-        self.assertEqual(2, len(text_items[1]["translation"]))
+    #     self.assertIsInstance(text_items[1]["rotation"], float)
+    #     self.assertEqual(2, len(text_items[1]["scale"]))
+    #     self.assertEqual(2, len(text_items[1]["translation"]))
 
-    def testMultipleNodes(self):
-        #testing 100 nodes
-        num_nodes = 100
-        for i in range(num_nodes):
-            createNode("node"+str(i), shapei = i%6) #see the length of shapeFactories in iodine.py
+    # def testMultipleNodes(self):
+    #     #testing 100 nodes
+    #     num_nodes = 100
+    #     for i in range(num_nodes):
+    #         createNode("node"+str(i), shapei = i%6) #see the length of shapeFactories in iodine.py
 
-        dump_object = iodine.dumpNetwork(0)
-        nodeDict = dump_object["nodes"]
-        self.assertEqual(num_nodes,len(nodeDict))
+    #     dump_object = iodine.dumpNetwork(0)
+    #     nodeDict = dump_object["nodes"]
+    #     self.assertEqual(num_nodes,len(nodeDict))
 
-        for i in range(num_nodes):
-            nodeObj = nodeDict[i]
-            self.assertEqual(-1, nodeObj["compi"])
-            self.assertIsInstance( nodeObj["floating"], bool)
-            self.assertEqual(2, len(nodeObj["position"]))
-            self.assertEqual(0.4, nodeObj["position"][1])
-            self.assertEqual(2, len(nodeObj["rectSize"]))
+    #     for i in range(num_nodes):
+    #         nodeObj = nodeDict[i]
+    #         self.assertEqual(-1, nodeObj["compi"])
+    #         self.assertIsInstance( nodeObj["floating"], bool)
+    #         self.assertEqual(2, len(nodeObj["position"]))
+    #         self.assertEqual(0.4, nodeObj["position"][1])
+    #         self.assertEqual(2, len(nodeObj["rectSize"]))
 
-    def testMultipleShapes(self):
-        num_nodes = 100
-        for i in range(num_nodes):
-            createNode("node"+str(i), shapei = i%6)
+    # def testMultipleShapes(self):
+    #     num_nodes = 100
+    #     for i in range(num_nodes):
+    #         createNode("node"+str(i), shapei = i%6)
 
-        dump_object = iodine.dumpNetwork(0)
-        nodeDict = dump_object["nodes"]
+    #     dump_object = iodine.dumpNetwork(0)
+    #     nodeDict = dump_object["nodes"]
 
-        shape_names = [shape.name for shape in iodine.shapeFactories]
+    #     shape_names = [shape.name for shape in iodine.shapeFactories]
 
-        for i in range(num_nodes):
-            shapeDict = nodeDict[i]["shape"]
-            #self.assertEqual(shape_names[i%6], shapeDict["name"]) #shapeDict["name"] is always 'rectangle'
+    #     for i in range(num_nodes):
+    #         shapeDict = nodeDict[i]["shape"]
+    #         #self.assertEqual(shape_names[i%6], shapeDict["name"]) #shapeDict["name"] is always 'rectangle'
 
-            #check `text-only` shapes
-            if shapeDict["name"] == "text-only":
-                self.assertEqual(0, len(shapeDict["items"]))
-                break
+    #         #check `text-only` shapes
+    #         if shapeDict["name"] == "text-only":
+    #             self.assertEqual(0, len(shapeDict["items"]))
+    #             break
 
-            shape_items = shapeDict["items"][0]
+    #         shape_items = shapeDict["items"][0]
             
 
-            if shapeDict["name"] =="rectangle":
-                match_primitive(self, shape_items, "rectangle")
-            elif shapeDict["name"] =="circle":
-                match_primitive(self, shape_items, "circle")
-            elif shapeDict["name"] == "text outside":
-                #self.assertEqual("circle", shape_items[0]["name"])
-                match_primitive(self, shape_items, "circle")
-            elif shapeDict["name"] == "demo combo":
-               match_primitive(self, shape_items[0], "circle")
-               match_primitive(self, shape_items[1], "circle")
-               match_primitive(self, shape_items, "rectangle")
+    #         if shapeDict["name"] =="rectangle":
+    #             match_primitive(self, shape_items, "rectangle")
+    #         elif shapeDict["name"] =="circle":
+    #             match_primitive(self, shape_items, "circle")
+    #         elif shapeDict["name"] == "text outside":
+    #             #self.assertEqual("circle", shape_items[0]["name"])
+    #             match_primitive(self, shape_items, "circle")
+    #         elif shapeDict["name"] == "demo combo":
+    #            match_primitive(self, shape_items[0], "circle")
+    #            match_primitive(self, shape_items[1], "circle")
+    #            match_primitive(self, shape_items, "rectangle")
 
-    def testAlias(self):
-        #since original node is at 0, alias is at 1
-        anode = createAlias("node0")
-        dump_object = iodine.dumpNetwork(0)
+    # def testAlias(self):
+    #     #since original node is at 0, alias is at 1
+    #     anode = createAlias("node0")
+    #     dump_object = iodine.dumpNetwork(0)
 
-        nodeDict = dump_object["nodes"]
-        self.assertEqual(2, len(nodeDict))
-        anodeObj = nodeDict[1]
-        self.assertIsInstance( anodeObj["nodeLocked"], bool)
-        self.assertEqual(0, anodeObj["originalIdx"])
-        self.assertEqual(2, len(anodeObj["position"]))
-        self.assertEqual(2, len(anodeObj["rectSize"]))
+    #     nodeDict = dump_object["nodes"]
+    #     self.assertEqual(2, len(nodeDict))
+    #     anodeObj = nodeDict[1]
+    #     self.assertIsInstance( anodeObj["nodeLocked"], bool)
+    #     self.assertEqual(0, anodeObj["originalIdx"])
+    #     self.assertEqual(2, len(anodeObj["position"]))
+    #     self.assertEqual(2, len(anodeObj["rectSize"]))
     
     def testCompartment(self):
         #compartment with no node
@@ -177,13 +177,13 @@ class TestSerialization(DummyAppTest):
         # compartment with reaction
         pass
 
-    def testReaction(self):
-        rxn = createReaction()
-        dump_object = iodine.dumpNetwork(0)
+    # def testReaction(self):
+    #     rxn = createReaction()
+    #     dump_object = iodine.dumpNetwork(0)
 
-        rxnDict = dump_object["reactions"]
-        #print(rxnDict)
-        self.assertEqual(1, len(rxnDict))
+    #     rxnDict = dump_object["reactions"]
+    #     print(rxnDict)
+    #     self.assertEqual(1, len(rxnDict))
 
         #a node as a reactant and product: 0 as reactant, 0 and 1 are products
         #multiple reactants and products

@@ -97,7 +97,8 @@ class TNode(TAbstractNode):
     shapei: int = 0
     shape: CompositeShape = field(default_factory=lambda: shapeFactories[0].produce())
     concentration: float = 0.0
-
+    node_name: str = ''
+    node_SBO: str = ''
 
 @dataclass
 class TAliasNode(TAbstractNode):
@@ -586,7 +587,9 @@ def _pushUndoStack():
         undoStack.push(networkDict)
 
 
-def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floatingNode: bool = True, nodeLocked: bool = False) -> int:
+def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, 
+            floatingNode: bool = True, nodeLocked: bool = False, 
+            nodeName: str = '', nodeSBO: str = '') -> int:
     """
     AddNode adds a node to the network
     errCode - 3: id repeat, 0: ok
@@ -604,7 +607,8 @@ def addNode(neti: int, nodeID: str, x: float, y: float, w: float, h: float, floa
         _raiseError(-12)
 
     _pushUndoStack()
-    newNode = TNode(n.lastNodeIdx, nodeID, Vec2(x, y), Vec2(w, h), floatingNode, nodeLocked)
+    newNode = TNode(n.lastNodeIdx, nodeID, Vec2(x, y), Vec2(w, h), 
+                    floatingNode, nodeLocked, nodeName, nodeSBO)
     return n.addNode(newNode)
 
 
@@ -836,7 +840,7 @@ def getNodeCenter(neti: int, nodei: int):
 
 def getNodeID(neti: int, nodei: int):
     """
-    GetNodeID Get the id of the node
+    GetNodeID: Get the id of the node
     errCode: -7: node index out of range
     -5: net index out of range
     """
@@ -847,6 +851,39 @@ def getNodeID(neti: int, nodei: int):
     else:
         node = _getConcreteNode(neti, nodei)
         return node.id
+
+    raise ExceptionDict[errCode](errorDict[errCode])
+
+def getNodeName(neti: int, nodei: int):
+    """
+    GetNodeName: Get the name of the node
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkDict, undoStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        node = _getConcreteNode(neti, nodei)
+        return node.node_name
+
+    raise ExceptionDict[errCode](errorDict[errCode])
+
+
+def getNodeSBO(neti: int, nodei: int):
+    """
+    GetNodeSBO: Get the SBO of the node
+    errCode: -7: node index out of range
+    -5: net index out of range
+    """
+    global stackFlag, errCode, networkDict, undoStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        node = _getConcreteNode(neti, nodei)
+        return node.node_SBO
 
     raise ExceptionDict[errCode](errorDict[errCode])
 
@@ -1066,6 +1103,46 @@ def setNodeID(neti: int, nodei: int, newID: str):
                 _pushUndoStack()
                 _getConcreteNode(neti, nodei).id = newID
                 return
+    raise ExceptionDict[errCode](errorDict[errCode])
+
+def setNodeName(neti: int, nodei: int, newName: str):
+    """
+    setNodeName set the name of a node
+    -5: net index out of range
+    -7: node index out of range
+    """
+    global stackFlag, errCode, networkDict, undoStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        net = networkDict[neti]
+        if nodei not in net.nodes.keys():
+            errCode = -7
+        else:
+            _pushUndoStack()
+            _getConcreteNode(neti, nodei).node_name = newName
+            return
+    raise ExceptionDict[errCode](errorDict[errCode])
+
+def setNodeSBO(neti: int, nodei: int, newSBO: str):
+    """
+    setNodeSBO set the name of a node
+    -5: net index out of range
+    -7: node index out of range
+    """
+    global stackFlag, errCode, networkDict, undoStack, redoStack
+    errCode = 0
+    if neti not in networkDict:
+        errCode = -5
+    else:
+        net = networkDict[neti]
+        if nodei not in net.nodes.keys():
+            errCode = -7
+        else:
+            _pushUndoStack()
+            _getConcreteNode(neti, nodei).node_SBO = newSBO
+            return
     raise ExceptionDict[errCode](errorDict[errCode])
 
 def setNodeConcentration(neti: int, nodei: int, newConc: float):
@@ -2247,8 +2324,9 @@ def getCompartmentOfNode(neti: int, nodei: int) -> int:
 def setCompartmentOfNode(neti: int, nodei: int, compi: int):
     """Set the compartment of the node, or remove it from any compartment if -1 is given."""
     net = _getNetwork(neti)
-
     node = _getNodeOrAlias(neti, nodei)
+    if node.compi == '':
+        node.compi = -1
     _pushUndoStack()
     if node.compi != -1:
         net.compartments[node.compi].node_indices.remove(nodei)

@@ -1932,6 +1932,11 @@ class Canvas(wx.ScrolledWindow):
             self.sel_reactions_idx.set_item({r.index for r in self._reactions})
         self.FullRedraw()
 
+    def SelectAllCompartments(self):
+        with self._SelectGroupEvent():
+            self.sel_compartments_idx.set_item({c.index for c in self._compartments})
+        self.FullRedraw()
+
     def ClearCurrentSelection(self):
         """Clear the current highest level of selection.
 

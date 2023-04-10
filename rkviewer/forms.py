@@ -238,7 +238,7 @@ class FieldGrid(wx.Window):
         # there is not enough width to display everything
         width = self.GetSize()[0]
         right_width = (width - VGAP * 3 - MORE_LEFT_PADDING - MORE_RIGHT_PADDING -
-                       self._info_length) * 0.7
+                       self._info_length) * .7
         sizer.Add(int(right_width), 0, wx.GBPosition(0, 2), wx.GBSpan(1, 1))
         sizer.AddGrowableCol(0, 3)
         sizer.AddGrowableCol(1, 7)
@@ -715,7 +715,8 @@ class EditPanelForm(ScrolledPanel):
     self_changes: bool  #: flag for if edits were made but the controller hasn't updated the view yet
 
     def __init__(self, parent, canvas: Canvas, controller: IController):
-        super().__init__(parent, style=wx.VSCROLL)
+        #super().__init__(parent, style=wx.VSCROLL)
+        super().__init__(parent, style = wx.ALWAYS_SHOW_SB)
         self.SetForegroundColour(get_theme('toolbar_fg'))
         self.SetBackgroundColour(get_theme('toolbar_bg'))
         self.canvas = canvas

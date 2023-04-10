@@ -1846,12 +1846,15 @@ class ReactionForm(EditPanelForm):
             self._modifiers = reaction.modifiers
             self._UpdateModifierSelection()
         else:
+
             self.id_ctrl.Disable()
             fill, fill_alpha = GetMultiColor(list(r.fill_color for r in reactions))
             ratelaw_text = 'multiple'
             self.ratelaw_ctrl.Disable()
-
+            self.auto_center_ctrl.SetValue(False)
+            self.auto_center_ctrl.SetLabel("Off")
             self.auto_center_ctrl.Disable()
+            self.center_pos_ctrl.ChangeValue(' ')
             self.center_pos_ctrl.Disable()
 
             self._UpdateStoichFields(0, [], [])

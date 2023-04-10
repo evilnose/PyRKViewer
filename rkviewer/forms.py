@@ -1643,8 +1643,8 @@ class ReactionForm(EditPanelForm):
             self.auto_center_ctrl.Enable()
             self.auto_center_ctrl.SetValue(True)
             self.auto_center_ctrl.SetLabel("On")
-            self.center_pos_ctrl.Disable()
             self.center_pos_ctrl.ChangeValue('')
+            self.center_pos_ctrl.Disable()
             with self.controller.group_action():
                 self.controller.set_reaction_center(self.net_index, reaction.index, None)
                 # Move centroid handle along if centroid changed.

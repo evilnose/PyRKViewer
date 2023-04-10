@@ -1832,6 +1832,7 @@ class ReactionForm(EditPanelForm):
             self.auto_center_ctrl.SetValue(auto_set)
             if auto_set:
                 self.auto_center_ctrl.SetLabel("On")
+                self.center_pos_ctrl.ChangeValue(' ')
             else:
                 self.auto_center_ctrl.SetLabel("Off")
             self.center_pos_ctrl.Enable(not auto_set)

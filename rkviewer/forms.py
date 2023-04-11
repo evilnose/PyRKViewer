@@ -237,7 +237,7 @@ class FieldGrid(wx.Window):
         # Note that we might want to adjust this when scrollbars are displayed, but only in case
         # there is not enough width to display everything
         right_width = (edit_panel_width - VGAP * 3 - MORE_LEFT_PADDING - MORE_RIGHT_PADDING -
-                       self._info_length) * .5
+                       self._info_length) * .7
         sizer.Add(int(right_width), 0, wx.GBPosition(0, 2), wx.GBSpan(1, 1))
         sizer.AddGrowableCol(0, 3)
         sizer.AddGrowableCol(1, 7)

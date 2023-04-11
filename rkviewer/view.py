@@ -301,7 +301,6 @@ class ModePanel(wx.Panel):
 
         self.AppendSeparator(sizer)
         #self.AppendNormalButtonUniUni('UniUni', sizer, tooltip='Add UniUni reactions')
-        #self.AppendToggleButtonUniUni('UniUni', sizer)
 
 
         self.SetSizer(sizer)
@@ -351,6 +350,8 @@ class ModePanel(wx.Panel):
            btn = wx.Button(self, label=label, style=wx.BORDER_NONE)
 
         def addUniUni(evt):
+            addReaction.AddReaction.__init__(self)
+            addReaction.AddReaction.on_selection_did_change(self, evt)
             addReaction.AddReaction.UniUni(self, evt)
 
         btn.SetBackgroundColour(get_theme ('btn_bg'))
@@ -359,32 +360,6 @@ class ModePanel(wx.Panel):
             btn.SetToolTip(tooltip)
         btn.Bind(wx.EVT_TOGGLEBUTTON, addUniUni)
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
-
-    def AppendToggleButtonUniUni(self, label: str, sizer: wx.Sizer):
-        if get_theme ('btn_border'):
-            btn = wx.ToggleButton(self, label=label)
-        else:
-            btn = wx.ToggleButton(self, label=label, style=wx.BORDER_NONE)
-
-        def enter_func(evt):
-            btn.SetBackgroundColour(get_theme('btn_hover_bg'))
-            btn.SetForegroundColour(get_theme('btn_hover_fg'))
-
-        def exit_func(evt):
-            btn.SetBackgroundColour(get_theme('btn_bg'))
-            btn.SetForegroundColour(get_theme('btn_fg'))
-
-        def addUniUni(evt):
-            addReaction.AddReaction.UniUni(self, evt)
-
-        btn.Bind(wx.EVT_ENTER_WINDOW, enter_func)
-        btn.Bind(wx.EVT_LEAVE_WINDOW, exit_func)
-
-        btn.SetBackgroundColour(get_theme('btn_bg'))
-        btn.SetForegroundColour(get_theme('btn_fg'))
-
-        sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
-        self.btn_group.AddButton(btn, addUniUni)
 
     def AppendSeparator(self, sizer: wx.Sizer):
         sizer.Add((0, 10))

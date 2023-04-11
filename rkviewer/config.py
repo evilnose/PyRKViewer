@@ -292,7 +292,7 @@ class ThemeSchema(Schema):
     canvas_outside_bg = ColorField(missing=Color(160, 160, 160))
     mode_panel_width = Pixel(missing=100)
     toolbar_height = Pixel(missing=75)
-    edit_panel_width = Pixel(missing=260)
+    edit_panel_width = Pixel(missing=400)
     node_fill = ColorField(missing=Color(255, 204, 153, 200))
     node_border = ColorField(missing=Color(255, 108, 9))
     node_width = Dim(missing=50)

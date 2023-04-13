@@ -291,12 +291,31 @@ class IMPORTSBML(WindowedPlugin):
                                 if center_pt == []:
                                     if pos_x == 0 and pos_y == 0 and width == 0 and height == 0: #LinearChain.xml
                                         center_pt = []
+                                        #if the boudingbox can not give the info for the center point,
+                                        #look for the common point of the start and end points
+                                        start_end_pt = []
+                                        for j in range(numSpecRefGlyphs):     
+                                            specRefGlyph = reactionGlyph.getSpeciesReferenceGlyph(j)   
+                                            curve = specRefGlyph.getCurve()                                  
+                                            for segment in curve.getListOfCurveSegments():
+                                                line_start_x = segment.getStart().getXOffset()
+                                                line_start_y = segment.getStart().getYOffset()
+                                                line_end_x = segment.getEnd().getXOffset()
+                                                line_end_y = segment.getEnd().getYOffset()
+                                                line_start_pt =  [line_start_x, line_start_y]
+                                                line_end_pt = [line_end_x, line_end_y]
+                                                if line_start_pt in start_end_pt:
+                                                    center_pt = line_start_pt
+                                                if line_end_pt in start_end_pt:
+                                                    center_pt = line_end_pt
+                                                else:
+                                                    start_end_pt.append(line_start_pt)
+                                                    start_end_pt.append(line_end_pt)
                                     else:
                                         center_pt = [pos_x+.5*width, pos_y+.5*height]
                                 center_sz = [width, height]
                             except:
                                 pass
-
                             
                             reaction_center_list.append(center_pt)
                             #reaction_size_list.append(center_sz)
@@ -551,12 +570,12 @@ class IMPORTSBML(WindowedPlugin):
                                     spec_text_alignment_list.append(alignment_name)
                                     spec_text_position_list.append(position_name)
                                     spec_concentration_list.append(concentration)
-                                
-                                if center_handle == []:
-                                    center_handle.append(center_handle_candidate)
 
                               
                                 if role == "substrate" or role == "sidesubstrate": #it is a rct
+                                    #the center handle is supposed to be from the reactant
+                                    if center_handle == []:
+                                        center_handle.append(center_handle_candidate)
                                     #rct_specGlyph_temp_list.append(specGlyph_id)
                                     rct_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
                                 elif role == "product" or role == "sideproduct": #it is a prd

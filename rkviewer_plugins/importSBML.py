@@ -1398,7 +1398,6 @@ class IMPORTSBML(WindowedPlugin):
                                 for xx in range(numComps):
                                     if comp_id == Comps_ids[xx]:
                                         api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx) 
-                                
                                 for k in range(numCompGlyphs):
                                     if len(comp_id_list) !=0 and comp_id == comp_id_list[k]:
                                         comp_node_list[k].append(nodeIdx_temp)
@@ -1481,9 +1480,9 @@ class IMPORTSBML(WindowedPlugin):
                                 
                                 comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                                 for xx in range(numComps):
-                                    if comp_id == Comps_ids[xx]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
-                                        
+                                    if comp_id == Comps_ids[xx]:            
+                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)             
+                                     
                                 for k in range(numCompGlyphs):
                                     if len(comp_id) != 0 and comp_id == comp_id_list[k]:
                                         comp_node_list[k].append(nodeIdx_temp)
@@ -1496,7 +1495,7 @@ class IMPORTSBML(WindowedPlugin):
                                 node_list_default = [item for item in range(len(nodeIdx_list))]
                                 for j in range(len(node_list_default)):
                                     try:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=i) 
+                                        api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=i)
                                     except:
                                         pass # Orphan nodes are removed
                             for j in range(numCompGlyphs):
@@ -2226,12 +2225,12 @@ class IMPORTSBML(WindowedPlugin):
                         # if flag_add_rxn_err == 1:
                         #     wx.MessageBox("There are errors while loading this SBML file!", "Message", wx.OK | wx.ICON_INFORMATION)
                         
-            except:
-                if showDialogues:
-                    wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
+            # except:
+            #     if showDialogues:
+            #         wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
-            # except Exception as e:
-            #     raise Exception (e) 
+            except Exception as e:
+                raise Exception (e) 
 
 

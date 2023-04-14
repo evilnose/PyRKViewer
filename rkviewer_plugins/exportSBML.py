@@ -257,7 +257,7 @@ class ExportSBML(WindowedPlugin):
                             comp_id = allcompartments[comp_idx].id 
                             species.setCompartment(comp_id)  
                         else:
-                            species.setCompartment("_compartment_default_") 
+                           species.setCompartment("_compartment_default_") #why "_compartment_default_"
                         species.setInitialConcentration(allNodes[i].concentration)	
                         species.setHasOnlySubstanceUnits(False)
                         species.setBoundaryCondition(False)
@@ -285,8 +285,8 @@ class ExportSBML(WindowedPlugin):
                         species = model.createSpecies()
                         species.setId(spec_id)
                         species.setName(spec_name)
-                        species.setSBOTerm(spec_SBO)
-                        species.setCompartment(comp_id)
+                        species.setSBOTerm(spec_SBO) 
+                        species.setCompartment(comp_id) #why "_compartment_default_"
                         species.setInitialConcentration(allNodes[i].concentration)	
                         species.setHasOnlySubstanceUnits(False)
                         species.setBoundaryCondition(False)

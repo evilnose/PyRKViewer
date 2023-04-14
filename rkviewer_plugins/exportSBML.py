@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an SBML string as save it as a file.
-Version 1.0.6: Author: Jin Xu (2023)
+Version 1.0.7: Author: Jin Xu (2023)
 """
 
 
@@ -20,7 +20,7 @@ class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportSBML',
         author='Jin Xu',
-        version='1.0.6',
+        version='1.0.7',
         short_desc='Export SBML.',
         long_desc='Export the SBML String from the network on canvas and save it to a file.',
         category=PluginCategory.MODELS
@@ -322,23 +322,23 @@ class ExportSBML(WindowedPlugin):
 
                 kinetic_law_from_user = allReactions[i].rate_law
                 
-                # if kinetic_law_from_user == '':
-                kinetic_law = ''
-                kinetic_law = kinetic_law + 'E' + str (i) + '*(k' + str (i) 
-                parameter_id_value_dict_self_pre['E' + str(i)] = 0.1
-                parameter_id_value_dict_self_pre['k' + str(i)] = 0.1
+                if kinetic_law_from_user == '':
+                    kinetic_law = ''
+                    kinetic_law = kinetic_law + 'E' + str (i) + '*(k' + str (i) 
+                    parameter_id_value_dict_self_pre['E' + str(i)] = 0.1
+                    parameter_id_value_dict_self_pre['k' + str(i)] = 0.1
 
-                for j in range(rct_num):
-                    kinetic_law = kinetic_law + '*' + rct[j]
-                    
-                if isReversible:
-                    kinetic_law = kinetic_law + ' - k' + str (i) + 'r'
-                    parameter_id_value_dict_self_pre['k' + str (i) + 'r'] = 0.1
-                    for j in range(prd_num):
-                        kinetic_law = kinetic_law + '*' + prd[j]
-                kinetic_law = kinetic_law + ')'
-                # else:
-                #     kinetic_law = kinetic_law_from_user
+                    for j in range(rct_num):
+                        kinetic_law = kinetic_law + '*' + rct[j]
+                        
+                    if isReversible:
+                        kinetic_law = kinetic_law + ' - k' + str (i) + 'r'
+                        parameter_id_value_dict_self_pre['k' + str (i) + 'r'] = 0.1
+                        for j in range(prd_num):
+                            kinetic_law = kinetic_law + '*' + prd[j]
+                    kinetic_law = kinetic_law + ')'
+                else:
+                    kinetic_law = kinetic_law_from_user
 
                 reaction = model.createReaction()
                 reaction.setId(allReactions[i].id)

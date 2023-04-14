@@ -1503,7 +1503,7 @@ class ReactionForm(EditPanelForm):
         self.main_section.AppendControl('identifier', self.id_ctrl)
 
         self.ratelaw_ctrl = self.main_section.CreateTextCtrl()
-        self.ratelaw_ctrl.Bind(wx.EVT_TEXT, self._OnRateLawText)
+        #self.ratelaw_ctrl.Bind(wx.EVT_TEXT, self._OnRateLawText)
         self.main_section.AppendControl('rate law', self.ratelaw_ctrl)
 
         self.fill_ctrl, self.fill_alpha_ctrl = self.main_section.CreateColorControl(
@@ -1827,7 +1827,8 @@ class ReactionForm(EditPanelForm):
             fill = reaction.fill_color
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
-            self.ratelaw_ctrl.Enable()
+            #self.ratelaw_ctrl.Enable()
+            self.ratelaw_ctrl.Disable()
             
             self.auto_center_ctrl.Enable()
             auto_set = reaction.center_pos is None

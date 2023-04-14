@@ -22,6 +22,7 @@ from libsbml import *
 import math
 import random as _random
 import pandas as pd
+from rkviewer.config import get_theme
 
 class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
@@ -197,10 +198,12 @@ class IMPORTSBML(WindowedPlugin):
                 #     if showDialogues:
                 #         wx.MessageBox("There is no layout information, so positions are randomly assigned.", "Message", wx.OK | wx.ICON_INFORMATION)
                 # else:
-                def_canvas_width = 10000.
-                def_canvas_height = 6200.
-                def_comp_width = def_canvas_width-20.
-                def_comp_height = def_canvas_height-20.
+                #def_canvas_width = 10000.
+                #def_canvas_height = 6200.
+                def_canvas_width = get_theme('real_canvas_width')
+                def_canvas_height = get_theme('real_canvas_height')
+                def_comp_width = def_canvas_width - 20.
+                def_comp_height = def_canvas_height - 20.
                 if mplugin is not None:
                     layout = mplugin.getLayout(0)
                     # if layout is None:

@@ -15,6 +15,7 @@ from rkviewer.plugin.api import Node, Vec2, Reaction, Color, get_node_by_index
 import os
 from libsbml import * # does not have to import in the main.py too
 import re # to process kinetic_law string
+from rkviewer.config import get_theme
 
 class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
@@ -417,9 +418,13 @@ class ExportSBML(WindowedPlugin):
             # Creates a Layout object via LayoutModelPlugin object.
             #
             layout = mplugin.createLayout()
-            layout.setId("COYOTO_layout")
-            layout_width = 10000 - 20
-            layout_height = 6200 - 20
+            layout.setId("SBcoyote_layout")
+            def_canvas_width = get_theme('real_canvas_width')
+            def_canvas_height = get_theme('real_canvas_height')
+            #layout_width = 10000 - 20
+            #layout_height = 6200 - 20
+            layout_width = def_canvas_width - 20.
+            layout_height = def_canvas_height - 20.
             layout.setDimensions(Dimensions(layoutns, layout_width, layout_height))
             # random network (40+800x, 40+800y)
 

@@ -4,6 +4,7 @@ Tutorial
 A brief guide to help you use and understand version 1.
 
 Once you have completed all applicable steps in Quick Start run the application and wait for it to open. The main window will pop up and look like the following:
+Follow the steps in :ref:`Quick Start<QuickStart>` to install and run SBCoyote. When the application starts the first thing you will see is the main window below.
     
 .. image:: ../fotos/S1.png
 
@@ -14,47 +15,20 @@ Once you have completed all applicable steps in Quick Start run the application 
 --------------------
 Here you will find all of the necessary utilities and information to use this application. 
 
-**- File**: you’ll find commands to help edit some settings, load or save your canvas, export your work or exit the application. The application will save files to and load files from the directory in which your app is found. To change the settings (such as appearance of the platform) you must follow these steps:
+**- File**: commands to load or save your canvas, export your work, edit some settings, or exit the application. The application will save files to and load files from the directory in which your app is found.
 
-**- Edit**: you find basic commands like copy, paste, undo and redo, along with their keyboard shortcuts. 
+**- Edit**: basic commands such as copy, paste, undo and redo, along with their keyboard shortcuts. 
 
-**- Select**: you find some shortcuts to help you select parts of the canvas such as all of the nodes. Note that select all will select all nodes and reactions. These commands will select all of the indicated, regardless of the compartment the nodes or reactions are in.
+**- Select**: shortcuts for selecting parts of the canvas such as all of the nodes.
 
-**- Reaction**: provides quick options to generate your reactions. These help us select multiple nodes and name them as reactants or products rather than go one by one using the creating panel (explained below). 
+**- Reaction**: provides quick options to generate your reactions. These allow users to select multiple nodes and mark them all as reactants or products rather than going one by one using the creating panel (explained below). 
 
-**- Plugins**: you’ll find the main features that will help you create, visualize, or analyze your reactions. They will also appear in the applications menu under their corresponding sections. We will go over them in detail below, for example, add reaction, arrow designer, auto layout, random network and structural analysis.
+**- Plugins**: additional features for creating, visualizing, or analyzing your reactions. A wide selection of plugins are automatically installed with SBCoyote. Any additional plugins you install will appear in this menu as well. The "Applications" section of this tutorial explains how to use SBCoyote's default plugins in detail.
 
-**- Help**:
-
-    1. Select Help in the same Navigation Bar.
-    2. Select Default Settings.
-    3. Copy the setting(s) that you wish to change.
-
-.. image:: ../fotos/S2.png
-
-*(Figure 2)*
-
-    4. Click File in the Navigation Bar
-    5. Select Edit Settings
-    6. Paste the copied settings to change.
-    7. Change the values accordingly.
-
-.. image:: ../fotos/S3.png
-
-*(Figure 3)*
-
-    8. Close both NotePads and Select File again. (Click save if you haven’t already saved them).
-    9. Click Reload Settings or simply exit the application and open it again.
-
-    To restore default settings simple erase all changes made under File -> Edit Settings so that it looks  like the following:
-
-.. image:: ../fotos/S4.png
-
-*(Figure 4)*
-
+**- Help**: view and edit GUI settings. See "Additional Options" section below.
 
 ----------------------
-2. Applicaions Menu
+2. Applications Menu
 ----------------------
 
 A lot of the functionalities found here are also in the Navigation Bar. However, they are organized according to their different uses, allowing you to access them in a more structured way.
@@ -212,3 +186,36 @@ Here is an example of some of the values being changed and the end result (in co
 -----------------
 
 You can visualize the location of your nodes on the little square, and scroll through the bar to zoom in or out.
+
+
+-----------------
+7. Additional Options
+-----------------
+
+Follow the steps below to use SBCoyote in Dark Mode.
+
+    1. Select Help in the Navigation Bar.
+    2. Select Default Settings.
+    3. Copy the setting(s) that you wish to change.
+
+.. image:: ../fotos/S2.png
+
+*(Figure 2)*
+
+    4. Click File in the Navigation Bar
+    5. Select Edit Settings
+    6. Paste the copied settings to change.
+    7. Change the values accordingly.
+
+.. image:: ../fotos/S3.png
+
+*(Figure 3)*
+
+    8. Close both NotePads and Select File again. (Click save if you haven’t already saved them).
+    9. Click Reload Settings or simply exit the application and open it again.
+
+    To restore default settings simple erase all changes made under File -> Edit Settings so that it looks  like the following:
+
+.. image:: ../fotos/S4.png
+
+*(Figure 4)*

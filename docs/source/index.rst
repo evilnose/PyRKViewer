@@ -13,12 +13,12 @@ Jin Xu, Gary Geng, Nhan D. Nguyen, Carmen Perena-Cortes, Claire Samuels, Herbert
 
 University of Washington - Sauro Lab
 
-SBcoyote is a visualization tool for drawing the reaction networks written by wxPython (https://www.wxpython.org/) and applicable for different platforms.
-It can draw reactants, products, reactions, and compartments. Its features are listed below but not limited to:
+SBcoyote is a visualization tool for drawing reaction networks written with wxPython (https://www.wxpython.org/) and applicable for different platforms.
+It can draw reactants, products, reactions, and compartments. Its features include, but are not limited to:
 
-* It supports floating and boundary species.
-* Reactions can be displayed using Bezier curves and straight lines.
-* It has plugin support, with some plugin examples: arrow designer, random network, auto layout and etc. 
+* Support for floating and boundary species.
+* Option to display reactions using Bezier curves and straight lines.
+* Plugin support, with some plugin examples: arrow designer, random network, auto layout and etc. 
 
 .. toctree::
    :maxdepth: 2

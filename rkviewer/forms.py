@@ -212,10 +212,10 @@ class FieldGrid(wx.Window):
         info_image = wx.Image(resource_path('info-2-16.png'), wx.BITMAP_TYPE_PNG)
         self._info_bitmap = wx.Bitmap(info_image)
         self._info_length = 16
-        sizer = self.InitAndGetSizer()
+        sizer = self.InitAndGetSizer(self.GetParent().GetParent().GetSize()[0])
         self.SetSizer(sizer)
 
-    def InitAndGetSizer(self) -> wx.GridSizer:
+    def InitAndGetSizer(self, edit_panel_width) -> wx.GridSizer:
         VGAP = 8
         HGAP = 5
         MORE_LEFT_PADDING = 0  # Left padding in addition to vgap
@@ -236,9 +236,8 @@ class FieldGrid(wx.Window):
         # Ensure the input field takes up some percentage of width
         # Note that we might want to adjust this when scrollbars are displayed, but only in case
         # there is not enough width to display everything
-        width = self.GetSize()[0]
-        right_width = (width - VGAP * 3 - MORE_LEFT_PADDING - MORE_RIGHT_PADDING -
-                       self._info_length) * 0.7
+        right_width = (edit_panel_width - VGAP * 3 - MORE_LEFT_PADDING - MORE_RIGHT_PADDING -
+                       self._info_length) * .7
         sizer.Add(int(right_width), 0, wx.GBPosition(0, 2), wx.GBSpan(1, 1))
         sizer.AddGrowableCol(0, 3)
         sizer.AddGrowableCol(1, 7)
@@ -450,6 +449,9 @@ class PrimitiveGrid(FieldGrid):
     def __init__(self, parent, form: 'NodeForm'):
         super().__init__(parent, form)
         self.update_callbacks = list()
+        # need another GetParent() in addition to FieldGrid's call
+        sizer = self.InitAndGetSizer(self.GetParent().GetParent().GetParent().GetSize()[0])
+        self.SetSizer(sizer)
 
     def UpdateValues(self, nodes):
         '''Update the values in the primitive fields.
@@ -715,7 +717,8 @@ class EditPanelForm(ScrolledPanel):
     self_changes: bool  #: flag for if edits were made but the controller hasn't updated the view yet
 
     def __init__(self, parent, canvas: Canvas, controller: IController):
-        super().__init__(parent, style=wx.VSCROLL)
+        #super().__init__(parent, style=wx.VSCROLL)
+        super().__init__(parent, style = wx.ALWAYS_SHOW_SB)
         self.SetForegroundColour(get_theme('toolbar_fg'))
         self.SetBackgroundColour(get_theme('toolbar_bg'))
         self.canvas = canvas
@@ -1500,7 +1503,7 @@ class ReactionForm(EditPanelForm):
         self.main_section.AppendControl('identifier', self.id_ctrl)
 
         self.ratelaw_ctrl = self.main_section.CreateTextCtrl()
-        self.ratelaw_ctrl.Bind(wx.EVT_TEXT, self._OnRateLawText)
+        #self.ratelaw_ctrl.Bind(wx.EVT_TEXT, self._OnRateLawText)
         self.main_section.AppendControl('rate law', self.ratelaw_ctrl)
 
         self.fill_ctrl, self.fill_alpha_ctrl = self.main_section.CreateColorControl(
@@ -1642,8 +1645,8 @@ class ReactionForm(EditPanelForm):
             self.auto_center_ctrl.Enable()
             self.auto_center_ctrl.SetValue(True)
             self.auto_center_ctrl.SetLabel("On")
-            self.center_pos_ctrl.Disable()
             self.center_pos_ctrl.ChangeValue('')
+            self.center_pos_ctrl.Disable()
             with self.controller.group_action():
                 self.controller.set_reaction_center(self.net_index, reaction.index, None)
                 # Move centroid handle along if centroid changed.
@@ -1824,13 +1827,15 @@ class ReactionForm(EditPanelForm):
             fill = reaction.fill_color
             fill_alpha = reaction.fill_color.Alpha()
             ratelaw_text = reaction.rate_law
-            self.ratelaw_ctrl.Enable()
+            #self.ratelaw_ctrl.Enable()
+            self.ratelaw_ctrl.Disable()
             
             self.auto_center_ctrl.Enable()
             auto_set = reaction.center_pos is None
             self.auto_center_ctrl.SetValue(auto_set)
             if auto_set:
                 self.auto_center_ctrl.SetLabel("On")
+                self.center_pos_ctrl.ChangeValue(' ')
             else:
                 self.auto_center_ctrl.SetLabel("Off")
             self.center_pos_ctrl.Enable(not auto_set)
@@ -1845,12 +1850,15 @@ class ReactionForm(EditPanelForm):
             self._modifiers = reaction.modifiers
             self._UpdateModifierSelection()
         else:
+
             self.id_ctrl.Disable()
             fill, fill_alpha = GetMultiColor(list(r.fill_color for r in reactions))
             ratelaw_text = 'multiple'
             self.ratelaw_ctrl.Disable()
-
+            self.auto_center_ctrl.SetValue(False)
+            self.auto_center_ctrl.SetLabel("Off")
             self.auto_center_ctrl.Disable()
+            self.center_pos_ctrl.ChangeValue(' ')
             self.center_pos_ctrl.Disable()
 
             self._UpdateStoichFields(0, [], [])

@@ -299,8 +299,9 @@ class ModePanel(wx.Panel):
         self.AppendNormalButton('Create Rxn', canvas.CreateReactionFromMarked,
                                 sizer, tooltip='Create reaction from marked reactants and products')
 
-        # self.AppendSeparator(sizer)
-        # self.AppendToggleButtonUniUni('UniUni', sizer, tooltip='Add a UniUni reaction')
+        self.AppendSeparator(sizer)
+        #self.AppendNormalButtonUniUni('UniUni', sizer, tooltip='Add UniUni reactions')
+
 
         self.SetSizer(sizer)
 
@@ -342,18 +343,22 @@ class ModePanel(wx.Panel):
         btn.Bind(wx.EVT_BUTTON, lambda _: callback())
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
-    def AppendToggleButtonUniUni(self, label: str, sizer: wx.Sizer, tooltip: str = None):
-
+    def AppendNormalButtonUniUni(self, label: str, sizer: wx.Sizer, tooltip: str = None):
         if get_theme ('btn_border'):
-           btn = wx.ToggleButton(self, label=label)
+           btn = wx.Button(self, label=label)
         else:
-           btn = wx.ToggleButton(self, label=label, style=wx.BORDER_NONE)
+           btn = wx.Button(self, label=label, style=wx.BORDER_NONE)
+
+        def addUniUni(evt):
+            addReaction.AddReaction.__init__(self)
+            addReaction.AddReaction.on_selection_did_change(self, evt)
+            addReaction.AddReaction.UniUni(self, evt)
 
         btn.SetBackgroundColour(get_theme ('btn_bg'))
         btn.SetForegroundColour(get_theme ('btn_fg'))
         if tooltip is not None:
             btn.SetToolTip(tooltip)
-        btn.Bind(wx.EVT_TOGGLEBUTTON, addReaction.AddReaction._UniUni(self))
+        btn.Bind(wx.EVT_TOGGLEBUTTON, addUniUni)
         sizer.Add(btn, wx.SizerFlags().Align(wx.ALIGN_CENTER).Border(wx.TOP, 10))
 
     def AppendSeparator(self, sizer: wx.Sizer):
@@ -700,7 +705,7 @@ class MainFrame(wx.Frame):
     def onAboutDlg(self, event):
         info = wx.adv.AboutDialogInfo()
         info.SetName("SBcoyote")
-        info.SetVersion("1.3.7")
+        info.SetVersion("1.4.0")
         info.SetCopyright("(c) 2023 UW Sauro Lab")
         info.SetDescription("An Extensible Python-Based Reaction Editor and Viewer.")
         info.SetWebSite("https://github.com/sys-bio/SBcoyote",

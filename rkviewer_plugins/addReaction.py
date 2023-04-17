@@ -197,22 +197,6 @@ class AddReaction(WindowedPlugin):
       else:
          self.uniuniState = False
 
-   def _UniUni(self, state = True):
-      """
-      Handler for the "UniUni" button in view.py.
-      """
-
-      if state == True:  
-         self.src = []
-         self.dest = []
-         # This code is to make the buttons work as a radionbutton
-         self.uniuniState = True
-         self.biuniState = False
-         self.unibiState = False
-         self.bibiState = False
-      else:
-         self.uniuniState = False
-
    def BiUni(self, evt):
       """
       Handler for the "BiUni" button. add a BiUni reaction.

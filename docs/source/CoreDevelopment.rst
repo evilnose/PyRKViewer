@@ -32,9 +32,9 @@ How do I add a field to Node/Reaction/Compartment?
 
  b. The control should be bound to an event, which calls a callback function that updates the controller. Follow the other callback functions as examples.
 
- c. Also, to populate the form field based on the selected items, go to UpdateAllFields() and update that. You need to consider the cases where one item vs. multiple items are selected. There are existing helper functions that handle this, so check out how the other fields deal with this problem
+ c. Also, to populate the form field based on the selected items, go to UpdateAllFields() and update that. You need to consider the cases where one item vs. multiple items are selected. There are existing helper functions that handle this, so check out how the other fields deal with this problem.
 
- d. Note: If the form freezes after changing the field, you might’ve gotten into a circular event loop, i.e. user changes field → event triggers → field updates controller → controller notifies form → form updates field → event triggers → … This shouldn’t happen with most controls (use ChangeValue()), but in case it does happen, check out the variable “_self_changes” and how it’s used)
+ d. Note: If the form freezes after changing the field, you might’ve gotten into a circular event loop, i.e. user changes field → event triggers → field updates controller → controller notifies form → form updates field → event triggers → … This shouldn’t happen with most controls (use ChangeValue()), but in case it does happen, check out the variable “_self_changes” and how it’s used.
  
 Some additional work could definitely be done here to reduce the number of copies of the data classes and also to automate the process (e.g. of adding field to forms).
 The MVC structure is also not perfect right now, with iodine importing from the view (e.g. Vec2). If a real MVC structure is deemed to be necessary,

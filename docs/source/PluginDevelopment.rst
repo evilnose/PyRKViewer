@@ -8,7 +8,7 @@ Writing plugins
 
 Here are the steps for writing a plugin:
 
-1. First decide the plugin types by choosing a CommandPlugin or a WindowedPlugin. CommandPlugins are those with one single action and don’t require a dialog display. WindowedPlugin allows for a more complex UI by spawning a window.
+1. First decide the plugin types by choosing a CommandPlugin or a WindowedPlugin. CommandPlugins are those with one single action and don’t require a dialog display. WindowedPlugin allows for a more complex UI by spawning a dialog window.
 
 2. Create a Python script with a single class that inherits from either CommandPlugin or WindowedPlugin.
 
@@ -18,7 +18,7 @@ Here are the steps for writing a plugin:
 
 5. Override the inherited methods:
 
- a. If you inherited a CommandPlugin, simply override the “run()”method, which is called when the user clicks on the plugin item
+ a. If you inherited a CommandPlugin, simply override the “run()”method, which is called when the user clicks on the plugin item.
  b. For WindowedPlugin, you need to override “create_window(dialog)”, which passes you the parent dialog in which you can create your widgets.
 
 6. Also keep in mind the event handlers which are called when events occur (e.g. on node created, deleted, etc.). See the same file on plugins for info on these.

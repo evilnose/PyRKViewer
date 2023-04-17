@@ -24,12 +24,14 @@
             255
         ],
         "canvas_height": 620,
+        "real_canvas_height": 6200,
         "canvas_outside_bg": [
             160,
             160,
             160
         ],
         "canvas_width": 1000,
+        "real_canvas_width": 10000,
         "comp_border": [
             0,
             29,
@@ -55,7 +57,7 @@
             255,
             20
         ],
-        "edit_panel_width": 260,
+        "edit_panel_width": 400,
         "handle_color": [
             0,
             140,

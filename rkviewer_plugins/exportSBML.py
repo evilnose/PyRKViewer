@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an SBML string as save it as a file.
-Version 1.0.7: Author: Jin Xu (2023)
+Version 1.0.8: Author: Jin Xu (2023)
 """
 
 
@@ -193,7 +193,51 @@ class ExportSBML(WindowedPlugin):
             #print("allNodes:", allNodes)
             #print("allReactions:", allReactions)
             #print("allcompartments:", allcompartments)
-            numCompartments = len(allcompartments)      
+            numCompartments = len(allcompartments) 
+            #The following code calculates the size of the network
+            pos = [allNodes[0].position.x + 2.*allNodes[0].size.x, #double comes from the text position
+                    allNodes[0].position.y + 2.*allNodes[0].size.y]
+            for node in allNodes:
+                if (node.position.x + 2.*node.size.x) > pos[0]:
+                    pos[0] = node.position.x + 2.*node.size.x
+                if (node.position.y + 2.*node.size.y) > pos[1]:
+                    pos[1] = node.position.y + 2.*node.size.y
+            for comp in allcompartments:
+                if comp.id != "_compartment_default_":
+                    comp_fill_color = [comp.fill_color.r, comp.fill_color.g, comp.fill_color.b]
+                    comp_border_color = [comp.border_color.r, comp.border_color.g, comp.border_color.b]
+                    if comp_fill_color != [255, 255, 255] or comp_border_color != [255, 255, 255]:
+                        if (comp.position.x + comp.size.x) > pos[0]:
+                            pos[0] = comp.position.x + comp.size.x
+                        if (comp.position.y + comp.size.y) > pos[1]:
+                            pos[1] = comp.position.y + comp.size.y
+            for rxn in allReactions:
+                if rxn.center_pos.x > pos[0]:
+                    pos[0] = rxn.center_pos.x
+                if rxn.center_pos.y > pos[1]:
+                    pos[1] = rxn.center_pos.y
+                idx = rxn.index
+                handle_pos = api.get_reaction_center_handle(netIn, idx)
+                if handle_pos.x > pos[0]:
+                    pos[0] = handle_pos.x
+                if handle_pos.y > pos[1]:
+                    pos[1] = handle_pos.y
+                src = rxn.sources
+                tgt = rxn.targets
+                for i in range(len(src)):
+                    handle_pos = api.get_reaction_node_handle(netIn, idx, src[i],is_source=True)
+                    if handle_pos.x > pos[0]:
+                        pos[0] = handle_pos.x
+                    if handle_pos.y > pos[1]:
+                        pos[1] = handle_pos.y
+                for i in range(len(tgt)):
+                    handle_pos = api.get_reaction_node_handle(netIn, idx, tgt[i],is_source=False)
+                    if handle_pos.x > pos[0]:
+                        pos[0] = handle_pos.x
+                    if handle_pos.y > pos[1]:
+                        pos[1] = handle_pos.y    
+            cal_layout_size = [pos[0] + 100., pos[1] + 100.]
+            
     #######################################
 
             # Creates an SBMLNamespaces object with the given SBML level, version
@@ -423,8 +467,13 @@ class ExportSBML(WindowedPlugin):
             def_canvas_height = get_theme('real_canvas_height')
             #layout_width = 10000 - 20
             #layout_height = 6200 - 20
-            layout_width = def_canvas_width - 20.
-            layout_height = def_canvas_height - 20.
+            try:
+                layout_width = cal_layout_size[0]
+                layout_height = cal_layout_size[1]
+            except:
+                layout_width = def_canvas_width - 20.
+                layout_height = def_canvas_height - 20.
+
             layout.setDimensions(Dimensions(layoutns, layout_width, layout_height))
             # random network (40+800x, 40+800y)
 

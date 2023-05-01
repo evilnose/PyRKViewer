@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.1.7: Author: Jin Xu (2023)
+Version 1.1.8: Author: Jin Xu (2023)
 """
 
 
@@ -1225,11 +1225,24 @@ class IMPORTSBML(WindowedPlugin):
                         if math.isnan(vol):
                             vol = 1.
                         if temp_id == "_compartment_default_":
-                            api.add_compartment(net_index, id=temp_id, volume = vol,
-                            size=Vec2(def_comp_width,def_comp_height), position=Vec2(10,10),
-                            fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
-                            border_color = api.Color(255, 255, 255, 0),
-                            border_width = comp_border_width)
+                            if len(comp_id_list) != 0:
+                                dimension = [def_comp_width, def_comp_height]
+                                position = [10, 10]                  
+                                for j in range(numCompGlyphs):
+                                    if comp_id_list[j] == temp_id:
+                                        dimension = comp_dimension_list[j]
+                                        position = comp_position_list[j]
+                                api.add_compartment(net_index, id=temp_id, volume = vol,
+                                size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
+                                fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
+                                border_color = api.Color(255, 255, 255, 0),
+                                border_width = comp_border_width)  
+                            else:
+                                api.add_compartment(net_index, id=temp_id, volume = vol,
+                                size=Vec2(def_comp_width,def_comp_height), position=Vec2(10,10),
+                                fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
+                                border_color = api.Color(255, 255, 255, 0),
+                                border_width = comp_border_width)
                         else:
                             if len(comp_id_list) != 0:
                             #if mplugin is not None:                    
@@ -1397,7 +1410,10 @@ class IMPORTSBML(WindowedPlugin):
                                 comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                                 for xx in range(numComps):
                                     if comp_id == Comps_ids[xx]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx) 
+                                        try:
+                                            api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
+                                        except:
+                                            pass 
                                 for k in range(numCompGlyphs):
                                     if len(comp_id_list) !=0 and comp_id == comp_id_list[k]:
                                         comp_node_list[k].append(nodeIdx_temp)

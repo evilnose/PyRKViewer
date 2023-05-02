@@ -8,7 +8,7 @@ Quick Start
 INSTALLATION FOR USERS
 --------------------------
 
-* Install Python 3.7, 3.8, 3.9 or 3.10 if not already on the system.
+* Install Python 3.8, 3.9 or 3.10 if not already on the system.
 
 * Open the command line and type ``pip install SBcoyote``.
 

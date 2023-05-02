@@ -28,7 +28,7 @@ class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='1.1.7',
+        version='1.1.8',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.MODELS
@@ -360,7 +360,7 @@ class IMPORTSBML(WindowedPlugin):
                             prd_specGlyph_handles_temp_list = []  
                             mod_specGlyph_temp_list = []
 
-                            center_handle = []
+                            center_handle = [[],[]]
 
                             for j in range(numSpecRefGlyphs):
                                 alignment_name = TextAlignment.CENTER
@@ -577,19 +577,24 @@ class IMPORTSBML(WindowedPlugin):
                               
                                 if role == "substrate" or role == "sidesubstrate": #it is a rct
                                     #the center handle is supposed to be from the reactant
-                                    if center_handle == []:
-                                        center_handle.append(center_handle_candidate)
+                                    if center_handle[0] == []:
+                                        center_handle[0] = center_handle_candidate
                                     #rct_specGlyph_temp_list.append(specGlyph_id)
                                     rct_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
                                 elif role == "product" or role == "sideproduct": #it is a prd
                                     #prd_specGlyph_temp_list.append(specGlyph_id)
+                                    if center_handle[1] == []:
+                                        center_handle[1] = center_handle_candidate
                                     prd_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
                                 elif role == "modifier" or role == 'activator': #it is a modifier
                                     mod_specGlyph_temp_list.append(specGlyph_id)
                             #rct_specGlyph_list.append(rct_specGlyph_temp_list)
                             #prd_specGlyph_list.append(prd_specGlyph_temp_list)
                             try:
-                                reaction_center_handle_list.append(center_handle[0])
+                                if center_handle[0] != []:
+                                    reaction_center_handle_list.append(center_handle[0])
+                                else:
+                                    reaction_center_handle_list.append(center_handle[1])
                             except:
                                 #raise Exception("Can not find center handle information to process.")
                                 reaction_center_handle_list.append([])

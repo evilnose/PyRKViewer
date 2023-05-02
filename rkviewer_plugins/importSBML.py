@@ -23,6 +23,7 @@ import math
 import random as _random
 import pandas as pd
 from rkviewer.config import get_theme
+import SBMLDiagrams
 
 class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
@@ -202,8 +203,14 @@ class IMPORTSBML(WindowedPlugin):
                 #def_canvas_height = 6200.
                 def_canvas_width = get_theme('real_canvas_width')
                 def_canvas_height = get_theme('real_canvas_height')
-                def_comp_width = def_canvas_width - 20.
-                def_comp_height = def_canvas_height - 20.
+                #def_comp_width = def_canvas_width - 20.
+                #def_comp_height = def_canvas_height - 20.
+                def_comp_width = SBMLDiagrams.load(sbmlStr).getNetworkBottomRightCorner().x + 100.
+                def_comp_height = SBMLDiagrams.load(sbmlStr).getNetworkBottomRightCorner().y + 100.
+                if SBMLDiagrams.load(sbmlStr).getNetworkTopLeftCorner().x < 0:
+                    def_comp_width -= SBMLDiagrams.load(sbmlStr).getNetworkTopLeftCorner().x
+                if SBMLDiagrams.load(sbmlStr).getNetworkTopLeftCorner().y < 0:
+                    def_comp_height -= SBMLDiagrams.load(sbmlStr).getNetworkTopLeftCorner().y
                 if mplugin is not None:
                     layout = mplugin.getLayout(0)
                     # if layout is None:
@@ -2029,7 +2036,7 @@ class IMPORTSBML(WindowedPlugin):
 
 
                 else: # there is no layout information, assign position randomly and size as default
-                
+                    
                     comp_id_list = Comps_ids
 
                     for i in range(numComps):
@@ -2037,8 +2044,8 @@ class IMPORTSBML(WindowedPlugin):
                         vol= model.getCompartmentVolume(i)
                         if math.isnan(vol):
                             vol = 1.
-                        dimension = [def_comp_width,def_comp_height]
-                        position = [10,10]
+                        dimension = [800 + 100, 800 + 100]
+                        position = [40,40]
 
                         api.add_compartment(net_index, id=temp_id, volume = vol,
                         size=Vec2(dimension[0],dimension[1]),position=Vec2(position[0],position[1]),

@@ -245,6 +245,13 @@ class IMPORTSBML(WindowedPlugin):
                             pos_y = boundingbox.getY()
                             comp_dimension_list.append([width,height])
                             comp_position_list.append([pos_x,pos_y])
+                        if "_compartment_default_" in comp_id_list:
+                            numCompGlyphs -= 1
+                            idx = comp_id_list.index("_compartment_default_")
+                            comp_id_list.remove("_compartment_default_")
+                            del compGlyph_id_list[idx]
+                            del comp_dimension_list[idx]
+                            del comp_position_list[idx]                      
 
 
                         reaction_id_list = []
@@ -1173,6 +1180,9 @@ class IMPORTSBML(WindowedPlugin):
                 Rxns_ids  = model.getListOfReactionIds()
                 numComps  = model.getNumCompartments()
                 Comps_ids = model.getListOfCompartmentIds()
+                if "_compartment_default_" in Comps_ids:
+                    numComps -= 1
+                    Comps_ids.remove("_compartment_default_")
                 numNodes = numFloatingNodes + numBoundaryNodes
 
                 parameter_list = model.getListOfParameterIds()
@@ -1237,24 +1247,25 @@ class IMPORTSBML(WindowedPlugin):
                         if math.isnan(vol):
                             vol = 1.
                         if temp_id == "_compartment_default_":
-                            if len(comp_id_list) != 0:
-                                dimension = [def_comp_width, def_comp_height]
-                                position = [10, 10]                  
-                                for j in range(numCompGlyphs):
-                                    if comp_id_list[j] == temp_id:
-                                        dimension = comp_dimension_list[j]
-                                        position = comp_position_list[j]
-                                api.add_compartment(net_index, id=temp_id, volume = vol,
-                                size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
-                                fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
-                                border_color = api.Color(255, 255, 255, 0),
-                                border_width = comp_border_width)  
-                            else:
-                                api.add_compartment(net_index, id=temp_id, volume = vol,
-                                size=Vec2(def_comp_width,def_comp_height), position=Vec2(10,10),
-                                fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
-                                border_color = api.Color(255, 255, 255, 0),
-                                border_width = comp_border_width)
+                            pass
+                            # if len(comp_id_list) != 0:
+                            #     dimension = [def_comp_width, def_comp_height]
+                            #     position = [10, 10]                  
+                            #     for j in range(numCompGlyphs):
+                            #         if comp_id_list[j] == temp_id:
+                            #             dimension = comp_dimension_list[j]
+                            #             position = comp_position_list[j]
+                            #     api.add_compartment(net_index, id=temp_id, volume = vol,
+                            #     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
+                            #     fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
+                            #     border_color = api.Color(255, 255, 255, 0),
+                            #     border_width = comp_border_width)  
+                            # else:
+                            #     api.add_compartment(net_index, id=temp_id, volume = vol,
+                            #     size=Vec2(def_comp_width,def_comp_height), position=Vec2(10,10),
+                            #     fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
+                            #     border_color = api.Color(255, 255, 255, 0),
+                            #     border_width = comp_border_width)
                         else:
                             if len(comp_id_list) != 0:
                             #if mplugin is not None:                    
@@ -1519,13 +1530,15 @@ class IMPORTSBML(WindowedPlugin):
                         for i in range(numComps):
                             temp_id = Comps_ids[i]
                             if temp_id == '_compartment_default_': 
-                                #numNodes is different from len(nodeIdx_list) because of alias node
+                                # #numNodes is different from len(nodeIdx_list) because of alias node
                                 node_list_default = [item for item in range(len(nodeIdx_list))]
+                                # for j in range(len(node_list_default)):
+                                #     try:
+                                #         api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=i)
+                                #     except:
+                                #         pass # Orphan nodes are removed
                                 for j in range(len(node_list_default)):
-                                    try:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=i)
-                                    except:
-                                        pass # Orphan nodes are removed
+                                    api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=-1)
                             for j in range(numCompGlyphs):
                                 if comp_id_list[j] == temp_id:
                                     node_list_temp = comp_node_list[j]
@@ -1539,8 +1552,8 @@ class IMPORTSBML(WindowedPlugin):
                                         pass
                     else:
                         for i in range(len(nodeIdx_list)):
-                            api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=0)
-
+                            #api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=0)
+                            api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=-1)
 
                     nodeIdx_specGlyph_whole_list = nodeIdx_specGlyph_list + nodeIdx_specGlyph_alias_list
 

@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.1.8: Author: Jin Xu (2023)
+Version 1.2.8: Author: Jin Xu (2023)
 """
 
 
@@ -24,12 +24,13 @@ import random as _random
 import pandas as pd
 from rkviewer.config import get_theme
 import SBMLDiagrams
+import re # Extract substrings between brackets
 
 class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='1.1.8',
+        version='1.2.8',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.MODELS
@@ -128,6 +129,48 @@ class IMPORTSBML(WindowedPlugin):
         df_color = pd.DataFrame(color_data)
         df_color["html_name"] = df_color["html_name"].str.lower()
 
+        MAX_RECURSION = 5 # Maximum number for iteration function expansions
+        def _expandFormula(expansion, function_definitions,
+                num_recursion=0):
+            """
+            Expands the kinetics formula, replacing function definitions
+            with their body.
+
+            Parameters
+            ----------
+            expansion: str
+                expansion of the kinetic law
+            function_definitions: list-FunctionDefinition
+            num_recursion: int
+            
+            Returns
+            -------
+            str
+            """
+            if num_recursion > MAX_RECURSION:
+                return expansion
+            done = True
+            for fd in function_definitions:
+            # Find the function calls
+                calls = re.findall(r'{}\(.*?\)'.format(fd.id), expansion)
+                if len(calls) == 0:
+                    continue
+                done = False
+                for call in calls:
+                    # Find argument call. Ex: '(a, b)'
+                    call_arguments = re.findall(r'\(.*?\)', call)[0]
+                    call_arguments = call_arguments.strip()
+                    call_arguments = call_arguments[1:-1]  # Eliminate parentheses
+                    arguments = call_arguments.split(',')
+                    arguments = [a.strip() for a in arguments]
+                    body = str(fd.body)
+                    for formal_arg, call_arg in zip(fd.argument_names, arguments):
+                        body = body.replace(formal_arg, call_arg)
+                    expansion = expansion.replace(call, body)
+            if not done:
+                return _expandFormula(expansion, function_definitions,
+                num_recursion=num_recursion+1)
+            return expansion
 
         # if len(sbmlStr) == 0:
         #   if showDialogues:
@@ -193,6 +236,11 @@ class IMPORTSBML(WindowedPlugin):
                     mplugin = model_layout.getPlugin("layout")
                 except:
                     raise Exception("There is no layout.") 
+                
+                sbml_definitions =[model_layout.getFunctionDefinition(n) for n 
+                    in range(model_layout.getNumFunctionDefinitions())]
+                function_definitions = [FunctionDefinition(s) for s in sbml_definitions]
+                
                 # Get the first Layout object via LayoutModelPlugin object.
                 #
                 # if mplugin is None:
@@ -344,6 +392,8 @@ class IMPORTSBML(WindowedPlugin):
                             reaction = model_layout.getReaction(reaction_id)
                             try:
                                 kinetics = reaction.getKineticLaw().getFormula()
+                                if len(function_definitions) > 0:
+                                    kinetics = _expandFormula(kinetics, function_definitions)
                             except:
                                 kinetics = ""
                             kinetics_list.append(kinetics)
@@ -2130,8 +2180,11 @@ class IMPORTSBML(WindowedPlugin):
                         temp_id = Rxns_ids[i]
                         try: 
                             kinetics = model.getRateLaw(i)
+                            if len(function_definitions) > 0:
+                                kinetics = _expandFormula(kinetics, function_definitions)
                         except:
                             kinetics = ""
+                    
                         rct_num = model.getNumReactants(i)
                         prd_num = model.getNumProducts(i)
                         mod_num = model.getNumModifiers(temp_id)
@@ -2273,5 +2326,56 @@ class IMPORTSBML(WindowedPlugin):
 
             # except Exception as e:
             #     raise Exception (e) 
+
+class FunctionDefinition():
+
+    def __init__(self, sbml_function_definition,
+          name=None, fid=None, arguments=None, body=None):
+        """
+        Parameters
+        ----------
+        sbml_function_definition: FunctionDefinition
+        name: str
+        fid: str
+        arguments: list-str
+        body: str
+        """
+        self.sbml_function_definition = sbml_function_definition
+        if self.sbml_function_definition is not None:
+            name = self.sbml_function_definition.getName()
+            fid = self.sbml_function_definition.getId()
+            arguments = [
+                  self.sbml_function_definition.getArgument(n).getName()
+                  for n in 
+                  range(self.sbml_function_definition.getNumArguments())]
+            body = formulaToL3String(
+                  self.sbml_function_definition.getBody())
+        self.function_name = name
+        self.id = fid
+        self.argument_names = arguments
+        self.body = body
+  
+    def __repr__(self):
+        argument_call = ",".join(self.argument_names)
+        call_str = "%s(%s)" % (self.id, argument_call)
+        return "%s: %s" % (call_str, self.body)
+  
+    @classmethod
+    def makeBuiltinFunctions(cls):
+        """
+        Creates a function definition for the SBML delay function.
+        Returns
+        -------
+        list-FunctionDefinition
+        """
+        functions = []
+        # Delay
+        functions.append(cls(None, name="delay", fid="delay",
+               arguments=["a_species", "num"], body = "a_species"))
+        # Exponential
+        functions.append(cls(None, name="exp", fid="exp",
+               arguments=["num"], body = "2.71828182**num"))
+        #
+        return functions
 
 

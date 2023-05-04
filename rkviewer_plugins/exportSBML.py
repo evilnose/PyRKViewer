@@ -340,6 +340,7 @@ class ExportSBML(WindowedPlugin):
                             species.setConstant(True)
             # create reactions:
             parameter_id_value_dict_self_pre = {}  
+            parameter_id_value_dict = api.get_parameters(netIn)
             
             for i in range(numReactions):
                 reaction_id = allReactions[i].id
@@ -391,7 +392,7 @@ class ExportSBML(WindowedPlugin):
                 reaction.setFast(False)
                 if isReversible:
                     reaction.setReversible(True)
-                if kinetic_law != "":  
+                if kinetic_law != "" and len(parameter_id_value_dict) != 0:  
                     kinetics = reaction.createKineticLaw()
                     kinetics.setFormula(kinetic_law)
                 
@@ -417,7 +418,7 @@ class ExportSBML(WindowedPlugin):
                     ref_id = "SpecRef_" + reaction_id + "_mod" + str(j)
                     reference.setId(ref_id)
 
-            parameter_id_value_dict = api.get_parameters(netIn)
+
             parameter_id_value_dict.update(parameter_id_value_dict_self_pre)
             for name,dict_ in parameter_id_value_dict.items():
                 parameters = model.createParameter()

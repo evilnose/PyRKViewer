@@ -2328,6 +2328,8 @@ class IMPORTSBML(WindowedPlugin):
             #     raise Exception (e) 
 
 class FunctionDefinition():
+    #This class is adopted from SBMLKinetics. See the original source code:
+    #https://github.com/ModelEngineering/SBMLKinetics/blob/master/SBMLKinetics/common/function_definition.py
 
     def __init__(self, sbml_function_definition,
           name=None, fid=None, arguments=None, body=None):

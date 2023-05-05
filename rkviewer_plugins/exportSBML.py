@@ -16,6 +16,7 @@ import os
 from libsbml import * # does not have to import in the main.py too
 import re # to process kinetic_law string
 from rkviewer.config import get_theme
+from rkviewer.mvc import ModifierTipStyle
 
 class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
@@ -627,6 +628,7 @@ class ExportSBML(WindowedPlugin):
                     rct_num = len(allReactions[i].sources)
                     prd_num = len(allReactions[i].targets)
                     mod_num = len(allReactions[i].modifiers)
+                    mod_type = allReactions[i].modifier_tip_style
 
                     for j in range(rct_num):
                         temp_spec_id = get_node_by_index(netIn, allReactions[i].sources[j]).id
@@ -734,8 +736,10 @@ class ExportSBML(WindowedPlugin):
                         speciesReferenceGlyph.setId(specsRefG_id)
                         speciesReferenceGlyph.setSpeciesGlyphId(specG_id)
                         speciesReferenceGlyph.setSpeciesReferenceId(ref_id)
-                        speciesReferenceGlyph.setRole(SPECIES_ROLE_MODIFIER)
-
+                        if mod_type == ModifierTipStyle.TEE:
+                            speciesReferenceGlyph.setRole(SPECIES_ROLE_INHIBITOR)
+                        else:
+                            speciesReferenceGlyph.setRole(SPECIES_ROLE_MODIFIER)
                         speciesReferenceCurve = speciesReferenceGlyph.getCurve()
                         mod_ls = speciesReferenceCurve.createLineSegment()
 
@@ -799,6 +803,7 @@ class ExportSBML(WindowedPlugin):
                     rct_num = len(allReactions[i].sources)
                     prd_num = len(allReactions[i].targets)
                     mod_num = len(allReactions[i].modifiers)
+                    mod_type = allReactions[i].modifier_tip_style
 
                     # for j in range(rct_num):
                     #     rct.append(get_node_by_index(netIn, allReactions[i].sources[j]).id)
@@ -917,7 +922,10 @@ class ExportSBML(WindowedPlugin):
                         speciesReferenceGlyph.setId(specsRefG_id)
                         speciesReferenceGlyph.setSpeciesGlyphId(specG_id)
                         speciesReferenceGlyph.setSpeciesReferenceId(ref_id)
-                        speciesReferenceGlyph.setRole(SPECIES_ROLE_MODIFIER)
+                        if mod_type == ModifierTipStyle.TEE:
+                            speciesReferenceGlyph.setRole(SPECIES_ROLE_INHIBITOR)
+                        else:
+                            speciesReferenceGlyph.setRole(SPECIES_ROLE_MODIFIER)
 
                         speciesReferenceCurve = speciesReferenceGlyph.getCurve()
                         mod_ls = speciesReferenceCurve.createLineSegment()
@@ -1162,6 +1170,7 @@ class ExportSBML(WindowedPlugin):
                     rct_num = len(allReactions[i].sources)
                     prd_num = len(allReactions[i].targets)
                     mod_num = len(allReactions[i].modifiers)
+                    mod_type = allReactions[i].modifier_tip_style
 
                     lineEnding = rInfo.createLineEnding()
                     lineEnding_id = '_line_ending_default_NONE_' + rxn_id
@@ -1263,10 +1272,15 @@ class ExportSBML(WindowedPlugin):
                     color.setColorValue(border_color_str)
                     #lineEnding.getGroup().setStroke('lineEnding_border_color' + '_' + lineEnding_mod_id)
                     lineEnding.getGroup().setStroke("_default_modifier_color_")
-
-                    ellipse = lineEnding.getGroup().createEllipse()
-                    ellipse.setCenter2D(RelAbsVector(0, 0.), RelAbsVector(0, 0.))
-                    ellipse.setRadii(RelAbsVector(0, 100.), RelAbsVector(0, 100.))
+                    if mod_type == ModifierTipStyle.TEE:
+                        rectangle = lineEnding.getGroup().createRectangle()
+                        rectangle.setCoordinatesAndSize(RelAbsVector(0,0),
+                        RelAbsVector(0,-100),RelAbsVector(0,50),
+                        RelAbsVector(0,50),RelAbsVector(0,200))
+                    else:
+                        ellipse = lineEnding.getGroup().createEllipse()
+                        ellipse.setCenter2D(RelAbsVector(0, 0.), RelAbsVector(0, 0.))
+                        ellipse.setRadii(RelAbsVector(0, 50.), RelAbsVector(0, 50.))
 
                     for j in range(mod_num):
                         specsRefG_id = "SpecRefG_" + rxn_id + "_mod" + str(j)

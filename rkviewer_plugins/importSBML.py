@@ -25,6 +25,7 @@ import pandas as pd
 from rkviewer.config import get_theme
 import SBMLDiagrams
 import re # Extract substrings between brackets
+from rkviewer.mvc import ModifierTipStyle
 
 class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
@@ -650,8 +651,8 @@ class IMPORTSBML(WindowedPlugin):
                                     if center_handle[1] == []:
                                         center_handle[1] = center_handle_candidate
                                     prd_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
-                                elif role == "modifier" or role == 'activator': #it is a modifier
-                                    mod_specGlyph_temp_list.append(specGlyph_id)
+                                elif role == "modifier" or role == 'activator' or role == "inhibitor": #it is a modifier
+                                    mod_specGlyph_temp_list.append([specGlyph_id, role])
                             #rct_specGlyph_list.append(rct_specGlyph_temp_list)
                             #prd_specGlyph_list.append(prd_specGlyph_temp_list)
                             try:
@@ -1614,6 +1615,7 @@ class IMPORTSBML(WindowedPlugin):
                         src = []
                         dst = []
                         mod = []
+                        mod_type = ModifierTipStyle.CIRCLE
                         src_handle = []
                         dst_handle = []
                         src_lineend_pos = []
@@ -1661,11 +1663,13 @@ class IMPORTSBML(WindowedPlugin):
 
                             for j in range(mod_num):
                                 if len(mod_specGlyph_list[i]) != 0:
-                                    temp_specGlyph_id = mod_specGlyph_list[i][j]
+                                    temp_specGlyph_id = mod_specGlyph_list[i][j][0]
                                     for k in range(numSpec_in_reaction):
                                         if temp_specGlyph_id == nodeIdx_specGlyph_whole_list[k][1]:
                                             mod_idx = nodeIdx_specGlyph_whole_list[k][0]
                                     mod.append(mod_idx)
+                                    if mod_specGlyph_list[i][j][1] == "inhibitor":
+                                        mod_type = ModifierTipStyle.TEE
                                 else:
                                     for k in range(len(spec_specGlyph_id_list)):
                                         if reaction_mod_list[i][j] == spec_specGlyph_id_list[k][0]:
@@ -1674,6 +1678,7 @@ class IMPORTSBML(WindowedPlugin):
                                         if temp_specGlyph_id == nodeIdx_specGlyph_whole_list[k][1]:
                                             mod_idx = nodeIdx_specGlyph_whole_list[k][0]
                                     mod.append(mod_idx)
+                                    
                         else:
                             rct_num = model.getNumReactants(i)
                             prd_num = model.getNumProducts(i)
@@ -1903,9 +1908,8 @@ class IMPORTSBML(WindowedPlugin):
                                 center_pos = Vec2(center_position[0],center_position[1]), 
                                 handle_positions=handles_Vec2, 
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-                                
+                            api.update_reaction(net_index, idx, modifier_tip_style = mod_type)    
                         except: #There is no info about the center/handle positions, so set as default 
-                            
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
                             dst_corr = []
@@ -2069,7 +2073,7 @@ class IMPORTSBML(WindowedPlugin):
 
                             if len(reaction_line_color)==3:
                                 reaction_line_color.append(255)
-
+                    
                             try: 
                                 idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
@@ -2096,7 +2100,8 @@ class IMPORTSBML(WindowedPlugin):
                                 center_pos = Vec2(center_position[0],center_position[1]), 
                                 handle_positions=handles_Vec2, 
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-
+                            
+                            api.update_reaction(net_index, idx, modifier_tip_style = mod_type)
 
                 else: # there is no layout information, assign position randomly and size as default
                     

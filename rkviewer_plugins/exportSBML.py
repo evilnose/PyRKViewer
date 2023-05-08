@@ -267,9 +267,14 @@ class ExportSBML(WindowedPlugin):
             for i in range(numCompartments):
                 comp_id_list.append(allcompartments[i].id) 
 
+            flag_comp_def = 0
+            for i in range(numNodes):
+                comp_idx = allNodes[i].comp_idx
+                if comp_idx == -1:
+                    flag_comp_def = 1
 
             if numCompartments != 0:
-                if "_compartment_default_" not in comp_id_list:
+                if "_compartment_default_" not in comp_id_list and flag_comp_def == 1:
                     compartment = model.createCompartment()
                     comp_id="_compartment_default_"
                     compartment.setId(comp_id)

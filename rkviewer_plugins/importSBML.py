@@ -2337,6 +2337,7 @@ class IMPORTSBML(WindowedPlugin):
                                 handles.append([dst_handle_x,dst_handle_y])
 
                             handles_Vec2 = []  
+                            
                             if [] not in handles:      
                                 for i in range(len(handles)):
                                     handles_Vec2.append(Vec2(handles[i][0],handles[i][1]))

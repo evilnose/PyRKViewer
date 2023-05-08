@@ -213,10 +213,13 @@ class ExportSBML(WindowedPlugin):
                         if (comp.position.y + comp.size.y) > pos[1]:
                             pos[1] = comp.position.y + comp.size.y
             for rxn in allReactions:
-                if rxn.center_pos.x > pos[0]:
-                    pos[0] = rxn.center_pos.x
-                if rxn.center_pos.y > pos[1]:
-                    pos[1] = rxn.center_pos.y
+                try:
+                    if rxn.center_pos.x > pos[0]:
+                        pos[0] = rxn.center_pos.x
+                    if rxn.center_pos.y > pos[1]:
+                        pos[1] = rxn.center_pos.y
+                except:
+                    pass
                 idx = rxn.index
                 handle_pos = api.get_reaction_center_handle(netIn, idx)
                 if handle_pos.x > pos[0]:

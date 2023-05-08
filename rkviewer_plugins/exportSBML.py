@@ -598,7 +598,7 @@ class ExportSBML(WindowedPlugin):
 
             # create the ReactionGlyphs and SpeciesReferenceGlyphs
             for i in range(numReactions):
-                if allReactions[i].using_bezier == True:
+                if allReactions[i].using_bezier == True: #bezier curve
                     reaction_id = allReactions[i].id
                     center_pos = allReactions[i].center_pos
                     centroid = api.compute_centroid(netIn, allReactions[i].sources, allReactions[i].targets)
@@ -772,9 +772,10 @@ class ExportSBML(WindowedPlugin):
                             mod_ls.setEnd(Point(layoutns, center_value[0], center_value[1]))
             
 
-                else:
+                else: #straight line
                     reaction_id = allReactions[i].id
                     center_pos = allReactions[i].center_pos
+                    reaction_line_thickness = allReactions[i].line_thickness
                     centroid = api.compute_centroid(netIn, allReactions[i].sources, allReactions[i].targets)
                     handles = api.default_handle_positions(netIn,i)
 
@@ -846,12 +847,13 @@ class ExportSBML(WindowedPlugin):
                         speciesReferenceGlyph.setSpeciesReferenceId(ref_id)
                         speciesReferenceGlyph.setRole(SPECIES_ROLE_SUBSTRATE)
                         speciesReferenceCurve = speciesReferenceGlyph.getCurve()
-                        cb = speciesReferenceCurve.createCubicBezier()
-                        # handle1 = api.get_reaction_center_handle(netIn, allReactions[i].index)
-                        # handle2 = api.get_reaction_node_handle(netIn, allReactions[i].index,
+                        # cb = speciesReferenceCurve.createCubicBezier()
+                        # #handle1 = api.get_reaction_center_handle(netIn, allReactions[i].index)
+                        # #handle2 = api.get_reaction_node_handle(netIn, allReactions[i].index,
                         #     allReactions[i].sources[j],is_source=True)
                         handle1 = handles[0]
                         handle2 = handles[1+j]
+                        rct_ls = speciesReferenceCurve.createLineSegment()
                         
                         pos_x = get_node_by_index(netIn,allReactions[i].sources[j]).position.x
                         pos_y = get_node_by_index(netIn,allReactions[i].sources[j]).position.y
@@ -865,14 +867,21 @@ class ExportSBML(WindowedPlugin):
                             line_end_pt = _cross_point(center_value, 
                             [pos_x-reaction_line_thickness, pos_y-reaction_line_thickness], 
                             [width+2.*reaction_line_thickness,height+2.*reaction_line_thickness])
-                        try:
-                            cb.setStart(Point(layoutns, line_end_pt[0], line_end_pt[1]))
-                        except:     
-                            cb.setStart(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+                        # try:
+                        #     cb.setStart(Point(layoutns, line_end_pt[0], line_end_pt[1]))
+                        # except:     
+                        #     cb.setStart(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
 
-                        cb.setBasePoint1(Point(layoutns, handle2.x, handle2.y))
-                        cb.setBasePoint2(Point(layoutns, handle1.x, handle1.y))
-                        cb.setEnd(Point(layoutns, center_value[0], center_value[1]))
+                        # cb.setBasePoint1(Point(layoutns, handle2.x, handle2.y))
+                        # cb.setBasePoint2(Point(layoutns, handle1.x, handle1.y))
+                        # cb.setEnd(Point(layoutns, center_value[0], center_value[1]))
+                        
+                        try:
+                            rct_ls.setStart(Point(layoutns, line_end_pt[0], line_end_pt[1]))
+                        except:     
+                            rct_ls.setStart(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+
+                        rct_ls.setEnd(Point(layoutns, center_value[0], center_value[1]))
 
                     for j in range(prd_num):
                         ref_id = "SpecRef_" + reaction_id + "_prd" + str(j)
@@ -885,17 +894,19 @@ class ExportSBML(WindowedPlugin):
                         speciesReferenceGlyph.setRole(SPECIES_ROLE_PRODUCT)
 
                         speciesReferenceCurve = speciesReferenceGlyph.getCurve()
-                        cb = speciesReferenceCurve.createCubicBezier()
-                        cb.setStart(Point(layoutns, center_value[0], center_value[1]))
+                        # cb = speciesReferenceCurve.createCubicBezier()
+                        # cb.setStart(Point(layoutns, center_value[0], center_value[1]))
 
-                        # handle1 = api.get_reaction_center_handle(netIn, allReactions[i].index)
-                        # handle2 = api.get_reaction_node_handle(netIn, allReactions[i].index,
-                        #     allReactions[i].targets[j],is_source=False)
+                        # # handle1 = api.get_reaction_center_handle(netIn, allReactions[i].index)
+                        # # handle2 = api.get_reaction_node_handle(netIn, allReactions[i].index,
+                        # #     allReactions[i].targets[j],is_source=False)
 
                         handle1 = [2.*center_value[0]-handles[0].x, 2.*center_value[1]-handles[0].y]
                         handle2 = handles[1+rct_num+j]
-                        cb.setBasePoint1(Point(layoutns, handle1[0], handle1[1]))
-                        cb.setBasePoint2(Point(layoutns, handle2.x, handle2.y))
+                        # cb.setBasePoint1(Point(layoutns, handle1[0], handle1[1]))
+                        # cb.setBasePoint2(Point(layoutns, handle2.x, handle2.y))
+
+                        prd_ls = speciesReferenceCurve.createLineSegment()
 
                         pos_x = get_node_by_index(netIn, allReactions[i].targets[j]).position.x
                         pos_y = get_node_by_index(netIn, allReactions[i].targets[j]).position.y
@@ -909,10 +920,17 @@ class ExportSBML(WindowedPlugin):
                             line_head_pt = _cross_point(center_value, 
                             [pos_x-reaction_line_thickness, pos_y-reaction_line_thickness], 
                             [width+2.*reaction_line_thickness,height+2.*reaction_line_thickness])                   
+                        # try:
+                        #     cb.setEnd(Point(layoutns, line_head_pt[0], line_head_pt[1]))
+                        # except:
+                        #     cb.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+
+                        prd_ls.setStart(Point(layoutns, center_value[0], center_value[1]))
                         try:
-                            cb.setEnd(Point(layoutns, line_head_pt[0], line_head_pt[1]))
+                            prd_ls.setEnd(Point(layoutns, line_head_pt[0], line_head_pt[1]))
                         except:
-                            cb.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+                            prd_ls.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+
 
                     for j in range(mod_num):
                         ref_id = "SpecRef_" + reaction_id + "_mod" + str(j)

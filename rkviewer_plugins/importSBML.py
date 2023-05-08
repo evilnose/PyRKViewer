@@ -316,8 +316,10 @@ class IMPORTSBML(WindowedPlugin):
                         reaction_rct_list = []
                         reaction_prd_list = []
                         mod_specGlyph_list = []
+                        reaction_type_list = []  
 
                         for i in range(numReactionGlyphs):
+                            reaction_straight_flag = 1
                             reactionGlyph = layout.getReactionGlyph(i)
                             reaction_id = reactionGlyph.getReactionId()
                             reactionGlyph_id = reactionGlyph.getId()
@@ -469,17 +471,26 @@ class IMPORTSBML(WindowedPlugin):
                                         modifier_lineend_pos = line_start_pt
                                         
                                         if num_curve == 1:
+                                            try_flag = 0
                                             try: #bezier
                                                 center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
                                                                 segment.getBasePoint1().getYOffset()]                                
                                                 spec_handle = [segment.getBasePoint2().getXOffset(),
-                                                            segment.getBasePoint2().getYOffset()] 
+                                                            segment.getBasePoint2().getYOffset()]
+                                                
                                             except: #straight
                                                 spec_handle = [.5*(center_pt[0]+line_end_pt[0]),
                                                 .5*(center_pt[1]+line_end_pt[1])]
                                                 center_handle_candidate = center_pt
-                                                #spec_handle = center_pt         
-                                        else:  
+                                                try_flag = 1
+                                                #spec_handle = []
+                                                #center_handle_candidate = []
+                                                #spec_handle = center_pt 
+                                            if try_flag == 0:
+                                                reaction_straight_flag = 0 
+
+                                        else:
+                                            reaction_straight_flag = 0  
                                             try: #bezier
                                                 center_handle_candidate = []  
                                                 flag_bezier = 0  
@@ -509,6 +520,7 @@ class IMPORTSBML(WindowedPlugin):
                                         modifier_lineend_pos = line_end_pt
                                         
                                         if num_curve == 1:
+                                            try_flag = 0
                                             try: #bezier
                                                 spec_handle = [segment.getBasePoint1().getXOffset(), 
                                                                     segment.getBasePoint1().getYOffset()]                                
@@ -519,7 +531,11 @@ class IMPORTSBML(WindowedPlugin):
                                                 .5*(center_pt[1]+line_start_pt[1])]
                                                 center_handle_candidate = center_pt
                                                 #spec_handle = center_pt
+                                                try_flag = 1
+                                            if try_flag == 0:
+                                                reaction_straight_flag = 0 
                                         else:
+                                            reaction_straight_flag = 0 
                                             try: #bezier
                                                 center_handle_candidate = [] 
                                                 flag_bezier = 0  
@@ -545,6 +561,7 @@ class IMPORTSBML(WindowedPlugin):
                                                 #spec_handle = center_pt
 
                                 except:
+                                    reaction_straight_flag = 0 
                                     center_handle_candidate = []
                                     spec_handle = []
 
@@ -666,7 +683,11 @@ class IMPORTSBML(WindowedPlugin):
                             rct_specGlyph_handle_list.append(rct_specGlyph_handles_temp_list)
                             prd_specGlyph_handle_list.append(prd_specGlyph_handles_temp_list)    
                             mod_specGlyph_list.append(mod_specGlyph_temp_list)
-                         
+                            if reaction_straight_flag == 1:
+                                reaction_type_list.append(False)#straight line
+                            else:
+                                reaction_type_list.append(True)#bezier curve
+
                         #orphan nodes
                         for i in range(numSpecGlyphs):
                             specGlyph = layout.getSpeciesGlyph(i)
@@ -1626,7 +1647,8 @@ class IMPORTSBML(WindowedPlugin):
                         prd_num = len(prd_specGlyph_handle_list[i])
                         #mod_num = max(len(mod_specGlyph_list[i]),len(reaction_mod_list[i]))
                         mod_num = len(mod_specGlyph_list[i])
-
+                        reaction_type = reaction_type_list[i]
+                        
                         # for j in range(rct_num):
                         #     temp_specGlyph_id = rct_specGlyph_list[i][j]
                         #     for k in range(numSpec_in_reaction):
@@ -1895,20 +1917,26 @@ class IMPORTSBML(WindowedPlugin):
                             
                             if len(reaction_line_color) == 3:
                                 reaction_line_color.append(255)
-                            
-                            idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
+                            idx = api.add_reaction(net_index, id=temp_id, 
+                            reactants=src_corr, products=dst_corr,
                             fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
-                            line_thickness=reaction_line_width, modifiers = mod)
+                            line_thickness=reaction_line_width, 
+                            modifiers = mod)
+                            
                             api.update_reaction(net_index, idx, ratelaw = kinetics)
-                            handles_Vec2 = []  
-                            if [] not in handles:      
-                                for i in range(len(handles)):
-                                    handles_Vec2.append(Vec2(handles[i][0],handles[i][1]))
+                            if reaction_type == False:
                                 api.update_reaction(net_index, idx, 
-                                center_pos = Vec2(center_position[0],center_position[1]), 
-                                handle_positions=handles_Vec2, 
-                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-                            api.update_reaction(net_index, idx, modifier_tip_style = mod_type)    
+                                center_pos = Vec2(center_position[0],center_position[1]),
+                                use_bezier = reaction_type)
+                            else:
+                                handles_Vec2 = [] 
+                                if [] not in handles:      
+                                    for i in range(len(handles)):
+                                        handles_Vec2.append(Vec2(handles[i][0],handles[i][1]))
+                                    api.update_reaction(net_index, idx, center_pos = Vec2(center_position[0],center_position[1]),
+                                    handle_positions=handles_Vec2)
+                            api.update_reaction(net_index, idx, modifier_tip_style = mod_type)  
+                            
                         except: #There is no info about the center/handle positions, so set as default 
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
@@ -2324,13 +2352,13 @@ class IMPORTSBML(WindowedPlugin):
                         # if flag_add_rxn_err == 1:
                         #     wx.MessageBox("There are errors while loading this SBML file!", "Message", wx.OK | wx.ICON_INFORMATION)
                         
-            except:
-                if showDialogues:
-                    wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
+            # except:
+            #     if showDialogues:
+            #         wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
-            # except Exception as e:
-            #     raise Exception (e) 
+            except Exception as e:
+                raise Exception (e) 
 
 class FunctionDefinition():
     #This class is adopted from SBMLKinetics. See the original source code:

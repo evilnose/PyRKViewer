@@ -1237,6 +1237,7 @@ class NodeForm(EditPanelForm):
                         self.main_section.SetValidationState(
                         False, ctrl_id, 'Should be in the form of "width, height" or "(w1, h1); (w2, h2)"')   
                         return
+                   
 
         self.main_section.SetValidationState(True, self.size_ctrl.GetId())
 

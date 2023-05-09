@@ -2353,13 +2353,13 @@ class IMPORTSBML(WindowedPlugin):
                         # if flag_add_rxn_err == 1:
                         #     wx.MessageBox("There are errors while loading this SBML file!", "Message", wx.OK | wx.ICON_INFORMATION)
                         
-            # except:
-            #     if showDialogues:
-            #         wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
+            except:
+                if showDialogues:
+                    wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
-            except Exception as e:
-                raise Exception (e) 
+            # except Exception as e:
+            #     raise Exception (e) 
 
 class FunctionDefinition():
     #This class is adopted from SBMLKinetics. See the original source code:

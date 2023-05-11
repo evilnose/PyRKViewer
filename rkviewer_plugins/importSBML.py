@@ -1697,26 +1697,29 @@ class IMPORTSBML(WindowedPlugin):
                                 modSpecRef = reaction.getModifier(j)
                                 modifiers.append(modSpecRef.getSpecies())
 
-                            #parameter in kinetic law   
-                            kineticLaw = reaction.getKineticLaw()
-                            kinetic_parameter_list = []
-                            kinetic_parameter_value_list = []
-                            for j in range(len(kineticLaw.getListOfParameters())):
-                                parameter = kineticLaw.getParameter(j)
-                                name = parameter.getName()
-                                if parameter.isSetValue():
-                                    value = kineticLaw.getParameter(j).getValue()
-                                else:
-                                    value = 0.
-                                kinetic_parameter_list.append(name)
-                                kinetic_parameter_value_list.append(value)
-                            for j in range(len(kinetic_parameter_list)):
-                                p = kinetic_parameter_list[j]
-                                v = kinetic_parameter_value_list[j]
-                                try:
-                                    api.set_parameter_value(net_index, p, v)
-                                except:
-                                    pass
+                            #parameter in kinetic law 
+                            try:  
+                                kineticLaw = reaction.getKineticLaw()
+                                kinetic_parameter_list = []
+                                kinetic_parameter_value_list = []
+                                for j in range(len(kineticLaw.getListOfParameters())):
+                                    parameter = kineticLaw.getParameter(j)
+                                    name = parameter.getName()
+                                    if parameter.isSetValue():
+                                        value = kineticLaw.getParameter(j).getValue()
+                                    else:
+                                        value = 0.
+                                    kinetic_parameter_list.append(name)
+                                    kinetic_parameter_value_list.append(value)
+                                for j in range(len(kinetic_parameter_list)):
+                                    p = kinetic_parameter_list[j]
+                                    v = kinetic_parameter_value_list[j]
+                                    try:
+                                        api.set_parameter_value(net_index, p, v)
+                                    except:
+                                        pass
+                            except:
+                                pass
 
 
                             for j in range(mod_num):
@@ -2260,25 +2263,28 @@ class IMPORTSBML(WindowedPlugin):
                            modifiers.append(modSpecRef.getSpecies())
 
                         #parameter in kinetic law
-                        kineticLaw = reaction.getKineticLaw()
-                        kinetic_parameter_list = []
-                        kinetic_parameter_value_list = []
-                        for j in range(len(kineticLaw.getListOfParameters())):
-                            parameter = kineticLaw.getParameter(j)
-                            name = parameter.getName()
-                            if parameter.isSetValue():
-                                value = kineticLaw.getParameter(j).getValue()
-                            else:
-                                value = 0.
-                            kinetic_parameter_list.append(name)
-                            kinetic_parameter_value_list.append(value)
-                        for j in range(len(kinetic_parameter_list)):
-                            p = kinetic_parameter_list[j]
-                            v = kinetic_parameter_value_list[j]
-                            try:
-                                api.set_parameter_value(net_index, p, v)
-                            except:
-                                pass
+                        try:
+                            kineticLaw = reaction.getKineticLaw()
+                            kinetic_parameter_list = []
+                            kinetic_parameter_value_list = []
+                            for j in range(len(kineticLaw.getListOfParameters())):
+                                parameter = kineticLaw.getParameter(j)
+                                name = parameter.getName()
+                                if parameter.isSetValue():
+                                    value = kineticLaw.getParameter(j).getValue()
+                                else:
+                                    value = 0.
+                                kinetic_parameter_list.append(name)
+                                kinetic_parameter_value_list.append(value)
+                            for j in range(len(kinetic_parameter_list)):
+                                p = kinetic_parameter_list[j]
+                                v = kinetic_parameter_value_list[j]
+                                try:
+                                    api.set_parameter_value(net_index, p, v)
+                                except:
+                                    pass
+                        except:
+                            pass
 
                         for j in range(mod_num):
                             mod_id = modifiers[j]
@@ -2397,11 +2403,11 @@ class IMPORTSBML(WindowedPlugin):
                         # if flag_add_rxn_err == 1:
                         #     wx.MessageBox("There are errors while loading this SBML file!", "Message", wx.OK | wx.ICON_INFORMATION)
                         
-            # except:
-            #     if showDialogues:
-            #         wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
+            except:
+                if showDialogues:
+                    wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
-            except Exception as e:
-                raise Exception (e) 
+            # except Exception as e:
+            #     raise Exception (e) 
 

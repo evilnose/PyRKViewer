@@ -130,49 +130,6 @@ class IMPORTSBML(WindowedPlugin):
         df_color = pd.DataFrame(color_data)
         df_color["html_name"] = df_color["html_name"].str.lower()
 
-        MAX_RECURSION = 5 # Maximum number for iteration function expansions
-        def _expandFormula(expansion, function_definitions,
-                num_recursion=0):
-            """
-            Expands the kinetics formula, replacing function definitions
-            with their body.
-
-            Parameters
-            ----------
-            expansion: str
-                expansion of the kinetic law
-            function_definitions: list-FunctionDefinition
-            num_recursion: int
-            
-            Returns
-            -------
-            str
-            """
-            if num_recursion > MAX_RECURSION:
-                return expansion
-            done = True
-            for fd in function_definitions:
-            # Find the function calls
-                calls = re.findall(r'{}\(.*?\)'.format(fd.id), expansion)
-                if len(calls) == 0:
-                    continue
-                done = False
-                for call in calls:
-                    # Find argument call. Ex: '(a, b)'
-                    call_arguments = re.findall(r'\(.*?\)', call)[0]
-                    call_arguments = call_arguments.strip()
-                    call_arguments = call_arguments[1:-1]  # Eliminate parentheses
-                    arguments = call_arguments.split(',')
-                    arguments = [a.strip() for a in arguments]
-                    body = str(fd.body)
-                    for formal_arg, call_arg in zip(fd.argument_names, arguments):
-                        body = body.replace(formal_arg, call_arg)
-                    expansion = expansion.replace(call, body)
-            if not done:
-                return _expandFormula(expansion, function_definitions,
-                num_recursion=num_recursion+1)
-            return expansion
-
         # if len(sbmlStr) == 0:
         #   if showDialogues:
         #     wx.MessageBox("Please import an SBML file.", "Message", wx.OK | wx.ICON_INFORMATION)
@@ -1740,6 +1697,27 @@ class IMPORTSBML(WindowedPlugin):
                                 modSpecRef = reaction.getModifier(j)
                                 modifiers.append(modSpecRef.getSpecies())
 
+                            #parameter in kinetic law   
+                            kineticLaw = reaction.getKineticLaw()
+                            kinetic_parameter_list = []
+                            kinetic_parameter_value_list = []
+                            for j in range(len(kineticLaw.getListOfParameters())):
+                                parameter = kineticLaw.getParameter(j)
+                                name = parameter.getName()
+                                if parameter.isSetValue():
+                                    value = kineticLaw.getParameter(j).getValue()
+                                else:
+                                    value = 0.
+                                kinetic_parameter_list.append(name)
+                                kinetic_parameter_value_list.append(value)
+                            for j in range(len(kinetic_parameter_list)):
+                                p = kinetic_parameter_list[j]
+                                v = kinetic_parameter_value_list[j]
+                                try:
+                                    api.set_parameter_value(net_index, p, v)
+                                except:
+                                    pass
+
 
                             for j in range(mod_num):
                                 mod_id = modifiers[j]
@@ -2281,6 +2259,27 @@ class IMPORTSBML(WindowedPlugin):
                            modSpecRef = reaction.getModifier(j)
                            modifiers.append(modSpecRef.getSpecies())
 
+                        #parameter in kinetic law
+                        kineticLaw = reaction.getKineticLaw()
+                        kinetic_parameter_list = []
+                        kinetic_parameter_value_list = []
+                        for j in range(len(kineticLaw.getListOfParameters())):
+                            parameter = kineticLaw.getParameter(j)
+                            name = parameter.getName()
+                            if parameter.isSetValue():
+                                value = kineticLaw.getParameter(j).getValue()
+                            else:
+                                value = 0.
+                            kinetic_parameter_list.append(name)
+                            kinetic_parameter_value_list.append(value)
+                        for j in range(len(kinetic_parameter_list)):
+                            p = kinetic_parameter_list[j]
+                            v = kinetic_parameter_value_list[j]
+                            try:
+                                api.set_parameter_value(net_index, p, v)
+                            except:
+                                pass
+
                         for j in range(mod_num):
                             mod_id = modifiers[j]
                             for k in range(numNodes):
@@ -2405,58 +2404,4 @@ class IMPORTSBML(WindowedPlugin):
 
             except Exception as e:
                 raise Exception (e) 
-
-class FunctionDefinition():
-    #This class is adopted from SBMLKinetics. See the original source code:
-    #https://github.com/ModelEngineering/SBMLKinetics/blob/master/SBMLKinetics/common/function_definition.py
-
-    def __init__(self, sbml_function_definition,
-          name=None, fid=None, arguments=None, body=None):
-        """
-        Parameters
-        ----------
-        sbml_function_definition: FunctionDefinition
-        name: str
-        fid: str
-        arguments: list-str
-        body: str
-        """
-        self.sbml_function_definition = sbml_function_definition
-        if self.sbml_function_definition is not None:
-            name = self.sbml_function_definition.getName()
-            fid = self.sbml_function_definition.getId()
-            arguments = [
-                  self.sbml_function_definition.getArgument(n).getName()
-                  for n in 
-                  range(self.sbml_function_definition.getNumArguments())]
-            body = formulaToL3String(
-                  self.sbml_function_definition.getBody())
-        self.function_name = name
-        self.id = fid
-        self.argument_names = arguments
-        self.body = body
-  
-    def __repr__(self):
-        argument_call = ",".join(self.argument_names)
-        call_str = "%s(%s)" % (self.id, argument_call)
-        return "%s: %s" % (call_str, self.body)
-  
-    @classmethod
-    def makeBuiltinFunctions(cls):
-        """
-        Creates a function definition for the SBML delay function.
-        Returns
-        -------
-        list-FunctionDefinition
-        """
-        functions = []
-        # Delay
-        functions.append(cls(None, name="delay", fid="delay",
-               arguments=["a_species", "num"], body = "a_species"))
-        # Exponential
-        functions.append(cls(None, name="exp", fid="exp",
-               arguments=["num"], body = "2.71828182**num"))
-        #
-        return functions
-
 

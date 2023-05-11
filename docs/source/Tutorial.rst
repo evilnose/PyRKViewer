@@ -45,9 +45,10 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
 - Random Network: This utility lets you create a completely random network with personalized parameters. **NOTE: This will erase your current canvas, not add to it. If you want to save your work you can do so under File in the Navigation Bar.** After You create the random network you will be able to modify it at your own will, including adding and deleting nodes. To customize the parameters:
 
-.. image:: ../fotos/S5.png
+.. image:: ../fotos/S2.png
+    :width: 300
 
-*(Figure 5)*
+*(Figure 2)*
 
     + Number of species: The number of nodes that you want featured in your network.
 
@@ -60,9 +61,10 @@ A lot of the functionalities found here are also in the Navigation Bar. However,
 
 - Auto Layout: This utility automatically gives you a “nice” layout of your network. **NOTE**: This has not been implemented for multiple compartments, and doesn’t behave well for complex reactions. This is under work, and will be cleaned by version 2. The parameters:
   
-.. image:: ../fotos/S6.png
+.. image:: ../fotos/S3.png
+    :width: 300
 
-*(Figure 6)*
+*(Figure 3)*
 
     + Maximum number of iterations: This will help make the layout more neat. 100-120 is a good default value range. If you have a very high number of nodes then you’re going to want to increase this number. Computationally, it may take a bit longer when this number is increased by a lot.
     
@@ -99,9 +101,9 @@ This is your visual workspace. Here you will be able to see your created nodes, 
 
 You can right click on a node or on a selection of nodes to delete the selection. You also have an align option: This will let you align a set or nodes in the manners described.
 
-.. image:: ../fotos/S7.png
+.. image:: ../fotos/S4.png
 
-*(Figure 7)*
+*(Figure 4)*
 
 * Align Left will align nodes vertically to be at the level of the left-most node among all the selected nodes.
 
@@ -128,41 +130,52 @@ You can right click on a node or on a selection of nodes to delete the selection
 
 This is key to personalizing your nodes and reactions. Through this panel you will be able to add information to and about your networks. **NOTE**: The information panel will only show when something is selected (nodes, reactions, or compartments).
 
-.. image:: ../fotos/S8.png
+.. image:: ../fotos/S5.png
 
-*(Figure 8)*
+*(Figure 5)*
 
 You will modify independently the reactions selected and the nodes selected.
 
 **- Nodes:** Let’s go over the case where you select a single node. You can adjust settings for multiple nodes at once but some of the features are locked, like identifier, to avoid internal conflict.
 
-.. image:: ../fotos/S9.png
+.. image:: ../fotos/S6.png
+    :width: 300
 
-*(Figure 9)*
+*(Figure 6)*
 
     * Identifiers: This allows you to change the name of the node in question. E.g. say we want to name it H, we type H into the box.
     
-    * Position: this helps you select exactly what canvas coordinate you want the node to be in. Note: the top left corner is the position (0,0).
+    * Compartment: The compartment, if any, where the node is in.
+
+    * Name: Node name in the annotation.
+
+    * SBO: Node SBO in the annotation, with the expected format as "SBO:0000247".
+
+    * Concentration: Species concentration.
+
+    * Position: This helps you select exactly what canvas coordinate you want the node to be in. Note: the top left corner is the position (0,0).
     
     * Size: This lets you modify the node’s size, it is coherent with the canvas coordinate system. 
+
+    * Node status: Lets you identify a node as floating or border. This comes with a double border, to help you identify this type of node at a glance.
     
+    * Lock node: When this box is clicked, it indicates that the node is not to be moved. The program will not let you (or other utilities) drag or move this node. You will see a circle appear at the top left of your node to help you identify locked nodes at a glance.
+    
+    * Shape: Node shape including rectangle, circle, hexagon, line, triangle, text-only, etc.
+        
     * Fill color, fill opacity, border color, border opacity, border width: You can customize these values to your own taste. Note: if you want to change all of the nodes to a specific color you can select all and modify accordingly, you don’t need to go one by one.
-    
-    * Node status: lets you identify a node as floating or border. This comes with a double border, to help you identify this type of node at a glance.
-    
-    * Lock node: when this box is clicked, it indicates that the node is not to be moved. The program will not let you (or other utilities) drag or move this node. You will see a circle appear at the top left of your node to help you identify locked nodes at a glance.
     
 Here is an example of some of the values being changed and the end result (in contrast to the default values).
     
-.. image:: ../fotos/S10.png
+.. image:: ../fotos/S7.png
 
-*(Figure 10)*
+*(Figure 7)*
 
 **- Reactions:** Each case will be very unique, let’s go over a simple scenario.
 
-.. image:: ../fotos/S11.png
+.. image:: ../fotos/S8.png
 
-*(Figure 11)*
+*(Figure 8)*
 
     * Identifier: the reaction’s name.
     
@@ -188,9 +201,9 @@ Here is an example of some of the values being changed and the end result (in co
 You can visualize the location of your nodes on the little square, and scroll through the bar to zoom in or out.
 
 
------------------
-7. Additional Options
------------------
+------------------------------
+7. Theme For Developers
+------------------------------
 
 Follow the steps below to use SBCoyote in Dark Mode.
 
@@ -198,24 +211,24 @@ Follow the steps below to use SBCoyote in Dark Mode.
     2. Select Default Settings.
     3. Copy the setting(s) that you wish to change.
 
-.. image:: ../fotos/S2.png
+.. image:: ../fotos/S9.png
 
-*(Figure 2)*
+*(Figure 9)*
 
     4. Click File in the Navigation Bar
     5. Select Edit Settings
     6. Paste the copied settings to change.
     7. Change the values accordingly.
 
-.. image:: ../fotos/S3.png
+.. image:: ../fotos/S10.png
 
-*(Figure 3)*
+*(Figure 10)*
 
     8. Close both NotePads and Select File again. (Click save if you haven’t already saved them).
     9. Click Reload Settings or simply exit the application and open it again.
 
     To restore default settings simple erase all changes made under File -> Edit Settings so that it looks  like the following:
 
-.. image:: ../fotos/S4.png
+.. image:: ../fotos/S11.png
 
-*(Figure 4)*
+*(Figure 11)*

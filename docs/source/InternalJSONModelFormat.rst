@@ -24,7 +24,7 @@ Information
 2. Optional information in the internal JSON model format:
  a. Compartment render information (i.e., fill color, border color, border width).
  b. Node render information (i.e., fill color, border color, border width).
- c. Reaction render information (i.e., fill color, line width).
+ c. Reaction render information (i.e., fill color, line width), and rateLaw.
 
 3. How to extend the interal JSON model file:
  Users can either use SBcoyote to modify the internal JSON model file by editing the model on the canvas, 

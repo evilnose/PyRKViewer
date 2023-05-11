@@ -396,7 +396,8 @@ class IMPORTSBML(WindowedPlugin):
                             try:
                                 kinetics = reaction.getKineticLaw().getFormula()
                                 if len(function_definitions) > 0:
-                                    kinetics = _expandFormula(kinetics, function_definitions)
+                                    #kinetics = _expandFormula(kinetics, function_definitions)
+                                    kinetics = ""
                             except:
                                 kinetics = ""
                             kinetics_list.append(kinetics)
@@ -1255,7 +1256,8 @@ class IMPORTSBML(WindowedPlugin):
                 if "_compartment_default_" in Comps_ids:
                     numComps -= 1
                     Comps_ids.remove("_compartment_default_")
-                numNodes = numFloatingNodes + numBoundaryNodes
+                numNodes = model.getNumSpecies()
+                Nodes_ids = model.getListOfAllSpecies()
 
                 parameter_list = model.getListOfParameterIds()
 
@@ -1591,9 +1593,11 @@ class IMPORTSBML(WindowedPlugin):
                                 
                                 comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                                 for xx in range(numComps):
-                                    if comp_id == Comps_ids[xx]:            
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)             
-                                     
+                                    if comp_id == Comps_ids[xx]: 
+                                        try:           
+                                            api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)             
+                                        except:
+                                            pass                                   
                                 for k in range(numCompGlyphs):
                                     if len(comp_id) != 0 and comp_id == comp_id_list[k]:
                                         comp_node_list[k].append(nodeIdx_temp)
@@ -1728,7 +1732,15 @@ class IMPORTSBML(WindowedPlugin):
                                 dst.append(prd_idx)
                                 #dst_handle.append(prd_specGlyph_handle_list[i][j][1])
 
-                            modifiers = model.getListOfModifiers(temp_id)
+                            #modifiers = model.getListOfModifiers(temp_id) 
+                            #simple sbml bug with repeated first modifiers
+                            reaction = model_layout.getReaction(temp_id)
+                            modifiers = []
+                            for j in range(len(reaction.getListOfModifiers())):
+                                modSpecRef = reaction.getModifier(j)
+                                modifiers.append(modSpecRef.getSpecies())
+
+
                             for j in range(mod_num):
                                 mod_id = modifiers[j]
                                 for k in range(len(spec_specGlyph_id_list)):
@@ -2149,8 +2161,50 @@ class IMPORTSBML(WindowedPlugin):
                         border_color = api.Color(comp_border_color[0],comp_border_color[1],comp_border_color[2],comp_border_color[3]),
                         border_width = comp_border_width)
 
-                    for i in range (numFloatingNodes):
-                        temp_id = FloatingNodes_ids[i]
+                    # for i in range (numFloatingNodes):
+                    #     temp_id = FloatingNodes_ids[i]
+                    #     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
+                    #     try:
+                    #         temp_concentration = model.getSpeciesInitialConcentration(temp_id)
+                    #         if math.nan(temp_concentration):
+                    #             temp_concentration = 1
+                    #     except:
+                    #         temp_concentration = 1.
+                    #     if spec_border_width == 0.:
+                    #         spec_border_width = 0.001
+                    #         spec_border_color = spec_fill_color
+                    #     nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = True,
+                    #     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
+                    #     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
+                    #     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
+                    #     border_width=spec_border_width, shape_index=shapeIdx, concentration=temp_concentration)
+                    #     for j in range(numComps):
+                    #         if comp_id == comp_id_list[j]:
+                    #             comp_node_list[j].append(nodeIdx_temp)
+
+                    # for i in range (numBoundaryNodes):
+                    #     temp_id = BoundaryNodes_ids[i]
+                    #     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
+                    #     try:
+                    #         temp_concentration = model.getSpeciesInitialConcentration(temp_id)
+                    #         if math.nan(temp_concentration):
+                    #             temp_concentration = 1
+                    #     except:
+                    #         temp_concentration = 1.0
+                    #     if spec_border_width == 0.:
+                    #         spec_border_width = 0.001
+                    #         spec_border_color = spec_fill_color
+                    #     nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = False,
+                    #     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
+                    #     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
+                    #     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
+                    #     border_width=spec_border_width, shape_index=shapeIdx, concentration=temp_concentration)
+                    #     for j in range(numComps):
+                    #         if comp_id == comp_id_list[j]:
+                    #             comp_node_list[j].append(nodeIdx_temp)
+
+                    for i in range (numNodes):
+                        temp_id = Nodes_ids[i]
                         comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                         try:
                             temp_concentration = model.getSpeciesInitialConcentration(temp_id)
@@ -2161,28 +2215,12 @@ class IMPORTSBML(WindowedPlugin):
                         if spec_border_width == 0.:
                             spec_border_width = 0.001
                             spec_border_color = spec_fill_color
-                        nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = True,
-                        position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
-                        fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
-                        border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
-                        border_width=spec_border_width, shape_index=shapeIdx, concentration=temp_concentration)
-                        for j in range(numComps):
-                            if comp_id == comp_id_list[j]:
-                                comp_node_list[j].append(nodeIdx_temp)
-
-                    for i in range (numBoundaryNodes):
-                        temp_id = BoundaryNodes_ids[i]
-                        comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
-                        try:
-                            temp_concentration = model.getSpeciesInitialConcentration(temp_id)
-                            if math.nan(temp_concentration):
-                                temp_concentration = 1
-                        except:
-                            temp_concentration = 1.0
-                        if spec_border_width == 0.:
-                            spec_border_width = 0.001
-                            spec_border_color = spec_fill_color
-                        nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = False,
+                        node_status = True
+                        for j in range(numBoundaryNodes):
+                            temp_b_id = BoundaryNodes_ids[j]
+                            if temp_id == temp_b_id:
+                                node_status = False
+                        nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = node_status,
                         position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                         fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                         border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
@@ -2214,12 +2252,13 @@ class IMPORTSBML(WindowedPlugin):
                         try: 
                             kinetics = model.getRateLaw(i)
                             if len(function_definitions) > 0:
-                                kinetics = _expandFormula(kinetics, function_definitions)
+                                #kinetics = _expandFormula(kinetics, function_definitions)
+                                kinetics = ""
                         except:
                             kinetics = ""
                     
-                        rct_num = model.getNumReactants(i)
-                        prd_num = model.getNumProducts(i)
+                        rct_num = model.getNumReactants(temp_id)
+                        prd_num = model.getNumProducts(temp_id)
                         mod_num = model.getNumModifiers(temp_id)
 
                         for j in range(rct_num):
@@ -2234,14 +2273,20 @@ class IMPORTSBML(WindowedPlugin):
                                 if allNodes[k].id == prd_id:
                                     dst.append(allNodes[k].index)                   
 
-                        modifiers = model.getListOfModifiers(temp_id)
+                        #modifiers = model.getListOfModifiers(temp_id)
+                        #simple sbml bug with repeated first modifiers
+                        reaction = model_layout.getReaction(temp_id)
+                        modifiers = []
+                        for j in range(len(reaction.getListOfModifiers())):
+                           modSpecRef = reaction.getModifier(j)
+                           modifiers.append(modSpecRef.getSpecies())
+
                         for j in range(mod_num):
                             mod_id = modifiers[j]
                             for k in range(numNodes):
                                 if allNodes[k].id == mod_id:
                                     mod.append(allNodes[k].index) 
-                        mod = set(mod)
-
+                   
                         try: 
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
@@ -2353,13 +2398,13 @@ class IMPORTSBML(WindowedPlugin):
                         # if flag_add_rxn_err == 1:
                         #     wx.MessageBox("There are errors while loading this SBML file!", "Message", wx.OK | wx.ICON_INFORMATION)
                         
-            except:
-                if showDialogues:
-                    wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
+            # except:
+            #     if showDialogues:
+            #         wx.MessageBox("Imported SBML file is invalid.", "Message", wx.OK | wx.ICON_INFORMATION)
 
 
-            # except Exception as e:
-            #     raise Exception (e) 
+            except Exception as e:
+                raise Exception (e) 
 
 class FunctionDefinition():
     #This class is adopted from SBMLKinetics. See the original source code:

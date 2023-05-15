@@ -1,6 +1,6 @@
 """
 Export the network on canvas to an SBML string as save it as a file.
-Version 1.0.7: Author: Jin Xu (2023)
+Version 1.1.8: Author: Jin Xu (2023)
 """
 
 
@@ -16,12 +16,13 @@ import os
 from libsbml import * # does not have to import in the main.py too
 import re # to process kinetic_law string
 from rkviewer.config import get_theme
+from rkviewer.mvc import ModifierTipStyle
 
 class ExportSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ExportSBML',
         author='Jin Xu',
-        version='1.0.7',
+        version='1.1.8',
         short_desc='Export SBML.',
         long_desc='Export the SBML String from the network on canvas and save it to a file.',
         category=PluginCategory.MODELS
@@ -193,7 +194,54 @@ class ExportSBML(WindowedPlugin):
             #print("allNodes:", allNodes)
             #print("allReactions:", allReactions)
             #print("allcompartments:", allcompartments)
-            numCompartments = len(allcompartments)      
+            numCompartments = len(allcompartments) 
+            #The following code calculates the size of the network
+            pos = [allNodes[0].position.x + 2.*allNodes[0].size.x, #double comes from the text position
+                    allNodes[0].position.y + 2.*allNodes[0].size.y]
+            for node in allNodes:
+                if (node.position.x + 2.*node.size.x) > pos[0]:
+                    pos[0] = node.position.x + 2.*node.size.x
+                if (node.position.y + 2.*node.size.y) > pos[1]:
+                    pos[1] = node.position.y + 2.*node.size.y
+            for comp in allcompartments:
+                if comp.id != "_compartment_default_":
+                    comp_fill_color = [comp.fill_color.r, comp.fill_color.g, comp.fill_color.b]
+                    comp_border_color = [comp.border_color.r, comp.border_color.g, comp.border_color.b]
+                    if comp_fill_color != [255, 255, 255] or comp_border_color != [255, 255, 255]:
+                        if (comp.position.x + comp.size.x) > pos[0]:
+                            pos[0] = comp.position.x + comp.size.x
+                        if (comp.position.y + comp.size.y) > pos[1]:
+                            pos[1] = comp.position.y + comp.size.y
+            for rxn in allReactions:
+                try:
+                    if rxn.center_pos.x > pos[0]:
+                        pos[0] = rxn.center_pos.x
+                    if rxn.center_pos.y > pos[1]:
+                        pos[1] = rxn.center_pos.y
+                except:
+                    pass
+                idx = rxn.index
+                handle_pos = api.get_reaction_center_handle(netIn, idx)
+                if handle_pos.x > pos[0]:
+                    pos[0] = handle_pos.x
+                if handle_pos.y > pos[1]:
+                    pos[1] = handle_pos.y
+                src = rxn.sources
+                tgt = rxn.targets
+                for i in range(len(src)):
+                    handle_pos = api.get_reaction_node_handle(netIn, idx, src[i],is_source=True)
+                    if handle_pos.x > pos[0]:
+                        pos[0] = handle_pos.x
+                    if handle_pos.y > pos[1]:
+                        pos[1] = handle_pos.y
+                for i in range(len(tgt)):
+                    handle_pos = api.get_reaction_node_handle(netIn, idx, tgt[i],is_source=False)
+                    if handle_pos.x > pos[0]:
+                        pos[0] = handle_pos.x
+                    if handle_pos.y > pos[1]:
+                        pos[1] = handle_pos.y    
+            cal_layout_size = [pos[0] + 100., pos[1] + 100.]
+            
     #######################################
 
             # Creates an SBMLNamespaces object with the given SBML level, version
@@ -222,9 +270,14 @@ class ExportSBML(WindowedPlugin):
             for i in range(numCompartments):
                 comp_id_list.append(allcompartments[i].id) 
 
+            flag_comp_def = 0
+            for i in range(numNodes):
+                comp_idx = allNodes[i].comp_idx
+                if comp_idx == -1:
+                    flag_comp_def = 1
 
             if numCompartments != 0:
-                if "_compartment_default_" not in comp_id_list:
+                if "_compartment_default_" not in comp_id_list and flag_comp_def == 1:
                     compartment = model.createCompartment()
                     comp_id="_compartment_default_"
                     compartment.setId(comp_id)
@@ -296,6 +349,7 @@ class ExportSBML(WindowedPlugin):
                             species.setConstant(True)
             # create reactions:
             parameter_id_value_dict_self_pre = {}  
+            parameter_id_value_dict = api.get_parameters(netIn)
             
             for i in range(numReactions):
                 reaction_id = allReactions[i].id
@@ -323,23 +377,23 @@ class ExportSBML(WindowedPlugin):
 
                 kinetic_law_from_user = allReactions[i].rate_law
                 
-                if kinetic_law_from_user == '':
-                    kinetic_law = ''
-                    kinetic_law = kinetic_law + 'E' + str (i) + '*(k' + str (i) 
-                    parameter_id_value_dict_self_pre['E' + str(i)] = 0.1
-                    parameter_id_value_dict_self_pre['k' + str(i)] = 0.1
+                # if kinetic_law_from_user == '':
+                #     kinetic_law = ''
+                #     kinetic_law = kinetic_law + 'E' + str (i) + '*(k' + str (i) 
+                #     parameter_id_value_dict_self_pre['E' + str(i)] = 0.1
+                #     parameter_id_value_dict_self_pre['k' + str(i)] = 0.1
 
-                    for j in range(rct_num):
-                        kinetic_law = kinetic_law + '*' + rct[j]
+                #     for j in range(rct_num):
+                #         kinetic_law = kinetic_law + '*' + rct[j]
                         
-                    if isReversible:
-                        kinetic_law = kinetic_law + ' - k' + str (i) + 'r'
-                        parameter_id_value_dict_self_pre['k' + str (i) + 'r'] = 0.1
-                        for j in range(prd_num):
-                            kinetic_law = kinetic_law + '*' + prd[j]
-                    kinetic_law = kinetic_law + ')'
-                else:
-                    kinetic_law = kinetic_law_from_user
+                #     if isReversible:
+                #         kinetic_law = kinetic_law + ' - k' + str (i) + 'r'
+                #         parameter_id_value_dict_self_pre['k' + str (i) + 'r'] = 0.1
+                #         for j in range(prd_num):
+                #             kinetic_law = kinetic_law + '*' + prd[j]
+                #     kinetic_law = kinetic_law + ')'
+                # else:
+                kinetic_law = kinetic_law_from_user
 
                 reaction = model.createReaction()
                 reaction.setId(allReactions[i].id)
@@ -347,9 +401,9 @@ class ExportSBML(WindowedPlugin):
                 reaction.setFast(False)
                 if isReversible:
                     reaction.setReversible(True)
-                
-                kinetics = reaction.createKineticLaw()
-                kinetics.setFormula(kinetic_law)
+                if kinetic_law != "" and len(parameter_id_value_dict) != 0:  
+                    kinetics = reaction.createKineticLaw()
+                    kinetics.setFormula(kinetic_law)
                 
                 for j in range(rct_num):
                     reference = reaction.createReactant()
@@ -373,7 +427,7 @@ class ExportSBML(WindowedPlugin):
                     ref_id = "SpecRef_" + reaction_id + "_mod" + str(j)
                     reference.setId(ref_id)
 
-            parameter_id_value_dict = api.get_parameters(netIn)
+
             parameter_id_value_dict.update(parameter_id_value_dict_self_pre)
             for name,dict_ in parameter_id_value_dict.items():
                 parameters = model.createParameter()
@@ -423,8 +477,13 @@ class ExportSBML(WindowedPlugin):
             def_canvas_height = get_theme('real_canvas_height')
             #layout_width = 10000 - 20
             #layout_height = 6200 - 20
-            layout_width = def_canvas_width - 20.
-            layout_height = def_canvas_height - 20.
+            try:
+                layout_width = cal_layout_size[0]
+                layout_height = cal_layout_size[1]
+            except:
+                layout_width = def_canvas_width - 20.
+                layout_height = def_canvas_height - 20.
+
             layout.setDimensions(Dimensions(layoutns, layout_width, layout_height))
             # random network (40+800x, 40+800y)
 
@@ -547,7 +606,7 @@ class ExportSBML(WindowedPlugin):
 
             # create the ReactionGlyphs and SpeciesReferenceGlyphs
             for i in range(numReactions):
-                if allReactions[i].using_bezier == True:
+                if allReactions[i].using_bezier == True: #bezier curve
                     reaction_id = allReactions[i].id
                     center_pos = allReactions[i].center_pos
                     centroid = api.compute_centroid(netIn, allReactions[i].sources, allReactions[i].targets)
@@ -577,6 +636,7 @@ class ExportSBML(WindowedPlugin):
                     rct_num = len(allReactions[i].sources)
                     prd_num = len(allReactions[i].targets)
                     mod_num = len(allReactions[i].modifiers)
+                    mod_type = allReactions[i].modifier_tip_style
 
                     for j in range(rct_num):
                         temp_spec_id = get_node_by_index(netIn, allReactions[i].sources[j]).id
@@ -684,8 +744,10 @@ class ExportSBML(WindowedPlugin):
                         speciesReferenceGlyph.setId(specsRefG_id)
                         speciesReferenceGlyph.setSpeciesGlyphId(specG_id)
                         speciesReferenceGlyph.setSpeciesReferenceId(ref_id)
-                        speciesReferenceGlyph.setRole(SPECIES_ROLE_MODIFIER)
-
+                        if mod_type == ModifierTipStyle.TEE:
+                            speciesReferenceGlyph.setRole(SPECIES_ROLE_INHIBITOR)
+                        else:
+                            speciesReferenceGlyph.setRole(SPECIES_ROLE_MODIFIER)
                         speciesReferenceCurve = speciesReferenceGlyph.getCurve()
                         mod_ls = speciesReferenceCurve.createLineSegment()
 
@@ -718,9 +780,10 @@ class ExportSBML(WindowedPlugin):
                             mod_ls.setEnd(Point(layoutns, center_value[0], center_value[1]))
             
 
-                else:
+                else: #straight line
                     reaction_id = allReactions[i].id
                     center_pos = allReactions[i].center_pos
+                    reaction_line_thickness = allReactions[i].line_thickness
                     centroid = api.compute_centroid(netIn, allReactions[i].sources, allReactions[i].targets)
                     handles = api.default_handle_positions(netIn,i)
 
@@ -749,6 +812,7 @@ class ExportSBML(WindowedPlugin):
                     rct_num = len(allReactions[i].sources)
                     prd_num = len(allReactions[i].targets)
                     mod_num = len(allReactions[i].modifiers)
+                    mod_type = allReactions[i].modifier_tip_style
 
                     # for j in range(rct_num):
                     #     rct.append(get_node_by_index(netIn, allReactions[i].sources[j]).id)
@@ -791,12 +855,13 @@ class ExportSBML(WindowedPlugin):
                         speciesReferenceGlyph.setSpeciesReferenceId(ref_id)
                         speciesReferenceGlyph.setRole(SPECIES_ROLE_SUBSTRATE)
                         speciesReferenceCurve = speciesReferenceGlyph.getCurve()
-                        cb = speciesReferenceCurve.createCubicBezier()
-                        # handle1 = api.get_reaction_center_handle(netIn, allReactions[i].index)
-                        # handle2 = api.get_reaction_node_handle(netIn, allReactions[i].index,
+                        # cb = speciesReferenceCurve.createCubicBezier()
+                        # #handle1 = api.get_reaction_center_handle(netIn, allReactions[i].index)
+                        # #handle2 = api.get_reaction_node_handle(netIn, allReactions[i].index,
                         #     allReactions[i].sources[j],is_source=True)
                         handle1 = handles[0]
                         handle2 = handles[1+j]
+                        rct_ls = speciesReferenceCurve.createLineSegment()
                         
                         pos_x = get_node_by_index(netIn,allReactions[i].sources[j]).position.x
                         pos_y = get_node_by_index(netIn,allReactions[i].sources[j]).position.y
@@ -810,14 +875,21 @@ class ExportSBML(WindowedPlugin):
                             line_end_pt = _cross_point(center_value, 
                             [pos_x-reaction_line_thickness, pos_y-reaction_line_thickness], 
                             [width+2.*reaction_line_thickness,height+2.*reaction_line_thickness])
-                        try:
-                            cb.setStart(Point(layoutns, line_end_pt[0], line_end_pt[1]))
-                        except:     
-                            cb.setStart(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+                        # try:
+                        #     cb.setStart(Point(layoutns, line_end_pt[0], line_end_pt[1]))
+                        # except:     
+                        #     cb.setStart(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
 
-                        cb.setBasePoint1(Point(layoutns, handle2.x, handle2.y))
-                        cb.setBasePoint2(Point(layoutns, handle1.x, handle1.y))
-                        cb.setEnd(Point(layoutns, center_value[0], center_value[1]))
+                        # cb.setBasePoint1(Point(layoutns, handle2.x, handle2.y))
+                        # cb.setBasePoint2(Point(layoutns, handle1.x, handle1.y))
+                        # cb.setEnd(Point(layoutns, center_value[0], center_value[1]))
+                        
+                        try:
+                            rct_ls.setStart(Point(layoutns, line_end_pt[0], line_end_pt[1]))
+                        except:     
+                            rct_ls.setStart(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+
+                        rct_ls.setEnd(Point(layoutns, center_value[0], center_value[1]))
 
                     for j in range(prd_num):
                         ref_id = "SpecRef_" + reaction_id + "_prd" + str(j)
@@ -830,17 +902,19 @@ class ExportSBML(WindowedPlugin):
                         speciesReferenceGlyph.setRole(SPECIES_ROLE_PRODUCT)
 
                         speciesReferenceCurve = speciesReferenceGlyph.getCurve()
-                        cb = speciesReferenceCurve.createCubicBezier()
-                        cb.setStart(Point(layoutns, center_value[0], center_value[1]))
+                        # cb = speciesReferenceCurve.createCubicBezier()
+                        # cb.setStart(Point(layoutns, center_value[0], center_value[1]))
 
-                        # handle1 = api.get_reaction_center_handle(netIn, allReactions[i].index)
-                        # handle2 = api.get_reaction_node_handle(netIn, allReactions[i].index,
-                        #     allReactions[i].targets[j],is_source=False)
+                        # # handle1 = api.get_reaction_center_handle(netIn, allReactions[i].index)
+                        # # handle2 = api.get_reaction_node_handle(netIn, allReactions[i].index,
+                        # #     allReactions[i].targets[j],is_source=False)
 
                         handle1 = [2.*center_value[0]-handles[0].x, 2.*center_value[1]-handles[0].y]
                         handle2 = handles[1+rct_num+j]
-                        cb.setBasePoint1(Point(layoutns, handle1[0], handle1[1]))
-                        cb.setBasePoint2(Point(layoutns, handle2.x, handle2.y))
+                        # cb.setBasePoint1(Point(layoutns, handle1[0], handle1[1]))
+                        # cb.setBasePoint2(Point(layoutns, handle2.x, handle2.y))
+
+                        prd_ls = speciesReferenceCurve.createLineSegment()
 
                         pos_x = get_node_by_index(netIn, allReactions[i].targets[j]).position.x
                         pos_y = get_node_by_index(netIn, allReactions[i].targets[j]).position.y
@@ -854,10 +928,17 @@ class ExportSBML(WindowedPlugin):
                             line_head_pt = _cross_point(center_value, 
                             [pos_x-reaction_line_thickness, pos_y-reaction_line_thickness], 
                             [width+2.*reaction_line_thickness,height+2.*reaction_line_thickness])                   
+                        # try:
+                        #     cb.setEnd(Point(layoutns, line_head_pt[0], line_head_pt[1]))
+                        # except:
+                        #     cb.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+
+                        prd_ls.setStart(Point(layoutns, center_value[0], center_value[1]))
                         try:
-                            cb.setEnd(Point(layoutns, line_head_pt[0], line_head_pt[1]))
+                            prd_ls.setEnd(Point(layoutns, line_head_pt[0], line_head_pt[1]))
                         except:
-                            cb.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+                            prd_ls.setEnd(Point(layoutns, pos_x + 0.5*width, pos_y + 0.5*height))
+
 
                     for j in range(mod_num):
                         ref_id = "SpecRef_" + reaction_id + "_mod" + str(j)
@@ -867,7 +948,10 @@ class ExportSBML(WindowedPlugin):
                         speciesReferenceGlyph.setId(specsRefG_id)
                         speciesReferenceGlyph.setSpeciesGlyphId(specG_id)
                         speciesReferenceGlyph.setSpeciesReferenceId(ref_id)
-                        speciesReferenceGlyph.setRole(SPECIES_ROLE_MODIFIER)
+                        if mod_type == ModifierTipStyle.TEE:
+                            speciesReferenceGlyph.setRole(SPECIES_ROLE_INHIBITOR)
+                        else:
+                            speciesReferenceGlyph.setRole(SPECIES_ROLE_MODIFIER)
 
                         speciesReferenceCurve = speciesReferenceGlyph.getCurve()
                         mod_ls = speciesReferenceCurve.createLineSegment()
@@ -1112,6 +1196,7 @@ class ExportSBML(WindowedPlugin):
                     rct_num = len(allReactions[i].sources)
                     prd_num = len(allReactions[i].targets)
                     mod_num = len(allReactions[i].modifiers)
+                    mod_type = allReactions[i].modifier_tip_style
 
                     lineEnding = rInfo.createLineEnding()
                     lineEnding_id = '_line_ending_default_NONE_' + rxn_id
@@ -1213,10 +1298,15 @@ class ExportSBML(WindowedPlugin):
                     color.setColorValue(border_color_str)
                     #lineEnding.getGroup().setStroke('lineEnding_border_color' + '_' + lineEnding_mod_id)
                     lineEnding.getGroup().setStroke("_default_modifier_color_")
-
-                    ellipse = lineEnding.getGroup().createEllipse()
-                    ellipse.setCenter2D(RelAbsVector(0, 0.), RelAbsVector(0, 0.))
-                    ellipse.setRadii(RelAbsVector(0, 100.), RelAbsVector(0, 100.))
+                    if mod_type == ModifierTipStyle.TEE:
+                        rectangle = lineEnding.getGroup().createRectangle()
+                        rectangle.setCoordinatesAndSize(RelAbsVector(0,0),
+                        RelAbsVector(0,-100),RelAbsVector(0,50),
+                        RelAbsVector(0,50),RelAbsVector(0,200))
+                    else:
+                        ellipse = lineEnding.getGroup().createEllipse()
+                        ellipse.setCenter2D(RelAbsVector(0, 0.), RelAbsVector(0, 0.))
+                        ellipse.setRadii(RelAbsVector(0, 50.), RelAbsVector(0, 50.))
 
                     for j in range(mod_num):
                         specsRefG_id = "SpecRefG_" + rxn_id + "_mod" + str(j)

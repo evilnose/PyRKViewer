@@ -15,7 +15,7 @@ If you are using any of the code, please cite the article (https://arxiv.org/abs
 
 ## Installing SBcoyote
 
-* Install Python 3.7, 3.8, 3.9 or 3.10 if not already in the system.
+* Install Python 3.8, 3.9 or 3.10 if not already in the system.
 * Go to the command line and type `pip install SBcoyote`.
 * If wxPython doesn't get installed automatically, please try to install wxPython 4.1.1 or 4.2.0 manually referring to https://wxpython.org/pages/downloads/index.html. Note wxPython 4.1.1 does not work with Python 3.10. 
 * To run the application, simply type in the command line `SBcoyote`.

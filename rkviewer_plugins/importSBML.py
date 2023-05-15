@@ -1,6 +1,6 @@
 """
 Import an SBML string from a file and visualize it to a network on canvas.
-Version 1.1.7: Author: Jin Xu (2023)
+Version 1.2.8: Author: Jin Xu (2023)
 """
 
 
@@ -23,12 +23,15 @@ import math
 import random as _random
 import pandas as pd
 from rkviewer.config import get_theme
+import SBMLDiagrams
+import re # Extract substrings between brackets
+from rkviewer.mvc import ModifierTipStyle
 
 class IMPORTSBML(WindowedPlugin):
     metadata = PluginMetadata(
         name='ImportSBML',
         author='Jin Xu',
-        version='1.1.7',
+        version='1.2.8',
         short_desc='Import SBML.',
         long_desc='Import an SBML String from a file and visualize it as a network on canvas.',
         category=PluginCategory.MODELS
@@ -127,7 +130,6 @@ class IMPORTSBML(WindowedPlugin):
         df_color = pd.DataFrame(color_data)
         df_color["html_name"] = df_color["html_name"].str.lower()
 
-
         # if len(sbmlStr) == 0:
         #   if showDialogues:
         #     wx.MessageBox("Please import an SBML file.", "Message", wx.OK | wx.ICON_INFORMATION)
@@ -192,6 +194,11 @@ class IMPORTSBML(WindowedPlugin):
                     mplugin = model_layout.getPlugin("layout")
                 except:
                     raise Exception("There is no layout.") 
+                
+                sbml_definitions =[model_layout.getFunctionDefinition(n) for n 
+                    in range(model_layout.getNumFunctionDefinitions())]
+                function_definitions = [FunctionDefinition(s) for s in sbml_definitions]
+                
                 # Get the first Layout object via LayoutModelPlugin object.
                 #
                 # if mplugin is None:
@@ -202,8 +209,14 @@ class IMPORTSBML(WindowedPlugin):
                 #def_canvas_height = 6200.
                 def_canvas_width = get_theme('real_canvas_width')
                 def_canvas_height = get_theme('real_canvas_height')
-                def_comp_width = def_canvas_width - 20.
-                def_comp_height = def_canvas_height - 20.
+                #def_comp_width = def_canvas_width - 20.
+                #def_comp_height = def_canvas_height - 20.
+                def_comp_width = SBMLDiagrams.load(sbmlStr).getNetworkBottomRightCorner().x + 100.
+                def_comp_height = SBMLDiagrams.load(sbmlStr).getNetworkBottomRightCorner().y + 100.
+                if SBMLDiagrams.load(sbmlStr).getNetworkTopLeftCorner().x < 0:
+                    def_comp_width -= SBMLDiagrams.load(sbmlStr).getNetworkTopLeftCorner().x
+                if SBMLDiagrams.load(sbmlStr).getNetworkTopLeftCorner().y < 0:
+                    def_comp_height -= SBMLDiagrams.load(sbmlStr).getNetworkTopLeftCorner().y
                 if mplugin is not None:
                     layout = mplugin.getLayout(0)
                     # if layout is None:
@@ -238,6 +251,13 @@ class IMPORTSBML(WindowedPlugin):
                             pos_y = boundingbox.getY()
                             comp_dimension_list.append([width,height])
                             comp_position_list.append([pos_x,pos_y])
+                        if "_compartment_default_" in comp_id_list:
+                            numCompGlyphs -= 1
+                            idx = comp_id_list.index("_compartment_default_")
+                            comp_id_list.remove("_compartment_default_")
+                            del compGlyph_id_list[idx]
+                            del comp_dimension_list[idx]
+                            del comp_position_list[idx]                      
 
 
                         reaction_id_list = []
@@ -253,8 +273,10 @@ class IMPORTSBML(WindowedPlugin):
                         reaction_rct_list = []
                         reaction_prd_list = []
                         mod_specGlyph_list = []
+                        reaction_type_list = []  
 
                         for i in range(numReactionGlyphs):
+                            reaction_straight_flag = 1
                             reactionGlyph = layout.getReactionGlyph(i)
                             reaction_id = reactionGlyph.getReactionId()
                             reactionGlyph_id = reactionGlyph.getId()
@@ -330,6 +352,9 @@ class IMPORTSBML(WindowedPlugin):
                             reaction = model_layout.getReaction(reaction_id)
                             try:
                                 kinetics = reaction.getKineticLaw().getFormula()
+                                if len(function_definitions) > 0:
+                                    #kinetics = _expandFormula(kinetics, function_definitions)
+                                    kinetics = ""
                             except:
                                 kinetics = ""
                             kinetics_list.append(kinetics)
@@ -360,7 +385,7 @@ class IMPORTSBML(WindowedPlugin):
                             prd_specGlyph_handles_temp_list = []  
                             mod_specGlyph_temp_list = []
 
-                            center_handle = []
+                            center_handle = [[],[]]
 
                             for j in range(numSpecRefGlyphs):
                                 alignment_name = TextAlignment.CENTER
@@ -404,17 +429,26 @@ class IMPORTSBML(WindowedPlugin):
                                         modifier_lineend_pos = line_start_pt
                                         
                                         if num_curve == 1:
+                                            try_flag = 0
                                             try: #bezier
                                                 center_handle_candidate = [segment.getBasePoint1().getXOffset(), 
                                                                 segment.getBasePoint1().getYOffset()]                                
                                                 spec_handle = [segment.getBasePoint2().getXOffset(),
-                                                            segment.getBasePoint2().getYOffset()] 
+                                                            segment.getBasePoint2().getYOffset()]
+                                                
                                             except: #straight
                                                 spec_handle = [.5*(center_pt[0]+line_end_pt[0]),
                                                 .5*(center_pt[1]+line_end_pt[1])]
                                                 center_handle_candidate = center_pt
-                                                #spec_handle = center_pt         
-                                        else:  
+                                                try_flag = 1
+                                                #spec_handle = []
+                                                #center_handle_candidate = []
+                                                #spec_handle = center_pt 
+                                            if try_flag == 0:
+                                                reaction_straight_flag = 0 
+
+                                        else:
+                                            reaction_straight_flag = 0  
                                             try: #bezier
                                                 center_handle_candidate = []  
                                                 flag_bezier = 0  
@@ -444,6 +478,7 @@ class IMPORTSBML(WindowedPlugin):
                                         modifier_lineend_pos = line_end_pt
                                         
                                         if num_curve == 1:
+                                            try_flag = 0
                                             try: #bezier
                                                 spec_handle = [segment.getBasePoint1().getXOffset(), 
                                                                     segment.getBasePoint1().getYOffset()]                                
@@ -454,7 +489,11 @@ class IMPORTSBML(WindowedPlugin):
                                                 .5*(center_pt[1]+line_start_pt[1])]
                                                 center_handle_candidate = center_pt
                                                 #spec_handle = center_pt
+                                                try_flag = 1
+                                            if try_flag == 0:
+                                                reaction_straight_flag = 0 
                                         else:
+                                            reaction_straight_flag = 0 
                                             try: #bezier
                                                 center_handle_candidate = [] 
                                                 flag_bezier = 0  
@@ -480,6 +519,7 @@ class IMPORTSBML(WindowedPlugin):
                                                 #spec_handle = center_pt
 
                                 except:
+                                    reaction_straight_flag = 0 
                                     center_handle_candidate = []
                                     spec_handle = []
 
@@ -577,26 +617,35 @@ class IMPORTSBML(WindowedPlugin):
                               
                                 if role == "substrate" or role == "sidesubstrate": #it is a rct
                                     #the center handle is supposed to be from the reactant
-                                    if center_handle == []:
-                                        center_handle.append(center_handle_candidate)
+                                    if center_handle[0] == []:
+                                        center_handle[0] = center_handle_candidate
                                     #rct_specGlyph_temp_list.append(specGlyph_id)
                                     rct_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
                                 elif role == "product" or role == "sideproduct": #it is a prd
                                     #prd_specGlyph_temp_list.append(specGlyph_id)
+                                    if center_handle[1] == []:
+                                        center_handle[1] = center_handle_candidate
                                     prd_specGlyph_handles_temp_list.append([specGlyph_id,spec_handle,specRefGlyph_id,spec_lineend_pos])
-                                elif role == "modifier" or role == 'activator': #it is a modifier
-                                    mod_specGlyph_temp_list.append(specGlyph_id)
+                                elif role == "modifier" or role == 'activator' or role == "inhibitor": #it is a modifier
+                                    mod_specGlyph_temp_list.append([specGlyph_id, role])
                             #rct_specGlyph_list.append(rct_specGlyph_temp_list)
                             #prd_specGlyph_list.append(prd_specGlyph_temp_list)
                             try:
-                                reaction_center_handle_list.append(center_handle[0])
+                                if center_handle[0] != []:
+                                    reaction_center_handle_list.append(center_handle[0])
+                                else:
+                                    reaction_center_handle_list.append(center_handle[1])
                             except:
                                 #raise Exception("Can not find center handle information to process.")
                                 reaction_center_handle_list.append([])
                             rct_specGlyph_handle_list.append(rct_specGlyph_handles_temp_list)
                             prd_specGlyph_handle_list.append(prd_specGlyph_handles_temp_list)    
                             mod_specGlyph_list.append(mod_specGlyph_temp_list)
-                         
+                            if reaction_straight_flag == 1:
+                                reaction_type_list.append(False)#straight line
+                            else:
+                                reaction_type_list.append(True)#bezier curve
+
                         #orphan nodes
                         for i in range(numSpecGlyphs):
                             specGlyph = layout.getSpeciesGlyph(i)
@@ -1161,7 +1210,11 @@ class IMPORTSBML(WindowedPlugin):
                 Rxns_ids  = model.getListOfReactionIds()
                 numComps  = model.getNumCompartments()
                 Comps_ids = model.getListOfCompartmentIds()
-                numNodes = numFloatingNodes + numBoundaryNodes
+                if "_compartment_default_" in Comps_ids:
+                    numComps -= 1
+                    Comps_ids.remove("_compartment_default_")
+                numNodes = model.getNumSpecies()
+                Nodes_ids = model.getListOfAllSpecies()
 
                 parameter_list = model.getListOfParameterIds()
 
@@ -1225,11 +1278,25 @@ class IMPORTSBML(WindowedPlugin):
                         if math.isnan(vol):
                             vol = 1.
                         if temp_id == "_compartment_default_":
-                            api.add_compartment(net_index, id=temp_id, volume = vol,
-                            size=Vec2(def_comp_width,def_comp_height), position=Vec2(10,10),
-                            fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
-                            border_color = api.Color(255, 255, 255, 0),
-                            border_width = comp_border_width)
+                            pass
+                            # if len(comp_id_list) != 0:
+                            #     dimension = [def_comp_width, def_comp_height]
+                            #     position = [10, 10]                  
+                            #     for j in range(numCompGlyphs):
+                            #         if comp_id_list[j] == temp_id:
+                            #             dimension = comp_dimension_list[j]
+                            #             position = comp_position_list[j]
+                            #     api.add_compartment(net_index, id=temp_id, volume = vol,
+                            #     size=Vec2(dimension[0],dimension[1]), position=Vec2(position[0],position[1]),
+                            #     fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
+                            #     border_color = api.Color(255, 255, 255, 0),
+                            #     border_width = comp_border_width)  
+                            # else:
+                            #     api.add_compartment(net_index, id=temp_id, volume = vol,
+                            #     size=Vec2(def_comp_width,def_comp_height), position=Vec2(10,10),
+                            #     fill_color = api.Color(255, 255, 255, 0), #the last digit for transparent
+                            #     border_color = api.Color(255, 255, 255, 0),
+                            #     border_width = comp_border_width)
                         else:
                             if len(comp_id_list) != 0:
                             #if mplugin is not None:                    
@@ -1397,7 +1464,10 @@ class IMPORTSBML(WindowedPlugin):
                                 comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                                 for xx in range(numComps):
                                     if comp_id == Comps_ids[xx]:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx) 
+                                        try:
+                                            api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)
+                                        except:
+                                            pass 
                                 for k in range(numCompGlyphs):
                                     if len(comp_id_list) !=0 and comp_id == comp_id_list[k]:
                                         comp_node_list[k].append(nodeIdx_temp)
@@ -1480,9 +1550,11 @@ class IMPORTSBML(WindowedPlugin):
                                 
                                 comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                                 for xx in range(numComps):
-                                    if comp_id == Comps_ids[xx]:            
-                                        api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)             
-                                     
+                                    if comp_id == Comps_ids[xx]: 
+                                        try:           
+                                            api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_temp, comp_index=xx)             
+                                        except:
+                                            pass                                   
                                 for k in range(numCompGlyphs):
                                     if len(comp_id) != 0 and comp_id == comp_id_list[k]:
                                         comp_node_list[k].append(nodeIdx_temp)
@@ -1491,13 +1563,15 @@ class IMPORTSBML(WindowedPlugin):
                         for i in range(numComps):
                             temp_id = Comps_ids[i]
                             if temp_id == '_compartment_default_': 
-                                #numNodes is different from len(nodeIdx_list) because of alias node
+                                # #numNodes is different from len(nodeIdx_list) because of alias node
                                 node_list_default = [item for item in range(len(nodeIdx_list))]
+                                # for j in range(len(node_list_default)):
+                                #     try:
+                                #         api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=i)
+                                #     except:
+                                #         pass # Orphan nodes are removed
                                 for j in range(len(node_list_default)):
-                                    try:
-                                        api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=i)
-                                    except:
-                                        pass # Orphan nodes are removed
+                                    api.set_compartment_of_node(net_index=net_index, node_index=node_list_default[j], comp_index=-1)
                             for j in range(numCompGlyphs):
                                 if comp_id_list[j] == temp_id:
                                     node_list_temp = comp_node_list[j]
@@ -1511,8 +1585,8 @@ class IMPORTSBML(WindowedPlugin):
                                         pass
                     else:
                         for i in range(len(nodeIdx_list)):
-                            api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=0)
-
+                            #api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=0)
+                            api.set_compartment_of_node(net_index=net_index, node_index=nodeIdx_list[i], comp_index=-1)
 
                     nodeIdx_specGlyph_whole_list = nodeIdx_specGlyph_list + nodeIdx_specGlyph_alias_list
 
@@ -1523,6 +1597,7 @@ class IMPORTSBML(WindowedPlugin):
                         src = []
                         dst = []
                         mod = []
+                        mod_type = ModifierTipStyle.CIRCLE
                         src_handle = []
                         dst_handle = []
                         src_lineend_pos = []
@@ -1533,7 +1608,8 @@ class IMPORTSBML(WindowedPlugin):
                         prd_num = len(prd_specGlyph_handle_list[i])
                         #mod_num = max(len(mod_specGlyph_list[i]),len(reaction_mod_list[i]))
                         mod_num = len(mod_specGlyph_list[i])
-
+                        reaction_type = reaction_type_list[i]
+                        
                         # for j in range(rct_num):
                         #     temp_specGlyph_id = rct_specGlyph_list[i][j]
                         #     for k in range(numSpec_in_reaction):
@@ -1570,11 +1646,13 @@ class IMPORTSBML(WindowedPlugin):
 
                             for j in range(mod_num):
                                 if len(mod_specGlyph_list[i]) != 0:
-                                    temp_specGlyph_id = mod_specGlyph_list[i][j]
+                                    temp_specGlyph_id = mod_specGlyph_list[i][j][0]
                                     for k in range(numSpec_in_reaction):
                                         if temp_specGlyph_id == nodeIdx_specGlyph_whole_list[k][1]:
                                             mod_idx = nodeIdx_specGlyph_whole_list[k][0]
                                     mod.append(mod_idx)
+                                    if mod_specGlyph_list[i][j][1] == "inhibitor":
+                                        mod_type = ModifierTipStyle.TEE
                                 else:
                                     for k in range(len(spec_specGlyph_id_list)):
                                         if reaction_mod_list[i][j] == spec_specGlyph_id_list[k][0]:
@@ -1583,6 +1661,7 @@ class IMPORTSBML(WindowedPlugin):
                                         if temp_specGlyph_id == nodeIdx_specGlyph_whole_list[k][1]:
                                             mod_idx = nodeIdx_specGlyph_whole_list[k][0]
                                     mod.append(mod_idx)
+                                    
                         else:
                             rct_num = model.getNumReactants(i)
                             prd_num = model.getNumProducts(i)
@@ -1610,7 +1689,39 @@ class IMPORTSBML(WindowedPlugin):
                                 dst.append(prd_idx)
                                 #dst_handle.append(prd_specGlyph_handle_list[i][j][1])
 
-                            modifiers = model.getListOfModifiers(temp_id)
+                            #modifiers = model.getListOfModifiers(temp_id) 
+                            #simple sbml bug with repeated first modifiers
+                            reaction = model_layout.getReaction(temp_id)
+                            modifiers = []
+                            for j in range(len(reaction.getListOfModifiers())):
+                                modSpecRef = reaction.getModifier(j)
+                                modifiers.append(modSpecRef.getSpecies())
+
+                            #parameter in kinetic law 
+                            try:  
+                                kineticLaw = reaction.getKineticLaw()
+                                kinetic_parameter_list = []
+                                kinetic_parameter_value_list = []
+                                for j in range(len(kineticLaw.getListOfParameters())):
+                                    parameter = kineticLaw.getParameter(j)
+                                    name = parameter.getName()
+                                    if parameter.isSetValue():
+                                        value = kineticLaw.getParameter(j).getValue()
+                                    else:
+                                        value = 0.
+                                    kinetic_parameter_list.append(name)
+                                    kinetic_parameter_value_list.append(value)
+                                for j in range(len(kinetic_parameter_list)):
+                                    p = kinetic_parameter_list[j]
+                                    v = kinetic_parameter_value_list[j]
+                                    try:
+                                        api.set_parameter_value(net_index, p, v)
+                                    except:
+                                        pass
+                            except:
+                                pass
+
+
                             for j in range(mod_num):
                                 mod_id = modifiers[j]
                                 for k in range(len(spec_specGlyph_id_list)):
@@ -1799,22 +1910,27 @@ class IMPORTSBML(WindowedPlugin):
                             
                             if len(reaction_line_color) == 3:
                                 reaction_line_color.append(255)
-                            
-                            idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
+                            idx = api.add_reaction(net_index, id=temp_id, 
+                            reactants=src_corr, products=dst_corr,
                             fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
-                            line_thickness=reaction_line_width, modifiers = mod)
-                            api.update_reaction(net_index, idx, ratelaw = kinetics)
-                            handles_Vec2 = []  
-                            if [] not in handles:      
-                                for i in range(len(handles)):
-                                    handles_Vec2.append(Vec2(handles[i][0],handles[i][1]))
-                                api.update_reaction(net_index, idx, 
-                                center_pos = Vec2(center_position[0],center_position[1]), 
-                                handle_positions=handles_Vec2, 
-                                fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-                                
-                        except: #There is no info about the center/handle positions, so set as default 
+                            line_thickness=reaction_line_width, 
+                            modifiers = mod)
                             
+                            api.update_reaction(net_index, idx, ratelaw = kinetics)
+                            if reaction_type == False:
+                                api.update_reaction(net_index, idx, 
+                                center_pos = Vec2(center_position[0],center_position[1]),
+                                use_bezier = reaction_type)
+                            else:
+                                handles_Vec2 = [] 
+                                if [] not in handles:      
+                                    for i in range(len(handles)):
+                                        handles_Vec2.append(Vec2(handles[i][0],handles[i][1]))
+                                    api.update_reaction(net_index, idx, center_pos = Vec2(center_position[0],center_position[1]),
+                                    handle_positions=handles_Vec2)
+                            api.update_reaction(net_index, idx, modifier_tip_style = mod_type)  
+                            
+                        except: #There is no info about the center/handle positions, so set as default 
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
                             dst_corr = []
@@ -1978,7 +2094,7 @@ class IMPORTSBML(WindowedPlugin):
 
                             if len(reaction_line_color)==3:
                                 reaction_line_color.append(255)
-
+                    
                             try: 
                                 idx = api.add_reaction(net_index, id=temp_id, reactants=src_corr, products=dst_corr,
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]),
@@ -2005,10 +2121,11 @@ class IMPORTSBML(WindowedPlugin):
                                 center_pos = Vec2(center_position[0],center_position[1]), 
                                 handle_positions=handles_Vec2, 
                                 fill_color=api.Color(reaction_line_color[0],reaction_line_color[1],reaction_line_color[2],reaction_line_color[3]))
-
+                            
+                            api.update_reaction(net_index, idx, modifier_tip_style = mod_type)
 
                 else: # there is no layout information, assign position randomly and size as default
-                
+                    
                     comp_id_list = Comps_ids
 
                     for i in range(numComps):
@@ -2016,8 +2133,8 @@ class IMPORTSBML(WindowedPlugin):
                         vol= model.getCompartmentVolume(i)
                         if math.isnan(vol):
                             vol = 1.
-                        dimension = [def_comp_width,def_comp_height]
-                        position = [10,10]
+                        dimension = [800 + 100, 800 + 100]
+                        position = [40,40]
 
                         api.add_compartment(net_index, id=temp_id, volume = vol,
                         size=Vec2(dimension[0],dimension[1]),position=Vec2(position[0],position[1]),
@@ -2025,8 +2142,50 @@ class IMPORTSBML(WindowedPlugin):
                         border_color = api.Color(comp_border_color[0],comp_border_color[1],comp_border_color[2],comp_border_color[3]),
                         border_width = comp_border_width)
 
-                    for i in range (numFloatingNodes):
-                        temp_id = FloatingNodes_ids[i]
+                    # for i in range (numFloatingNodes):
+                    #     temp_id = FloatingNodes_ids[i]
+                    #     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
+                    #     try:
+                    #         temp_concentration = model.getSpeciesInitialConcentration(temp_id)
+                    #         if math.nan(temp_concentration):
+                    #             temp_concentration = 1
+                    #     except:
+                    #         temp_concentration = 1.
+                    #     if spec_border_width == 0.:
+                    #         spec_border_width = 0.001
+                    #         spec_border_color = spec_fill_color
+                    #     nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = True,
+                    #     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
+                    #     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
+                    #     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
+                    #     border_width=spec_border_width, shape_index=shapeIdx, concentration=temp_concentration)
+                    #     for j in range(numComps):
+                    #         if comp_id == comp_id_list[j]:
+                    #             comp_node_list[j].append(nodeIdx_temp)
+
+                    # for i in range (numBoundaryNodes):
+                    #     temp_id = BoundaryNodes_ids[i]
+                    #     comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
+                    #     try:
+                    #         temp_concentration = model.getSpeciesInitialConcentration(temp_id)
+                    #         if math.nan(temp_concentration):
+                    #             temp_concentration = 1
+                    #     except:
+                    #         temp_concentration = 1.0
+                    #     if spec_border_width == 0.:
+                    #         spec_border_width = 0.001
+                    #         spec_border_color = spec_fill_color
+                    #     nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = False,
+                    #     position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
+                    #     fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
+                    #     border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
+                    #     border_width=spec_border_width, shape_index=shapeIdx, concentration=temp_concentration)
+                    #     for j in range(numComps):
+                    #         if comp_id == comp_id_list[j]:
+                    #             comp_node_list[j].append(nodeIdx_temp)
+
+                    for i in range (numNodes):
+                        temp_id = Nodes_ids[i]
                         comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
                         try:
                             temp_concentration = model.getSpeciesInitialConcentration(temp_id)
@@ -2037,28 +2196,12 @@ class IMPORTSBML(WindowedPlugin):
                         if spec_border_width == 0.:
                             spec_border_width = 0.001
                             spec_border_color = spec_fill_color
-                        nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = True,
-                        position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
-                        fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
-                        border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
-                        border_width=spec_border_width, shape_index=shapeIdx, concentration=temp_concentration)
-                        for j in range(numComps):
-                            if comp_id == comp_id_list[j]:
-                                comp_node_list[j].append(nodeIdx_temp)
-
-                    for i in range (numBoundaryNodes):
-                        temp_id = BoundaryNodes_ids[i]
-                        comp_id = model.getCompartmentIdSpeciesIsIn(temp_id)
-                        try:
-                            temp_concentration = model.getSpeciesInitialConcentration(temp_id)
-                            if math.nan(temp_concentration):
-                                temp_concentration = 1
-                        except:
-                            temp_concentration = 1.0
-                        if spec_border_width == 0.:
-                            spec_border_width = 0.001
-                            spec_border_color = spec_fill_color
-                        nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = False,
+                        node_status = True
+                        for j in range(numBoundaryNodes):
+                            temp_b_id = BoundaryNodes_ids[j]
+                            if temp_id == temp_b_id:
+                                node_status = False
+                        nodeIdx_temp = api.add_node(net_index, id=temp_id, size=Vec2(60,40), floating_node = node_status,
                         position=Vec2(40 + math.trunc (_random.random()*800), 40 + math.trunc (_random.random()*800)),
                         fill_color=api.Color(spec_fill_color[0],spec_fill_color[1],spec_fill_color[2],spec_fill_color[3]),
                         border_color=api.Color(spec_border_color[0],spec_border_color[1],spec_border_color[2],spec_border_color[3]),
@@ -2089,10 +2232,14 @@ class IMPORTSBML(WindowedPlugin):
                         temp_id = Rxns_ids[i]
                         try: 
                             kinetics = model.getRateLaw(i)
+                            if len(function_definitions) > 0:
+                                #kinetics = _expandFormula(kinetics, function_definitions)
+                                kinetics = ""
                         except:
                             kinetics = ""
-                        rct_num = model.getNumReactants(i)
-                        prd_num = model.getNumProducts(i)
+                    
+                        rct_num = model.getNumReactants(temp_id)
+                        prd_num = model.getNumProducts(temp_id)
                         mod_num = model.getNumModifiers(temp_id)
 
                         for j in range(rct_num):
@@ -2107,14 +2254,44 @@ class IMPORTSBML(WindowedPlugin):
                                 if allNodes[k].id == prd_id:
                                     dst.append(allNodes[k].index)                   
 
-                        modifiers = model.getListOfModifiers(temp_id)
+                        #modifiers = model.getListOfModifiers(temp_id)
+                        #simple sbml bug with repeated first modifiers
+                        reaction = model_layout.getReaction(temp_id)
+                        modifiers = []
+                        for j in range(len(reaction.getListOfModifiers())):
+                           modSpecRef = reaction.getModifier(j)
+                           modifiers.append(modSpecRef.getSpecies())
+
+                        #parameter in kinetic law
+                        try:
+                            kineticLaw = reaction.getKineticLaw()
+                            kinetic_parameter_list = []
+                            kinetic_parameter_value_list = []
+                            for j in range(len(kineticLaw.getListOfParameters())):
+                                parameter = kineticLaw.getParameter(j)
+                                name = parameter.getName()
+                                if parameter.isSetValue():
+                                    value = kineticLaw.getParameter(j).getValue()
+                                else:
+                                    value = 0.
+                                kinetic_parameter_list.append(name)
+                                kinetic_parameter_value_list.append(value)
+                            for j in range(len(kinetic_parameter_list)):
+                                p = kinetic_parameter_list[j]
+                                v = kinetic_parameter_value_list[j]
+                                try:
+                                    api.set_parameter_value(net_index, p, v)
+                                except:
+                                    pass
+                        except:
+                            pass
+
                         for j in range(mod_num):
                             mod_id = modifiers[j]
                             for k in range(numNodes):
                                 if allNodes[k].id == mod_id:
                                     mod.append(allNodes[k].index) 
-                        mod = set(mod)
-
+                   
                         try: 
                             src_corr = []
                             [src_corr.append(x) for x in src if x not in src_corr]
@@ -2210,6 +2387,7 @@ class IMPORTSBML(WindowedPlugin):
                                 handles.append([dst_handle_x,dst_handle_y])
 
                             handles_Vec2 = []  
+                            
                             if [] not in handles:      
                                 for i in range(len(handles)):
                                     handles_Vec2.append(Vec2(handles[i][0],handles[i][1]))
@@ -2232,5 +2410,4 @@ class IMPORTSBML(WindowedPlugin):
 
             # except Exception as e:
             #     raise Exception (e) 
-
 

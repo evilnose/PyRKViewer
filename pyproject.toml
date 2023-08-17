@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "SBcoyote"
-version = "1.4.3"
+version = "1.4.4"
 description = "SBcoyote: An Extensible Python Based Reaction Editor and Viewer."
 readme = "README.md"
 authors = ["Jin Xu and Gary Geng et al <jxu2019@uw.edu>"]

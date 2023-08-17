@@ -316,7 +316,7 @@ class IMPORTSBML(WindowedPlugin):
                                 if center_pt == []:
                                     if pos_x == 0 and pos_y == 0 and width == 0 and height == 0: #LinearChain.xml
                                         center_pt = []
-                                        #if the boudingbox can not give the info for the center point,
+                                        #if the boundingbox can not give the info for the center point,
                                         #look for the common point of the start and end points
                                         start_end_pt = []
                                         for j in range(numSpecRefGlyphs):     

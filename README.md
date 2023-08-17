@@ -11,7 +11,7 @@ SBcoyote, initially called PyRKViewer or Coyote, is a cross-platform visualizati
 
 ## Citing
 
-If you are using any of the code, please cite the article (https://arxiv.org/abs/2302.09151). 
+If you are using any of the code, please cite the article (https://doi.org/10.1016/j.biosystems.2023.105001). 
 
 ## Installing SBcoyote
 

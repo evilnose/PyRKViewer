@@ -1,0 +1,2083 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" xmlns:layout="http://www.sbml.org/sbml/level3/version1/layout/version1" xmlns:render="http://www.sbml.org/sbml/level3/version1/render/version1" level="3" version="1" layout:required="false" render:required="false">
+  <model id="SBcoyote_model">
+    <listOfCompartments>
+      <compartment id="_compartment_default_" constant="true"/>
+      <compartment id="compartment" constant="true"/>
+    </listOfCompartments>
+    <listOfSpecies>
+      <species id="External_glucose" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="true" constant="true"/>
+      <species id="Glucose" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="ATP" compartment="compartment" initialConcentration="3" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="fructose_1_6_bisphosphate" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="ADP" compartment="compartment" initialConcentration="1" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="glyceraldehyde_3_phosphate" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="NADH" compartment="compartment" initialConcentration="0.5" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="NAD" compartment="compartment" initialConcentration="0.5" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="Glycerol" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="true" constant="true"/>
+      <species id="glycerate_3_phosphate" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="pyruvate" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="Acetyladehyde" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="ethanol" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="true" constant="true"/>
+      <species id="External_acetaldehyde" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false"/>
+      <species id="Sink" compartment="compartment" initialConcentration="0" hasOnlySubstanceUnits="false" boundaryCondition="true" constant="true"/>
+    </listOfSpecies>
+    <listOfParameters>
+      <parameter id="E0" value="0.1" constant="true"/>
+      <parameter id="k0" value="0.1" constant="true"/>
+      <parameter id="k0r" value="0.1" constant="true"/>
+      <parameter id="E1" value="0.1" constant="true"/>
+      <parameter id="k1" value="0.1" constant="true"/>
+      <parameter id="k1r" value="0.1" constant="true"/>
+      <parameter id="E2" value="0.1" constant="true"/>
+      <parameter id="k2" value="0.1" constant="true"/>
+      <parameter id="k2r" value="0.1" constant="true"/>
+      <parameter id="E3" value="0.1" constant="true"/>
+      <parameter id="k3" value="0.1" constant="true"/>
+      <parameter id="k3r" value="0.1" constant="true"/>
+      <parameter id="E4" value="0.1" constant="true"/>
+      <parameter id="k4" value="0.1" constant="true"/>
+      <parameter id="k4r" value="0.1" constant="true"/>
+      <parameter id="E5" value="0.1" constant="true"/>
+      <parameter id="k5" value="0.1" constant="true"/>
+      <parameter id="k5r" value="0.1" constant="true"/>
+      <parameter id="E6" value="0.1" constant="true"/>
+      <parameter id="k6" value="0.1" constant="true"/>
+      <parameter id="k6r" value="0.1" constant="true"/>
+      <parameter id="E7" value="0.1" constant="true"/>
+      <parameter id="k7" value="0.1" constant="true"/>
+      <parameter id="k7r" value="0.1" constant="true"/>
+      <parameter id="E8" value="0.1" constant="true"/>
+      <parameter id="k8" value="0.1" constant="true"/>
+      <parameter id="k8r" value="0.1" constant="true"/>
+      <parameter id="E9" value="0.1" constant="true"/>
+      <parameter id="k9" value="0.1" constant="true"/>
+      <parameter id="k9r" value="0.1" constant="true"/>
+      <parameter id="E10" value="0.1" constant="true"/>
+      <parameter id="k10" value="0.1" constant="true"/>
+      <parameter id="k10r" value="0.1" constant="true"/>
+    </listOfParameters>
+    <listOfReactions>
+      <reaction id="J0" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J0_rct0" species="External_glucose" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J0_prd0" species="Glucose" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E0 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k0 </ci>
+                  <ci> External_glucose </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k0r </ci>
+                  <ci> Glucose </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J1" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J1_rct0" species="Glucose" constant="false"/>
+          <speciesReference id="SpecRef_J1_rct1" species="ATP" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J1_prd0" species="fructose_1_6_bisphosphate" constant="false"/>
+          <speciesReference id="SpecRef_J1_prd1" species="ADP" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E1 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k1 </ci>
+                  <ci> Glucose </ci>
+                  <ci> ATP </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k1r </ci>
+                  <ci> fructose_1_6_bisphosphate </ci>
+                  <ci> ADP </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J2" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J2_rct0" species="fructose_1_6_bisphosphate" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J2_prd0" species="glyceraldehyde_3_phosphate" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E2 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k2 </ci>
+                  <ci> fructose_1_6_bisphosphate </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k2r </ci>
+                  <ci> glyceraldehyde_3_phosphate </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J3" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J3_rct0" species="glyceraldehyde_3_phosphate" constant="false"/>
+          <speciesReference id="SpecRef_J3_rct1" species="NADH" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J3_prd0" species="NAD" constant="false"/>
+          <speciesReference id="SpecRef_J3_prd1" species="Glycerol" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E3 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k3 </ci>
+                  <ci> glyceraldehyde_3_phosphate </ci>
+                  <ci> NADH </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k3r </ci>
+                  <ci> NAD </ci>
+                  <ci> Glycerol </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J4" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J4_rct0" species="glyceraldehyde_3_phosphate" constant="false"/>
+          <speciesReference id="SpecRef_J4_rct1" species="ADP" constant="false"/>
+          <speciesReference id="SpecRef_J4_rct2" species="NAD" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J4_prd0" species="ATP" constant="false"/>
+          <speciesReference id="SpecRef_J4_prd1" species="glycerate_3_phosphate" constant="false"/>
+          <speciesReference id="SpecRef_J4_prd2" species="NADH" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E4 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k4 </ci>
+                  <ci> glyceraldehyde_3_phosphate </ci>
+                  <ci> ADP </ci>
+                  <ci> NAD </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k4r </ci>
+                  <ci> ATP </ci>
+                  <ci> glycerate_3_phosphate </ci>
+                  <ci> NADH </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J5" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J5_rct0" species="glycerate_3_phosphate" constant="false"/>
+          <speciesReference id="SpecRef_J5_rct1" species="ADP" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J5_prd0" species="ATP" constant="false"/>
+          <speciesReference id="SpecRef_J5_prd1" species="pyruvate" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E5 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k5 </ci>
+                  <ci> glycerate_3_phosphate </ci>
+                  <ci> ADP </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k5r </ci>
+                  <ci> ATP </ci>
+                  <ci> pyruvate </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J6" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J6_rct0" species="pyruvate" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J6_prd0" species="Acetyladehyde" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E6 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k6 </ci>
+                  <ci> pyruvate </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k6r </ci>
+                  <ci> Acetyladehyde </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J7" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J7_rct0" species="Acetyladehyde" constant="false"/>
+          <speciesReference id="SpecRef_J7_rct1" species="NADH" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J7_prd0" species="NAD" constant="false"/>
+          <speciesReference id="SpecRef_J7_prd1" species="ethanol" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E7 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k7 </ci>
+                  <ci> Acetyladehyde </ci>
+                  <ci> NADH </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k7r </ci>
+                  <ci> NAD </ci>
+                  <ci> ethanol </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J8" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J8_rct0" species="Acetyladehyde" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J8_prd0" species="External_acetaldehyde" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E8 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k8 </ci>
+                  <ci> Acetyladehyde </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k8r </ci>
+                  <ci> External_acetaldehyde </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J9" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J9_rct0" species="ATP" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J9_prd0" species="ADP" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E9 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k9 </ci>
+                  <ci> ATP </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k9r </ci>
+                  <ci> ADP </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="J10" reversible="true" fast="false">
+        <listOfReactants>
+          <speciesReference id="SpecRef_J10_rct0" species="External_acetaldehyde" constant="false"/>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference id="SpecRef_J10_prd0" species="Sink" constant="false"/>
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <times/>
+              <ci> E10 </ci>
+              <apply>
+                <minus/>
+                <apply>
+                  <times/>
+                  <ci> k10 </ci>
+                  <ci> External_acetaldehyde </ci>
+                </apply>
+                <apply>
+                  <times/>
+                  <ci> k10r </ci>
+                  <ci> Sink </ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+    </listOfReactions>
+    <layout:listOfLayouts xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:layout="http://www.sbml.org/sbml/level3/version1/layout/version1">
+      <layout:layout layout:id="COYOTO_layout">
+        <layout:dimensions layout:width="800" layout:height="800"/>
+        <layout:listOfCompartmentGlyphs>
+          <layout:compartmentGlyph layout:id="CompG_compartment" layout:compartment="compartment">
+            <layout:boundingBox layout:id="bb_compartment">
+              <layout:position layout:x="8.20000000000005" layout:y="12.3999999999999"/>
+              <layout:dimensions layout:width="3900" layout:height="2400"/>
+            </layout:boundingBox>
+          </layout:compartmentGlyph>
+        </layout:listOfCompartmentGlyphs>
+        <layout:listOfSpeciesGlyphs>
+          <layout:speciesGlyph layout:id="SpecG_External_glucose_idx_0" layout:species="External_glucose">
+            <layout:boundingBox layout:id="bb_External_glucose_idx_0">
+              <layout:position layout:x="151.7" layout:y="78"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_Glucose_idx_1" layout:species="Glucose">
+            <layout:boundingBox layout:id="bb_Glucose_idx_1">
+              <layout:position layout:x="319" layout:y="82"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_ATP_idx_2" layout:species="ATP">
+            <layout:boundingBox layout:id="bb_ATP_idx_2">
+              <layout:position layout:x="515.2" layout:y="84.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_fructose_1_6_bisphosphate_idx_3" layout:species="fructose_1_6_bisphosphate">
+            <layout:boundingBox layout:id="bb_fructose_1_6_bisphosphate_idx_3">
+              <layout:position layout:x="357.2" layout:y="207.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_ADP_idx_4" layout:species="ADP">
+            <layout:boundingBox layout:id="bb_ADP_idx_4">
+              <layout:position layout:x="512.7" layout:y="177.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_glyceraldehyde_3_phosphate_idx_5" layout:species="glyceraldehyde_3_phosphate">
+            <layout:boundingBox layout:id="bb_glyceraldehyde_3_phosphate_idx_5">
+              <layout:position layout:x="353.7" layout:y="318.2"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_NADH_idx_6" layout:species="NADH">
+            <layout:boundingBox layout:id="bb_NADH_idx_6">
+              <layout:position layout:x="263.7" layout:y="250.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_NAD_idx_7" layout:species="NAD">
+            <layout:boundingBox layout:id="bb_NAD_idx_7">
+              <layout:position layout:x="145.2" layout:y="252.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_Glycerol_idx_8" layout:species="Glycerol">
+            <layout:boundingBox layout:id="bb_Glycerol_idx_8">
+              <layout:position layout:x="137.2" layout:y="355.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_ADP_idx_9" layout:species="ADP">
+            <layout:boundingBox layout:id="bb_ADP_idx_9">
+              <layout:position layout:x="482.7" layout:y="356.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_NAD_idx_10" layout:species="NAD">
+            <layout:boundingBox layout:id="bb_NAD_idx_10">
+              <layout:position layout:x="238.2" layout:y="363.8"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_ATP_idx_11" layout:species="ATP">
+            <layout:boundingBox layout:id="bb_ATP_idx_11">
+              <layout:position layout:x="491.2" layout:y="420.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_glycerate_3_phosphate_idx_12" layout:species="glycerate_3_phosphate">
+            <layout:boundingBox layout:id="bb_glycerate_3_phosphate_idx_12">
+              <layout:position layout:x="355.2" layout:y="443.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_NADH_idx_13" layout:species="NADH">
+            <layout:boundingBox layout:id="bb_NADH_idx_13">
+              <layout:position layout:x="236.7" layout:y="408.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_ADP_idx_14" layout:species="ADP">
+            <layout:boundingBox layout:id="bb_ADP_idx_14">
+              <layout:position layout:x="487.7" layout:y="479.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_ATP_idx_15" layout:species="ATP">
+            <layout:boundingBox layout:id="bb_ATP_idx_15">
+              <layout:position layout:x="489.2" layout:y="548.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_pyruvate_idx_16" layout:species="pyruvate">
+            <layout:boundingBox layout:id="bb_pyruvate_idx_16">
+              <layout:position layout:x="350.7" layout:y="574.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_Acetyladehyde_idx_17" layout:species="Acetyladehyde">
+            <layout:boundingBox layout:id="bb_Acetyladehyde_idx_17">
+              <layout:position layout:x="352.7" layout:y="657.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_NADH_idx_18" layout:species="NADH">
+            <layout:boundingBox layout:id="bb_NADH_idx_18">
+              <layout:position layout:x="248.7" layout:y="600.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_NAD_idx_19" layout:species="NAD">
+            <layout:boundingBox layout:id="bb_NAD_idx_19">
+              <layout:position layout:x="122.2" layout:y="636.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_ethanol_idx_20" layout:species="ethanol">
+            <layout:boundingBox layout:id="bb_ethanol_idx_20">
+              <layout:position layout:x="150.7" layout:y="743.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_External_acetaldehyde_idx_21" layout:species="External_acetaldehyde">
+            <layout:boundingBox layout:id="bb_External_acetaldehyde_idx_21">
+              <layout:position layout:x="476.2" layout:y="727.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+          <layout:speciesGlyph layout:id="SpecG_Sink_idx_22" layout:species="Sink">
+            <layout:boundingBox layout:id="bb_Sink_idx_22">
+              <layout:position layout:x="580.2" layout:y="782.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:speciesGlyph>
+        </layout:listOfSpeciesGlyphs>
+        <layout:listOfReactionGlyphs>
+          <layout:reactionGlyph layout:id="ReactionG_J0" layout:reaction="J0">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="236.45" layout:y="86.8999999999999"/>
+                  <layout:end layout:x="236.45" layout:y="86.8999999999999"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J0_rct0" layout:speciesReference="SpecRef_J0_rct0" layout:speciesGlyph="SpecG_External_glucose_idx_0" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="172.7" layout:y="86.91"/>
+                      <layout:end layout:x="236.45" layout:y="86.8999999999999"/>
+                      <layout:basePoint1 layout:x="195.08" layout:y="86.75"/>
+                      <layout:basePoint2 layout:x="212.53" layout:y="86.87"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J0_prd0" layout:speciesReference="SpecRef_J0_prd0" layout:speciesGlyph="SpecG_Glucose_idx_1" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="236.45" layout:y="86.8999999999999"/>
+                      <layout:end layout:x="316" layout:y="88.99"/>
+                      <layout:basePoint1 layout:x="260.37" layout:y="86.9299999999998"/>
+                      <layout:basePoint2 layout:x="293.62" layout:y="85.25"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J1" layout:reaction="J1">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="426.325" layout:y="150.65"/>
+                  <layout:end layout:x="426.325" layout:y="150.65"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J1_rct0" layout:speciesReference="SpecRef_J1_rct0" layout:speciesGlyph="SpecG_Glucose_idx_1" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="340" layout:y="92.08"/>
+                      <layout:end layout:x="426.325" layout:y="150.65"/>
+                      <layout:basePoint1 layout:x="407.06" layout:y="98.12"/>
+                      <layout:basePoint2 layout:x="421.15" layout:y="125.9"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J1_rct1" layout:speciesReference="SpecRef_J1_rct1" layout:speciesGlyph="SpecG_ATP_idx_2" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="512.2" layout:y="94.99"/>
+                      <layout:end layout:x="426.325" layout:y="150.65"/>
+                      <layout:basePoint1 layout:x="451.76" layout:y="103.02"/>
+                      <layout:basePoint2 layout:x="421.15" layout:y="125.9"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J1_prd0" layout:speciesReference="SpecRef_J1_prd0" layout:speciesGlyph="SpecG_fructose_1_6_bisphosphate_idx_3" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="426.325" layout:y="150.65"/>
+                      <layout:end layout:x="378.2" layout:y="207.28"/>
+                      <layout:basePoint1 layout:x="431.5" layout:y="175.4"/>
+                      <layout:basePoint2 layout:x="410.76" layout:y="182.52"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J1_prd1" layout:speciesReference="SpecRef_J1_prd1" layout:speciesGlyph="SpecG_ADP_idx_4" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="426.325" layout:y="150.65"/>
+                      <layout:end layout:x="509.7" layout:y="183.45"/>
+                      <layout:basePoint1 layout:x="431.5" layout:y="175.4"/>
+                      <layout:basePoint2 layout:x="477.51" layout:y="175.52"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J2" layout:reaction="J2">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="364.45" layout:y="276.4"/>
+                  <layout:end layout:x="364.45" layout:y="276.4"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J2_rct0" layout:speciesReference="SpecRef_J2_rct0" layout:speciesGlyph="SpecG_fructose_1_6_bisphosphate_idx_3" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="365.82" layout:y="228.4"/>
+                      <layout:end layout:x="364.45" layout:y="276.4"/>
+                      <layout:basePoint1 layout:x="365.32" layout:y="244.4"/>
+                      <layout:basePoint2 layout:x="365.03" layout:y="257.73"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J2_prd0" layout:speciesReference="SpecRef_J2_prd0" layout:speciesGlyph="SpecG_glyceraldehyde_3_phosphate_idx_5" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="364.45" layout:y="276.4"/>
+                      <layout:end layout:x="363.08" layout:y="315.2"/>
+                      <layout:basePoint1 layout:x="363.87" layout:y="295.07"/>
+                      <layout:basePoint2 layout:x="363.58" layout:y="299.2"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J3" layout:reaction="J3">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="222.45" layout:y="307.4"/>
+                  <layout:end layout:x="222.45" layout:y="307.4"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J3_rct0" layout:speciesReference="SpecRef_J3_rct0" layout:speciesGlyph="SpecG_glyceraldehyde_3_phosphate_idx_5" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="350.7" layout:y="324.23"/>
+                      <layout:end layout:x="222.45" layout:y="307.4"/>
+                      <layout:basePoint1 layout:x="298.08" layout:y="311.2"/>
+                      <layout:basePoint2 layout:x="257.53" layout:y="299.07"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J3_rct1" layout:speciesReference="SpecRef_J3_rct1" layout:speciesGlyph="SpecG_NADH_idx_6" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="267.89" layout:y="271.4"/>
+                      <layout:end layout:x="222.45" layout:y="307.4"/>
+                      <layout:basePoint1 layout:x="261.08" layout:y="288.4"/>
+                      <layout:basePoint2 layout:x="257.53" layout:y="299.07"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J3_prd0" layout:speciesReference="SpecRef_J3_prd0" layout:speciesGlyph="SpecG_NAD_idx_7" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="222.45" layout:y="307.4"/>
+                      <layout:end layout:x="160.65" layout:y="273.4"/>
+                      <layout:basePoint1 layout:x="187.37" layout:y="315.73"/>
+                      <layout:basePoint2 layout:x="173.82" layout:y="297.9"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J3_prd1" layout:speciesReference="SpecRef_J3_prd1" layout:speciesGlyph="SpecG_Glycerol_idx_8" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="222.45" layout:y="307.4"/>
+                      <layout:end layout:x="155.68" layout:y="352.4"/>
+                      <layout:basePoint1 layout:x="187.37" layout:y="315.73"/>
+                      <layout:basePoint2 layout:x="175.82" layout:y="326.9"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J4" layout:reaction="J4">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="364.45" layout:y="392.9"/>
+                  <layout:end layout:x="364.45" layout:y="392.9"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J4_rct0" layout:speciesReference="SpecRef_J4_rct0" layout:speciesGlyph="SpecG_glyceraldehyde_3_phosphate_idx_5" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="362.85" layout:y="339.2"/>
+                      <layout:end layout:x="364.45" layout:y="392.9"/>
+                      <layout:basePoint1 layout:x="363.08" layout:y="358.45"/>
+                      <layout:basePoint2 layout:x="364.4" layout:y="370.4"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J4_rct1" layout:speciesReference="SpecRef_J4_rct1" layout:speciesGlyph="SpecG_ADP_idx_9" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="479.7" layout:y="365.11"/>
+                      <layout:end layout:x="364.45" layout:y="392.9"/>
+                      <layout:basePoint1 layout:x="397.08" layout:y="363.15"/>
+                      <layout:basePoint2 layout:x="364.4" layout:y="370.4"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J4_rct2" layout:speciesReference="SpecRef_J4_rct2" layout:speciesGlyph="SpecG_NAD_idx_10" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="259.2" layout:y="372.4"/>
+                      <layout:end layout:x="364.45" layout:y="392.9"/>
+                      <layout:basePoint1 layout:x="328.82" layout:y="370.05"/>
+                      <layout:basePoint2 layout:x="364.4" layout:y="370.4"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J4_prd0" layout:speciesReference="SpecRef_J4_prd0" layout:speciesGlyph="SpecG_ATP_idx_11" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="364.45" layout:y="392.9"/>
+                      <layout:end layout:x="488.2" layout:y="429.05"/>
+                      <layout:basePoint1 layout:x="364.5" layout:y="415.4"/>
+                      <layout:basePoint2 layout:x="388.32" layout:y="426.15"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J4_prd1" layout:speciesReference="SpecRef_J4_prd1" layout:speciesGlyph="SpecG_glycerate_3_phosphate_idx_12" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="364.45" layout:y="392.9"/>
+                      <layout:end layout:x="364.77" layout:y="440.4"/>
+                      <layout:basePoint1 layout:x="364.5" layout:y="415.4"/>
+                      <layout:basePoint2 layout:x="365.62" layout:y="422.65"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J4_prd2" layout:speciesReference="SpecRef_J4_prd2" layout:speciesGlyph="SpecG_NADH_idx_13" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="364.45" layout:y="392.9"/>
+                      <layout:end layout:x="257.7" layout:y="418.61"/>
+                      <layout:basePoint1 layout:x="364.5" layout:y="415.4"/>
+                      <layout:basePoint2 layout:x="322.58" layout:y="425.15"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J5" layout:reaction="J5">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="359.45" layout:y="520.4"/>
+                  <layout:end layout:x="359.45" layout:y="520.4"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J5_rct0" layout:speciesReference="SpecRef_J5_rct0" layout:speciesGlyph="SpecG_glycerate_3_phosphate_idx_12" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="363.37" layout:y="464.4"/>
+                      <layout:end layout:x="359.45" layout:y="520.4"/>
+                      <layout:basePoint1 layout:x="361.32" layout:y="493.9"/>
+                      <layout:basePoint2 layout:x="360.57" layout:y="483.33"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J5_rct1" layout:speciesReference="SpecRef_J5_rct1" layout:speciesGlyph="SpecG_ADP_idx_14" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="484.7" layout:y="488.02"/>
+                      <layout:end layout:x="359.45" layout:y="520.4"/>
+                      <layout:basePoint1 layout:x="403.18" layout:y="485.4"/>
+                      <layout:basePoint2 layout:x="360.57" layout:y="483.33"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J5_prd0" layout:speciesReference="SpecRef_J5_prd0" layout:speciesGlyph="SpecG_ATP_idx_15" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="359.45" layout:y="520.4"/>
+                      <layout:end layout:x="486.2" layout:y="556.85"/>
+                      <layout:basePoint1 layout:x="358.33" layout:y="557.47"/>
+                      <layout:basePoint2 layout:x="399.82" layout:y="552.9"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J5_prd1" layout:speciesReference="SpecRef_J5_prd1" layout:speciesGlyph="SpecG_pyruvate_idx_16" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="359.45" layout:y="520.4"/>
+                      <layout:end layout:x="359.82" layout:y="571.4"/>
+                      <layout:basePoint1 layout:x="358.33" layout:y="557.47"/>
+                      <layout:basePoint2 layout:x="360.08" layout:y="546.4"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J6" layout:reaction="J6">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="360.7" layout:y="624.9"/>
+                  <layout:end layout:x="360.7" layout:y="624.9"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J6_rct0" layout:speciesReference="SpecRef_J6_rct0" layout:speciesGlyph="SpecG_pyruvate_idx_16" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="359.99" layout:y="595.4"/>
+                      <layout:end layout:x="360.7" layout:y="624.9"/>
+                      <layout:basePoint1 layout:x="360.2" layout:y="604.15"/>
+                      <layout:basePoint2 layout:x="360.37" layout:y="611.07"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J6_prd0" layout:speciesReference="SpecRef_J6_prd0" layout:speciesGlyph="SpecG_Acetyladehyde_idx_17" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="360.7" layout:y="624.9"/>
+                      <layout:end layout:x="361.41" layout:y="654.4"/>
+                      <layout:basePoint1 layout:x="361.03" layout:y="638.73"/>
+                      <layout:basePoint2 layout:x="361.2" layout:y="645.65"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J7" layout:reaction="J7">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="225.325" layout:y="670.9"/>
+                  <layout:end layout:x="225.325" layout:y="670.9"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J7_rct0" layout:speciesReference="SpecRef_J7_rct0" layout:speciesGlyph="SpecG_Acetyladehyde_idx_17" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="349.7" layout:y="666.8"/>
+                      <layout:end layout:x="225.325" layout:y="670.9"/>
+                      <layout:basePoint1 layout:x="293.51" layout:y="668.65"/>
+                      <layout:basePoint2 layout:x="265.78" layout:y="652.4"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J7_rct1" layout:speciesReference="SpecRef_J7_rct1" layout:speciesGlyph="SpecG_NADH_idx_18" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="257.01" layout:y="621.4"/>
+                      <layout:end layout:x="225.325" layout:y="670.9"/>
+                      <layout:basePoint1 layout:x="256.01" layout:y="638.65"/>
+                      <layout:basePoint2 layout:x="265.78" layout:y="652.4"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J7_prd0" layout:speciesReference="SpecRef_J7_prd0" layout:speciesGlyph="SpecG_NAD_idx_19" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="225.325" layout:y="670.9"/>
+                      <layout:end layout:x="143.2" layout:y="652.51"/>
+                      <layout:basePoint1 layout:x="184.87" layout:y="689.4"/>
+                      <layout:basePoint2 layout:x="182.26" layout:y="675.65"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J7_prd1" layout:speciesReference="SpecRef_J7_prd1" layout:speciesGlyph="SpecG_ethanol_idx_20" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="225.325" layout:y="670.9"/>
+                      <layout:end layout:x="164.27" layout:y="740.4"/>
+                      <layout:basePoint1 layout:x="184.87" layout:y="689.4"/>
+                      <layout:basePoint2 layout:x="177.51" layout:y="705.65"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J8" layout:reaction="J8">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="423.45" layout:y="701.4"/>
+                  <layout:end layout:x="423.45" layout:y="701.4"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J8_rct0" layout:speciesReference="SpecRef_J8_rct0" layout:speciesGlyph="SpecG_Acetyladehyde_idx_17" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="373.7" layout:y="673.2"/>
+                      <layout:end layout:x="423.45" layout:y="701.4"/>
+                      <layout:basePoint1 layout:x="392.58" layout:y="683.9"/>
+                      <layout:basePoint2 layout:x="402.87" layout:y="689.73"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J8_prd0" layout:speciesReference="SpecRef_J8_prd0" layout:speciesGlyph="SpecG_External_acetaldehyde_idx_21" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="423.45" layout:y="701.4"/>
+                      <layout:end layout:x="473.2" layout:y="729.6"/>
+                      <layout:basePoint1 layout:x="444.03" layout:y="713.07"/>
+                      <layout:basePoint2 layout:x="454.32" layout:y="718.9"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J9" layout:reaction="J9">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="522.95" layout:y="139.9"/>
+                  <layout:end layout:x="522.95" layout:y="139.9"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J9_rct0" layout:speciesReference="SpecRef_J9_rct0" layout:speciesGlyph="SpecG_ATP_idx_2" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="523.88" layout:y="105.4"/>
+                      <layout:end layout:x="522.95" layout:y="139.9"/>
+                      <layout:basePoint1 layout:x="523.58" layout:y="116.65"/>
+                      <layout:basePoint2 layout:x="523.37" layout:y="124.4"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J9_prd0" layout:speciesReference="SpecRef_J9_prd0" layout:speciesGlyph="SpecG_ADP_idx_4" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="522.95" layout:y="139.9"/>
+                      <layout:end layout:x="522.02" layout:y="174.4"/>
+                      <layout:basePoint1 layout:x="522.53" layout:y="155.4"/>
+                      <layout:basePoint2 layout:x="522.32" layout:y="163.15"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+          <layout:reactionGlyph layout:id="ReactionG_J10" layout:reaction="J10">
+            <layout:curve>
+              <layout:listOfCurveSegments>
+                <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="LineSegment">
+                  <layout:start layout:x="537.2" layout:y="763.9"/>
+                  <layout:end layout:x="537.2" layout:y="763.9"/>
+                </layout:curveSegment>
+              </layout:listOfCurveSegments>
+            </layout:curve>
+            <layout:listOfSpeciesReferenceGlyphs>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J10_rct0" layout:speciesReference="SpecRef_J10_rct0" layout:speciesGlyph="SpecG_External_acetaldehyde_idx_21" layout:role="substrate">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="497.2" layout:y="742.75"/>
+                      <layout:end layout:x="537.2" layout:y="763.9"/>
+                      <layout:basePoint1 layout:x="511.2" layout:y="750.15"/>
+                      <layout:basePoint2 layout:x="519.87" layout:y="754.73"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+              <layout:speciesReferenceGlyph layout:id="SpecRefG_J10_prd0" layout:speciesReference="SpecRef_J10_prd0" layout:speciesGlyph="SpecG_Sink_idx_22" layout:role="product">
+                <layout:curve>
+                  <layout:listOfCurveSegments>
+                    <layout:curveSegment xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="CubicBezier">
+                      <layout:start layout:x="537.2" layout:y="763.9"/>
+                      <layout:end layout:x="577.2" layout:y="785.05"/>
+                      <layout:basePoint1 layout:x="554.53" layout:y="773.07"/>
+                      <layout:basePoint2 layout:x="563.2" layout:y="777.65"/>
+                    </layout:curveSegment>
+                  </layout:listOfCurveSegments>
+                </layout:curve>
+              </layout:speciesReferenceGlyph>
+            </layout:listOfSpeciesReferenceGlyphs>
+          </layout:reactionGlyph>
+        </layout:listOfReactionGlyphs>
+        <layout:listOfTextGlyphs>
+          <layout:textGlyph layout:id="TextG_External_glucose_idx_0" layout:text="External_glucose" layout:graphicalObject="SpecG_External_glucose_idx_0">
+            <layout:boundingBox layout:id="bb_spec_text_External_glucose_idx_0">
+              <layout:position layout:x="151.7" layout:y="60"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_Glucose_idx_1" layout:text="Glucose" layout:graphicalObject="SpecG_Glucose_idx_1">
+            <layout:boundingBox layout:id="bb_spec_text_Glucose_idx_1">
+              <layout:position layout:x="319" layout:y="64"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_ATP_idx_2" layout:text="ATP" layout:graphicalObject="SpecG_ATP_idx_2">
+            <layout:boundingBox layout:id="bb_spec_text_ATP_idx_2">
+              <layout:position layout:x="533.2" layout:y="84.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_fructose_1_6_bisphosphate_idx_3" layout:text="fructose_1_6_bisphosphate" layout:graphicalObject="SpecG_fructose_1_6_bisphosphate_idx_3">
+            <layout:boundingBox layout:id="bb_spec_text_fructose_1_6_bisphosphate_idx_3">
+              <layout:position layout:x="375.2" layout:y="207.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_ADP_idx_4" layout:text="ADP" layout:graphicalObject="SpecG_ADP_idx_4">
+            <layout:boundingBox layout:id="bb_spec_text_ADP_idx_4">
+              <layout:position layout:x="530.7" layout:y="177.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_glyceraldehyde_3_phosphate_idx_5" layout:text="glyceraldehyde_3_phosphate" layout:graphicalObject="SpecG_glyceraldehyde_3_phosphate_idx_5">
+            <layout:boundingBox layout:id="bb_spec_text_glyceraldehyde_3_phosphate_idx_5">
+              <layout:position layout:x="371.7" layout:y="318.2"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_NADH_idx_6" layout:text="NADH" layout:graphicalObject="SpecG_NADH_idx_6">
+            <layout:boundingBox layout:id="bb_spec_text_NADH_idx_6">
+              <layout:position layout:x="245.7" layout:y="250.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_NAD_idx_7" layout:text="NAD" layout:graphicalObject="SpecG_NAD_idx_7">
+            <layout:boundingBox layout:id="bb_spec_text_NAD_idx_7">
+              <layout:position layout:x="127.2" layout:y="252.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_Glycerol_idx_8" layout:text="Glycerol" layout:graphicalObject="SpecG_Glycerol_idx_8">
+            <layout:boundingBox layout:id="bb_spec_text_Glycerol_idx_8">
+              <layout:position layout:x="119.2" layout:y="355.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_ADP_idx_9" layout:text="ADP" layout:graphicalObject="SpecG_ADP_idx_9">
+            <layout:boundingBox layout:id="bb_spec_text_ADP_idx_9">
+              <layout:position layout:x="500.7" layout:y="356.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_NAD_idx_10" layout:text="NAD" layout:graphicalObject="SpecG_NAD_idx_10">
+            <layout:boundingBox layout:id="bb_spec_text_NAD_idx_10">
+              <layout:position layout:x="220.2" layout:y="363.8"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_ATP_idx_11" layout:text="ATP" layout:graphicalObject="SpecG_ATP_idx_11">
+            <layout:boundingBox layout:id="bb_spec_text_ATP_idx_11">
+              <layout:position layout:x="509.2" layout:y="420.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_glycerate_3_phosphate_idx_12" layout:text="glycerate_3_phosphate" layout:graphicalObject="SpecG_glycerate_3_phosphate_idx_12">
+            <layout:boundingBox layout:id="bb_spec_text_glycerate_3_phosphate_idx_12">
+              <layout:position layout:x="373.2" layout:y="443.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_NADH_idx_13" layout:text="NADH" layout:graphicalObject="SpecG_NADH_idx_13">
+            <layout:boundingBox layout:id="bb_spec_text_NADH_idx_13">
+              <layout:position layout:x="218.7" layout:y="408.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_ADP_idx_14" layout:text="ADP" layout:graphicalObject="SpecG_ADP_idx_14">
+            <layout:boundingBox layout:id="bb_spec_text_ADP_idx_14">
+              <layout:position layout:x="505.7" layout:y="479.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_ATP_idx_15" layout:text="ATP" layout:graphicalObject="SpecG_ATP_idx_15">
+            <layout:boundingBox layout:id="bb_spec_text_ATP_idx_15">
+              <layout:position layout:x="507.2" layout:y="548.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_pyruvate_idx_16" layout:text="pyruvate" layout:graphicalObject="SpecG_pyruvate_idx_16">
+            <layout:boundingBox layout:id="bb_spec_text_pyruvate_idx_16">
+              <layout:position layout:x="368.7" layout:y="574.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_Acetyladehyde_idx_17" layout:text="Acetyladehyde" layout:graphicalObject="SpecG_Acetyladehyde_idx_17">
+            <layout:boundingBox layout:id="bb_spec_text_Acetyladehyde_idx_17">
+              <layout:position layout:x="370.7" layout:y="657.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_NADH_idx_18" layout:text="NADH" layout:graphicalObject="SpecG_NADH_idx_18">
+            <layout:boundingBox layout:id="bb_spec_text_NADH_idx_18">
+              <layout:position layout:x="230.7" layout:y="600.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_NAD_idx_19" layout:text="NAD" layout:graphicalObject="SpecG_NAD_idx_19">
+            <layout:boundingBox layout:id="bb_spec_text_NAD_idx_19">
+              <layout:position layout:x="104.2" layout:y="636.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_ethanol_idx_20" layout:text="ethanol" layout:graphicalObject="SpecG_ethanol_idx_20">
+            <layout:boundingBox layout:id="bb_spec_text_ethanol_idx_20">
+              <layout:position layout:x="168.7" layout:y="743.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_External_acetaldehyde_idx_21" layout:text="External_acetaldehyde" layout:graphicalObject="SpecG_External_acetaldehyde_idx_21">
+            <layout:boundingBox layout:id="bb_spec_text_External_acetaldehyde_idx_21">
+              <layout:position layout:x="494.2" layout:y="727.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+          <layout:textGlyph layout:id="TextG_Sink_idx_22" layout:text="Sink" layout:graphicalObject="SpecG_Sink_idx_22">
+            <layout:boundingBox layout:id="bb_spec_text_Sink_idx_22">
+              <layout:position layout:x="598.2" layout:y="782.4"/>
+              <layout:dimensions layout:width="18" layout:height="18"/>
+            </layout:boundingBox>
+          </layout:textGlyph>
+        </layout:listOfTextGlyphs>
+        <render:listOfRenderInformation xmlns:render="http://www.sbml.org/sbml/level3/version1/render/version1">
+          <render:renderInformation render:id="info" render:name="Render Information" render:programName="RenderInformation" render:programVersion="1.0">
+            <render:listOfColorDefinitions>
+              <render:colorDefinition render:id="_default_modifier_color_" render:value="#d086f9"/>
+              <render:colorDefinition render:id="comp_fill_color__compartment_default_" render:value="#ffffff"/>
+              <render:colorDefinition render:id="comp_border_color__compartment_default_" render:value="#ffffff"/>
+              <render:colorDefinition render:id="comp_fill_color_compartment" render:value="#ffffff00"/>
+              <render:colorDefinition render:id="comp_border_color_compartment" render:value="#ffffff00"/>
+              <render:colorDefinition render:id="spec_fill_color_External_glucose" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_External_glucose" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_External_glucose" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_Glucose" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_Glucose" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_Glucose" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_ATP" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_ATP" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_ATP" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_fructose_1_6_bisphosphate" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_fructose_1_6_bisphosphate" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_fructose_1_6_bisphosphate" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_ADP" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_ADP" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_ADP" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_glyceraldehyde_3_phosphate" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_glyceraldehyde_3_phosphate" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_glyceraldehyde_3_phosphate" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_NADH" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_NADH" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_NADH" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_NAD" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_NAD" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_NAD" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_Glycerol" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_Glycerol" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_Glycerol" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_ADP" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_ADP" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_ADP" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_NAD" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_NAD" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_NAD" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_ATP" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_ATP" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_ATP" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_glycerate_3_phosphate" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_glycerate_3_phosphate" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_glycerate_3_phosphate" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_NADH" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_NADH" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_NADH" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_ADP" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_ADP" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_ADP" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_ATP" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_ATP" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_ATP" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_pyruvate" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_pyruvate" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_pyruvate" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_Acetyladehyde" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_Acetyladehyde" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_Acetyladehyde" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_NADH" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_NADH" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_NADH" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_NAD" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_NAD" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_NAD" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_ethanol" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_ethanol" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_ethanol" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_External_acetaldehyde" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_External_acetaldehyde" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_External_acetaldehyde" render:value="#000000"/>
+              <render:colorDefinition render:id="spec_fill_color_Sink" render:value="#ffc891c8"/>
+              <render:colorDefinition render:id="spec_border_color_Sink" render:value="#ffcc99c8"/>
+              <render:colorDefinition render:id="text_line_color_Sink" render:value="#000000"/>
+              <render:colorDefinition render:id="reaction_fill_color_J0" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J0" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J0" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J0" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J0" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J0" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J0" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J1" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J1" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J1" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J1" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J1" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J1" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J1" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J2" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J2" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J2" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J2" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J2" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J2" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J2" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J3" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J3" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J3" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J3" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J3" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J3" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J3" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J4" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J4" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J4" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J4" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J4" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J4" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J4" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J5" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J5" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J5" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J5" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J5" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J5" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J5" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J6" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J6" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J6" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J6" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J6" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J6" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J6" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J7" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J7" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J7" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J7" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J7" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J7" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J7" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J8" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J8" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J8" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J8" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J8" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J8" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J8" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J9" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J9" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J9" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J9" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J9" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J9" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J9" render:value="#0080ff"/>
+              <render:colorDefinition render:id="reaction_fill_color_J10" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color__line_ending_default_NONE_J10" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color__line_ending_default_NONE_J10" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_J10" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_J10" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_fill_color_line_ending_modifier_J10" render:value="#0080ff"/>
+              <render:colorDefinition render:id="lineEnding_border_color_line_ending_modifier_J10" render:value="#0080ff"/>
+            </render:listOfColorDefinitions>
+            <render:listOfLineEndings>
+              <render:lineEnding render:id="_line_ending_default_NONE_J0">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J0">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J0" render:fill="lineEnding_fill_color__line_ending_default_NONE_J0"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J0">
+                <layout:boundingBox layout:id="bb_line_ending_J0">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J0" render:fill="lineEnding_fill_color_line_ending_J0">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J0">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J0">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J1">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J1">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J1" render:fill="lineEnding_fill_color__line_ending_default_NONE_J1"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J1">
+                <layout:boundingBox layout:id="bb_line_ending_J1">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J1" render:fill="lineEnding_fill_color_line_ending_J1">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J1">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J1">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J2">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J2">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J2" render:fill="lineEnding_fill_color__line_ending_default_NONE_J2"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J2">
+                <layout:boundingBox layout:id="bb_line_ending_J2">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J2" render:fill="lineEnding_fill_color_line_ending_J2">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J2">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J2">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J3">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J3">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J3"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J3">
+                <layout:boundingBox layout:id="bb_line_ending_J3">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J3" render:fill="lineEnding_fill_color_line_ending_J3">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J3">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J3">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J4">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J4">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J4" render:fill="lineEnding_fill_color__line_ending_default_NONE_J4"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J4">
+                <layout:boundingBox layout:id="bb_line_ending_J4">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J4" render:fill="lineEnding_fill_color_line_ending_J4">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J4">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J4">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J5">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J5">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J5" render:fill="lineEnding_fill_color__line_ending_default_NONE_J5"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J5">
+                <layout:boundingBox layout:id="bb_line_ending_J5">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J5" render:fill="lineEnding_fill_color_line_ending_J5">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J5">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J5">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J6">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J6">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J6" render:fill="lineEnding_fill_color__line_ending_default_NONE_J6"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J6">
+                <layout:boundingBox layout:id="bb_line_ending_J6">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J6" render:fill="lineEnding_fill_color_line_ending_J6">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J6">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J6">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J7">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J7">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J7" render:fill="lineEnding_fill_color__line_ending_default_NONE_J7"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J7">
+                <layout:boundingBox layout:id="bb_line_ending_J7">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J7" render:fill="lineEnding_fill_color_line_ending_J7">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J7">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J7">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J8">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J8">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J8" render:fill="lineEnding_fill_color__line_ending_default_NONE_J8"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J8">
+                <layout:boundingBox layout:id="bb_line_ending_J8">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J8" render:fill="lineEnding_fill_color_line_ending_J8">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J8">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J8">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J9">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J9">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J9" render:fill="lineEnding_fill_color__line_ending_default_NONE_J9"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J9">
+                <layout:boundingBox layout:id="bb_line_ending_J9">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J9" render:fill="lineEnding_fill_color_line_ending_J9">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J9">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J9">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="_line_ending_default_NONE_J10">
+                <layout:boundingBox layout:id="bb__line_ending_default_NONE_J10">
+                  <layout:position layout:x="0" layout:y="0"/>
+                  <layout:dimensions layout:width="0" layout:height="0"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J10" render:fill="lineEnding_fill_color__line_ending_default_NONE_J10"/>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_J10">
+                <layout:boundingBox layout:id="bb_line_ending_J10">
+                  <layout:position layout:x="-15" layout:y="-6"/>
+                  <layout:dimensions layout:width="15" layout:height="12"/>
+                </layout:boundingBox>
+                <render:g render:stroke="lineEnding_border_color_line_ending_J10" render:fill="lineEnding_fill_color_line_ending_J10">
+                  <render:polygon>
+                    <render:listOfElements>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="100%" render:y="50%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="100%"/>
+                      <render:element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="RenderPoint" render:x="0" render:y="0"/>
+                    </render:listOfElements>
+                  </render:polygon>
+                </render:g>
+              </render:lineEnding>
+              <render:lineEnding render:id="line_ending_modifier_J10">
+                <layout:boundingBox layout:id="bb_line_ending_modifier_J10">
+                  <layout:position layout:x="-3" layout:y="0"/>
+                  <layout:dimensions layout:width="6" layout:height="6"/>
+                </layout:boundingBox>
+                <render:g render:stroke="_default_modifier_color_" render:fill="_default_modifier_color_">
+                  <render:ellipse render:cx="0" render:cy="0" render:cz="50%" render:rx="100%"/>
+                </render:g>
+              </render:lineEnding>
+            </render:listOfLineEndings>
+            <render:listOfStyles>
+              <render:style render:id="compStyle__compartment_default_" render:typeList="COMPARTMENTGLYPH" render:idList="CompG__compartment_default_">
+                <render:g render:stroke="comp_border_color__compartment_default_" render:stroke-width="2" render:fill="comp_fill_color__compartment_default_">
+                  <render:rectangle render:x="0" render:y="0" render:width="100%" render:height="100%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="compStyle_compartment" render:typeList="COMPARTMENTGLYPH" render:idList="CompG_compartment">
+                <render:g render:stroke="comp_border_color_compartment" render:stroke-width="2" render:fill="comp_fill_color_compartment">
+                  <render:rectangle render:x="0" render:y="0" render:width="100%" render:height="100%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="specStyle_External_glucose" render:typeList="SPECIESGLYPH" render:idList="SpecG_External_glucose_idx_0">
+                <render:g render:stroke="spec_border_color_External_glucose" render:stroke-width="0.001" render:fill="spec_fill_color_External_glucose">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_External_glucose_idx_0">
+                <render:g render:stroke="text_line_color_External_glucose" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_Glucose" render:typeList="SPECIESGLYPH" render:idList="SpecG_Glucose_idx_1">
+                <render:g render:stroke="spec_border_color_Glucose" render:stroke-width="0.001" render:fill="spec_fill_color_Glucose">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_Glucose_idx_1">
+                <render:g render:stroke="text_line_color_Glucose" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_ATP" render:typeList="SPECIESGLYPH" render:idList="SpecG_ATP_idx_2">
+                <render:g render:stroke="spec_border_color_ATP" render:stroke-width="0.001" render:fill="spec_fill_color_ATP">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_ATP_idx_2">
+                <render:g render:stroke="text_line_color_ATP" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_fructose_1_6_bisphosphate" render:typeList="SPECIESGLYPH" render:idList="SpecG_fructose_1_6_bisphosphate_idx_3">
+                <render:g render:stroke="spec_border_color_fructose_1_6_bisphosphate" render:stroke-width="0.001" render:fill="spec_fill_color_fructose_1_6_bisphosphate">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_fructose_1_6_bisphosphate_idx_3">
+                <render:g render:stroke="text_line_color_fructose_1_6_bisphosphate" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="12"/>
+              </render:style>
+              <render:style render:id="specStyle_ADP" render:typeList="SPECIESGLYPH" render:idList="SpecG_ADP_idx_4">
+                <render:g render:stroke="spec_border_color_ADP" render:stroke-width="0.001" render:fill="spec_fill_color_ADP">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_ADP_idx_4">
+                <render:g render:stroke="text_line_color_ADP" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_glyceraldehyde_3_phosphate" render:typeList="SPECIESGLYPH" render:idList="SpecG_glyceraldehyde_3_phosphate_idx_5">
+                <render:g render:stroke="spec_border_color_glyceraldehyde_3_phosphate" render:stroke-width="0.001" render:fill="spec_fill_color_glyceraldehyde_3_phosphate">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_glyceraldehyde_3_phosphate_idx_5">
+                <render:g render:stroke="text_line_color_glyceraldehyde_3_phosphate" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="12"/>
+              </render:style>
+              <render:style render:id="specStyle_NADH" render:typeList="SPECIESGLYPH" render:idList="SpecG_NADH_idx_6">
+                <render:g render:stroke="spec_border_color_NADH" render:stroke-width="0.001" render:fill="spec_fill_color_NADH">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_NADH_idx_6">
+                <render:g render:stroke="text_line_color_NADH" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_NAD" render:typeList="SPECIESGLYPH" render:idList="SpecG_NAD_idx_7">
+                <render:g render:stroke="spec_border_color_NAD" render:stroke-width="0.001" render:fill="spec_fill_color_NAD">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_NAD_idx_7">
+                <render:g render:stroke="text_line_color_NAD" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_Glycerol" render:typeList="SPECIESGLYPH" render:idList="SpecG_Glycerol_idx_8">
+                <render:g render:stroke="spec_border_color_Glycerol" render:stroke-width="0.001" render:fill="spec_fill_color_Glycerol">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_Glycerol_idx_8">
+                <render:g render:stroke="text_line_color_Glycerol" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_ADP" render:typeList="SPECIESGLYPH" render:idList="SpecG_ADP_idx_9">
+                <render:g render:stroke="spec_border_color_ADP" render:stroke-width="0.001" render:fill="spec_fill_color_ADP">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_ADP_idx_9">
+                <render:g render:stroke="text_line_color_ADP" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_NAD" render:typeList="SPECIESGLYPH" render:idList="SpecG_NAD_idx_10">
+                <render:g render:stroke="spec_border_color_NAD" render:stroke-width="0.001" render:fill="spec_fill_color_NAD">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_NAD_idx_10">
+                <render:g render:stroke="text_line_color_NAD" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_ATP" render:typeList="SPECIESGLYPH" render:idList="SpecG_ATP_idx_11">
+                <render:g render:stroke="spec_border_color_ATP" render:stroke-width="0.001" render:fill="spec_fill_color_ATP">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_ATP_idx_11">
+                <render:g render:stroke="text_line_color_ATP" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_glycerate_3_phosphate" render:typeList="SPECIESGLYPH" render:idList="SpecG_glycerate_3_phosphate_idx_12">
+                <render:g render:stroke="spec_border_color_glycerate_3_phosphate" render:stroke-width="0.001" render:fill="spec_fill_color_glycerate_3_phosphate">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_glycerate_3_phosphate_idx_12">
+                <render:g render:stroke="text_line_color_glycerate_3_phosphate" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="12"/>
+              </render:style>
+              <render:style render:id="specStyle_NADH" render:typeList="SPECIESGLYPH" render:idList="SpecG_NADH_idx_13">
+                <render:g render:stroke="spec_border_color_NADH" render:stroke-width="0.001" render:fill="spec_fill_color_NADH">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_NADH_idx_13">
+                <render:g render:stroke="text_line_color_NADH" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_ADP" render:typeList="SPECIESGLYPH" render:idList="SpecG_ADP_idx_14">
+                <render:g render:stroke="spec_border_color_ADP" render:stroke-width="0.001" render:fill="spec_fill_color_ADP">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_ADP_idx_14">
+                <render:g render:stroke="text_line_color_ADP" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_ATP" render:typeList="SPECIESGLYPH" render:idList="SpecG_ATP_idx_15">
+                <render:g render:stroke="spec_border_color_ATP" render:stroke-width="0.001" render:fill="spec_fill_color_ATP">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_ATP_idx_15">
+                <render:g render:stroke="text_line_color_ATP" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_pyruvate" render:typeList="SPECIESGLYPH" render:idList="SpecG_pyruvate_idx_16">
+                <render:g render:stroke="spec_border_color_pyruvate" render:stroke-width="0.001" render:fill="spec_fill_color_pyruvate">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_pyruvate_idx_16">
+                <render:g render:stroke="text_line_color_pyruvate" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_Acetyladehyde" render:typeList="SPECIESGLYPH" render:idList="SpecG_Acetyladehyde_idx_17">
+                <render:g render:stroke="spec_border_color_Acetyladehyde" render:stroke-width="0.001" render:fill="spec_fill_color_Acetyladehyde">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_Acetyladehyde_idx_17">
+                <render:g render:stroke="text_line_color_Acetyladehyde" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_NADH" render:typeList="SPECIESGLYPH" render:idList="SpecG_NADH_idx_18">
+                <render:g render:stroke="spec_border_color_NADH" render:stroke-width="0.001" render:fill="spec_fill_color_NADH">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_NADH_idx_18">
+                <render:g render:stroke="text_line_color_NADH" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_NAD" render:typeList="SPECIESGLYPH" render:idList="SpecG_NAD_idx_19">
+                <render:g render:stroke="spec_border_color_NAD" render:stroke-width="0.001" render:fill="spec_fill_color_NAD">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_NAD_idx_19">
+                <render:g render:stroke="text_line_color_NAD" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_ethanol" render:typeList="SPECIESGLYPH" render:idList="SpecG_ethanol_idx_20">
+                <render:g render:stroke="spec_border_color_ethanol" render:stroke-width="0.001" render:fill="spec_fill_color_ethanol">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_ethanol_idx_20">
+                <render:g render:stroke="text_line_color_ethanol" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="specStyle_External_acetaldehyde" render:typeList="SPECIESGLYPH" render:idList="SpecG_External_acetaldehyde_idx_21">
+                <render:g render:stroke="spec_border_color_External_acetaldehyde" render:stroke-width="0.001" render:fill="spec_fill_color_External_acetaldehyde">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_External_acetaldehyde_idx_21">
+                <render:g render:stroke="text_line_color_External_acetaldehyde" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="12"/>
+              </render:style>
+              <render:style render:id="specStyle_Sink" render:typeList="SPECIESGLYPH" render:idList="SpecG_Sink_idx_22">
+                <render:g render:stroke="spec_border_color_Sink" render:stroke-width="0.001" render:fill="spec_fill_color_Sink">
+                  <render:ellipse render:cx="50%" render:cy="50%" render:cz="50%" render:rx="50%"/>
+                </render:g>
+              </render:style>
+              <render:style render:id="textStyle" render:typeList="TEXTGLYPH" render:idList="TextG_Sink_idx_22">
+                <render:g render:stroke="text_line_color_Sink" render:stroke-width="1" render:text-anchor="middle" render:vtext-anchor="middle" render:font-size="11"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J0" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J0">
+                <render:g render:stroke="reaction_fill_color_J0" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ0_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J0_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J0" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J0" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ0_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J0_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J0" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J0" render:endHead="line_ending_J0"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J1" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J1">
+                <render:g render:stroke="reaction_fill_color_J1" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ1_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J1_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J1" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J1" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ1_rct1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J1_rct1">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J1" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J1" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ1_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J1_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J1" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J1" render:endHead="line_ending_J1"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ1_prd1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J1_prd1">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J1" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J1" render:endHead="line_ending_J1"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J2" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J2">
+                <render:g render:stroke="reaction_fill_color_J2" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ2_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J2_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J2" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J2" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ2_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J2_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J2" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J2" render:endHead="line_ending_J2"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J3" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J3">
+                <render:g render:stroke="reaction_fill_color_J3" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ3_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J3_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J3" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J3" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ3_rct1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J3_rct1">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J3" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J3" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ3_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J3_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J3" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J3" render:endHead="line_ending_J3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ3_prd1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J3_prd1">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J3" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J3" render:endHead="line_ending_J3"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J4" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J4">
+                <render:g render:stroke="reaction_fill_color_J4" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ4_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J4_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J4" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J4" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ4_rct1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J4_rct1">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J4" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J4" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ4_rct2" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J4_rct2">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J4" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J4" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ4_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J4_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J4" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J4" render:endHead="line_ending_J4"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ4_prd1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J4_prd1">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J4" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J4" render:endHead="line_ending_J4"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ4_prd2" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J4_prd2">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J4" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J4" render:endHead="line_ending_J4"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J5" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J5">
+                <render:g render:stroke="reaction_fill_color_J5" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ5_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J5_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J5" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J5" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ5_rct1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J5_rct1">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J5" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J5" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ5_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J5_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J5" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J5" render:endHead="line_ending_J5"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ5_prd1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J5_prd1">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J5" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J5" render:endHead="line_ending_J5"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J6" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J6">
+                <render:g render:stroke="reaction_fill_color_J6" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ6_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J6_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J6" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J6" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ6_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J6_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J6" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J6" render:endHead="line_ending_J6"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J7" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J7">
+                <render:g render:stroke="reaction_fill_color_J7" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ7_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J7_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J7" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J7" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ7_rct1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J7_rct1">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J7" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J7" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ7_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J7_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J7" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J7" render:endHead="line_ending_J7"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ7_prd1" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J7_prd1">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J7" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J7" render:endHead="line_ending_J7"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J8" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J8">
+                <render:g render:stroke="reaction_fill_color_J8" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ8_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J8_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J8" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J8" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ8_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J8_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J8" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J8" render:endHead="line_ending_J8"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J9" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J9">
+                <render:g render:stroke="reaction_fill_color_J9" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ9_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J9_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J9" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J9" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ9_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J9_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J9" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J9" render:endHead="line_ending_J9"/>
+              </render:style>
+              <render:style render:id="reactionStyle_J10" render:typeList="REACTIONGLYPH" render:idList="ReactionG_J10">
+                <render:g render:stroke="reaction_fill_color_J10" render:stroke-width="3"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ10_rct0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J10_rct0">
+                <render:g render:stroke="lineEnding_border_color__line_ending_default_NONE_J10" render:stroke-width="3" render:fill="lineEnding_fill_color__line_ending_default_NONE_J10" render:endHead="_line_ending_default_NONE_"/>
+              </render:style>
+              <render:style render:id="specRefGlyphStyleJ10_prd0" render:typeList="SPECIESREFERENCEGLYPH" render:idList="SpecRefG_J10_prd0">
+                <render:g render:stroke="lineEnding_border_color_line_ending_J10" render:stroke-width="3" render:fill="lineEnding_fill_color_line_ending_J10" render:endHead="line_ending_J10"/>
+              </render:style>
+            </render:listOfStyles>
+          </render:renderInformation>
+        </render:listOfRenderInformation>
+      </layout:layout>
+    </layout:listOfLayouts>
+  </model>
+</sbml>

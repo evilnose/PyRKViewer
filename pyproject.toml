@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "SBcoyote"
-version = "1.4.4"
+version = "1.5.0"
 description = "SBcoyote: An Extensible Python Based Reaction Editor and Viewer."
 readme = "README.md"
 authors = ["Jin Xu and Gary Geng et al <jxu2019@uw.edu>"]
@@ -38,10 +38,10 @@ marshmallow-polyfield = "^5.10"
 wheel = "*"
 requests = "*"
 traitlets = "*"
-networkx = { version = "^2.5.1" }
+networkx = { version = ">=2.5.1" }
 simplesbml = { version = "^2.2.0"}
 python-libsbml = { version = "^5.18.0" }
-pandas = { version = "^1.3.0" }
+pandas = { version = ">=1.3.0" }
 SBMLDiagrams = { version = ">=1.3.4"}
 tellurium = { version = "^2.2.1", optional = true }
 

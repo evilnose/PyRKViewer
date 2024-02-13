@@ -9,7 +9,7 @@ SBcoyote, initially called PyRKViewer or Coyote, is a cross-platform visualizati
 * Reactions can be displayed using Bezier curves and straight lines.
 * Plugin support, with some plugin examples: arrow designer, random network, auto layout, etc.
 
-***Note that please make sure to save a copy of your SBML file before importing into SBcoyote.***
+***Note that please make sure to save a copy of your SBML file before importing into SBMLDiagrams.***
 
 ## Citing
 
